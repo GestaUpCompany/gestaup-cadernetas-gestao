@@ -1,0 +1,29 @@
+import { ReactNode } from 'react'
+import { Navigate } from 'react-router-dom'
+import { useAuth } from '../../contexts/AuthContext'
+
+interface AdminRouteProps {
+  children: ReactNode
+}
+
+export function AdminRoute({ children }: AdminRouteProps) {
+  const { user, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <p className="text-gray-600">Carregando...</p>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />
+  }
+
+  if (user.papel !== 'admin') {
+    return <Navigate to="/controller/dashboard" replace />
+  }
+
+  return <>{children}</>
+}

@@ -5,6 +5,7 @@ export interface User {
   email: string
   nome: string
   telefone?: string
+  papel: 'admin' | 'controller'
   ativo: boolean
 }
 
@@ -14,27 +15,38 @@ export interface Session {
 }
 
 export async function signIn(email: string, password: string): Promise<Session | null> {
+  console.log('Tentando fazer login com:', email)
+  
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   })
 
   if (error) {
-    console.error('Erro ao fazer login:', error)
+    console.error('Erro ao fazer login (Auth):', error)
     return null
   }
 
+  console.log('Login no Auth bem-sucedido, buscando dados do usuário...')
+
   // Buscar dados adicionais do usuário
-  const { data: userData } = await supabase
+  const { data: userData, error: userError } = await supabase
     .from('usuarios')
     .select('*')
     .eq('email', email)
     .single()
 
-  if (!userData) {
+  if (userError) {
+    console.error('Erro ao buscar dados do usuário (DB):', userError)
     return null
   }
 
+  if (!userData) {
+    console.error('Usuário não encontrado na tabela usuarios')
+    return null
+  }
+
+  console.log('Usuário encontrado:', userData)
   return {
     user: userData as User,
     token: data.session.access_token,
@@ -87,23 +99,52 @@ export async function signOut(): Promise<void> {
 }
 
 export async function getCurrentUser(): Promise<User | null> {
-  const { data: { user } } = await supabase.auth.getUser()
+  console.log('getCurrentUser: Buscando usuário do Supabase Auth...')
+  
+  // Adicionar timeout para evitar travamento
+  const timeoutPromise = new Promise<null>((resolve) => {
+    setTimeout(() => {
+      console.error('getCurrentUser: Timeout após 10 segundos')
+      resolve(null)
+    }, 10000)
+  })
 
-  if (!user) {
-    return null
-  }
+  const userPromise = (async () => {
+    const { data: { user }, error } = await supabase.auth.getUser()
 
-  const { data: userData } = await supabase
-    .from('usuarios')
-    .select('*')
-    .eq('email', user.email)
-    .single()
+    if (error) {
+      console.error('getCurrentUser: Erro ao buscar usuário do Auth:', error)
+      return null
+    }
 
-  if (!userData) {
-    return null
-  }
+    if (!user) {
+      console.log('getCurrentUser: Nenhum usuário logado no Auth')
+      return null
+    }
 
-  return userData as User
+    console.log('getCurrentUser: Usuário encontrado no Auth, buscando dados na tabela usuarios...')
+
+    const { data: userData, error: userError } = await supabase
+      .from('usuarios')
+      .select('*')
+      .eq('id', user.id)
+      .single()
+
+    if (userError) {
+      console.error('getCurrentUser: Erro ao buscar dados do usuário (DB):', userError)
+      return null
+    }
+
+    if (!userData) {
+      console.error('getCurrentUser: Usuário não encontrado na tabela usuarios')
+      return null
+    }
+
+    console.log('getCurrentUser: Usuário encontrado:', userData)
+    return userData as User
+  })()
+
+  return Promise.race([userPromise, timeoutPromise])
 }
 
 export async function onAuthStateChange(callback: (user: User | null) => void) {

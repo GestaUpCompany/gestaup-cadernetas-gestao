@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { Button, Input, Card } from '../../components/ui'
 
 export function Login() {
   const { signIn } = useAuth()
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -15,11 +17,12 @@ export function Login() {
     setLoading(true)
 
     const user = await signIn(email, password)
-    if (!user) {
+    if (user) {
+      navigate('/')
+    } else {
       setError('Email ou senha inválidos')
+      setLoading(false)
     }
-
-    setLoading(false)
   }
 
   return (

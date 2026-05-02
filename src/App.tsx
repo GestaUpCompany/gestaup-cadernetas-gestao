@@ -2,8 +2,17 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { useAuth } from './contexts/AuthContext'
 import { Login } from './pages/auth/Login'
 import { Signup } from './pages/auth/Signup'
+import { AdminLayout } from './components/layout/AdminLayout'
+import { ControllerLayout } from './components/layout/ControllerLayout'
+import { AdminRoute } from './components/routes/AdminRoute'
+import { ControllerRoute } from './components/routes/ControllerRoute'
+import { AdminDashboard } from './pages/admin/Dashboard'
+import { FazendasList } from './pages/admin/Fazendas'
+import { NovaFazenda } from './pages/admin/NovaFazenda'
+import { EditarFazenda } from './pages/admin/EditarFazenda'
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+// Redirecionamento baseado no papel do usuário
+function RoleRedirect() {
   const { user, loading } = useAuth()
 
   if (loading) {
@@ -18,7 +27,15 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" replace />
   }
 
-  return <>{children}</>
+  if (user.papel === 'admin') {
+    return <Navigate to="/admin/dashboard" replace />
+  }
+
+  if (user.papel === 'controller') {
+    return <Navigate to="/controller/dashboard" replace />
+  }
+
+  return <Navigate to="/login" replace />
 }
 
 function App() {
@@ -27,20 +44,66 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        
+        {/* Rotas Admin */}
         <Route
-          path="/"
+          path="/admin/dashboard"
           element={
-            <ProtectedRoute>
-              <div className="min-h-screen bg-gray-100">
-                <div className="container mx-auto px-4 py-8">
-                  <h1 className="text-3xl font-bold text-gray-800">GestaUp - Cadernetas Gestão</h1>
-                  <p className="text-gray-600 mt-2">Interface Web Administrativa</p>
-                  <p className="text-green-600 mt-4">Autenticado com sucesso!</p>
-                </div>
-              </div>
-            </ProtectedRoute>
+            <AdminRoute>
+              <AdminLayout title="Dashboard Admin">
+                <AdminDashboard />
+              </AdminLayout>
+            </AdminRoute>
           }
         />
+        <Route
+          path="/admin/fazendas"
+          element={
+            <AdminRoute>
+              <AdminLayout title="Fazendas">
+                <FazendasList />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/fazendas/nova"
+          element={
+            <AdminRoute>
+              <AdminLayout title="Nova Fazenda">
+                <NovaFazenda />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/fazendas/:id"
+          element={
+            <AdminRoute>
+              <AdminLayout title="Editar Fazenda">
+                <EditarFazenda />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        
+        {/* Rotas Controller */}
+        <Route
+          path="/controller/dashboard"
+          element={
+            <ControllerRoute>
+              <ControllerLayout title="Dashboard Controller">
+                <div className="text-center py-12">
+                  <h2 className="text-3xl font-bold text-gray-800 mb-4">Bem-vindo ao GestaUp</h2>
+                  <p className="text-gray-600">Dashboard Controller - Visão da sua fazenda</p>
+                </div>
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        
+        {/* Redirecionamento padrão */}
+        <Route path="/" element={<RoleRedirect />} />
       </Routes>
     </Router>
   )

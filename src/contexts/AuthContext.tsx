@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { User, signIn, signUp, signOut, getCurrentUser, onAuthStateChange } from '../services/authService'
 
@@ -16,14 +17,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    console.log('AuthProvider: Iniciando verificação de usuário...')
+    
     // Verificar usuário atual ao carregar
     getCurrentUser().then((currentUser) => {
+      console.log('AuthProvider: getCurrentUser retornou:', currentUser)
       setUser(currentUser)
+      setLoading(false)
+    }).catch((error) => {
+      console.error('AuthProvider: Erro ao buscar usuário atual:', error)
       setLoading(false)
     })
 
     // Escutar mudanças no estado de autenticação
     onAuthStateChange((currentUser) => {
+      console.log('AuthProvider: onAuthStateChange:', currentUser)
       setUser(currentUser)
       setLoading(false)
     })
