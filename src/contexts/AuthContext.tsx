@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { User, signIn, signUp, signOut, getCurrentUser, onAuthStateChange } from '../services/authService'
+import { User, signIn, signUp, signOut, getCurrentUser } from '../services/authService'
 
 interface AuthContextType {
   user: User | null
@@ -19,22 +19,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     console.log('AuthProvider: Iniciando verificação de usuário...')
     
-    // Verificar usuário atual ao carregar
-    getCurrentUser().then((currentUser) => {
-      console.log('AuthProvider: getCurrentUser retornou:', currentUser)
-      setUser(currentUser)
+    // Timeout de 5 segundos para evitar travamento
+    const timeoutId = setTimeout(() => {
+      console.warn('AuthProvider: Timeout após 5 segundos, assumindo usuário não logado')
       setLoading(false)
-    }).catch((error) => {
-      console.error('AuthProvider: Erro ao buscar usuário atual:', error)
-      setLoading(false)
-    })
-
-    // Escutar mudanças no estado de autenticação
-    onAuthStateChange((currentUser) => {
-      console.log('AuthProvider: onAuthStateChange:', currentUser)
-      setUser(currentUser)
-      setLoading(false)
-    })
+    }, 5000)
+    
+    // Verificar usuário atual
+    getCurrentUser()
+      .then((currentUser) => {
+        console.log('AuthProvider: Usuário encontrado:', currentUser)
+        clearTimeout(timeoutId)
+        setUser(currentUser)
+        setLoading(false)
+      })
+      .catch((error) => {
+        console.error('AuthProvider: Erro ao buscar usuário:', error)
+        clearTimeout(timeoutId)
+        setLoading(false)
+      })
   }, [])
 
   const handleSignIn = async (email: string, password: string): Promise<User | null> => {

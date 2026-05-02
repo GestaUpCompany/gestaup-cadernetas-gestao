@@ -10,6 +10,9 @@ import { AdminDashboard } from './pages/admin/Dashboard'
 import { FazendasList } from './pages/admin/Fazendas'
 import { NovaFazenda } from './pages/admin/NovaFazenda'
 import { EditarFazenda } from './pages/admin/EditarFazenda'
+import { UsuariosList } from './pages/admin/Usuarios'
+import { NovoUsuario } from './pages/admin/NovoUsuario'
+import { EditarUsuario } from './pages/admin/EditarUsuario'
 
 // Redirecionamento baseado no papel do usuário
 function RoleRedirect() {
@@ -82,6 +85,36 @@ function App() {
             <AdminRoute>
               <AdminLayout title="Editar Fazenda">
                 <EditarFazenda />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/usuarios"
+          element={
+            <AdminRoute>
+              <AdminLayout title="Usuários">
+                <UsuariosList />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/usuarios/novo"
+          element={
+            <AdminRoute>
+              <AdminLayout title="Novo Usuário">
+                <NovoUsuario />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/usuarios/:id"
+          element={
+            <AdminRoute>
+              <AdminLayout title="Editar Usuário">
+                <EditarUsuario />
               </AdminLayout>
             </AdminRoute>
           }

@@ -101,50 +101,38 @@ export async function signOut(): Promise<void> {
 export async function getCurrentUser(): Promise<User | null> {
   console.log('getCurrentUser: Buscando usuário do Supabase Auth...')
   
-  // Adicionar timeout para evitar travamento
-  const timeoutPromise = new Promise<null>((resolve) => {
-    setTimeout(() => {
-      console.error('getCurrentUser: Timeout após 10 segundos')
-      resolve(null)
-    }, 10000)
-  })
+  const { data: { user }, error } = await supabase.auth.getUser()
 
-  const userPromise = (async () => {
-    const { data: { user }, error } = await supabase.auth.getUser()
+  if (error) {
+    console.error('getCurrentUser: Erro ao buscar usuário do Auth:', error)
+    return null
+  }
 
-    if (error) {
-      console.error('getCurrentUser: Erro ao buscar usuário do Auth:', error)
-      return null
-    }
+  if (!user) {
+    console.log('getCurrentUser: Nenhum usuário logado no Auth')
+    return null
+  }
 
-    if (!user) {
-      console.log('getCurrentUser: Nenhum usuário logado no Auth')
-      return null
-    }
+  console.log('getCurrentUser: Usuário encontrado no Auth, buscando dados na tabela usuarios...')
 
-    console.log('getCurrentUser: Usuário encontrado no Auth, buscando dados na tabela usuarios...')
+  const { data: userData, error: userError } = await supabase
+    .from('usuarios')
+    .select('*')
+    .eq('id', user.id)
+    .single()
 
-    const { data: userData, error: userError } = await supabase
-      .from('usuarios')
-      .select('*')
-      .eq('id', user.id)
-      .single()
+  if (userError) {
+    console.error('getCurrentUser: Erro ao buscar dados do usuário (DB):', userError)
+    return null
+  }
 
-    if (userError) {
-      console.error('getCurrentUser: Erro ao buscar dados do usuário (DB):', userError)
-      return null
-    }
+  if (!userData) {
+    console.error('getCurrentUser: Usuário não encontrado na tabela usuarios')
+    return null
+  }
 
-    if (!userData) {
-      console.error('getCurrentUser: Usuário não encontrado na tabela usuarios')
-      return null
-    }
-
-    console.log('getCurrentUser: Usuário encontrado:', userData)
-    return userData as User
-  })()
-
-  return Promise.race([userPromise, timeoutPromise])
+  console.log('getCurrentUser: Usuário encontrado:', userData)
+  return userData as User
 }
 
 export async function onAuthStateChange(callback: (user: User | null) => void) {
