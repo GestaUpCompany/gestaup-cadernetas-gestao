@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getUsuarioById, updateUsuario } from '../../services/usuariosService'
+import { changeUserPassword } from '../../services/authService'
 import { getFazendas, Fazenda } from '../../services/fazendasService'
 import { getFazendasDoUsuario, vincularFazendaAoUsuario, desvincularFazendaDoUsuario } from '../../services/usuarioFazendaService'
 import { Button, Input, Card } from '../../components/ui'
@@ -19,6 +20,11 @@ export function EditarUsuario() {
     telefone: '',
     papel: 'controller' as 'admin' | 'controller',
     ativo: true,
+  })
+
+  const [passwordData, setPasswordData] = useState({
+    newPassword: '',
+    confirmPassword: '',
   })
 
   const [errors, setErrors] = useState({
@@ -94,6 +100,22 @@ export function EditarUsuario() {
       return
     }
 
+    // Atualizar senha se fornecida
+    if (passwordData.newPassword) {
+      if (passwordData.newPassword !== passwordData.confirmPassword) {
+        setError('As senhas não coincidem')
+        setSaving(false)
+        return
+      }
+
+      const passwordChanged = await changeUserPassword(id, passwordData.newPassword)
+      if (!passwordChanged) {
+        setError('Erro ao alterar senha')
+        setSaving(false)
+        return
+      }
+    }
+
     // Atualizar vínculos de fazendas
     // Primeiro, desvincular todas as fazendas atuais
     const fazendasAtuais = await getFazendasDoUsuario(id)
@@ -120,6 +142,11 @@ export function EditarUsuario() {
     if (errors[name as keyof typeof errors]) {
       setErrors(prev => ({ ...prev, [name]: '' }))
     }
+  }
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    setPasswordData(prev => ({ ...prev, [name]: value }))
   }
 
   if (loading) {
@@ -187,6 +214,29 @@ export function EditarUsuario() {
             <label htmlFor="ativo" className="text-sm text-gray-700">
               Usuário ativo
             </label>
+          </div>
+
+          <div className="border-t-2 border-gray-200 pt-4 mt-4">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Alterar Senha</h3>
+            <p className="text-sm text-gray-600 mb-4">Deixe em branco para manter a senha atual</p>
+            
+            <Input
+              label="Nova Senha"
+              name="newPassword"
+              type="password"
+              value={passwordData.newPassword}
+              onChange={handlePasswordChange}
+              placeholder="Mínimo 6 caracteres"
+            />
+
+            <Input
+              label="Confirmar Nova Senha"
+              name="confirmPassword"
+              type="password"
+              value={passwordData.confirmPassword}
+              onChange={handlePasswordChange}
+              placeholder="Digite a senha novamente"
+            />
           </div>
 
           <div className="space-y-2">

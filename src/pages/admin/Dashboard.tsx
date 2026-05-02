@@ -72,7 +72,7 @@ export function AdminDashboard() {
               <div
                 key={fazenda.id}
                 className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
-                onClick={() => navigate(`/admin/fazendas/${fazenda.id}`)}
+                onClick={() => navigate(`/admin/fazendas/${fazenda.id}/detalhes`)}
               >
                 <div className="flex items-center gap-4">
                   {fazenda.logo_url && (

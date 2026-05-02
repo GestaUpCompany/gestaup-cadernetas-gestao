@@ -50,7 +50,7 @@ export function FazendasList() {
             <Card
               key={fazenda.id}
               className="bg-white p-6 hover:shadow-lg transition-shadow cursor-pointer"
-              onClick={() => navigate(`/admin/fazendas/${fazenda.id}`)}
+              onClick={() => navigate(`/admin/fazendas/${fazenda.id}/detalhes`)}
             >
               <div className="flex items-start gap-4">
                 {fazenda.logo_url ? (

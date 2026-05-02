@@ -1,5 +1,7 @@
 import { supabase } from './supabaseClient'
 
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+
 export interface User {
   id: string
   email: string
@@ -69,10 +71,11 @@ export async function signUp(email: string, password: string, nome: string, tele
     return null
   }
 
-  // Criar usuário na tabela usuarios
+  // Criar usuário na tabela usuarios com auth_id
   const { data: userData, error: dbError } = await supabase
     .from('usuarios')
     .insert({
+      id: authData.user.id, // Usar o mesmo ID do Supabase Auth
       email,
       nome,
       telefone,
@@ -144,4 +147,51 @@ export async function onAuthStateChange(callback: (user: User | null) => void) {
       callback(null)
     }
   })
+}
+
+export async function changeUserPassword(usuarioId: string, newPassword: string): Promise<boolean> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      return false
+    }
+
+    // Buscar o auth_id do usuário
+    const { data: userData, error: userError } = await supabase
+      .from('usuarios')
+      .select('auth_id, id')
+      .eq('id', usuarioId)
+      .single()
+
+    if (userError || !userData) {
+      console.error('Erro ao buscar auth_id do usuário:', userError)
+      return false
+    }
+
+    // Usar auth_id se existir, senão usar o próprio id
+    const authId = userData.auth_id || userData.id
+
+    const response = await fetch(
+      `${supabaseUrl}/functions/v1/change-user-password`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId: authId, newPassword }),
+      }
+    )
+
+    if (!response.ok) {
+      const error = await response.json()
+      console.error('Erro ao alterar senha:', error)
+      return false
+    }
+
+    return true
+  } catch (error) {
+    console.error('Erro ao alterar senha:', error)
+    return false
+  }
 }

@@ -10,9 +10,13 @@ import { AdminDashboard } from './pages/admin/Dashboard'
 import { FazendasList } from './pages/admin/Fazendas'
 import { NovaFazenda } from './pages/admin/NovaFazenda'
 import { EditarFazenda } from './pages/admin/EditarFazenda'
+import { DetalhesFazenda } from './pages/admin/DetalhesFazenda'
 import { UsuariosList } from './pages/admin/Usuarios'
 import { NovoUsuario } from './pages/admin/NovoUsuario'
 import { EditarUsuario } from './pages/admin/EditarUsuario'
+import { ControllerDashboard } from './pages/controller/Dashboard'
+import { Pastos } from './pages/controller/Pastos'
+import { Lotes } from './pages/controller/Lotes'
 
 // Redirecionamento baseado no papel do usuário
 function RoleRedirect() {
@@ -90,6 +94,16 @@ function App() {
           }
         />
         <Route
+          path="/admin/fazendas/:id/detalhes"
+          element={
+            <AdminRoute>
+              <AdminLayout title="Detalhes da Fazenda">
+                <DetalhesFazenda />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
           path="/admin/usuarios"
           element={
             <AdminRoute>
@@ -126,10 +140,27 @@ function App() {
           element={
             <ControllerRoute>
               <ControllerLayout title="Dashboard Controller">
-                <div className="text-center py-12">
-                  <h2 className="text-3xl font-bold text-gray-800 mb-4">Bem-vindo ao GestaUp</h2>
-                  <p className="text-gray-600">Dashboard Controller - Visão da sua fazenda</p>
-                </div>
+                <ControllerDashboard />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/pastos"
+          element={
+            <ControllerRoute>
+              <ControllerLayout title="Pastos">
+                <Pastos />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/lotes"
+          element={
+            <ControllerRoute>
+              <ControllerLayout title="Lotes">
+                <Lotes />
               </ControllerLayout>
             </ControllerRoute>
           }
