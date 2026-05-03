@@ -82,7 +82,7 @@ export function NovoUsuario() {
 
     setLoading(true)
 
-    const result = await signUp(formData.email, formData.password, formData.nome, formData.telefone || undefined)
+    const result = await signUp(formData.email, formData.password, formData.nome, formData.telefone || undefined, formData.papel)
 
     if (!result) {
       setError('Erro ao criar usuário. O email já pode estar em uso.')

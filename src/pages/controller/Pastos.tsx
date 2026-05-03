@@ -20,6 +20,7 @@ export function Pastos() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingPasto, setEditingPasto] = useState<Pasto | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
   const [formData, setFormData] = useState({
     nome: '',
     area_util_ha: '',
@@ -169,9 +170,18 @@ export function Pastos() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h2 className="text-2xl font-bold text-gray-800">Pastos</h2>
-        <Button onClick={() => setShowForm(true)}>Novo Pasto</Button>
+        <div className="flex gap-2">
+          <Input
+            type="text"
+            placeholder="Buscar pasto..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-xs"
+          />
+          <Button onClick={() => setShowForm(true)}>Novo Pasto</Button>
+        </div>
       </div>
 
       {showForm && (
@@ -265,42 +275,43 @@ export function Pastos() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {pastos.map((pasto) => (
-            <Card key={pasto.id} className="bg-white p-6">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="font-semibold text-gray-800">{pasto.nome}</h3>
-                  {pasto.area_util_ha && (
-                    <p className="text-sm text-gray-600">
-                      Área: {pasto.area_util_ha} ha
-                    </p>
-                  )}
+          {pastos
+            .filter((pasto) =>
+              pasto.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              (pasto.especie && pasto.especie.toLowerCase().includes(searchTerm.toLowerCase()))
+            )
+            .map((pasto) => (
+              <Card key={pasto.id} className="bg-white p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="font-semibold text-gray-800">{pasto.nome}</h3>
+                    {pasto.area_util_ha && (
+                      <p className="text-sm text-gray-600">Área: {pasto.area_util_ha} ha</p>
+                    )}
+                  </div>
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs ${
+                      pasto.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}
+                  >
+                    {pasto.ativo ? 'Ativo' : 'Inativo'}
+                  </span>
                 </div>
-                <span
-                  className={`px-3 py-1 rounded-full text-xs ${
-                    pasto.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}
-                >
-                  {pasto.ativo ? 'Ativo' : 'Inativo'}
-                </span>
-              </div>
 
-              {pasto.especie && (
-                <p className="text-sm text-gray-600 mb-2">
-                  Espécie: {pasto.especie}
-                </p>
-              )}
+                {pasto.especie && (
+                  <p className="text-sm text-gray-600 mb-2">Espécie: {pasto.especie}</p>
+                )}
 
-              {(pasto.altura_entrada_cm || pasto.altura_saida_cm) && (
-                <div className="text-sm text-gray-600 mb-4">
-                  {pasto.altura_entrada_cm && (
-                    <p>Entrada: {pasto.altura_entrada_cm} cm</p>
-                  )}
-                  {pasto.altura_saida_cm && (
-                    <p>Saída: {pasto.altura_saida_cm} cm</p>
-                  )}
-                </div>
-              )}
+                {(pasto.altura_entrada_cm || pasto.altura_saida_cm) && (
+                  <div className="text-sm text-gray-600 mb-4">
+                    {pasto.altura_entrada_cm && (
+                      <p>Entrada: {pasto.altura_entrada_cm} cm</p>
+                    )}
+                    {pasto.altura_saida_cm && (
+                      <p>Saída: {pasto.altura_saida_cm} cm</p>
+                    )}
+                  </div>
+                )}
 
               <div className="flex gap-2">
                 <Button variant="secondary" onClick={() => handleEdit(pasto)}>

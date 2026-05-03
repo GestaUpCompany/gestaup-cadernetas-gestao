@@ -17,6 +17,23 @@ import { EditarUsuario } from './pages/admin/EditarUsuario'
 import { ControllerDashboard } from './pages/controller/Dashboard'
 import { Pastos } from './pages/controller/Pastos'
 import { Lotes } from './pages/controller/Lotes'
+import { Funcionarios } from './pages/controller/Funcionarios'
+import { Insumos } from './pages/controller/Insumos'
+import { Cadernetas } from './pages/controller/Cadernetas'
+import { Maternidade } from './pages/controller/Maternidade'
+import { MaternidadeDetalhes } from './pages/controller/MaternidadeDetalhes'
+import { Enfermaria } from './pages/controller/Enfermaria'
+import { EnfermariaDetalhes } from './pages/controller/EnfermariaDetalhes'
+import { PastagensCaderneta } from './pages/controller/PastagensCaderneta'
+import { PastagensDetalhes } from './pages/controller/PastagensDetalhes'
+import { Rodeio } from './pages/controller/Rodeio'
+import { RodeioDetalhes } from './pages/controller/RodeioDetalhes'
+import { Suplementacao } from './pages/controller/Suplementacao'
+import { SuplementacaoDetalhes } from './pages/controller/SuplementacaoDetalhes'
+import { Bebedouros } from './pages/controller/Bebedouros'
+import { BebedourosDetalhes } from './pages/controller/BebedourosDetalhes'
+import { Movimentacao } from './pages/controller/Movimentacao'
+import { MovimentacaoDetalhes } from './pages/controller/MovimentacaoDetalhes'
 
 // Redirecionamento baseado no papel do usuário
 function RoleRedirect() {
@@ -161,6 +178,176 @@ function App() {
             <ControllerRoute>
               <ControllerLayout title="Lotes">
                 <Lotes />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/funcionarios"
+          element={
+            <ControllerRoute>
+              <ControllerLayout title="Funcionários">
+                <Funcionarios />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/insumos"
+          element={
+            <ControllerRoute>
+              <ControllerLayout title="Insumos">
+                <Insumos />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/cadernetas"
+          element={
+            <ControllerRoute>
+              <ControllerLayout title="Cadernetas">
+                <Cadernetas />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/maternidade"
+          element={
+            <ControllerRoute>
+              <ControllerLayout title="Maternidade">
+                <Maternidade />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/maternidade/:id"
+          element={
+            <ControllerRoute>
+              <ControllerLayout title="Detalhes Maternidade">
+                <MaternidadeDetalhes />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/enfermaria"
+          element={
+            <ControllerRoute>
+              <ControllerLayout title="Enfermaria">
+                <Enfermaria />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/enfermaria/:id"
+          element={
+            <ControllerRoute>
+              <ControllerLayout title="Detalhes Enfermaria">
+                <EnfermariaDetalhes />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/pastagens-caderneta"
+          element={
+            <ControllerRoute>
+              <ControllerLayout title="Pastagens">
+                <PastagensCaderneta />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/pastagens-caderneta/:id"
+          element={
+            <ControllerRoute>
+              <ControllerLayout title="Detalhes Pastagens">
+                <PastagensDetalhes />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/rodeio"
+          element={
+            <ControllerRoute>
+              <ControllerLayout title="Rodeio">
+                <Rodeio />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/rodeio/:id"
+          element={
+            <ControllerRoute>
+              <ControllerLayout title="Detalhes Rodeio">
+                <RodeioDetalhes />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/suplementacao"
+          element={
+            <ControllerRoute>
+              <ControllerLayout title="Suplementação">
+                <Suplementacao />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/suplementacao/:id"
+          element={
+            <ControllerRoute>
+              <ControllerLayout title="Detalhes Suplementação">
+                <SuplementacaoDetalhes />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/bebedouros"
+          element={
+            <ControllerRoute>
+              <ControllerLayout title="Bebedouros">
+                <Bebedouros />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/bebedouros/:id"
+          element={
+            <ControllerRoute>
+              <ControllerLayout title="Detalhes Bebedouros">
+                <BebedourosDetalhes />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/movimentacao"
+          element={
+            <ControllerRoute>
+              <ControllerLayout title="Movimentação">
+                <Movimentacao />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/movimentacao/:id"
+          element={
+            <ControllerRoute>
+              <ControllerLayout title="Detalhes Movimentação">
+                <MovimentacaoDetalhes />
               </ControllerLayout>
             </ControllerRoute>
           }

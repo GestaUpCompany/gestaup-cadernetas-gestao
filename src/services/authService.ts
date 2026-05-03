@@ -55,7 +55,7 @@ export async function signIn(email: string, password: string): Promise<Session |
   }
 }
 
-export async function signUp(email: string, password: string, nome: string, telefone?: string): Promise<User | null> {
+export async function signUp(email: string, password: string, nome: string, telefone?: string, papel: 'admin' | 'controller' = 'controller'): Promise<User | null> {
   // Criar usuário no Supabase Auth
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
@@ -79,6 +79,7 @@ export async function signUp(email: string, password: string, nome: string, tele
       email,
       nome,
       telefone,
+      papel,
       ativo: true,
     })
     .select()

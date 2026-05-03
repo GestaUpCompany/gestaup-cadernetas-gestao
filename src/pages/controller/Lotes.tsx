@@ -20,6 +20,7 @@ export function Lotes() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingLote, setEditingLote] = useState<Lote | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
   const [formData, setFormData] = useState({
     nome: '',
     numero_cabecas: '',
@@ -218,9 +219,18 @@ export function Lotes() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h2 className="text-2xl font-bold text-gray-800">Lotes</h2>
-        <Button onClick={() => setShowForm(true)}>Novo Lote</Button>
+        <div className="flex gap-2">
+          <Input
+            type="text"
+            placeholder="Buscar lote..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-xs"
+          />
+          <Button onClick={() => setShowForm(true)}>Novo Lote</Button>
+        </div>
       </div>
 
       {showForm && (
@@ -332,7 +342,11 @@ export function Lotes() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {lotes.map((lote) => (
+          {lotes
+            .filter((lote) =>
+              lote.nome.toLowerCase().includes(searchTerm.toLowerCase())
+            )
+            .map((lote) => (
             <Card key={lote.id} className="bg-white p-6">
               <div className="flex justify-between items-start mb-4">
                 <div>

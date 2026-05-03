@@ -28,6 +28,9 @@ interface CadernetaStats {
   enfermaria: number
   pastagens: number
   rodeio: number
+  suplementacao: number
+  bebedouros: number
+  movimentacao: number
 }
 
 export function ControllerDashboard() {
@@ -46,6 +49,9 @@ export function ControllerDashboard() {
     enfermaria: 0,
     pastagens: 0,
     rodeio: 0,
+    suplementacao: 0,
+    bebedouros: 0,
+    movimentacao: 0,
   })
 
   useEffect(() => {
@@ -119,11 +125,17 @@ export function ControllerDashboard() {
       { count: enfermariaCount },
       { count: pastagensCount },
       { count: rodeioCount },
+      { count: suplementacaoCount },
+      { count: bebedourosCount },
+      { count: movimentacaoCount },
     ] = await Promise.all([
       supabase.from('registros_maternidade').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
       supabase.from('registros_enfermaria').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
       supabase.from('registros_pastagens').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
       supabase.from('registros_rodeio').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
+      supabase.from('registros_suplementacao').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
+      supabase.from('registros_bebedouros').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
+      supabase.from('registros_movimentacao').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
     ])
 
     setCadastroStats({
@@ -138,6 +150,9 @@ export function ControllerDashboard() {
       enfermaria: enfermariaCount || 0,
       pastagens: pastagensCount || 0,
       rodeio: rodeioCount || 0,
+      suplementacao: suplementacaoCount || 0,
+      bebedouros: bebedourosCount || 0,
+      movimentacao: movimentacaoCount || 0,
     })
   }
 
@@ -239,7 +254,7 @@ export function ControllerDashboard() {
             <Button
               variant="secondary"
               className="mt-4 w-full"
-              onClick={() => navigate('/controller/cadernetas/maternidade')}
+              onClick={() => navigate('/controller/maternidade')}
             >
               Ver Registros
             </Button>
@@ -250,7 +265,7 @@ export function ControllerDashboard() {
             <Button
               variant="secondary"
               className="mt-4 w-full"
-              onClick={() => navigate('/controller/cadernetas/enfermaria')}
+              onClick={() => navigate('/controller/enfermaria')}
             >
               Ver Registros
             </Button>
@@ -261,7 +276,7 @@ export function ControllerDashboard() {
             <Button
               variant="secondary"
               className="mt-4 w-full"
-              onClick={() => navigate('/controller/cadernetas/pastagens')}
+              onClick={() => navigate('/controller/pastagens-caderneta')}
             >
               Ver Registros
             </Button>
@@ -272,7 +287,40 @@ export function ControllerDashboard() {
             <Button
               variant="secondary"
               className="mt-4 w-full"
-              onClick={() => navigate('/controller/cadernetas/rodeio')}
+              onClick={() => navigate('/controller/rodeio')}
+            >
+              Ver Registros
+            </Button>
+          </Card>
+          <Card className="bg-white p-6">
+            <p className="text-sm text-gray-500 mb-2">Suplementação</p>
+            <p className="text-4xl font-bold text-orange-600">{cadernetaStats.suplementacao}</p>
+            <Button
+              variant="secondary"
+              className="mt-4 w-full"
+              onClick={() => navigate('/controller/suplementacao')}
+            >
+              Ver Registros
+            </Button>
+          </Card>
+          <Card className="bg-white p-6">
+            <p className="text-sm text-gray-500 mb-2">Bebedouros</p>
+            <p className="text-4xl font-bold text-cyan-600">{cadernetaStats.bebedouros}</p>
+            <Button
+              variant="secondary"
+              className="mt-4 w-full"
+              onClick={() => navigate('/controller/bebedouros')}
+            >
+              Ver Registros
+            </Button>
+          </Card>
+          <Card className="bg-white p-6">
+            <p className="text-sm text-gray-500 mb-2">Movimentação</p>
+            <p className="text-4xl font-bold text-purple-600">{cadernetaStats.movimentacao}</p>
+            <Button
+              variant="secondary"
+              className="mt-4 w-full"
+              onClick={() => navigate('/controller/movimentacao')}
             >
               Ver Registros
             </Button>
@@ -283,15 +331,18 @@ export function ControllerDashboard() {
       {/* Ações Rápidas */}
       <Card className="bg-white p-6">
         <h3 className="text-xl font-semibold text-gray-800 mb-4">Ações Rápidas</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Button onClick={() => navigate('/controller/pastos/novo')}>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Button onClick={() => navigate('/controller/pastos')}>
             Novo Pasto
           </Button>
-          <Button onClick={() => navigate('/controller/lotes/novo')}>
+          <Button onClick={() => navigate('/controller/lotes')}>
             Novo Lote
           </Button>
-          <Button onClick={() => navigate('/controller/funcionarios/novo')}>
+          <Button onClick={() => navigate('/controller/funcionarios')}>
             Novo Funcionário
+          </Button>
+          <Button onClick={() => navigate('/controller/insumos')}>
+            Novo Insumo
           </Button>
         </div>
       </Card>
