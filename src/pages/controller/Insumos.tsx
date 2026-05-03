@@ -164,6 +164,7 @@ export function Insumos() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h2 className="text-2xl font-bold text-gray-800">Insumos</h2>
         <div className="flex gap-2">
@@ -172,14 +173,14 @@ export function Insumos() {
             placeholder="Buscar insumo..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-xs"
+            className="max-w-xs border-gray-200 focus:border-accent"
           />
           <Button onClick={() => setShowForm(true)}>Novo Insumo</Button>
         </div>
       </div>
 
       {showForm && (
-        <Card className="bg-white p-6">
+        <Card className="bg-white p-6 border-0 shadow-sm">
           <h3 className="text-xl font-semibold text-gray-800 mb-4">
             {editingInsumo ? 'Editar Insumo' : 'Novo Insumo'}
           </h3>
@@ -194,6 +195,7 @@ export function Insumos() {
                 onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                 required
                 placeholder="Nome do insumo"
+                className="border-gray-200 focus:border-accent"
               />
             </div>
 
@@ -206,6 +208,7 @@ export function Insumos() {
                 value={formData.tipo}
                 onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
                 placeholder="Ex: Ração, Sal, Vacina, Medicamento"
+                className="border-gray-200 focus:border-accent"
               />
             </div>
 
@@ -219,6 +222,7 @@ export function Insumos() {
                 value={formData.estoque_atual}
                 onChange={(e) => setFormData({ ...formData, estoque_atual: e.target.value })}
                 placeholder="Ex: 100"
+                className="border-gray-200 focus:border-accent"
               />
             </div>
 
@@ -231,6 +235,7 @@ export function Insumos() {
                 value={formData.unidade}
                 onChange={(e) => setFormData({ ...formData, unidade: e.target.value })}
                 placeholder="Ex: kg, litros, unidades"
+                className="border-gray-200 focus:border-accent"
               />
             </div>
 
@@ -247,7 +252,8 @@ export function Insumos() {
       )}
 
       {insumos.length === 0 ? (
-        <Card className="bg-white p-6 text-center">
+        <Card className="bg-white p-12 border-0 shadow-sm text-center">
+          <div className="text-6xl mb-4">📦</div>
           <p className="text-gray-600 mb-4">Nenhum insumo cadastrado</p>
           <Button onClick={() => setShowForm(true)}>Criar Primeiro Insumo</Button>
         </Card>
@@ -259,16 +265,20 @@ export function Insumos() {
               (insumo.tipo && insumo.tipo.toLowerCase().includes(searchTerm.toLowerCase()))
             )
             .map((insumo) => (
-            <Card key={insumo.id} className="bg-white p-6">
+            <Card 
+              key={insumo.id} 
+              className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+              onClick={() => handleEdit(insumo)}
+            >
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h3 className="font-semibold text-gray-800">{insumo.nome}</h3>
+                  <h3 className="font-semibold text-gray-800 text-lg">{insumo.nome}</h3>
                   {insumo.tipo && (
-                    <p className="text-sm text-gray-600">{insumo.tipo}</p>
+                    <p className="text-sm text-gray-500">{insumo.tipo}</p>
                   )}
                 </div>
                 <span
-                  className={`px-3 py-1 rounded-full text-xs ${
+                  className={`px-3 py-1 rounded-full text-xs font-medium ${
                     insumo.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                   }`}
                 >
@@ -278,24 +288,38 @@ export function Insumos() {
 
               <div className="space-y-2 mb-4">
                 {insumo.estoque_atual !== undefined && insumo.estoque_atual !== null && (
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-gray-500">
                     <span className="font-medium">Estoque:</span> {insumo.estoque_atual}
                     {insumo.unidade && ` ${insumo.unidade}`}
                   </p>
                 )}
 
                 {insumo.unidade && !insumo.estoque_atual && (
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-gray-500">
                     <span className="font-medium">Unidade:</span> {insumo.unidade}
                   </p>
                 )}
               </div>
 
               <div className="flex gap-2">
-                <Button variant="secondary" onClick={() => handleEdit(insumo)}>
+                <Button 
+                  variant="secondary" 
+                  className="flex-1"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleEdit(insumo)
+                  }}
+                >
                   Editar
                 </Button>
-                <Button variant="secondary" onClick={() => handleDelete(insumo.id)}>
+                <Button 
+                  variant="secondary" 
+                  className="flex-1"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleDelete(insumo.id)
+                  }}
+                >
                   Excluir
                 </Button>
               </div>

@@ -219,6 +219,7 @@ export function Lotes() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h2 className="text-2xl font-bold text-gray-800">Lotes</h2>
         <div className="flex gap-2">
@@ -227,14 +228,14 @@ export function Lotes() {
             placeholder="Buscar lote..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-xs"
+            className="max-w-xs border-gray-200 focus:border-accent"
           />
           <Button onClick={() => setShowForm(true)}>Novo Lote</Button>
         </div>
       </div>
 
       {showForm && (
-        <Card className="bg-white p-6">
+        <Card className="bg-white p-6 border-0 shadow-sm">
           <h3 className="text-xl font-semibold text-gray-800 mb-4">
             {editingLote ? 'Editar Lote' : 'Novo Lote'}
           </h3>
@@ -249,6 +250,7 @@ export function Lotes() {
                 onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                 required
                 placeholder="Nome do lote"
+                className="border-gray-200 focus:border-accent"
               />
             </div>
 
@@ -263,6 +265,7 @@ export function Lotes() {
                   onChange={(e) => setFormData({ ...formData, numero_cabecas: e.target.value })}
                   required
                   placeholder="Ex: 100"
+                  className="border-gray-200 focus:border-accent"
                 />
               </div>
 
@@ -276,6 +279,7 @@ export function Lotes() {
                   value={formData.peso_vivo_kg}
                   onChange={(e) => setFormData({ ...formData, peso_vivo_kg: e.target.value })}
                   placeholder="Ex: 450.5"
+                  className="border-gray-200 focus:border-accent"
                 />
               </div>
             </div>
@@ -308,6 +312,7 @@ export function Lotes() {
                 value={formData.categoria_outros}
                 onChange={(e) => setFormData({ ...formData, categoria_outros: e.target.value })}
                 placeholder="Digite outra categoria (opcional)"
+                className="border-gray-200 focus:border-accent"
               />
             </div>
 
@@ -320,6 +325,7 @@ export function Lotes() {
                 value={formData.quantidade_bezerros}
                 onChange={(e) => setFormData({ ...formData, quantidade_bezerros: e.target.value })}
                 placeholder="Ex: 25"
+                className="border-gray-200 focus:border-accent"
               />
             </div>
 
@@ -336,7 +342,8 @@ export function Lotes() {
       )}
 
       {lotes.length === 0 ? (
-        <Card className="bg-white p-6 text-center">
+        <Card className="bg-white p-12 border-0 shadow-sm text-center">
+          <div className="text-6xl mb-4">🐄</div>
           <p className="text-gray-600 mb-4">Nenhum lote cadastrado</p>
           <Button onClick={() => setShowForm(true)}>Criar Primeiro Lote</Button>
         </Card>
@@ -347,18 +354,22 @@ export function Lotes() {
               lote.nome.toLowerCase().includes(searchTerm.toLowerCase())
             )
             .map((lote) => (
-            <Card key={lote.id} className="bg-white p-6">
+            <Card 
+              key={lote.id} 
+              className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+              onClick={() => handleEdit(lote)}
+            >
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h3 className="font-semibold text-gray-800">{lote.nome}</h3>
+                  <h3 className="font-semibold text-gray-800 text-lg">{lote.nome}</h3>
                   {lote.numero_cabecas && (
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-500">
                       {lote.numero_cabecas} cabeças
                     </p>
                   )}
                 </div>
                 <span
-                  className={`px-3 py-1 rounded-full text-xs ${
+                  className={`px-3 py-1 rounded-full text-xs font-medium ${
                     lote.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                   }`}
                 >
@@ -368,7 +379,7 @@ export function Lotes() {
 
               <div className="space-y-2 mb-4">
                 {lote.peso_vivo_kg && (
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-gray-500">
                     <span className="font-medium">Peso Vivo:</span> {lote.peso_vivo_kg} kg
                   </p>
                 )}
@@ -403,17 +414,31 @@ export function Lotes() {
                 )}
 
                 {lote.quantidade_bezerros && (
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-gray-500">
                     <span className="font-medium">Bezerros:</span> {lote.quantidade_bezerros}
                   </p>
                 )}
               </div>
 
               <div className="flex gap-2">
-                <Button variant="secondary" onClick={() => handleEdit(lote)}>
+                <Button 
+                  variant="secondary" 
+                  className="flex-1"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleEdit(lote)
+                  }}
+                >
                   Editar
                 </Button>
-                <Button variant="secondary" onClick={() => handleDelete(lote.id)}>
+                <Button 
+                  variant="secondary" 
+                  className="flex-1"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleDelete(lote.id)
+                  }}
+                >
                   Excluir
                 </Button>
               </div>

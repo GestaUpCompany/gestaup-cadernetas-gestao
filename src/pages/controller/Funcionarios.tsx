@@ -164,6 +164,7 @@ export function Funcionarios() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h2 className="text-2xl font-bold text-gray-800">Funcionários</h2>
         <div className="flex gap-2">
@@ -172,14 +173,14 @@ export function Funcionarios() {
             placeholder="Buscar funcionário..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-xs"
+            className="max-w-xs border-gray-200 focus:border-accent"
           />
           <Button onClick={() => setShowForm(true)}>Novo Funcionário</Button>
         </div>
       </div>
 
       {showForm && (
-        <Card className="bg-white p-6">
+        <Card className="bg-white p-6 border-0 shadow-sm">
           <h3 className="text-xl font-semibold text-gray-800 mb-4">
             {editingFuncionario ? 'Editar Funcionário' : 'Novo Funcionário'}
           </h3>
@@ -194,6 +195,7 @@ export function Funcionarios() {
                 onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                 required
                 placeholder="Nome completo"
+                className="border-gray-200 focus:border-accent"
               />
             </div>
 
@@ -206,6 +208,7 @@ export function Funcionarios() {
                 value={formData.cpf}
                 onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
                 placeholder="000.000.000-00"
+                className="border-gray-200 focus:border-accent"
               />
             </div>
 
@@ -218,6 +221,7 @@ export function Funcionarios() {
                 value={formData.telefone}
                 onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
                 placeholder="(00) 00000-0000"
+                className="border-gray-200 focus:border-accent"
               />
             </div>
 
@@ -230,6 +234,7 @@ export function Funcionarios() {
                 value={formData.cargo}
                 onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
                 placeholder="Ex: Peão, Tratorista, Administrador"
+                className="border-gray-200 focus:border-accent"
               />
             </div>
 
@@ -246,7 +251,8 @@ export function Funcionarios() {
       )}
 
       {funcionarios.length === 0 ? (
-        <Card className="bg-white p-6 text-center">
+        <Card className="bg-white p-12 border-0 shadow-sm text-center">
+          <div className="text-6xl mb-4">👷</div>
           <p className="text-gray-600 mb-4">Nenhum funcionário cadastrado</p>
           <Button onClick={() => setShowForm(true)}>Criar Primeiro Funcionário</Button>
         </Card>
@@ -259,16 +265,20 @@ export function Funcionarios() {
               (funcionario.cpf && funcionario.cpf.includes(searchTerm))
             )
             .map((funcionario) => (
-            <Card key={funcionario.id} className="bg-white p-6">
+            <Card 
+              key={funcionario.id} 
+              className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+              onClick={() => handleEdit(funcionario)}
+            >
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h3 className="font-semibold text-gray-800">{funcionario.nome}</h3>
+                  <h3 className="font-semibold text-gray-800 text-lg">{funcionario.nome}</h3>
                   {funcionario.cargo && (
-                    <p className="text-sm text-gray-600">{funcionario.cargo}</p>
+                    <p className="text-sm text-gray-500">{funcionario.cargo}</p>
                   )}
                 </div>
                 <span
-                  className={`px-3 py-1 rounded-full text-xs ${
+                  className={`px-3 py-1 rounded-full text-xs font-medium ${
                     funcionario.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                   }`}
                 >
@@ -278,23 +288,37 @@ export function Funcionarios() {
 
               <div className="space-y-2 mb-4">
                 {funcionario.cpf && (
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-gray-500">
                     <span className="font-medium">CPF:</span> {funcionario.cpf}
                   </p>
                 )}
 
                 {funcionario.telefone && (
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-gray-500">
                     <span className="font-medium">Telefone:</span> {funcionario.telefone}
                   </p>
                 )}
               </div>
 
               <div className="flex gap-2">
-                <Button variant="secondary" onClick={() => handleEdit(funcionario)}>
+                <Button 
+                  variant="secondary" 
+                  className="flex-1"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleEdit(funcionario)
+                  }}
+                >
                   Editar
                 </Button>
-                <Button variant="secondary" onClick={() => handleDelete(funcionario.id)}>
+                <Button 
+                  variant="secondary" 
+                  className="flex-1"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleDelete(funcionario.id)
+                  }}
+                >
                   Excluir
                 </Button>
               </div>
