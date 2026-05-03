@@ -34,6 +34,14 @@ interface CadernetaStats {
   movimentacao: number
 }
 
+interface RecentActivity {
+  id: string
+  type: string
+  title: string
+  date: string
+  path: string
+}
+
 export function ControllerDashboard() {
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -54,11 +62,88 @@ export function ControllerDashboard() {
     bebedouros: 0,
     movimentacao: 0,
   })
+  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([])
 
   useEffect(() => {
     loadFazenda()
     loadStats()
+    loadRecentActivities()
   }, [user])
+
+  const loadRecentActivities = async () => {
+    if (!user) return
+
+    // Buscar fazenda vinculada
+    const { data: vinculos } = await supabase
+      .from('usuario_fazenda')
+      .select('fazenda_id')
+      .eq('usuario_id', user.id)
+      .eq('ativo', true)
+
+    if (!vinculos || vinculos.length === 0) return
+
+    const fazendaId = vinculos[0].fazenda_id
+
+    // Buscar registros recentes de todas as cadernetas
+    const activities: RecentActivity[] = []
+
+    // Maternidade
+    const { data: maternidadeData } = await supabase
+      .from('registros_maternidade')
+      .select('id, data_parto')
+      .eq('fazenda_id', fazendaId)
+      .order('data_parto', { ascending: false })
+      .limit(1)
+
+    if (maternidadeData && maternidadeData.length > 0) {
+      activities.push({
+        id: maternidadeData[0].id,
+        type: 'Maternidade',
+        title: 'Registro de parto',
+        date: new Date(maternidadeData[0].data_parto).toLocaleDateString('pt-BR'),
+        path: '/controller/maternidade',
+      })
+    }
+
+    // Enfermaria
+    const { data: enfermariaData } = await supabase
+      .from('registros_enfermaria')
+      .select('id, data_tratamento')
+      .eq('fazenda_id', fazendaId)
+      .order('data_tratamento', { ascending: false })
+      .limit(1)
+
+    if (enfermariaData && enfermariaData.length > 0) {
+      activities.push({
+        id: enfermariaData[0].id,
+        type: 'Enfermaria',
+        title: 'Registro de tratamento',
+        date: new Date(enfermariaData[0].data_tratamento).toLocaleDateString('pt-BR'),
+        path: '/controller/enfermaria',
+      })
+    }
+
+    // Rodeio
+    const { data: rodeioData } = await supabase
+      .from('registros_rodeio')
+      .select('id, data')
+      .eq('fazenda_id', fazendaId)
+      .order('data', { ascending: false })
+      .limit(1)
+
+    if (rodeioData && rodeioData.length > 0) {
+      activities.push({
+        id: rodeioData[0].id,
+        type: 'Rodeio',
+        title: 'Registro de manejo',
+        date: new Date(rodeioData[0].data).toLocaleDateString('pt-BR'),
+        path: '/controller/rodeio',
+      })
+    }
+
+    // Ordenar por data e pegar os 5 mais recentes
+    setRecentActivities(activities.slice(0, 5))
+  }
 
   const loadFazenda = async () => {
     if (!user) return
@@ -171,26 +256,50 @@ export function ControllerDashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header da Fazenda */}
-      <div className="bg-white rounded-lg p-6 shadow-sm">
-        <div className="flex items-center gap-4">
+      <div className="bg-white rounded-lg p-4 shadow-sm border-0">
+        <div className="flex items-center gap-3">
           {fazenda.logo_url ? (
             <img
               src={fazenda.logo_url}
               alt={fazenda.nome}
-              className="w-20 h-20 rounded-lg object-cover"
+              className="w-16 h-16 rounded-lg object-cover"
             />
           ) : (
-            <div className="w-20 h-20 rounded-lg bg-gray-200 flex items-center justify-center">
-              <span className="text-4xl">🏠</span>
+            <div className="w-16 h-16 rounded-lg bg-gray-200 flex items-center justify-center">
+              <span className="text-3xl">🏠</span>
             </div>
           )}
           <div>
-            <h2 className="text-3xl font-bold text-gray-800">{fazenda.nome}</h2>
-            <p className="text-gray-600">ID: {fazenda.acesso_id}</p>
-            {fazenda.cnpj && <p className="text-sm text-gray-600">CNPJ: {fazenda.cnpj}</p>}
+            <h2 className="text-2xl font-bold text-gray-800">{fazenda.nome}</h2>
+            <p className="text-sm text-gray-500">ID: {fazenda.acesso_id}</p>
           </div>
+        </div>
+      </div>
+
+      {/* Resumo Consolidado */}
+      <div>
+        <h3 className="text-xl font-semibold text-gray-800 mb-4">Resumo Consolidado</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="bg-white p-6 border-0 shadow-sm">
+            <p className="text-sm text-gray-500 mb-2">Registros Hoje</p>
+            <p className="text-4xl font-bold text-gray-800">
+              {cadernetaStats.maternidade + cadernetaStats.enfermaria + cadernetaStats.pastagens + cadernetaStats.rodeio + cadernetaStats.suplementacao + cadernetaStats.bebedouros + cadernetaStats.movimentacao}
+            </p>
+          </Card>
+          <Card className="bg-white p-6 border-0 shadow-sm">
+            <p className="text-sm text-gray-500 mb-2">Total Cadastros</p>
+            <p className="text-4xl font-bold text-gray-800">
+              {cadastroStats.pastos + cadastroStats.lotes + cadastroStats.funcionarios + cadastroStats.insumos}
+            </p>
+          </Card>
+          <Card className="bg-white p-6 border-0 shadow-sm">
+            <p className="text-sm text-gray-500 mb-2">Total Registros</p>
+            <p className="text-4xl font-bold text-gray-800">
+              {cadernetaStats.maternidade + cadernetaStats.enfermaria + cadernetaStats.pastagens + cadernetaStats.rodeio + cadernetaStats.suplementacao + cadernetaStats.bebedouros + cadernetaStats.movimentacao}
+            </p>
+          </Card>
         </div>
       </div>
 
@@ -263,18 +372,6 @@ export function ControllerDashboard() {
           </Card>
           <Card 
             className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
-            onClick={() => navigate('/controller/enfermaria')}
-          >
-            <div className="flex items-center gap-4 mb-3">
-              <img src={CADERNETA_IMAGES.enfermaria} alt={CADERNETA_TITLES.enfermaria} className="w-16 h-16 rounded-[32px]" />
-              <div>
-                <p className="text-sm text-gray-500 mb-1">{CADERNETA_TITLES.enfermaria}</p>
-                <p className="text-4xl font-bold text-gray-800">{cadernetaStats.enfermaria}</p>
-              </div>
-            </div>
-          </Card>
-          <Card 
-            className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
             onClick={() => navigate('/controller/pastagens-caderneta')}
           >
             <div className="flex items-center gap-4 mb-3">
@@ -333,8 +430,47 @@ export function ControllerDashboard() {
               </div>
             </div>
           </Card>
+          <Card 
+            className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+            onClick={() => navigate('/controller/enfermaria')}
+          >
+            <div className="flex items-center gap-4 mb-3">
+              <img src={CADERNETA_IMAGES.enfermaria} alt={CADERNETA_TITLES.enfermaria} className="w-16 h-16 rounded-[32px]" />
+              <div>
+                <p className="text-sm text-gray-500 mb-1">{CADERNETA_TITLES.enfermaria}</p>
+                <p className="text-4xl font-bold text-gray-800">{cadernetaStats.enfermaria}</p>
+              </div>
+            </div>
+          </Card>
         </div>
       </div>
+
+      {/* Atividades Recentes */}
+      {recentActivities.length > 0 && (
+        <Card className="bg-white p-6 border-0 shadow-sm">
+          <h3 className="text-xl font-semibold text-gray-800 mb-4">Atividades Recentes</h3>
+          <div className="space-y-3">
+            {recentActivities.map((activity) => (
+              <div
+                key={activity.id}
+                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                onClick={() => navigate(activity.path)}
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center">
+                    <span className="text-lg">📝</span>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-800">{activity.title}</p>
+                    <p className="text-sm text-gray-500">{activity.type}</p>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-500">{activity.date}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Ações Rápidas */}
       <Card className="bg-white p-6 border-0 shadow-sm">
