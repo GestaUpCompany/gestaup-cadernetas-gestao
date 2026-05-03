@@ -14,6 +14,12 @@ const controllerMenuItems = [
   { label: 'Lotes', path: '/controller/lotes' },
   { label: 'Funcionários', path: '/controller/funcionarios' },
   { label: 'Insumos', path: '/controller/insumos' },
+  { label: 'Mineral', path: '/controller/mineral' },
+  { label: 'Proteinado', path: '/controller/proteinado' },
+  { label: 'Ração', path: '/controller/racao' },
+  { label: 'Dietas', path: '/controller/dietas' },
+  { label: 'Fornecedores', path: '/controller/fornecedores' },
+  { label: 'Frigoríficos', path: '/controller/frigorificos' },
   { label: 'Cadernetas', path: '/controller/cadernetas' },
 ]
 

@@ -33,6 +33,12 @@ import { Bebedouros } from './pages/controller/Bebedouros'
 import { BebedourosDetalhes } from './pages/controller/BebedourosDetalhes'
 import { Movimentacao } from './pages/controller/Movimentacao'
 import { MovimentacaoDetalhes } from './pages/controller/MovimentacaoDetalhes'
+import { Mineral } from './pages/controller/Mineral'
+import { Proteinado } from './pages/controller/Proteinado'
+import { Racao } from './pages/controller/Racao'
+import { Dietas } from './pages/controller/Dietas'
+import { Fornecedores } from './pages/controller/Fornecedores'
+import { Frigorificos } from './pages/controller/Frigorificos'
 
 // Redirecionamento baseado no papel do usuário
 function RoleRedirect() {
@@ -196,6 +202,66 @@ function App() {
             <ControllerRoute>
               <ControllerLayout title="Insumos">
                 <Insumos />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/mineral"
+          element={
+            <ControllerRoute>
+              <ControllerLayout title="Mineral">
+                <Mineral />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/proteinado"
+          element={
+            <ControllerRoute>
+              <ControllerLayout title="Proteinado">
+                <Proteinado />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/racao"
+          element={
+            <ControllerRoute>
+              <ControllerLayout title="Ração">
+                <Racao />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/dietas"
+          element={
+            <ControllerRoute>
+              <ControllerLayout title="Dietas">
+                <Dietas />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/fornecedores"
+          element={
+            <ControllerRoute>
+              <ControllerLayout title="Fornecedores">
+                <Fornecedores />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/frigorificos"
+          element={
+            <ControllerRoute>
+              <ControllerLayout title="Frigoríficos">
+                <Frigorificos />
               </ControllerLayout>
             </ControllerRoute>
           }
