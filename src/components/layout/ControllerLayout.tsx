@@ -5,7 +5,6 @@ import { Header } from './Header'
 
 interface ControllerLayoutProps {
   children: ReactNode
-  title: string
 }
 
 const menuStructure = [
@@ -46,7 +45,7 @@ const menuStructure = [
   },
 ]
 
-export function ControllerLayout({ children, title }: ControllerLayoutProps) {
+export function ControllerLayout({ children }: ControllerLayoutProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const { user } = useAuth()
@@ -73,7 +72,7 @@ export function ControllerLayout({ children, title }: ControllerLayoutProps) {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <Header title={title} />
+      <Header />
       
       <div className="flex">
         {/* Sidebar - Desktop */}

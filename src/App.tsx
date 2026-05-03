@@ -78,7 +78,7 @@ function App() {
           path="/admin/dashboard"
           element={
             <AdminRoute>
-              <AdminLayout title="Dashboard Admin">
+              <AdminLayout>
                 <AdminDashboard />
               </AdminLayout>
             </AdminRoute>
@@ -88,7 +88,7 @@ function App() {
           path="/admin/fazendas"
           element={
             <AdminRoute>
-              <AdminLayout title="Fazendas">
+              <AdminLayout>
                 <FazendasList />
               </AdminLayout>
             </AdminRoute>
@@ -98,7 +98,7 @@ function App() {
           path="/admin/fazendas/nova"
           element={
             <AdminRoute>
-              <AdminLayout title="Nova Fazenda">
+              <AdminLayout>
                 <NovaFazenda />
               </AdminLayout>
             </AdminRoute>
@@ -108,7 +108,7 @@ function App() {
           path="/admin/fazendas/:id"
           element={
             <AdminRoute>
-              <AdminLayout title="Editar Fazenda">
+              <AdminLayout>
                 <EditarFazenda />
               </AdminLayout>
             </AdminRoute>
@@ -118,7 +118,7 @@ function App() {
           path="/admin/fazendas/:id/detalhes"
           element={
             <AdminRoute>
-              <AdminLayout title="Detalhes da Fazenda">
+              <AdminLayout>
                 <DetalhesFazenda />
               </AdminLayout>
             </AdminRoute>
@@ -128,7 +128,7 @@ function App() {
           path="/admin/usuarios"
           element={
             <AdminRoute>
-              <AdminLayout title="Usuários">
+              <AdminLayout>
                 <UsuariosList />
               </AdminLayout>
             </AdminRoute>
@@ -138,7 +138,7 @@ function App() {
           path="/admin/usuarios/novo"
           element={
             <AdminRoute>
-              <AdminLayout title="Novo Usuário">
+              <AdminLayout>
                 <NovoUsuario />
               </AdminLayout>
             </AdminRoute>
@@ -148,7 +148,7 @@ function App() {
           path="/admin/usuarios/:id"
           element={
             <AdminRoute>
-              <AdminLayout title="Editar Usuário">
+              <AdminLayout>
                 <EditarUsuario />
               </AdminLayout>
             </AdminRoute>
@@ -160,7 +160,7 @@ function App() {
           path="/controller/dashboard"
           element={
             <ControllerRoute>
-              <ControllerLayout title="Dashboard Controller">
+              <ControllerLayout>
                 <ControllerDashboard />
               </ControllerLayout>
             </ControllerRoute>
@@ -170,7 +170,7 @@ function App() {
           path="/controller/pastos"
           element={
             <ControllerRoute>
-              <ControllerLayout title="Pastos">
+              <ControllerLayout>
                 <Pastos />
               </ControllerLayout>
             </ControllerRoute>
@@ -180,7 +180,7 @@ function App() {
           path="/controller/lotes"
           element={
             <ControllerRoute>
-              <ControllerLayout title="Lotes">
+              <ControllerLayout>
                 <Lotes />
               </ControllerLayout>
             </ControllerRoute>
@@ -190,7 +190,7 @@ function App() {
           path="/controller/funcionarios"
           element={
             <ControllerRoute>
-              <ControllerLayout title="Funcionários">
+              <ControllerLayout>
                 <Funcionarios />
               </ControllerLayout>
             </ControllerRoute>
@@ -200,7 +200,7 @@ function App() {
           path="/controller/insumos"
           element={
             <ControllerRoute>
-              <ControllerLayout title="Insumos">
+              <ControllerLayout>
                 <Insumos />
               </ControllerLayout>
             </ControllerRoute>
@@ -210,7 +210,7 @@ function App() {
           path="/controller/mineral"
           element={
             <ControllerRoute>
-              <ControllerLayout title="Mineral">
+              <ControllerLayout>
                 <Mineral />
               </ControllerLayout>
             </ControllerRoute>
@@ -220,7 +220,7 @@ function App() {
           path="/controller/proteinado"
           element={
             <ControllerRoute>
-              <ControllerLayout title="Proteinado">
+              <ControllerLayout>
                 <Proteinado />
               </ControllerLayout>
             </ControllerRoute>
@@ -230,7 +230,7 @@ function App() {
           path="/controller/racao"
           element={
             <ControllerRoute>
-              <ControllerLayout title="Ração">
+              <ControllerLayout>
                 <Racao />
               </ControllerLayout>
             </ControllerRoute>
@@ -240,7 +240,7 @@ function App() {
           path="/controller/dietas"
           element={
             <ControllerRoute>
-              <ControllerLayout title="Dietas">
+              <ControllerLayout>
                 <Dietas />
               </ControllerLayout>
             </ControllerRoute>
@@ -250,7 +250,7 @@ function App() {
           path="/controller/fornecedores"
           element={
             <ControllerRoute>
-              <ControllerLayout title="Fornecedores">
+              <ControllerLayout>
                 <Fornecedores />
               </ControllerLayout>
             </ControllerRoute>
@@ -260,7 +260,7 @@ function App() {
           path="/controller/frigorificos"
           element={
             <ControllerRoute>
-              <ControllerLayout title="Frigoríficos">
+              <ControllerLayout>
                 <Frigorificos />
               </ControllerLayout>
             </ControllerRoute>
@@ -270,7 +270,7 @@ function App() {
           path="/controller/cadernetas"
           element={
             <ControllerRoute>
-              <ControllerLayout title="Cadernetas">
+              <ControllerLayout>
                 <Cadernetas />
               </ControllerLayout>
             </ControllerRoute>
@@ -280,7 +280,7 @@ function App() {
           path="/controller/maternidade"
           element={
             <ControllerRoute>
-              <ControllerLayout title="Maternidade">
+              <ControllerLayout>
                 <Maternidade />
               </ControllerLayout>
             </ControllerRoute>
@@ -290,7 +290,7 @@ function App() {
           path="/controller/maternidade/:id"
           element={
             <ControllerRoute>
-              <ControllerLayout title="Detalhes Maternidade">
+              <ControllerLayout>
                 <MaternidadeDetalhes />
               </ControllerLayout>
             </ControllerRoute>
@@ -300,7 +300,7 @@ function App() {
           path="/controller/enfermaria"
           element={
             <ControllerRoute>
-              <ControllerLayout title="Enfermaria">
+              <ControllerLayout>
                 <Enfermaria />
               </ControllerLayout>
             </ControllerRoute>
@@ -310,7 +310,7 @@ function App() {
           path="/controller/enfermaria/:id"
           element={
             <ControllerRoute>
-              <ControllerLayout title="Detalhes Enfermaria">
+              <ControllerLayout>
                 <EnfermariaDetalhes />
               </ControllerLayout>
             </ControllerRoute>
@@ -320,7 +320,7 @@ function App() {
           path="/controller/pastagens-caderneta"
           element={
             <ControllerRoute>
-              <ControllerLayout title="Pastagens">
+              <ControllerLayout>
                 <PastagensCaderneta />
               </ControllerLayout>
             </ControllerRoute>
@@ -330,7 +330,7 @@ function App() {
           path="/controller/pastagens-caderneta/:id"
           element={
             <ControllerRoute>
-              <ControllerLayout title="Detalhes Pastagens">
+              <ControllerLayout>
                 <PastagensDetalhes />
               </ControllerLayout>
             </ControllerRoute>
@@ -340,7 +340,7 @@ function App() {
           path="/controller/rodeio"
           element={
             <ControllerRoute>
-              <ControllerLayout title="Rodeio">
+              <ControllerLayout>
                 <Rodeio />
               </ControllerLayout>
             </ControllerRoute>
@@ -350,7 +350,7 @@ function App() {
           path="/controller/rodeio/:id"
           element={
             <ControllerRoute>
-              <ControllerLayout title="Detalhes Rodeio">
+              <ControllerLayout>
                 <RodeioDetalhes />
               </ControllerLayout>
             </ControllerRoute>
@@ -360,7 +360,7 @@ function App() {
           path="/controller/suplementacao"
           element={
             <ControllerRoute>
-              <ControllerLayout title="Suplementação">
+              <ControllerLayout>
                 <Suplementacao />
               </ControllerLayout>
             </ControllerRoute>
@@ -370,7 +370,7 @@ function App() {
           path="/controller/suplementacao/:id"
           element={
             <ControllerRoute>
-              <ControllerLayout title="Detalhes Suplementação">
+              <ControllerLayout>
                 <SuplementacaoDetalhes />
               </ControllerLayout>
             </ControllerRoute>
@@ -380,7 +380,7 @@ function App() {
           path="/controller/bebedouros"
           element={
             <ControllerRoute>
-              <ControllerLayout title="Bebedouros">
+              <ControllerLayout>
                 <Bebedouros />
               </ControllerLayout>
             </ControllerRoute>
@@ -390,7 +390,7 @@ function App() {
           path="/controller/bebedouros/:id"
           element={
             <ControllerRoute>
-              <ControllerLayout title="Detalhes Bebedouros">
+              <ControllerLayout>
                 <BebedourosDetalhes />
               </ControllerLayout>
             </ControllerRoute>
@@ -400,7 +400,7 @@ function App() {
           path="/controller/movimentacao"
           element={
             <ControllerRoute>
-              <ControllerLayout title="Movimentação">
+              <ControllerLayout>
                 <Movimentacao />
               </ControllerLayout>
             </ControllerRoute>
@@ -410,7 +410,7 @@ function App() {
           path="/controller/movimentacao/:id"
           element={
             <ControllerRoute>
-              <ControllerLayout title="Detalhes Movimentação">
+              <ControllerLayout>
                 <MovimentacaoDetalhes />
               </ControllerLayout>
             </ControllerRoute>

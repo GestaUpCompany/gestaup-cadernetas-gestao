@@ -7,10 +7,10 @@ interface Lote {
   id: string
   fazenda_id: string
   nome: string
-  numero_cabecas?: number
+  n_cabecas?: number
   categorias?: string[]
   peso_vivo_kg?: number
-  quantidade_bezerros?: number
+  qtd_bezerros?: number
   ativo: boolean
 }
 
@@ -121,10 +121,10 @@ export function Lotes() {
     const data = {
       fazenda_id: fazendaId,
       nome: formData.nome,
-      numero_cabecas: formData.numero_cabecas ? parseInt(formData.numero_cabecas) : null,
+      n_cabecas: formData.numero_cabecas ? parseInt(formData.numero_cabecas) : null,
       categorias: categoriasFinal.length > 0 ? categoriasFinal : null,
       peso_vivo_kg: formData.peso_vivo_kg ? parseFloat(formData.peso_vivo_kg) : null,
-      quantidade_bezerros: formData.quantidade_bezerros ? parseInt(formData.quantidade_bezerros) : null,
+      qtd_bezerros: formData.quantidade_bezerros ? parseInt(formData.quantidade_bezerros) : null,
     }
 
     let error
@@ -179,11 +179,11 @@ export function Lotes() {
 
     setFormData({
       nome: lote.nome,
-      numero_cabecas: lote.numero_cabecas?.toString() || '',
+      numero_cabecas: lote.n_cabecas?.toString() || '',
       categorias: cats,
       categoria_outros: '',
       peso_vivo_kg: lote.peso_vivo_kg?.toString() || '',
-      quantidade_bezerros: lote.quantidade_bezerros?.toString() || '',
+      quantidade_bezerros: lote.qtd_bezerros?.toString() || '',
     })
     setShowForm(true)
   }
@@ -222,15 +222,15 @@ export function Lotes() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h2 className="text-2xl font-bold text-gray-800">Lotes</h2>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-start">
           <Input
             type="text"
             placeholder="Buscar lote..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-xs border-gray-200 focus:border-accent"
+            className="max-w-xs border-gray-200 focus:border-accent h-10"
           />
-          <Button onClick={() => setShowForm(true)}>Novo Lote</Button>
+          <Button onClick={() => setShowForm(true)} className="h-10">Novo Lote</Button>
         </div>
       </div>
 
@@ -362,9 +362,9 @@ export function Lotes() {
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <h3 className="font-semibold text-gray-800 text-lg">{lote.nome}</h3>
-                  {lote.numero_cabecas && (
+                  {lote.n_cabecas && (
                     <p className="text-sm text-gray-500">
-                      {lote.numero_cabecas} cabeças
+                      {lote.n_cabecas} cabeças
                     </p>
                   )}
                 </div>
@@ -413,9 +413,9 @@ export function Lotes() {
                   </div>
                 )}
 
-                {lote.quantidade_bezerros && (
+                {lote.qtd_bezerros && (
                   <p className="text-sm text-gray-500">
-                    <span className="font-medium">Bezerros:</span> {lote.quantidade_bezerros}
+                    <span className="font-medium">Bezerros:</span> {lote.qtd_bezerros}
                   </p>
                 )}
               </div>

@@ -204,15 +204,15 @@ export function Fornecedores() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h2 className="text-2xl font-bold text-gray-800">Fornecedores</h2>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-start">
           <Input
             type="text"
             placeholder="Buscar fornecedor..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-xs border-gray-200 focus:border-accent"
+            className="max-w-xs border-gray-200 focus:border-accent h-10"
           />
-          <Button onClick={() => setShowForm(true)}>Novo Fornecedor</Button>
+          <Button onClick={() => setShowForm(true)} className="h-10">Novo Fornecedor</Button>
         </div>
       </div>
 

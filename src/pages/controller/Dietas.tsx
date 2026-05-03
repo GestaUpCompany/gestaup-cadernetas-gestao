@@ -187,15 +187,15 @@ export function Dietas() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h2 className="text-2xl font-bold text-gray-800">Dietas</h2>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-start">
           <Input
             type="text"
             placeholder="Buscar dieta..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-xs border-gray-200 focus:border-accent"
+            className="max-w-xs border-gray-200 focus:border-accent h-10"
           />
-          <Button onClick={() => setShowForm(true)}>Nova Dieta</Button>
+          <Button onClick={() => setShowForm(true)} className="h-10">Nova Dieta</Button>
         </div>
       </div>
 

@@ -4,7 +4,6 @@ import { Sidebar } from './Sidebar'
 
 interface AdminLayoutProps {
   children: ReactNode
-  title: string
 }
 
 const sidebarItems = [
@@ -13,10 +12,10 @@ const sidebarItems = [
   { label: 'Usuários', path: '/admin/usuarios', icon: '👥' },
 ]
 
-export function AdminLayout({ children, title }: AdminLayoutProps) {
+export function AdminLayout({ children }: AdminLayoutProps) {
   return (
     <div className="min-h-screen bg-gray-100">
-      <Header title={title} />
+      <Header />
       <div className="flex">
         <Sidebar items={sidebarItems} />
         <main className="flex-1 p-6">

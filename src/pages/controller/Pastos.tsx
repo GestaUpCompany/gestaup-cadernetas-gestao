@@ -173,15 +173,15 @@ export function Pastos() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h2 className="text-2xl font-bold text-gray-800">Pastos</h2>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-start">
           <Input
             type="text"
             placeholder="Buscar pasto..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-xs border-gray-200 focus:border-accent"
+            className="max-w-xs border-gray-200 focus:border-accent h-10"
           />
-          <Button onClick={() => setShowForm(true)}>Novo Pasto</Button>
+          <Button onClick={() => setShowForm(true)} className="h-10">Novo Pasto</Button>
         </div>
       </div>
 
@@ -232,7 +232,7 @@ export function Pastos() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 items-end">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Altura Entrada (cm)
@@ -262,7 +262,7 @@ export function Pastos() {
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center">
               <Button type="submit" disabled={submitting}>
                 {submitting ? 'Salvando...' : 'Salvar'}
               </Button>
