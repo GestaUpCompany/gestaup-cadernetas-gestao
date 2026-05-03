@@ -170,6 +170,7 @@ export function Pastos() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h2 className="text-2xl font-bold text-gray-800">Pastos</h2>
         <div className="flex gap-2">
@@ -178,14 +179,14 @@ export function Pastos() {
             placeholder="Buscar pasto..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-xs"
+            className="max-w-xs border-gray-200 focus:border-accent"
           />
           <Button onClick={() => setShowForm(true)}>Novo Pasto</Button>
         </div>
       </div>
 
       {showForm && (
-        <Card className="bg-white p-6">
+        <Card className="bg-white p-6 border-0 shadow-sm">
           <h3 className="text-xl font-semibold text-gray-800 mb-4">
             {editingPasto ? 'Editar Pasto' : 'Novo Pasto'}
           </h3>
@@ -200,6 +201,7 @@ export function Pastos() {
                 onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                 required
                 placeholder="Nome do pasto"
+                className="border-gray-200 focus:border-accent"
               />
             </div>
 
@@ -213,6 +215,7 @@ export function Pastos() {
                 value={formData.area_util_ha}
                 onChange={(e) => setFormData({ ...formData, area_util_ha: e.target.value })}
                 placeholder="Ex: 50.5"
+                className="border-gray-200 focus:border-accent"
               />
             </div>
 
@@ -225,6 +228,7 @@ export function Pastos() {
                 value={formData.especie}
                 onChange={(e) => setFormData({ ...formData, especie: e.target.value })}
                 placeholder="Ex: Brachiaria"
+                className="border-gray-200 focus:border-accent"
               />
             </div>
 
@@ -239,6 +243,7 @@ export function Pastos() {
                   value={formData.altura_entrada_cm}
                   onChange={(e) => setFormData({ ...formData, altura_entrada_cm: e.target.value })}
                   placeholder="Ex: 15.0"
+                  className="border-gray-200 focus:border-accent"
                 />
               </div>
 
@@ -252,6 +257,7 @@ export function Pastos() {
                   value={formData.altura_saida_cm}
                   onChange={(e) => setFormData({ ...formData, altura_saida_cm: e.target.value })}
                   placeholder="Ex: 5.0"
+                  className="border-gray-200 focus:border-accent"
                 />
               </div>
             </div>
@@ -269,7 +275,8 @@ export function Pastos() {
       )}
 
       {pastos.length === 0 ? (
-        <Card className="bg-white p-6 text-center">
+        <Card className="bg-white p-12 border-0 shadow-sm text-center">
+          <div className="text-6xl mb-4">🌾</div>
           <p className="text-gray-600 mb-4">Nenhum pasto cadastrado</p>
           <Button onClick={() => setShowForm(true)}>Criar Primeiro Pasto</Button>
         </Card>
@@ -281,16 +288,20 @@ export function Pastos() {
               (pasto.especie && pasto.especie.toLowerCase().includes(searchTerm.toLowerCase()))
             )
             .map((pasto) => (
-              <Card key={pasto.id} className="bg-white p-6">
+              <Card 
+                key={pasto.id} 
+                className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+                onClick={() => handleEdit(pasto)}
+              >
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h3 className="font-semibold text-gray-800">{pasto.nome}</h3>
+                    <h3 className="font-semibold text-gray-800 text-lg">{pasto.nome}</h3>
                     {pasto.area_util_ha && (
-                      <p className="text-sm text-gray-600">Área: {pasto.area_util_ha} ha</p>
+                      <p className="text-sm text-gray-500">Área: {pasto.area_util_ha} ha</p>
                     )}
                   </div>
                   <span
-                    className={`px-3 py-1 rounded-full text-xs ${
+                    className={`px-3 py-1 rounded-full text-xs font-medium ${
                       pasto.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                     }`}
                   >
@@ -299,11 +310,11 @@ export function Pastos() {
                 </div>
 
                 {pasto.especie && (
-                  <p className="text-sm text-gray-600 mb-2">Espécie: {pasto.especie}</p>
+                  <p className="text-sm text-gray-500 mb-2">Espécie: {pasto.especie}</p>
                 )}
 
                 {(pasto.altura_entrada_cm || pasto.altura_saida_cm) && (
-                  <div className="text-sm text-gray-600 mb-4">
+                  <div className="text-sm text-gray-500 mb-4">
                     {pasto.altura_entrada_cm && (
                       <p>Entrada: {pasto.altura_entrada_cm} cm</p>
                     )}
@@ -313,16 +324,30 @@ export function Pastos() {
                   </div>
                 )}
 
-              <div className="flex gap-2">
-                <Button variant="secondary" onClick={() => handleEdit(pasto)}>
-                  Editar
-                </Button>
-                <Button variant="secondary" onClick={() => handleDelete(pasto.id)}>
-                  Excluir
-                </Button>
-              </div>
-            </Card>
-          ))}
+                <div className="flex gap-2">
+                  <Button 
+                    variant="secondary" 
+                    className="flex-1"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleEdit(pasto)
+                    }}
+                  >
+                    Editar
+                  </Button>
+                  <Button 
+                    variant="secondary" 
+                    className="flex-1"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleDelete(pasto.id)
+                    }}
+                  >
+                    Excluir
+                  </Button>
+                </div>
+              </Card>
+            ))}
         </div>
       )}
     </div>
