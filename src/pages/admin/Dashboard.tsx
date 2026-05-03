@@ -26,37 +26,30 @@ export function AdminDashboard() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Estatísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-white p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">Total de Fazendas</h3>
-          <p className="text-4xl font-bold text-primary">{stats.totalFazendas}</p>
-        </Card>
-        <Card className="bg-white p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">Fazendas Ativas</h3>
-          <p className="text-4xl font-bold text-green-600">{stats.fazendasAtivas}</p>
-        </Card>
-        <Card className="bg-white p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">Fazendas Inativas</h3>
-          <p className="text-4xl font-bold text-red-600">{stats.fazendasInativas}</p>
-        </Card>
+    <div className="space-y-8">
+      {/* Visão Geral */}
+      <div>
+        <h2 className="text-2xl font-bold text-gray-800 mb-6">Visão Geral</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="bg-white p-6 border-0 shadow-sm">
+            <h3 className="text-sm text-gray-500 mb-2">Total de Fazendas</h3>
+            <p className="text-4xl font-bold text-gray-800">{stats.totalFazendas}</p>
+          </Card>
+          <Card className="bg-white p-6 border-0 shadow-sm">
+            <h3 className="text-sm text-gray-500 mb-2">Fazendas Ativas</h3>
+            <p className="text-4xl font-bold text-gray-800">{stats.fazendasAtivas}</p>
+          </Card>
+          <Card className="bg-white p-6 border-0 shadow-sm">
+            <h3 className="text-sm text-gray-500 mb-2">Fazendas Inativas</h3>
+            <p className="text-4xl font-bold text-gray-800">{stats.fazendasInativas}</p>
+          </Card>
+        </div>
       </div>
 
-      {/* Ações rápidas */}
-      <div className="flex gap-4">
-        <Button onClick={() => navigate('/admin/fazendas/nova')}>
-          Nova Fazenda
-        </Button>
-        <Button variant="secondary" onClick={() => navigate('/admin/usuarios')}>
-          Novo Usuário
-        </Button>
-      </div>
-
-      {/* Lista de fazendas */}
-      <Card className="bg-white p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-gray-800">Fazendas</h2>
+      {/* Fazendas Recentes */}
+      <Card className="bg-white p-6 border-0 shadow-sm">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-gray-800">Fazendas Recentes</h2>
           <Button variant="secondary" onClick={() => navigate('/admin/fazendas')}>
             Ver Todas
           </Button>
@@ -84,7 +77,7 @@ export function AdminDashboard() {
                   )}
                   <div>
                     <h3 className="font-semibold text-gray-800">{fazenda.nome}</h3>
-                    <p className="text-sm text-gray-600">ID: {fazenda.acesso_id}</p>
+                    <p className="text-sm text-gray-500">ID: {fazenda.acesso_id}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -103,6 +96,14 @@ export function AdminDashboard() {
           </div>
         )}
       </Card>
+
+      {/* Botão Flutuante Nova Fazenda */}
+      <Button
+        onClick={() => navigate('/admin/fazendas/nova')}
+        className="bg-accent text-gray-800 hover:bg-yellow-400"
+      >
+        Nova Fazenda
+      </Button>
     </div>
   )
 }

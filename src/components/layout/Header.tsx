@@ -1,4 +1,5 @@
 import { useAuth } from '../../contexts/AuthContext'
+import { LOGO_GESTAUP } from '../../types/images'
 
 interface HeaderProps {
   title: string
@@ -13,11 +14,17 @@ export function Header({ title }: HeaderProps) {
   }
 
   return (
-    <header className="bg-white border-b-2 border-gray-200 px-6 py-4">
+    <header className="bg-white border-b border-gray-100 px-6 py-4 sticky top-0 z-50">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">{title}</h1>
-          <p className="text-sm text-gray-500">GestaUp - Cadernetas Gestão</p>
+        <div className="flex items-center gap-4">
+          <img 
+            src={LOGO_GESTAUP} 
+            alt="Gesta'Up Logo" 
+            className="h-10 w-auto"
+          />
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">{title}</h1>
+          </div>
         </div>
         <div className="flex items-center gap-4">
           <div className="text-right">
@@ -26,7 +33,7 @@ export function Header({ title }: HeaderProps) {
           </div>
           <button
             onClick={handleLogout}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            className="px-4 py-2 bg-white border border-gray-200 text-gray-800 rounded-lg hover:bg-gray-50 transition-colors"
           >
             Sair
           </button>

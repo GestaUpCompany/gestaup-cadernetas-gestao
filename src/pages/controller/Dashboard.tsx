@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
-import { supabase } from '../../services/supabaseClient'
 import { Card, Button } from '../../components/ui'
+import { supabase } from '../../services/supabaseClient'
+import { CADERNETA_IMAGES, CADERNETA_TITLES } from '../../types/images'
 
 interface Fazenda {
   id: string
@@ -195,11 +196,11 @@ export function ControllerDashboard() {
 
       {/* Estatísticas de Cadastros */}
       <div>
-        <h3 className="text-xl font-semibold text-gray-800 mb-4">Cadastros</h3>
+        <h3 className="text-xl font-semibold text-gray-800 mb-4">Resumo</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="bg-white p-6">
+          <Card className="bg-white p-6 border-0 shadow-sm">
             <p className="text-sm text-gray-500 mb-2">Pastos</p>
-            <p className="text-4xl font-bold text-primary">{cadastroStats.pastos}</p>
+            <p className="text-4xl font-bold text-gray-800">{cadastroStats.pastos}</p>
             <Button
               variant="secondary"
               className="mt-4 w-full"
@@ -208,9 +209,9 @@ export function ControllerDashboard() {
               Gerenciar
             </Button>
           </Card>
-          <Card className="bg-white p-6">
+          <Card className="bg-white p-6 border-0 shadow-sm">
             <p className="text-sm text-gray-500 mb-2">Lotes</p>
-            <p className="text-4xl font-bold text-blue-600">{cadastroStats.lotes}</p>
+            <p className="text-4xl font-bold text-gray-800">{cadastroStats.lotes}</p>
             <Button
               variant="secondary"
               className="mt-4 w-full"
@@ -219,9 +220,9 @@ export function ControllerDashboard() {
               Gerenciar
             </Button>
           </Card>
-          <Card className="bg-white p-6">
+          <Card className="bg-white p-6 border-0 shadow-sm">
             <p className="text-sm text-gray-500 mb-2">Funcionários</p>
-            <p className="text-4xl font-bold text-green-600">{cadastroStats.funcionarios}</p>
+            <p className="text-4xl font-bold text-gray-800">{cadastroStats.funcionarios}</p>
             <Button
               variant="secondary"
               className="mt-4 w-full"
@@ -230,9 +231,9 @@ export function ControllerDashboard() {
               Gerenciar
             </Button>
           </Card>
-          <Card className="bg-white p-6">
+          <Card className="bg-white p-6 border-0 shadow-sm">
             <p className="text-sm text-gray-500 mb-2">Insumos</p>
-            <p className="text-4xl font-bold text-purple-600">{cadastroStats.insumos}</p>
+            <p className="text-4xl font-bold text-gray-800">{cadastroStats.insumos}</p>
             <Button
               variant="secondary"
               className="mt-4 w-full"
@@ -248,88 +249,95 @@ export function ControllerDashboard() {
       <div>
         <h3 className="text-xl font-semibold text-gray-800 mb-4">Cadernetas</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="bg-white p-6">
-            <p className="text-sm text-gray-500 mb-2">Maternidade</p>
-            <p className="text-4xl font-bold text-pink-600">{cadernetaStats.maternidade}</p>
-            <Button
-              variant="secondary"
-              className="mt-4 w-full"
-              onClick={() => navigate('/controller/maternidade')}
-            >
-              Ver Registros
-            </Button>
+          <Card 
+            className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+            onClick={() => navigate('/controller/maternidade')}
+          >
+            <div className="flex items-center gap-4 mb-3">
+              <img src={CADERNETA_IMAGES.maternidade} alt={CADERNETA_TITLES.maternidade} className="w-16 h-16 rounded-[32px]" />
+              <div>
+                <p className="text-sm text-gray-500 mb-1">{CADERNETA_TITLES.maternidade}</p>
+                <p className="text-4xl font-bold text-gray-800">{cadernetaStats.maternidade}</p>
+              </div>
+            </div>
           </Card>
-          <Card className="bg-white p-6">
-            <p className="text-sm text-gray-500 mb-2">Enfermaria</p>
-            <p className="text-4xl font-bold text-red-600">{cadernetaStats.enfermaria}</p>
-            <Button
-              variant="secondary"
-              className="mt-4 w-full"
-              onClick={() => navigate('/controller/enfermaria')}
-            >
-              Ver Registros
-            </Button>
+          <Card 
+            className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+            onClick={() => navigate('/controller/enfermaria')}
+          >
+            <div className="flex items-center gap-4 mb-3">
+              <img src={CADERNETA_IMAGES.enfermaria} alt={CADERNETA_TITLES.enfermaria} className="w-16 h-16 rounded-[32px]" />
+              <div>
+                <p className="text-sm text-gray-500 mb-1">{CADERNETA_TITLES.enfermaria}</p>
+                <p className="text-4xl font-bold text-gray-800">{cadernetaStats.enfermaria}</p>
+              </div>
+            </div>
           </Card>
-          <Card className="bg-white p-6">
-            <p className="text-sm text-gray-500 mb-2">Pastagens</p>
-            <p className="text-4xl font-bold text-yellow-600">{cadernetaStats.pastagens}</p>
-            <Button
-              variant="secondary"
-              className="mt-4 w-full"
-              onClick={() => navigate('/controller/pastagens-caderneta')}
-            >
-              Ver Registros
-            </Button>
+          <Card 
+            className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+            onClick={() => navigate('/controller/pastagens-caderneta')}
+          >
+            <div className="flex items-center gap-4 mb-3">
+              <img src={CADERNETA_IMAGES.pastagens} alt={CADERNETA_TITLES.pastagens} className="w-16 h-16 rounded-[32px]" />
+              <div>
+                <p className="text-sm text-gray-500 mb-1">{CADERNETA_TITLES.pastagens}</p>
+                <p className="text-4xl font-bold text-gray-800">{cadernetaStats.pastagens}</p>
+              </div>
+            </div>
           </Card>
-          <Card className="bg-white p-6">
-            <p className="text-sm text-gray-500 mb-2">Rodeio</p>
-            <p className="text-4xl font-bold text-orange-600">{cadernetaStats.rodeio}</p>
-            <Button
-              variant="secondary"
-              className="mt-4 w-full"
-              onClick={() => navigate('/controller/rodeio')}
-            >
-              Ver Registros
-            </Button>
+          <Card 
+            className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+            onClick={() => navigate('/controller/rodeio')}
+          >
+            <div className="flex items-center gap-4 mb-3">
+              <img src={CADERNETA_IMAGES.rodeio} alt={CADERNETA_TITLES.rodeio} className="w-16 h-16 rounded-[32px]" />
+              <div>
+                <p className="text-sm text-gray-500 mb-1">{CADERNETA_TITLES.rodeio}</p>
+                <p className="text-4xl font-bold text-gray-800">{cadernetaStats.rodeio}</p>
+              </div>
+            </div>
           </Card>
-          <Card className="bg-white p-6">
-            <p className="text-sm text-gray-500 mb-2">Suplementação</p>
-            <p className="text-4xl font-bold text-orange-600">{cadernetaStats.suplementacao}</p>
-            <Button
-              variant="secondary"
-              className="mt-4 w-full"
-              onClick={() => navigate('/controller/suplementacao')}
-            >
-              Ver Registros
-            </Button>
+          <Card 
+            className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+            onClick={() => navigate('/controller/suplementacao')}
+          >
+            <div className="flex items-center gap-4 mb-3">
+              <img src={CADERNETA_IMAGES.suplementacao} alt={CADERNETA_TITLES.suplementacao} className="w-16 h-16 rounded-[32px]" />
+              <div>
+                <p className="text-sm text-gray-500 mb-1">{CADERNETA_TITLES.suplementacao}</p>
+                <p className="text-4xl font-bold text-gray-800">{cadernetaStats.suplementacao}</p>
+              </div>
+            </div>
           </Card>
-          <Card className="bg-white p-6">
-            <p className="text-sm text-gray-500 mb-2">Bebedouros</p>
-            <p className="text-4xl font-bold text-cyan-600">{cadernetaStats.bebedouros}</p>
-            <Button
-              variant="secondary"
-              className="mt-4 w-full"
-              onClick={() => navigate('/controller/bebedouros')}
-            >
-              Ver Registros
-            </Button>
+          <Card 
+            className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+            onClick={() => navigate('/controller/bebedouros')}
+          >
+            <div className="flex items-center gap-4 mb-3">
+              <img src={CADERNETA_IMAGES.bebedouros} alt={CADERNETA_TITLES.bebedouros} className="w-16 h-16 rounded-[32px]" />
+              <div>
+                <p className="text-sm text-gray-500 mb-1">{CADERNETA_TITLES.bebedouros}</p>
+                <p className="text-4xl font-bold text-gray-800">{cadernetaStats.bebedouros}</p>
+              </div>
+            </div>
           </Card>
-          <Card className="bg-white p-6">
-            <p className="text-sm text-gray-500 mb-2">Movimentação</p>
-            <p className="text-4xl font-bold text-purple-600">{cadernetaStats.movimentacao}</p>
-            <Button
-              variant="secondary"
-              className="mt-4 w-full"
-              onClick={() => navigate('/controller/movimentacao')}
-            >
-              Ver Registros
-            </Button>
+          <Card 
+            className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+            onClick={() => navigate('/controller/movimentacao')}
+          >
+            <div className="flex items-center gap-4 mb-3">
+              <img src={CADERNETA_IMAGES.movimentacao} alt={CADERNETA_TITLES.movimentacao} className="w-16 h-16 rounded-[32px]" />
+              <div>
+                <p className="text-sm text-gray-500 mb-1">{CADERNETA_TITLES.movimentacao}</p>
+                <p className="text-4xl font-bold text-gray-800">{cadernetaStats.movimentacao}</p>
+              </div>
+            </div>
           </Card>
         </div>
       </div>
 
       {/* Ações Rápidas */}
-      <Card className="bg-white p-6">
+      <Card className="bg-white p-6 border-0 shadow-sm">
         <h3 className="text-xl font-semibold text-gray-800 mb-4">Ações Rápidas</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Button onClick={() => navigate('/controller/pastos')}>

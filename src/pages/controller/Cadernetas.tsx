@@ -1,58 +1,52 @@
 import { useNavigate } from 'react-router-dom'
 import { Card } from '../../components/ui'
+import { CADERNETA_IMAGES, CADERNETA_TITLES, CADERNETA_DESCRIPTIONS } from '../../types/images'
 
 export function Cadernetas() {
   const navigate = useNavigate()
 
   const cadernetas = [
     {
-      title: 'Maternidade',
-      description: 'Registros de nascimentos e partos',
-      icon: '🐄',
+      title: CADERNETA_TITLES.maternidade,
+      description: CADERNETA_DESCRIPTIONS.maternidade,
+      image: CADERNETA_IMAGES.maternidade,
       path: '/controller/maternidade',
-      color: 'bg-green-500',
     },
     {
-      title: 'Enfermaria',
-      description: 'Registros de tratamentos e enfermidades',
-      icon: '🏥',
-      path: '/controller/enfermaria',
-      color: 'bg-red-500',
-    },
-    {
-      title: 'Pastagens',
-      description: 'Registros de manejo de pastagens',
-      icon: '🌾',
+      title: CADERNETA_TITLES.pastagens,
+      description: CADERNETA_DESCRIPTIONS.pastagens,
+      image: CADERNETA_IMAGES.pastagens,
       path: '/controller/pastagens-caderneta',
-      color: 'bg-yellow-500',
     },
     {
-      title: 'Rodeio',
-      description: 'Registros de manejos e rodeios',
-      icon: '🤠',
+      title: CADERNETA_TITLES.rodeio,
+      description: CADERNETA_DESCRIPTIONS.rodeio,
+      image: CADERNETA_IMAGES.rodeio,
       path: '/controller/rodeio',
-      color: 'bg-blue-500',
     },
     {
-      title: 'Suplementação',
-      description: 'Registros de suplementação alimentar',
-      icon: '🥄',
+      title: CADERNETA_TITLES.suplementacao,
+      description: CADERNETA_DESCRIPTIONS.suplementacao,
+      image: CADERNETA_IMAGES.suplementacao,
       path: '/controller/suplementacao',
-      color: 'bg-orange-500',
     },
     {
-      title: 'Bebedouros',
-      description: 'Registros de leitura de bebedouros',
-      icon: '💧',
+      title: CADERNETA_TITLES.bebedouros,
+      description: CADERNETA_DESCRIPTIONS.bebedouros,
+      image: CADERNETA_IMAGES.bebedouros,
       path: '/controller/bebedouros',
-      color: 'bg-cyan-500',
     },
     {
-      title: 'Movimentação',
-      description: 'Registros de movimentação de animais',
-      icon: '🔄',
+      title: CADERNETA_TITLES.movimentacao,
+      description: CADERNETA_DESCRIPTIONS.movimentacao,
+      image: CADERNETA_IMAGES.movimentacao,
       path: '/controller/movimentacao',
-      color: 'bg-purple-500',
+    },
+    {
+      title: CADERNETA_TITLES.enfermaria,
+      description: CADERNETA_DESCRIPTIONS.enfermaria,
+      image: CADERNETA_IMAGES.enfermaria,
+      path: '/controller/enfermaria',
     },
   ]
 
@@ -64,14 +58,18 @@ export function Cadernetas() {
         {cadernetas.map((caderneta) => (
           <Card
             key={caderneta.path}
-            className="bg-white p-6 cursor-pointer hover:shadow-lg transition-shadow"
+            className="bg-white p-6 cursor-pointer hover:shadow-lg hover:border-accent border-0 transition-all"
             onClick={() => navigate(caderneta.path)}
           >
-            <div className={`${caderneta.color} w-16 h-16 rounded-full flex items-center justify-center text-3xl mb-4`}>
-              {caderneta.icon}
+            <div className="flex flex-col items-center">
+              <img
+                src={caderneta.image}
+                alt={caderneta.title}
+                className="w-24 h-24 mb-4 rounded-[32px]"
+              />
+              <h3 className="text-xl font-semibold text-gray-800 mb-2 text-center">{caderneta.title}</h3>
+              <p className="text-sm text-gray-500 text-center">{caderneta.description}</p>
             </div>
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">{caderneta.title}</h3>
-            <p className="text-sm text-gray-600">{caderneta.description}</p>
           </Card>
         ))}
       </div>

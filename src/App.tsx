@@ -1,7 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './contexts/AuthContext'
 import { Login } from './pages/auth/Login'
-import { Signup } from './pages/auth/Signup'
 import { AdminLayout } from './components/layout/AdminLayout'
 import { ControllerLayout } from './components/layout/ControllerLayout'
 import { AdminRoute } from './components/routes/AdminRoute'
@@ -67,7 +66,6 @@ function App() {
     <Router>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
         
         {/* Rotas Admin */}
         <Route
