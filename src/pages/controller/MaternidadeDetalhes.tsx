@@ -132,7 +132,10 @@ export function MaternidadeDetalhes() {
           <div className="md:col-span-2">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Metadados</h3>
             <div className="space-y-2">
-              <p className="text-sm"><span className="font-medium text-gray-700">Data:</span> {new Date(registro.data).toLocaleDateString('pt-BR')}</p>
+              <p className="text-sm"><span className="font-medium text-gray-700">Data:</span> {(() => {
+                const [year, day, month] = registro.data.split('-')
+                return `${day}/${month}/${year}`
+              })()}</p>
               <p className="text-sm"><span className="font-medium text-gray-700">Usuário:</span> {registro.nome_usuario || '-'}</p>
               <p className="text-sm"><span className="font-medium text-gray-700">Criado em:</span> {new Date(registro.created_at).toLocaleString('pt-BR')}</p>
               {registro.updated_at && (

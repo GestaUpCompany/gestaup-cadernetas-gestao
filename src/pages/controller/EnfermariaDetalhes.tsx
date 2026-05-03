@@ -116,7 +116,10 @@ export function EnfermariaDetalhes() {
             <div className="space-y-2">
               <p className="text-sm"><span className="font-medium text-gray-700">Brinco/Chip:</span> {registro.brinco_chip || '-'}</p>
               <p className="text-sm"><span className="font-medium text-gray-700">Categoria:</span> {registro.categoria || '-'}</p>
-              <p className="text-sm"><span className="font-medium text-gray-700">Data:</span> {new Date(registro.data).toLocaleDateString('pt-BR')}</p>
+              <p className="text-sm"><span className="font-medium text-gray-700">Data:</span> {(() => {
+                const [year, day, month] = registro.data.split('-')
+                return `${day}/${month}/${year}`
+              })()}</p>
             </div>
           </div>
 

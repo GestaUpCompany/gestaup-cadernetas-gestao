@@ -102,7 +102,10 @@ export function PastagensDetalhes() {
           <div>
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Informações Gerais</h3>
             <div className="space-y-2">
-              <p className="text-sm"><span className="font-medium text-gray-700">Data:</span> {new Date(registro.data).toLocaleDateString('pt-BR')}</p>
+              <p className="text-sm"><span className="font-medium text-gray-700">Data:</span> {(() => {
+                const [year, day, month] = registro.data.split('-')
+                return `${day}/${month}/${year}`
+              })()}</p>
               <p className="text-sm"><span className="font-medium text-gray-700">Manejador:</span> {registro.manejador || '-'}</p>
               <p className="text-sm"><span className="font-medium text-gray-700">Lote:</span> {registro.lote || '-'}</p>
             </div>

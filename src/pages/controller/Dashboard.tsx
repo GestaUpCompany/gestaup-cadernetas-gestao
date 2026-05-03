@@ -47,13 +47,13 @@ export function ControllerDashboard() {
   const { user } = useAuth()
   const [fazenda, setFazenda] = useState<Fazenda | null>(null)
   const [loading, setLoading] = useState(true)
-  const [cadastroStats, setCadastroStats] = useState<CadastroStats>({
+  const [cadastroStats, setCadastroStats] = useState({
     pastos: 0,
     lotes: 0,
     funcionarios: 0,
     insumos: 0,
   })
-  const [cadernetaStats, setCadernetaStats] = useState<CadernetaStats>({
+  const [cadernetaStats, setCadernetaStats] = useState({
     maternidade: 0,
     enfermaria: 0,
     pastagens: 0,
@@ -62,6 +62,8 @@ export function ControllerDashboard() {
     bebedouros: 0,
     movimentacao: 0,
   })
+
+  const [registrosHoje, setRegistrosHoje] = useState(0)
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([])
 
   useEffect(() => {
@@ -90,17 +92,19 @@ export function ControllerDashboard() {
     // Maternidade
     const { data: maternidadeData } = await supabase
       .from('registros_maternidade')
-      .select('id, data_parto')
+      .select('id, data')
       .eq('fazenda_id', fazendaId)
-      .order('data_parto', { ascending: false })
+      .order('data', { ascending: false })
       .limit(1)
 
     if (maternidadeData && maternidadeData.length > 0) {
+      const [year, day, month] = maternidadeData[0].data.split('-')
+      const dataFormatada = `${day}/${month}/${year}`
       activities.push({
         id: maternidadeData[0].id,
         type: 'Maternidade',
         title: 'Registro de parto',
-        date: new Date(maternidadeData[0].data_parto).toLocaleDateString('pt-BR'),
+        date: dataFormatada,
         path: '/controller/maternidade',
       })
     }
@@ -132,11 +136,13 @@ export function ControllerDashboard() {
       .limit(1)
 
     if (rodeioData && rodeioData.length > 0) {
+      const [year, day, month] = rodeioData[0].data.split('-')
+      const dataFormatada = `${day}/${month}/${year}`
       activities.push({
         id: rodeioData[0].id,
         type: 'Rodeio',
-        title: 'Registro de manejo',
-        date: new Date(rodeioData[0].data).toLocaleDateString('pt-BR'),
+        title: 'Registro de rodeio',
+        date: dataFormatada,
         path: '/controller/rodeio',
       })
     }
@@ -224,6 +230,34 @@ export function ControllerDashboard() {
       supabase.from('registros_movimentacao').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
     ])
 
+    // Buscar registros de hoje
+    const today = new Date()
+    const year = today.getFullYear()
+    const month = String(today.getMonth() + 1).padStart(2, '0')
+    const day = String(today.getDate()).padStart(2, '0')
+    const todayStr = `${year}-${day}-${month}` // Formato yyyy-dd-mm
+
+    const [
+      { count: maternidadeHoje },
+      { count: enfermariaHoje },
+      { count: pastagensHoje },
+      { count: rodeioHoje },
+      { count: suplementacaoHoje },
+      { count: bebedourosHoje },
+      { count: movimentacaoHoje },
+    ] = await Promise.all([
+      supabase.from('registros_maternidade').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('data', todayStr),
+      supabase.from('registros_enfermaria').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('data', todayStr),
+      supabase.from('registros_pastagens').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('data', todayStr),
+      supabase.from('registros_rodeio').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('data', todayStr),
+      supabase.from('registros_suplementacao').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('data', todayStr),
+      supabase.from('registros_bebedouros').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('data', todayStr),
+      supabase.from('registros_movimentacao').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('data', todayStr),
+    ])
+
+    const totalHoje = (maternidadeHoje || 0) + (enfermariaHoje || 0) + (pastagensHoje || 0) + (rodeioHoje || 0) + (suplementacaoHoje || 0) + (bebedourosHoje || 0) + (movimentacaoHoje || 0)
+    setRegistrosHoje(totalHoje)
+
     setCadastroStats({
       pastos: pastosCount || 0,
       lotes: lotesCount || 0,
@@ -285,7 +319,7 @@ export function ControllerDashboard() {
           <Card className="bg-white p-6 border-0 shadow-sm">
             <p className="text-sm text-gray-500 mb-2">Registros Hoje</p>
             <p className="text-4xl font-bold text-gray-800">
-              {cadernetaStats.maternidade + cadernetaStats.enfermaria + cadernetaStats.pastagens + cadernetaStats.rodeio + cadernetaStats.suplementacao + cadernetaStats.bebedouros + cadernetaStats.movimentacao}
+              {registrosHoje}
             </p>
           </Card>
           <Card className="bg-white p-6 border-0 shadow-sm">

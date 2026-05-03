@@ -117,7 +117,10 @@ export function RodeioDetalhes() {
           <div>
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Informações Gerais</h3>
             <div className="space-y-2">
-              <p><span className="font-medium">Data:</span> {new Date(registro.data).toLocaleDateString('pt-BR')}</p>
+              <p><span className="font-medium">Data:</span> {(() => {
+                const [year, day, month] = registro.data.split('-')
+                return `${day}/${month}/${year}`
+              })()}</p>
               <p><span className="font-medium">Pasto:</span> {registro.pasto || '-'}</p>
               <p><span className="font-medium">Lote:</span> {registro.lote || '-'}</p>
             </div>

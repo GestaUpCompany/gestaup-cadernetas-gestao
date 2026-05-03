@@ -174,7 +174,10 @@ export function Maternidade() {
                   className="hover:bg-gray-50 cursor-pointer"
                 >
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {new Date(registro.data).toLocaleDateString('pt-BR')}
+                    {(() => {
+                      const [year, day, month] = registro.data.split('-')
+                      return `${day}/${month}/${year}`
+                    })()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {registro.numero_mae || '-'}
