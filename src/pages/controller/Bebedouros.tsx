@@ -75,8 +75,15 @@ export function Bebedouros() {
       (registro.pasto && registro.pasto.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.categoria && registro.categoria.toLowerCase().includes(searchTerm.toLowerCase()))
 
-    const matchesDataInicio = !dataInicio || registro.data >= dataInicio
-    const matchesDataFim = !dataFim || registro.data <= dataFim
+    // Converter data do input (yyyy-mm-dd) para formato do banco (yyyy-dd-mm)
+    const convertDate = (dateStr: string) => {
+      if (!dateStr) return ''
+      const [year, month, day] = dateStr.split('-')
+      return `${year}-${day}-${month}`
+    }
+
+    const matchesDataInicio = !dataInicio || registro.data >= convertDate(dataInicio)
+    const matchesDataFim = !dataFim || registro.data <= convertDate(dataFim)
 
     return matchesSearch && matchesDataInicio && matchesDataFim
   })
@@ -127,7 +134,8 @@ export function Bebedouros() {
               onChange={(e) => setDataFim(e.target.value)}
             />
           </div>
-          <div className="flex items-end">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">&nbsp;</label>
             <Button variant="secondary" onClick={() => {
               setSearchTerm('')
               setDataInicio('')
