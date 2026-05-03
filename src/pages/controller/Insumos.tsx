@@ -7,10 +7,22 @@ interface Insumo {
   id: string
   fazenda_id: string
   nome: string
+  marca?: string
+  fabricante?: string
   tipo?: string
+  categoria?: string
+  composicao?: any
+  unidade_medida?: string
+  peso_saco?: number
   estoque_atual?: number
-  unidade?: string
+  estoque_minimo?: number
+  custo_unitario?: number
+  custo_saco?: number
+  custo_total_estoque?: number
+  fornecedor?: string
   ativo: boolean
+  created_at: string
+  updated_at: string
 }
 
 export function Insumos() {
@@ -22,9 +34,18 @@ export function Insumos() {
   const [searchTerm, setSearchTerm] = useState('')
   const [formData, setFormData] = useState({
     nome: '',
+    marca: '',
+    fabricante: '',
     tipo: '',
+    categoria: '',
+    unidade_medida: '',
+    peso_saco: '',
     estoque_atual: '',
-    unidade: '',
+    estoque_minimo: '',
+    custo_unitario: '',
+    custo_saco: '',
+    fornecedor: '',
+    ativo: true,
   })
   const [submitting, setSubmitting] = useState(false)
 
@@ -87,9 +108,18 @@ export function Insumos() {
     const data = {
       fazenda_id: fazendaId,
       nome: formData.nome,
+      marca: formData.marca || null,
+      fabricante: formData.fabricante || null,
       tipo: formData.tipo || null,
+      categoria: formData.categoria || null,
+      unidade_medida: formData.unidade_medida || null,
+      peso_saco: formData.peso_saco ? parseFloat(formData.peso_saco) : null,
       estoque_atual: formData.estoque_atual ? parseFloat(formData.estoque_atual) : null,
-      unidade: formData.unidade || null,
+      estoque_minimo: formData.estoque_minimo ? parseFloat(formData.estoque_minimo) : null,
+      custo_unitario: formData.custo_unitario ? parseFloat(formData.custo_unitario) : null,
+      custo_saco: formData.custo_saco ? parseFloat(formData.custo_saco) : null,
+      fornecedor: formData.fornecedor || null,
+      ativo: formData.ativo,
     }
 
     let error
@@ -112,9 +142,18 @@ export function Insumos() {
     } else {
       setFormData({
         nome: '',
+        marca: '',
+        fabricante: '',
         tipo: '',
+        categoria: '',
+        unidade_medida: '',
+        peso_saco: '',
         estoque_atual: '',
-        unidade: '',
+        estoque_minimo: '',
+        custo_unitario: '',
+        custo_saco: '',
+        fornecedor: '',
+        ativo: true,
       })
       setShowForm(false)
       setEditingInsumo(null)
@@ -128,9 +167,18 @@ export function Insumos() {
     setEditingInsumo(insumo)
     setFormData({
       nome: insumo.nome,
+      marca: insumo.marca || '',
+      fabricante: insumo.fabricante || '',
       tipo: insumo.tipo || '',
+      categoria: insumo.categoria || '',
+      unidade_medida: insumo.unidade_medida || '',
+      peso_saco: insumo.peso_saco?.toString() || '',
       estoque_atual: insumo.estoque_atual?.toString() || '',
-      unidade: insumo.unidade || '',
+      estoque_minimo: insumo.estoque_minimo?.toString() || '',
+      custo_unitario: insumo.custo_unitario?.toString() || '',
+      custo_saco: insumo.custo_saco?.toString() || '',
+      fornecedor: insumo.fornecedor || '',
+      ativo: insumo.ativo,
     })
     setShowForm(true)
   }
@@ -139,9 +187,18 @@ export function Insumos() {
     setEditingInsumo(null)
     setFormData({
       nome: '',
+      marca: '',
+      fabricante: '',
       tipo: '',
+      categoria: '',
+      unidade_medida: '',
+      peso_saco: '',
       estoque_atual: '',
-      unidade: '',
+      estoque_minimo: '',
+      custo_unitario: '',
+      custo_saco: '',
+      fornecedor: '',
+      ativo: true,
     })
     setShowForm(false)
   }
@@ -201,6 +258,32 @@ export function Insumos() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
+                Marca
+              </label>
+              <Input
+                type="text"
+                value={formData.marca}
+                onChange={(e) => setFormData({ ...formData, marca: e.target.value })}
+                placeholder="Marca do insumo"
+                className="border-gray-200 focus:border-accent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Fabricante
+              </label>
+              <Input
+                type="text"
+                value={formData.fabricante}
+                onChange={(e) => setFormData({ ...formData, fabricante: e.target.value })}
+                placeholder="Fabricante do insumo"
+                className="border-gray-200 focus:border-accent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Tipo
               </label>
               <Input
@@ -208,6 +291,46 @@ export function Insumos() {
                 value={formData.tipo}
                 onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
                 placeholder="Ex: Ração, Sal, Vacina, Medicamento"
+                className="border-gray-200 focus:border-accent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Categoria
+              </label>
+              <Input
+                type="text"
+                value={formData.categoria}
+                onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
+                placeholder="Categoria do insumo"
+                className="border-gray-200 focus:border-accent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Unidade de Medida
+              </label>
+              <Input
+                type="text"
+                value={formData.unidade_medida}
+                onChange={(e) => setFormData({ ...formData, unidade_medida: e.target.value })}
+                placeholder="Ex: kg, litros, unidades"
+                className="border-gray-200 focus:border-accent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Peso do Saco (kg)
+              </label>
+              <Input
+                type="number"
+                step="0.1"
+                value={formData.peso_saco}
+                onChange={(e) => setFormData({ ...formData, peso_saco: e.target.value })}
+                placeholder="Ex: 50"
                 className="border-gray-200 focus:border-accent"
               />
             </div>
@@ -228,15 +351,70 @@ export function Insumos() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Unidade
+                Estoque Mínimo
+              </label>
+              <Input
+                type="number"
+                step="0.1"
+                value={formData.estoque_minimo}
+                onChange={(e) => setFormData({ ...formData, estoque_minimo: e.target.value })}
+                placeholder="Ex: 10"
+                className="border-gray-200 focus:border-accent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Custo Unitário (R$)
+              </label>
+              <Input
+                type="number"
+                step="0.01"
+                value={formData.custo_unitario}
+                onChange={(e) => setFormData({ ...formData, custo_unitario: e.target.value })}
+                placeholder="Ex: 50.00"
+                className="border-gray-200 focus:border-accent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Custo do Saco (R$)
+              </label>
+              <Input
+                type="number"
+                step="0.01"
+                value={formData.custo_saco}
+                onChange={(e) => setFormData({ ...formData, custo_saco: e.target.value })}
+                placeholder="Ex: 2500.00"
+                className="border-gray-200 focus:border-accent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Fornecedor
               </label>
               <Input
                 type="text"
-                value={formData.unidade}
-                onChange={(e) => setFormData({ ...formData, unidade: e.target.value })}
-                placeholder="Ex: kg, litros, unidades"
+                value={formData.fornecedor}
+                onChange={(e) => setFormData({ ...formData, fornecedor: e.target.value })}
+                placeholder="Nome do fornecedor"
                 className="border-gray-200 focus:border-accent"
               />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="ativo"
+                checked={formData.ativo}
+                onChange={(e) => setFormData({ ...formData, ativo: e.target.checked })}
+                className="rounded border-gray-300 text-accent focus:ring-accent"
+              />
+              <label htmlFor="ativo" className="text-sm font-medium text-gray-700">
+                Ativo
+              </label>
             </div>
 
             <div className="flex gap-2">
@@ -290,13 +468,31 @@ export function Insumos() {
                 {insumo.estoque_atual !== undefined && insumo.estoque_atual !== null && (
                   <p className="text-sm text-gray-500">
                     <span className="font-medium">Estoque:</span> {insumo.estoque_atual}
-                    {insumo.unidade && ` ${insumo.unidade}`}
+                    {insumo.unidade_medida && ` ${insumo.unidade_medida}`}
                   </p>
                 )}
 
-                {insumo.unidade && !insumo.estoque_atual && (
+                {insumo.unidade_medida && !insumo.estoque_atual && (
                   <p className="text-sm text-gray-500">
-                    <span className="font-medium">Unidade:</span> {insumo.unidade}
+                    <span className="font-medium">Unidade:</span> {insumo.unidade_medida}
+                  </p>
+                )}
+
+                {insumo.marca && (
+                  <p className="text-sm text-gray-500">
+                    <span className="font-medium">Marca:</span> {insumo.marca}
+                  </p>
+                )}
+
+                {insumo.fornecedor && (
+                  <p className="text-sm text-gray-500">
+                    <span className="font-medium">Fornecedor:</span> {insumo.fornecedor}
+                  </p>
+                )}
+
+                {insumo.custo_unitario && (
+                  <p className="text-sm text-gray-500">
+                    <span className="font-medium">Custo Unitário:</span> R$ {insumo.custo_unitario.toFixed(2)}
                   </p>
                 )}
               </div>
