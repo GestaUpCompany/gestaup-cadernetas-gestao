@@ -89,43 +89,44 @@ export function PastagensDetalhes() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h2 className="text-2xl font-bold text-gray-800">Detalhes do Registro de Pastagens</h2>
         <Button variant="secondary" onClick={() => navigate('/controller/pastagens-caderneta')}>
           Voltar
         </Button>
       </div>
 
-      <Card className="bg-white p-6">
+      <Card className="bg-white p-6 border-0 shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Informações Gerais</h3>
             <div className="space-y-2">
-              <p><span className="font-medium">Data:</span> {new Date(registro.data).toLocaleDateString('pt-BR')}</p>
-              <p><span className="font-medium">Manejador:</span> {registro.manejador || '-'}</p>
-              <p><span className="font-medium">Lote:</span> {registro.lote || '-'}</p>
+              <p className="text-sm"><span className="font-medium text-gray-700">Data:</span> {new Date(registro.data).toLocaleDateString('pt-BR')}</p>
+              <p className="text-sm"><span className="font-medium text-gray-700">Manejador:</span> {registro.manejador || '-'}</p>
+              <p className="text-sm"><span className="font-medium text-gray-700">Lote:</span> {registro.lote || '-'}</p>
             </div>
           </div>
 
           <div>
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Movimentação</h3>
             <div className="space-y-2">
-              <p><span className="font-medium">Pasto Saída:</span> {registro.pasto_saida || '-'}</p>
-              <p><span className="font-medium">Avaliação Saída:</span> {registro.avaliacao_saida || '-'}</p>
-              <p><span className="font-medium">Pasto Entrada:</span> {registro.pasto_entrada || '-'}</p>
-              <p><span className="font-medium">Avaliação Entrada:</span> {registro.avaliacao_entrada || '-'}</p>
+              <p className="text-sm"><span className="font-medium text-gray-700">Pasto Saída:</span> {registro.pasto_saida || '-'}</p>
+              <p className="text-sm"><span className="font-medium text-gray-700">Avaliação Saída:</span> {registro.avaliacao_saida || '-'}</p>
+              <p className="text-sm"><span className="font-medium text-gray-700">Pasto Entrada:</span> {registro.pasto_entrada || '-'}</p>
+              <p className="text-sm"><span className="font-medium text-gray-700">Avaliação Entrada:</span> {registro.avaliacao_entrada || '-'}</p>
             </div>
           </div>
 
           <div>
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Contagem de Animais</h3>
             <div className="space-y-2">
-              <p><span className="font-medium">Vaca:</span> {registro.vaca || 0}</p>
-              <p><span className="font-medium">Touro:</span> {registro.touro || 0}</p>
-              <p><span className="font-medium">Bezerro:</span> {registro.bezerro || 0}</p>
-              <p><span className="font-medium">Boi Magro:</span> {registro.boi_magro || 0}</p>
-              <p><span className="font-medium">Garrote:</span> {registro.garrote || 0}</p>
-              <p><span className="font-medium">Novilha:</span> {registro.novilha || 0}</p>
+              <p className="text-sm"><span className="font-medium text-gray-700">Vaca:</span> {registro.vaca || 0}</p>
+              <p className="text-sm"><span className="font-medium text-gray-700">Touro:</span> {registro.touro || 0}</p>
+              <p className="text-sm"><span className="font-medium text-gray-700">Bezerro:</span> {registro.bezerro || 0}</p>
+              <p className="text-sm"><span className="font-medium text-gray-700">Boi Magro:</span> {registro.boi_magro || 0}</p>
+              <p className="text-sm"><span className="font-medium text-gray-700">Garrote:</span> {registro.garrote || 0}</p>
+              <p className="text-sm"><span className="font-medium text-gray-700">Novilha:</span> {registro.novilha || 0}</p>
               <p className="font-bold text-gray-800 mt-2">Total: {totalAnimais}</p>
             </div>
           </div>
@@ -133,12 +134,12 @@ export function PastagensDetalhes() {
           <div>
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Metadados</h3>
             <div className="space-y-2">
-              <p><span className="font-medium">Usuário:</span> {registro.nome_usuario || '-'}</p>
-              <p><span className="font-medium">Criado em:</span> {new Date(registro.created_at).toLocaleString('pt-BR')}</p>
+              <p className="text-sm"><span className="font-medium text-gray-700">Usuário:</span> {registro.nome_usuario || '-'}</p>
+              <p className="text-sm"><span className="font-medium text-gray-700">Criado em:</span> {new Date(registro.created_at).toLocaleString('pt-BR')}</p>
               {registro.updated_at && (
-                <p><span className="font-medium">Atualizado em:</span> {new Date(registro.updated_at).toLocaleString('pt-BR')}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Atualizado em:</span> {new Date(registro.updated_at).toLocaleString('pt-BR')}</p>
               )}
-              <p><span className="font-medium">Sync Status:</span> {registro.sync_status || '-'}</p>
+              <p className="text-sm"><span className="font-medium text-gray-700">Sync Status:</span> {registro.sync_status || '-'}</p>
             </div>
           </div>
         </div>

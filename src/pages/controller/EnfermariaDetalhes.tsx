@@ -101,58 +101,59 @@ export function EnfermariaDetalhes() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h2 className="text-2xl font-bold text-gray-800">Detalhes do Registro de Enfermaria</h2>
         <Button variant="secondary" onClick={() => navigate('/controller/enfermaria')}>
           Voltar
         </Button>
       </div>
 
-      <Card className="bg-white p-6">
+      <Card className="bg-white p-6 border-0 shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Identificação</h3>
             <div className="space-y-2">
-              <p><span className="font-medium">Brinco/Chip:</span> {registro.brinco_chip || '-'}</p>
-              <p><span className="font-medium">Categoria:</span> {registro.categoria || '-'}</p>
-              <p><span className="font-medium">Data:</span> {new Date(registro.data).toLocaleDateString('pt-BR')}</p>
+              <p className="text-sm"><span className="font-medium text-gray-700">Brinco/Chip:</span> {registro.brinco_chip || '-'}</p>
+              <p className="text-sm"><span className="font-medium text-gray-700">Categoria:</span> {registro.categoria || '-'}</p>
+              <p className="text-sm"><span className="font-medium text-gray-700">Data:</span> {new Date(registro.data).toLocaleDateString('pt-BR')}</p>
             </div>
           </div>
 
           <div>
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Localização</h3>
             <div className="space-y-2">
-              <p><span className="font-medium">Lote:</span> {registro.lote || '-'}</p>
-              <p><span className="font-medium">Pasto:</span> {registro.pasto || '-'}</p>
+              <p className="text-sm"><span className="font-medium text-gray-700">Lote:</span> {registro.lote || '-'}</p>
+              <p className="text-sm"><span className="font-medium text-gray-700">Pasto:</span> {registro.pasto || '-'}</p>
             </div>
           </div>
 
           <div>
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Tratamento</h3>
             <div className="space-y-2">
-              <p><span className="font-medium">Tratamento:</span> {registro.tratamento || '-'}</p>
+              <p className="text-sm"><span className="font-medium text-gray-700">Tratamento:</span> {registro.tratamento || '-'}</p>
             </div>
           </div>
 
           <div>
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Sintomas</h3>
             <div className="space-y-2">
-              <p><span className="font-medium">Sintomas:</span> {sintomas.length > 0 ? sintomas.join(', ') : 'Nenhum'}</p>
-              {registro.problema_casco_obs && <p><span className="font-medium">Obs Cascos:</span> {registro.problema_casco_obs}</p>}
-              {registro.fraturas_obs && <p><span className="font-medium">Obs Fraturas:</span> {registro.fraturas_obs}</p>}
-              {registro.desordens_digestivas_obs && <p><span className="font-medium">Obs Digestivo:</span> {registro.desordens_digestivas_obs}</p>}
+              <p className="text-sm"><span className="font-medium text-gray-700">Sintomas:</span> {sintomas.length > 0 ? sintomas.join(', ') : 'Nenhum'}</p>
+              {registro.problema_casco_obs && <p className="text-sm"><span className="font-medium text-gray-700">Obs Cascos:</span> {registro.problema_casco_obs}</p>}
+              {registro.fraturas_obs && <p className="text-sm"><span className="font-medium text-gray-700">Obs Fraturas:</span> {registro.fraturas_obs}</p>}
+              {registro.desordens_digestivas_obs && <p className="text-sm"><span className="font-medium text-gray-700">Obs Digestivo:</span> {registro.desordens_digestivas_obs}</p>}
             </div>
           </div>
 
           <div className="md:col-span-2">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Metadados</h3>
             <div className="space-y-2">
-              <p><span className="font-medium">Usuário:</span> {registro.nome_usuario || '-'}</p>
-              <p><span className="font-medium">Criado em:</span> {new Date(registro.created_at).toLocaleString('pt-BR')}</p>
+              <p className="text-sm"><span className="font-medium text-gray-700">Usuário:</span> {registro.nome_usuario || '-'}</p>
+              <p className="text-sm"><span className="font-medium text-gray-700">Criado em:</span> {new Date(registro.created_at).toLocaleString('pt-BR')}</p>
               {registro.updated_at && (
-                <p><span className="font-medium">Atualizado em:</span> {new Date(registro.updated_at).toLocaleString('pt-BR')}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Atualizado em:</span> {new Date(registro.updated_at).toLocaleString('pt-BR')}</p>
               )}
-              <p><span className="font-medium">Sync Status:</span> {registro.sync_status || '-'}</p>
+              <p className="text-sm"><span className="font-medium text-gray-700">Sync Status:</span> {registro.sync_status || '-'}</p>
             </div>
           </div>
         </div>
