@@ -15,6 +15,7 @@ interface RegistroEnfermaria {
   pasto?: string
   categoria?: string
   tratamento?: string
+  tratamento_obs?: string
   problema_casco?: boolean
   problema_casco_obs?: string
   sintomas_pneumonia?: boolean
@@ -26,6 +27,10 @@ interface RegistroEnfermaria {
   fraturas_obs?: string
   desordens_digestivas?: boolean
   desordens_digestivas_obs?: string
+  cegueira?: boolean
+  cegueira_obs?: string
+  andar_cambaleante?: boolean
+  andar_cambaleante_obs?: string
   sync_status?: string
   created_at: string
   updated_at?: string
@@ -98,6 +103,8 @@ export function EnfermariaDetalhes() {
   if (registro.presenca_sangue) sintomas.push('Sangue')
   if (registro.fraturas) sintomas.push('Fraturas')
   if (registro.desordens_digestivas) sintomas.push('Digestivo')
+  if (registro.cegueira) sintomas.push('Cegueira')
+  if (registro.andar_cambaleante) sintomas.push('Andar Cambaleante')
 
   return (
     <div className="space-y-6">
@@ -135,6 +142,7 @@ export function EnfermariaDetalhes() {
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Tratamento</h3>
             <div className="space-y-2">
               <p className="text-sm"><span className="font-medium text-gray-700">Tratamento:</span> {registro.tratamento || '-'}</p>
+              {registro.tratamento_obs && <p className="text-sm"><span className="font-medium text-gray-700">Obs Tratamento:</span> {registro.tratamento_obs}</p>}
             </div>
           </div>
 
@@ -145,6 +153,8 @@ export function EnfermariaDetalhes() {
               {registro.problema_casco_obs && <p className="text-sm"><span className="font-medium text-gray-700">Obs Cascos:</span> {registro.problema_casco_obs}</p>}
               {registro.fraturas_obs && <p className="text-sm"><span className="font-medium text-gray-700">Obs Fraturas:</span> {registro.fraturas_obs}</p>}
               {registro.desordens_digestivas_obs && <p className="text-sm"><span className="font-medium text-gray-700">Obs Digestivo:</span> {registro.desordens_digestivas_obs}</p>}
+              {registro.cegueira_obs && <p className="text-sm"><span className="font-medium text-gray-700">Obs Cegueira:</span> {registro.cegueira_obs}</p>}
+              {registro.andar_cambaleante_obs && <p className="text-sm"><span className="font-medium text-gray-700">Obs Andar Cambaleante:</span> {registro.andar_cambaleante_obs}</p>}
             </div>
           </div>
 

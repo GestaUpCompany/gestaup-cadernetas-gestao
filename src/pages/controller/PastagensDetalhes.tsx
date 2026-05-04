@@ -22,6 +22,7 @@ interface RegistroPastagens {
   boi_magro?: number
   garrote?: number
   novilha?: number
+  escore_gado?: number
   sync_status?: string
   created_at: string
   updated_at?: string
@@ -131,6 +132,7 @@ export function PastagensDetalhes() {
               <p className="text-sm"><span className="font-medium text-gray-700">Garrote:</span> {registro.garrote || 0}</p>
               <p className="text-sm"><span className="font-medium text-gray-700">Novilha:</span> {registro.novilha || 0}</p>
               <p className="font-bold text-gray-800 mt-2">Total: {totalAnimais}</p>
+              <p className="text-sm"><span className="font-medium text-gray-700">Escore Gado:</span> {registro.escore_gado || '-'}</p>
             </div>
           </div>
 

@@ -20,6 +20,7 @@ interface RegistroMaternidade {
   raca?: string
   numero_mae?: string
   categoria_mae?: string
+  escore_matriz?: string
   sync_status?: string
   created_at: string
   updated_at?: string
@@ -118,6 +119,7 @@ export function MaternidadeDetalhes() {
             <div className="space-y-2">
               <p className="text-sm"><span className="font-medium text-gray-700">Tipo Parto:</span> {registro.tipo_parto || '-'}</p>
               <p className="text-sm"><span className="font-medium text-gray-700">Tratamento:</span> {registro.tratamento || '-'}</p>
+              <p className="text-sm"><span className="font-medium text-gray-700">Escore Matriz:</span> {registro.escore_matriz || '-'}</p>
             </div>
           </div>
 

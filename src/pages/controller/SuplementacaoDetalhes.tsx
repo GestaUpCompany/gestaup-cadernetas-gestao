@@ -26,6 +26,7 @@ interface RegistroSuplementacao {
   kg_cocho?: number
   kg_deposito?: number
   creep?: number
+  escore_fezes?: number
   sync_status?: string
   created_at: string
   updated_at?: string
@@ -138,6 +139,7 @@ export function SuplementacaoDetalhes() {
               <p><span className="font-medium">kg Cocho:</span> {registro.kg_cocho || 0}</p>
               <p><span className="font-medium">kg Depósito:</span> {registro.kg_deposito || 0}</p>
               <p><span className="font-medium">Creep:</span> {registro.creep || 0}</p>
+              <p><span className="font-medium">Escore Fezes:</span> {registro.escore_fezes || '-'}</p>
             </div>
           </div>
 

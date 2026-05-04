@@ -20,6 +20,7 @@ interface RegistroRodeio {
   novilha?: number
   animais_tratados?: number
   escore_fezes?: number
+  escore_gado?: number
   equipe?: number
   procedimentos?: string[]
   escore_gado_ideal?: boolean
@@ -143,6 +144,7 @@ export function RodeioDetalhes() {
             <div className="space-y-2">
               <p><span className="font-medium">Animais Tratados:</span> {registro.animais_tratados || 0}</p>
               <p><span className="font-medium">Escore Fezes:</span> {registro.escore_fezes || '-'}</p>
+              <p><span className="font-medium">Escore Gado:</span> {registro.escore_gado || '-'}</p>
               <p><span className="font-medium">Equipe:</span> {registro.equipe || 0}</p>
             </div>
           </div>
