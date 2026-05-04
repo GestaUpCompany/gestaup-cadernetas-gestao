@@ -61,7 +61,7 @@ export function FazendasList() {
                   />
                 ) : (
                   <div className="w-16 h-16 rounded-lg bg-gray-200 flex items-center justify-center">
-                    <span className="text-2xl">🏠</span>
+                    <span className="text-2xl text-gray-400">F</span>
                   </div>
                 )}
                 <div className="flex-1">

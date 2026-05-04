@@ -18,11 +18,9 @@ interface RegistroRodeio {
   boi?: number
   garrote?: number
   novilha?: number
-  animais_tratados?: number
   escore_fezes?: number
   escore_gado?: number
   equipe?: number
-  procedimentos?: string[]
   escore_gado_ideal?: boolean
   agua_boa_bebedouro?: boolean
   pastagem_adequada?: boolean
@@ -142,17 +140,9 @@ export function RodeioDetalhes() {
           <div>
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Indicadores</h3>
             <div className="space-y-2">
-              <p><span className="font-medium">Animais Tratados:</span> {registro.animais_tratados || 0}</p>
               <p><span className="font-medium">Escore Fezes:</span> {registro.escore_fezes || '-'}</p>
               <p><span className="font-medium">Escore Gado:</span> {registro.escore_gado || '-'}</p>
               <p><span className="font-medium">Equipe:</span> {registro.equipe || 0}</p>
-            </div>
-          </div>
-
-          <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Procedimentos</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Procedimentos:</span> {registro.procedimentos?.join(', ') || '-'}</p>
             </div>
           </div>
 

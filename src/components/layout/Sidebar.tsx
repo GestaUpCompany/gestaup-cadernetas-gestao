@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext'
 interface SidebarItem {
   label: string
   path: string
-  icon: string
+  icon?: string
 }
 
 interface SidebarProps {
@@ -33,7 +33,6 @@ export function Sidebar({ items }: SidebarProps) {
                     : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
-                <span className="mr-2">{item.icon}</span>
                 {item.label}
               </button>
             )

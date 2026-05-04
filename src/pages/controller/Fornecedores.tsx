@@ -365,9 +365,8 @@ export function Fornecedores() {
         </Card>
       )}
 
-      {fornecedores.length === 0 ? (
+      {!showForm && fornecedores.length === 0 ? (
         <Card className="bg-white p-12 border-0 shadow-sm text-center">
-          <div className="text-6xl mb-4">🏢</div>
           <p className="text-gray-600 mb-4">Nenhum fornecedor cadastrado</p>
           <Button onClick={() => setShowForm(true)}>Criar Primeiro Fornecedor</Button>
         </Card>

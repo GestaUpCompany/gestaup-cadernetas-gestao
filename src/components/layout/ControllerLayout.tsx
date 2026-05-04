@@ -19,6 +19,7 @@ const menuStructure = [
       { label: 'Pastos', path: '/controller/pastos' },
       { label: 'Lotes', path: '/controller/lotes' },
       { label: 'Funcionários', path: '/controller/funcionarios' },
+      { label: 'Causas de Morte', path: '/controller/causas-morte' },
     ],
   },
   {

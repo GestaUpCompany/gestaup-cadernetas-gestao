@@ -39,6 +39,7 @@ import { Racao } from './pages/controller/Racao'
 import { Dietas } from './pages/controller/Dietas'
 import { Fornecedores } from './pages/controller/Fornecedores'
 import { Frigorificos } from './pages/controller/Frigorificos'
+import { CausasMorte } from './pages/controller/CausasMorte'
 
 // Redirecionamento baseado no papel do usuário
 function RoleRedirect() {
@@ -262,6 +263,16 @@ function App() {
             <ControllerRoute>
               <ControllerLayout>
                 <Frigorificos />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/causas-morte"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <CausasMorte />
               </ControllerLayout>
             </ControllerRoute>
           }

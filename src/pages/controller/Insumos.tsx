@@ -429,9 +429,8 @@ export function Insumos() {
         </Card>
       )}
 
-      {insumos.length === 0 ? (
+      {!showForm && insumos.length === 0 ? (
         <Card className="bg-white p-12 border-0 shadow-sm text-center">
-          <div className="text-6xl mb-4">📦</div>
           <p className="text-gray-600 mb-4">Nenhum insumo cadastrado</p>
           <Button onClick={() => setShowForm(true)}>Criar Primeiro Insumo</Button>
         </Card>

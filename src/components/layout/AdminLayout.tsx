@@ -7,9 +7,9 @@ interface AdminLayoutProps {
 }
 
 const sidebarItems = [
-  { label: 'Dashboard', path: '/admin/dashboard', icon: '📊' },
-  { label: 'Fazendas', path: '/admin/fazendas', icon: '🏠' },
-  { label: 'Usuários', path: '/admin/usuarios', icon: '👥' },
+  { label: 'Dashboard', path: '/admin/dashboard' },
+  { label: 'Fazendas', path: '/admin/fazendas' },
+  { label: 'Usuários', path: '/admin/usuarios' },
 ]
 
 export function AdminLayout({ children }: AdminLayoutProps) {

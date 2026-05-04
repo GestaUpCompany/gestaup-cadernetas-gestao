@@ -151,10 +151,6 @@ export function Bebedouros() {
         <Card className="bg-white p-6 text-center">
           <p className="text-gray-600">Nenhum registro de bebedouros encontrado</p>
         </Card>
-      ) : filteredRegistros.length === 0 ? (
-        <Card className="bg-white p-6 text-center">
-          <p className="text-gray-600">Nenhum registro encontrado com os filtros aplicados</p>
-        </Card>
       ) : (
         <Card className="bg-white overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">

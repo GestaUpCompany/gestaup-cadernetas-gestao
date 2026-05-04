@@ -410,9 +410,8 @@ export function Racao() {
         </Card>
       )}
 
-      {racoes.length === 0 ? (
+      {!showForm && racoes.length === 0 ? (
         <Card className="bg-white p-12 border-0 shadow-sm text-center">
-          <div className="text-6xl mb-4">🌾</div>
           <p className="text-gray-600 mb-4">Nenhuma ração cadastrada</p>
           <Button onClick={() => setShowForm(true)}>Criar Primeira Ração</Button>
         </Card>
