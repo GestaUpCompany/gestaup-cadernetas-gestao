@@ -17,23 +17,6 @@ interface Fazenda {
   ativo: boolean
 }
 
-interface CadastroStats {
-  pastos: number
-  lotes: number
-  funcionarios: number
-  insumos: number
-}
-
-interface CadernetaStats {
-  maternidade: number
-  enfermaria: number
-  pastagens: number
-  rodeio: number
-  suplementacao: number
-  bebedouros: number
-  movimentacao: number
-}
-
 interface RecentActivity {
   id: string
   type: string
