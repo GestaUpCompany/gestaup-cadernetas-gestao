@@ -13,8 +13,7 @@ A senha será gerada automaticamente usando o formato: `acesso_id + "2026"`
 ## Tarefas
 
 ### 1. Modificar NovaFazenda.tsx para incluir campos de criação de usuário
-- Adicionar campo opcional para email do controller
-- Se não informado, usar o email da fazenda como fallback
+- Adicionar campo **obrigatório** para email do controller
 - Adicionar checkbox para criar usuário automaticamente (padrão: marcado)
 
 ### 2. Criar função em fazendasService que gera senha e cria usuário controller
