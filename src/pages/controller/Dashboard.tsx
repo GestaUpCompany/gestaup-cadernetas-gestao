@@ -112,17 +112,19 @@ export function ControllerDashboard() {
     // Enfermaria
     const { data: enfermariaData } = await supabase
       .from('registros_enfermaria')
-      .select('id, data_tratamento')
+      .select('id, data')
       .eq('fazenda_id', fazendaId)
-      .order('data_tratamento', { ascending: false })
+      .order('data', { ascending: false })
       .limit(1)
 
     if (enfermariaData && enfermariaData.length > 0) {
+      const [year, day, month] = enfermariaData[0].data.split('-')
+      const dataFormatada = `${day}/${month}/${year}`
       activities.push({
         id: enfermariaData[0].id,
         type: 'Enfermaria',
         title: 'Registro de tratamento',
-        date: new Date(enfermariaData[0].data_tratamento).toLocaleDateString('pt-BR'),
+        date: dataFormatada,
         path: '/controller/enfermaria',
       })
     }

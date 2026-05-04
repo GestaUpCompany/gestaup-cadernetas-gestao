@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { createFazenda } from '../../services/fazendasService'
+import { createFazenda, createFazendaWithController } from '../../services/fazendasService'
 import { uploadLogo } from '../../services/storageService'
 import { Button, Input, Card } from '../../components/ui'
 
@@ -10,6 +10,8 @@ export function NovaFazenda() {
   const [error, setError] = useState('')
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreview, setLogoPreview] = useState<string>('')
+  const [showCredentials, setShowCredentials] = useState(false)
+  const [credentials, setCredentials] = useState<{ email: string; senha: string } | null>(null)
 
   const [formData, setFormData] = useState({
     acesso_id: '',
@@ -20,17 +22,21 @@ export function NovaFazenda() {
     email: '',
     planilha_id: '',
     ativo: true,
+    controller_email: '',
+    criar_usuario_controller: true,
   })
 
   const [errors, setErrors] = useState({
     acesso_id: '',
     nome: '',
+    controller_email: '',
   })
 
   const validateForm = () => {
     const newErrors = {
       acesso_id: '',
       nome: '',
+      controller_email: '',
     }
 
     if (!formData.acesso_id.trim()) {
@@ -41,8 +47,12 @@ export function NovaFazenda() {
       newErrors.nome = 'Nome é obrigatório'
     }
 
+    if (formData.criar_usuario_controller && !formData.controller_email.trim()) {
+      newErrors.controller_email = 'Email do controller é obrigatório'
+    }
+
     setErrors(newErrors)
-    return !newErrors.acesso_id && !newErrors.nome
+    return !newErrors.acesso_id && !newErrors.nome && !newErrors.controller_email
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -66,25 +76,58 @@ export function NovaFazenda() {
       }
     }
 
-    const result = await createFazenda({
-      acesso_id: formData.acesso_id,
-      nome: formData.nome,
-      cnpj: formData.cnpj || undefined,
-      endereco: formData.endereco || undefined,
-      telefone: formData.telefone || undefined,
-      email: formData.email || undefined,
-      planilha_id: formData.planilha_id || undefined,
-      logo_url: logoUrl || undefined,
-      ativo: formData.ativo,
-    })
+    let result
+    if (formData.criar_usuario_controller) {
+      // Criar fazenda com usuário controller
+      result = await createFazendaWithController({
+        acesso_id: formData.acesso_id,
+        nome: formData.nome,
+        cnpj: formData.cnpj || undefined,
+        endereco: formData.endereco || undefined,
+        telefone: formData.telefone || undefined,
+        email: formData.email || undefined,
+        planilha_id: formData.planilha_id || undefined,
+        logo_url: logoUrl || undefined,
+        ativo: formData.ativo,
+        controller_email: formData.controller_email,
+        controller_nome: `Controller ${formData.nome}`,
+      })
+
+      if (result.error) {
+        setError(result.error)
+        setLoading(false)
+        return
+      }
+
+      if (result.controller) {
+        setCredentials(result.controller)
+        setShowCredentials(true)
+      }
+    } else {
+      // Criar apenas fazenda (sem usuário controller)
+      result = await createFazenda({
+        acesso_id: formData.acesso_id,
+        nome: formData.nome,
+        cnpj: formData.cnpj || undefined,
+        endereco: formData.endereco || undefined,
+        telefone: formData.telefone || undefined,
+        email: formData.email || undefined,
+        planilha_id: formData.planilha_id || undefined,
+        logo_url: logoUrl || undefined,
+        ativo: formData.ativo,
+      })
+
+      if (!result) {
+        setError('Erro ao criar fazenda. Tente novamente.')
+        setLoading(false)
+        return
+      }
+
+      // Se não criou usuário controller, redireciona para lista
+      navigate('/admin/fazendas')
+    }
 
     setLoading(false)
-
-    if (result) {
-      navigate('/admin/fazendas')
-    } else {
-      setError('Erro ao criar fazenda. Tente novamente.')
-    }
   }
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -106,6 +149,19 @@ export function NovaFazenda() {
     if (errors[name as keyof typeof errors]) {
       setErrors(prev => ({ ...prev, [name]: '' }))
     }
+  }
+
+  const handleCopyCredentials = () => {
+    if (credentials) {
+      const text = `Email: ${credentials.email}\nSenha: ${credentials.senha}`
+      navigator.clipboard.writeText(text)
+    }
+  }
+
+  const handleCloseCredentials = () => {
+    setShowCredentials(false)
+    setCredentials(null)
+    navigate('/admin/fazendas')
   }
 
   return (
@@ -211,6 +267,36 @@ export function NovaFazenda() {
             placeholder="ID da planilha para integração"
           />
 
+          <div className="border-t border-gray-200 pt-4 mt-4">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Criação de Usuário Controller</h3>
+            
+            <div className="flex items-center gap-2 mb-4">
+              <input
+                type="checkbox"
+                id="criar_usuario_controller"
+                checked={formData.criar_usuario_controller}
+                onChange={(e) => setFormData(prev => ({ ...prev, criar_usuario_controller: e.target.checked }))}
+                className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+              />
+              <label htmlFor="criar_usuario_controller" className="text-sm text-gray-700">
+                Criar usuário controller automaticamente
+              </label>
+            </div>
+
+            {formData.criar_usuario_controller && (
+              <Input
+                label="Email do Controller *"
+                name="controller_email"
+                type="email"
+                value={formData.controller_email}
+                onChange={handleChange}
+                placeholder="email@controller.com"
+                error={errors.controller_email}
+                required
+              />
+            )}
+          </div>
+
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -240,6 +326,56 @@ export function NovaFazenda() {
           </div>
         </form>
       </Card>
+
+      {/* Modal de Credenciais */}
+      {showCredentials && credentials && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-gray-800">Fazenda Criada com Sucesso!</h3>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
+              <p className="text-sm text-gray-600 mb-2">Credenciais de acesso do controller:</p>
+              <div className="space-y-2">
+                <div>
+                  <p className="text-xs text-gray-500">Email:</p>
+                  <p className="font-mono text-sm font-semibold text-gray-800">{credentials.email}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Senha:</p>
+                  <p className="font-mono text-sm font-semibold text-gray-800">{credentials.senha}</p>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-sm text-gray-600 mb-4">
+              <strong>Importante:</strong> Copie estas credenciais e envie ao controller. 
+            </p>
+
+            <div className="flex gap-3">
+              <Button
+                onClick={handleCopyCredentials}
+                className="flex-1"
+              >
+                Copiar Credenciais
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={handleCloseCredentials}
+                className="flex-1"
+              >
+                Fechar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
