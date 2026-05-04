@@ -27,6 +27,7 @@ interface RegistroMovimentacao {
   motivo_movimentacao?: string
   brinco_chip?: string
   causa_observacao?: string
+  causa_morte?: string
   sync_status?: string
   created_at: string
 }
@@ -81,7 +82,8 @@ export function Movimentacao() {
       (registro.lote_origem && registro.lote_origem.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.lote_destino && registro.lote_destino.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.brinco_chip && registro.brinco_chip.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.motivo_movimentacao && registro.motivo_movimentacao.toLowerCase().includes(searchTerm.toLowerCase()))
+      (registro.motivo_movimentacao && registro.motivo_movimentacao.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.causa_morte && registro.causa_morte.toLowerCase().includes(searchTerm.toLowerCase()))
 
     // Converter data do input (yyyy-mm-dd) para formato do banco (yyyy-dd-mm)
     const convertDate = (dateStr: string) => {
@@ -174,6 +176,7 @@ export function Movimentacao() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nº Cabeças</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Peso Médio (kg)</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Motivo</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Causa Morte</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categorias</th>
               </tr>
             </thead>
@@ -216,6 +219,9 @@ export function Movimentacao() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {registro.motivo_movimentacao || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {registro.causa_morte || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {categorias.length > 0 ? categorias.join(', ') : '-'}

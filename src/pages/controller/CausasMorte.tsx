@@ -230,7 +230,7 @@ export function CausasMorte() {
           <p className="text-gray-600 mb-4">Nenhuma causa de morte cadastrada</p>
           <Button onClick={() => setShowForm(true)}>Criar Primeira Causa</Button>
         </Card>
-      ) : (
+      ) : !showForm ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {causas
             .filter((causa) =>
@@ -294,7 +294,7 @@ export function CausasMorte() {
               </Card>
             ))}
         </div>
-      )}
+      ) : null}
     </div>
   )
 }

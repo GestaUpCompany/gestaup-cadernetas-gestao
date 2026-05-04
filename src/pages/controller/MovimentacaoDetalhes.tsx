@@ -26,6 +26,7 @@ interface RegistroMovimentacao {
   motivo_movimentacao?: string
   brinco_chip?: string
   causa_observacao?: string
+  causa_morte?: string
   sync_status?: string
   created_at: string
   updated_at?: string
@@ -143,7 +144,8 @@ export function MovimentacaoDetalhes() {
             <div className="space-y-2">
               <p><span className="font-medium">Motivo:</span> {registro.motivo_movimentacao || '-'}</p>
               <p><span className="font-medium">Brinco/Chip:</span> {registro.brinco_chip || '-'}</p>
-              <p><span className="font-medium">Causa/Observação:</span> {registro.causa_observacao || '-'}</p>
+              <p><span className="font-medium">Observação:</span> {registro.causa_observacao || '-'}</p>
+              <p><span className="font-medium">Causa Morte:</span> {registro.causa_morte || '-'}</p>
             </div>
           </div>
 
