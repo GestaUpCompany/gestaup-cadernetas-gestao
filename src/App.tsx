@@ -40,6 +40,7 @@ import { Dietas } from './pages/controller/Dietas'
 import { Fornecedores } from './pages/controller/Fornecedores'
 import { Frigorificos } from './pages/controller/Frigorificos'
 import { CausasMorte } from './pages/controller/CausasMorte'
+import { BebedourosCadastro } from './pages/controller/BebedourosCadastro'
 
 // Redirecionamento baseado no papel do usuário
 function RoleRedirect() {
@@ -273,6 +274,16 @@ function App() {
             <ControllerRoute>
               <ControllerLayout>
                 <CausasMorte />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/bebedouros-cadastro"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <BebedourosCadastro />
               </ControllerLayout>
             </ControllerRoute>
           }
