@@ -56,43 +56,37 @@ export async function signIn(email: string, password: string): Promise<Session |
 }
 
 export async function signUp(email: string, password: string, nome: string, telefone?: string, papel: 'admin' | 'controller' = 'controller'): Promise<User | null> {
-  // Criar usuário no Supabase Auth
-  const { data: authData, error: authError } = await supabase.auth.signUp({
-    email,
-    password,
-  })
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      console.error('No session found for user creation')
+      return null
+    }
 
-  if (authError) {
-    console.error('Erro ao criar usuário no Auth:', authError)
+    const response = await fetch(
+      `${supabaseUrl}/functions/v1/create-user-without-confirmation`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password, nome, telefone, papel }),
+      }
+    )
+
+    if (!response.ok) {
+      const error = await response.json()
+      console.error('Error calling create user function:', error)
+      return null
+    }
+
+    const result = await response.json()
+    return result.user
+  } catch (error) {
+    console.error('Exception in signUp:', error)
     return null
   }
-
-  if (!authData.user) {
-    return null
-  }
-
-  // Criar usuário na tabela usuarios com auth_id
-  const { data: userData, error: dbError } = await supabase
-    .from('usuarios')
-    .insert({
-      id: authData.user.id, // Usar o mesmo ID do Supabase Auth
-      email,
-      nome,
-      telefone,
-      papel,
-      ativo: true,
-    })
-    .select()
-    .single()
-
-  if (dbError) {
-    console.error('Erro ao criar usuário no banco:', dbError)
-    // Rollback: deletar usuário do Auth
-    await supabase.auth.admin.deleteUser(authData.user.id)
-    return null
-  }
-
-  return userData as User
 }
 
 export async function signOut(): Promise<void> {
