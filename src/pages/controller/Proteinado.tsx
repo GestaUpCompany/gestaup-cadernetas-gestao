@@ -10,15 +10,6 @@ interface Proteinado {
   marca?: string
   fabricante?: string
   tipo?: string
-  teor_proteico?: number
-  composicao?: any
-  unidade_medida?: string
-  peso_saco?: number
-  estoque_atual?: number
-  estoque_minimo?: number
-  custo_unitario?: number
-  custo_saco?: number
-  custo_total_estoque?: number
   fornecedor?: string
   ativo: boolean
   created_at: string
@@ -37,13 +28,6 @@ export function Proteinado() {
     marca: '',
     fabricante: '',
     tipo: '',
-    teor_proteico: '',
-    unidade_medida: '',
-    peso_saco: '',
-    estoque_atual: '',
-    estoque_minimo: '',
-    custo_unitario: '',
-    custo_saco: '',
     fornecedor: '',
     ativo: true,
   })
@@ -111,13 +95,6 @@ export function Proteinado() {
       marca: formData.marca || null,
       fabricante: formData.fabricante || null,
       tipo: formData.tipo || null,
-      teor_proteico: formData.teor_proteico ? parseFloat(formData.teor_proteico) : null,
-      unidade_medida: formData.unidade_medida || null,
-      peso_saco: formData.peso_saco ? parseFloat(formData.peso_saco) : null,
-      estoque_atual: formData.estoque_atual ? parseFloat(formData.estoque_atual) : null,
-      estoque_minimo: formData.estoque_minimo ? parseFloat(formData.estoque_minimo) : null,
-      custo_unitario: formData.custo_unitario ? parseFloat(formData.custo_unitario) : null,
-      custo_saco: formData.custo_saco ? parseFloat(formData.custo_saco) : null,
       fornecedor: formData.fornecedor || null,
       ativo: formData.ativo,
     }
@@ -145,13 +122,6 @@ export function Proteinado() {
         marca: '',
         fabricante: '',
         tipo: '',
-        teor_proteico: '',
-        unidade_medida: '',
-        peso_saco: '',
-        estoque_atual: '',
-        estoque_minimo: '',
-        custo_unitario: '',
-        custo_saco: '',
         fornecedor: '',
         ativo: true,
       })
@@ -170,13 +140,6 @@ export function Proteinado() {
       marca: proteinado.marca || '',
       fabricante: proteinado.fabricante || '',
       tipo: proteinado.tipo || '',
-      teor_proteico: proteinado.teor_proteico?.toString() || '',
-      unidade_medida: proteinado.unidade_medida || '',
-      peso_saco: proteinado.peso_saco?.toString() || '',
-      estoque_atual: proteinado.estoque_atual?.toString() || '',
-      estoque_minimo: proteinado.estoque_minimo?.toString() || '',
-      custo_unitario: proteinado.custo_unitario?.toString() || '',
-      custo_saco: proteinado.custo_saco?.toString() || '',
       fornecedor: proteinado.fornecedor || '',
       ativo: proteinado.ativo,
     })
@@ -190,13 +153,6 @@ export function Proteinado() {
       marca: '',
       fabricante: '',
       tipo: '',
-      teor_proteico: '',
-      unidade_medida: '',
-      peso_saco: '',
-      estoque_atual: '',
-      estoque_minimo: '',
-      custo_unitario: '',
-      custo_saco: '',
       fornecedor: '',
       ativo: true,
     })
@@ -297,103 +253,6 @@ export function Proteinado() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Teor Proteico (%)
-              </label>
-              <Input
-                type="number"
-                step="0.1"
-                value={formData.teor_proteico}
-                onChange={(e) => setFormData({ ...formData, teor_proteico: e.target.value })}
-                placeholder="Ex: 45.0"
-                className="border-gray-200 focus:border-accent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Unidade de Medida
-              </label>
-              <Input
-                type="text"
-                value={formData.unidade_medida}
-                onChange={(e) => setFormData({ ...formData, unidade_medida: e.target.value })}
-                placeholder="Ex: kg, litros, unidades"
-                className="border-gray-200 focus:border-accent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Peso do Saco (kg)
-              </label>
-              <Input
-                type="number"
-                step="0.1"
-                value={formData.peso_saco}
-                onChange={(e) => setFormData({ ...formData, peso_saco: e.target.value })}
-                placeholder="Ex: 50"
-                className="border-gray-200 focus:border-accent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Estoque Atual
-              </label>
-              <Input
-                type="number"
-                step="0.1"
-                value={formData.estoque_atual}
-                onChange={(e) => setFormData({ ...formData, estoque_atual: e.target.value })}
-                placeholder="Ex: 100"
-                className="border-gray-200 focus:border-accent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Estoque Mínimo
-              </label>
-              <Input
-                type="number"
-                step="0.1"
-                value={formData.estoque_minimo}
-                onChange={(e) => setFormData({ ...formData, estoque_minimo: e.target.value })}
-                placeholder="Ex: 10"
-                className="border-gray-200 focus:border-accent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Custo Unitário (R$)
-              </label>
-              <Input
-                type="number"
-                step="0.01"
-                value={formData.custo_unitario}
-                onChange={(e) => setFormData({ ...formData, custo_unitario: e.target.value })}
-                placeholder="Ex: 50.00"
-                className="border-gray-200 focus:border-accent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Custo do Saco (R$)
-              </label>
-              <Input
-                type="number"
-                step="0.01"
-                value={formData.custo_saco}
-                onChange={(e) => setFormData({ ...formData, custo_saco: e.target.value })}
-                placeholder="Ex: 2500.00"
-                className="border-gray-200 focus:border-accent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Fornecedor
               </label>
               <Input
@@ -465,40 +324,21 @@ export function Proteinado() {
               </div>
 
               <div className="space-y-2 mb-4">
-                {proteinado.teor_proteico && (
-                  <p className="text-sm text-gray-500">
-                    <span className="font-medium">Teor Proteico:</span> {proteinado.teor_proteico}%
-                  </p>
-                )}
-
-                {proteinado.estoque_atual !== undefined && proteinado.estoque_atual !== null && (
-                  <p className="text-sm text-gray-500">
-                    <span className="font-medium">Estoque:</span> {proteinado.estoque_atual}
-                    {proteinado.unidade_medida && ` ${proteinado.unidade_medida}`}
-                  </p>
-                )}
-
-                {proteinado.unidade_medida && !proteinado.estoque_atual && (
-                  <p className="text-sm text-gray-500">
-                    <span className="font-medium">Unidade:</span> {proteinado.unidade_medida}
-                  </p>
-                )}
-
                 {proteinado.marca && (
                   <p className="text-sm text-gray-500">
                     <span className="font-medium">Marca:</span> {proteinado.marca}
                   </p>
                 )}
 
-                {proteinado.fornecedor && (
+                {proteinado.fabricante && (
                   <p className="text-sm text-gray-500">
-                    <span className="font-medium">Fornecedor:</span> {proteinado.fornecedor}
+                    <span className="font-medium">Fabricante:</span> {proteinado.fabricante}
                   </p>
                 )}
 
-                {proteinado.custo_unitario && (
+                {proteinado.fornecedor && (
                   <p className="text-sm text-gray-500">
-                    <span className="font-medium">Custo Unitário:</span> R$ {proteinado.custo_unitario.toFixed(2)}
+                    <span className="font-medium">Fornecedor:</span> {proteinado.fornecedor}
                   </p>
                 )}
               </div>

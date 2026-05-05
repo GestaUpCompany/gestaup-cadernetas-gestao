@@ -10,14 +10,6 @@ interface Mineral {
   marca?: string
   fabricante?: string
   tipo?: string
-  composicao?: any
-  unidade_medida?: string
-  peso_saco?: number
-  estoque_atual?: number
-  estoque_minimo?: number
-  custo_unitario?: number
-  custo_saco?: number
-  custo_total_estoque?: number
   fornecedor?: string
   ativo: boolean
   created_at: string
@@ -36,12 +28,6 @@ export function Mineral() {
     marca: '',
     fabricante: '',
     tipo: '',
-    unidade_medida: '',
-    peso_saco: '',
-    estoque_atual: '',
-    estoque_minimo: '',
-    custo_unitario: '',
-    custo_saco: '',
     fornecedor: '',
     ativo: true,
   })
@@ -109,12 +95,6 @@ export function Mineral() {
       marca: formData.marca || null,
       fabricante: formData.fabricante || null,
       tipo: formData.tipo || null,
-      unidade_medida: formData.unidade_medida || null,
-      peso_saco: formData.peso_saco ? parseFloat(formData.peso_saco) : null,
-      estoque_atual: formData.estoque_atual ? parseFloat(formData.estoque_atual) : null,
-      estoque_minimo: formData.estoque_minimo ? parseFloat(formData.estoque_minimo) : null,
-      custo_unitario: formData.custo_unitario ? parseFloat(formData.custo_unitario) : null,
-      custo_saco: formData.custo_saco ? parseFloat(formData.custo_saco) : null,
       fornecedor: formData.fornecedor || null,
       ativo: formData.ativo,
     }
@@ -142,12 +122,6 @@ export function Mineral() {
         marca: '',
         fabricante: '',
         tipo: '',
-        unidade_medida: '',
-        peso_saco: '',
-        estoque_atual: '',
-        estoque_minimo: '',
-        custo_unitario: '',
-        custo_saco: '',
         fornecedor: '',
         ativo: true,
       })
@@ -166,12 +140,6 @@ export function Mineral() {
       marca: mineral.marca || '',
       fabricante: mineral.fabricante || '',
       tipo: mineral.tipo || '',
-      unidade_medida: mineral.unidade_medida || '',
-      peso_saco: mineral.peso_saco?.toString() || '',
-      estoque_atual: mineral.estoque_atual?.toString() || '',
-      estoque_minimo: mineral.estoque_minimo?.toString() || '',
-      custo_unitario: mineral.custo_unitario?.toString() || '',
-      custo_saco: mineral.custo_saco?.toString() || '',
       fornecedor: mineral.fornecedor || '',
       ativo: mineral.ativo,
     })
@@ -185,12 +153,6 @@ export function Mineral() {
       marca: '',
       fabricante: '',
       tipo: '',
-      unidade_medida: '',
-      peso_saco: '',
-      estoque_atual: '',
-      estoque_minimo: '',
-      custo_unitario: '',
-      custo_saco: '',
       fornecedor: '',
       ativo: true,
     })
@@ -291,89 +253,6 @@ export function Mineral() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Unidade de Medida
-              </label>
-              <Input
-                type="text"
-                value={formData.unidade_medida}
-                onChange={(e) => setFormData({ ...formData, unidade_medida: e.target.value })}
-                placeholder="Ex: kg, litros, unidades"
-                className="border-gray-200 focus:border-accent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Peso do Saco (kg)
-              </label>
-              <Input
-                type="number"
-                step="0.1"
-                value={formData.peso_saco}
-                onChange={(e) => setFormData({ ...formData, peso_saco: e.target.value })}
-                placeholder="Ex: 50"
-                className="border-gray-200 focus:border-accent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Estoque Atual
-              </label>
-              <Input
-                type="number"
-                step="0.1"
-                value={formData.estoque_atual}
-                onChange={(e) => setFormData({ ...formData, estoque_atual: e.target.value })}
-                placeholder="Ex: 100"
-                className="border-gray-200 focus:border-accent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Estoque Mínimo
-              </label>
-              <Input
-                type="number"
-                step="0.1"
-                value={formData.estoque_minimo}
-                onChange={(e) => setFormData({ ...formData, estoque_minimo: e.target.value })}
-                placeholder="Ex: 10"
-                className="border-gray-200 focus:border-accent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Custo Unitário (R$)
-              </label>
-              <Input
-                type="number"
-                step="0.01"
-                value={formData.custo_unitario}
-                onChange={(e) => setFormData({ ...formData, custo_unitario: e.target.value })}
-                placeholder="Ex: 50.00"
-                className="border-gray-200 focus:border-accent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Custo do Saco (R$)
-              </label>
-              <Input
-                type="number"
-                step="0.01"
-                value={formData.custo_saco}
-                onChange={(e) => setFormData({ ...formData, custo_saco: e.target.value })}
-                placeholder="Ex: 2500.00"
-                className="border-gray-200 focus:border-accent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Fornecedor
               </label>
               <Input
@@ -445,34 +324,21 @@ export function Mineral() {
               </div>
 
               <div className="space-y-2 mb-4">
-                {mineral.estoque_atual !== undefined && mineral.estoque_atual !== null && (
-                  <p className="text-sm text-gray-500">
-                    <span className="font-medium">Estoque:</span> {mineral.estoque_atual}
-                    {mineral.unidade_medida && ` ${mineral.unidade_medida}`}
-                  </p>
-                )}
-
-                {mineral.unidade_medida && !mineral.estoque_atual && (
-                  <p className="text-sm text-gray-500">
-                    <span className="font-medium">Unidade:</span> {mineral.unidade_medida}
-                  </p>
-                )}
-
                 {mineral.marca && (
                   <p className="text-sm text-gray-500">
                     <span className="font-medium">Marca:</span> {mineral.marca}
                   </p>
                 )}
 
-                {mineral.fornecedor && (
+                {mineral.fabricante && (
                   <p className="text-sm text-gray-500">
-                    <span className="font-medium">Fornecedor:</span> {mineral.fornecedor}
+                    <span className="font-medium">Fabricante:</span> {mineral.fabricante}
                   </p>
                 )}
 
-                {mineral.custo_unitario && (
+                {mineral.fornecedor && (
                   <p className="text-sm text-gray-500">
-                    <span className="font-medium">Custo Unitário:</span> R$ {mineral.custo_unitario.toFixed(2)}
+                    <span className="font-medium">Fornecedor:</span> {mineral.fornecedor}
                   </p>
                 )}
               </div>

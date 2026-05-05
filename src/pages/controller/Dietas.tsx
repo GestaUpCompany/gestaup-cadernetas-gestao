@@ -9,10 +9,6 @@ interface Dieta {
   nome: string
   descricao?: string
   tipo?: string
-  insumos?: any
-  custo_total?: number
-  custo_diario_animal?: number
-  consumo_diario_kg?: number
   ativo: boolean
   created_at: string
   updated_at: string
@@ -29,9 +25,6 @@ export function Dietas() {
     nome: '',
     descricao: '',
     tipo: '',
-    custo_total: '',
-    custo_diario_animal: '',
-    consumo_diario_kg: '',
     ativo: true,
   })
   const [submitting, setSubmitting] = useState(false)
@@ -97,9 +90,6 @@ export function Dietas() {
       nome: formData.nome,
       descricao: formData.descricao || null,
       tipo: formData.tipo || null,
-      custo_total: formData.custo_total ? parseFloat(formData.custo_total) : null,
-      custo_diario_animal: formData.custo_diario_animal ? parseFloat(formData.custo_diario_animal) : null,
-      consumo_diario_kg: formData.consumo_diario_kg ? parseFloat(formData.consumo_diario_kg) : null,
       ativo: formData.ativo,
     }
 
@@ -125,9 +115,6 @@ export function Dietas() {
         nome: '',
         descricao: '',
         tipo: '',
-        custo_total: '',
-        custo_diario_animal: '',
-        consumo_diario_kg: '',
         ativo: true,
       })
       setShowForm(false)
@@ -144,9 +131,6 @@ export function Dietas() {
       nome: dieta.nome,
       descricao: dieta.descricao || '',
       tipo: dieta.tipo || '',
-      custo_total: dieta.custo_total?.toString() || '',
-      custo_diario_animal: dieta.custo_diario_animal?.toString() || '',
-      consumo_diario_kg: dieta.consumo_diario_kg?.toString() || '',
       ativo: dieta.ativo,
     })
     setShowForm(true)
@@ -158,9 +142,6 @@ export function Dietas() {
       nome: '',
       descricao: '',
       tipo: '',
-      custo_total: '',
-      custo_diario_animal: '',
-      consumo_diario_kg: '',
       ativo: true,
     })
     setShowForm(false)
@@ -245,48 +226,6 @@ export function Dietas() {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Custo Total (R$)
-              </label>
-              <Input
-                type="number"
-                step="0.01"
-                value={formData.custo_total}
-                onChange={(e) => setFormData({ ...formData, custo_total: e.target.value })}
-                placeholder="Ex: 5000.00"
-                className="border-gray-200 focus:border-accent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Custo Diário por Animal (R$)
-              </label>
-              <Input
-                type="number"
-                step="0.01"
-                value={formData.custo_diario_animal}
-                onChange={(e) => setFormData({ ...formData, custo_diario_animal: e.target.value })}
-                placeholder="Ex: 5.00"
-                className="border-gray-200 focus:border-accent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Consumo Diário (kg/animal)
-              </label>
-              <Input
-                type="number"
-                step="0.1"
-                value={formData.consumo_diario_kg}
-                onChange={(e) => setFormData({ ...formData, consumo_diario_kg: e.target.value })}
-                placeholder="Ex: 10.0"
-                className="border-gray-200 focus:border-accent"
-              />
-            </div>
-
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
@@ -353,21 +292,9 @@ export function Dietas() {
                   </p>
                 )}
 
-                {dieta.custo_total && (
+                {dieta.tipo && (
                   <p className="text-sm text-gray-500">
-                    <span className="font-medium">Custo Total:</span> R$ {dieta.custo_total.toFixed(2)}
-                  </p>
-                )}
-
-                {dieta.custo_diario_animal && (
-                  <p className="text-sm text-gray-500">
-                    <span className="font-medium">Custo Diário/Animal:</span> R$ {dieta.custo_diario_animal.toFixed(2)}
-                  </p>
-                )}
-
-                {dieta.consumo_diario_kg && (
-                  <p className="text-sm text-gray-500">
-                    <span className="font-medium">Consumo Diário:</span> {dieta.consumo_diario_kg} kg
+                    <span className="font-medium">Tipo:</span> {dieta.tipo}
                   </p>
                 )}
               </div>
