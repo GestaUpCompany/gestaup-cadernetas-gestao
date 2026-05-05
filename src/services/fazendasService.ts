@@ -152,24 +152,7 @@ export async function createFazendaWithController(
 ): Promise<CreateFazendaWithControllerResult> {
   const { controller_email, controller_nome } = params
 
-  // Gerar senha usando a regra: acesso_id + "2026"
-  const senha = `${params.acesso_id}2026`
-
-  // Nome do controller: usar o nome da fazenda se não fornecido
-  const nomeController = controller_nome || `Controller ${params.nome}`
-
-  // Criar usuário no Supabase Auth e na tabela usuarios
-  const user = await signUp(controller_email, senha, nomeController, undefined, 'controller')
-
-  if (!user) {
-    return {
-      fazenda: null,
-      controller: null,
-      error: 'Erro ao criar usuário controller'
-    }
-  }
-
-  // Criar fazenda
+  // Passo 1: Criar fazenda primeiro
   const fazenda = await createFazenda({
     acesso_id: params.acesso_id,
     nome: params.nome,
@@ -183,8 +166,6 @@ export async function createFazendaWithController(
   })
 
   if (!fazenda) {
-    // Rollback: deletar usuário criado via Edge Function
-    await rollbackUserCreation(user.id)
     return {
       fazenda: null,
       controller: null,
@@ -192,7 +173,23 @@ export async function createFazendaWithController(
     }
   }
 
-  // Associar usuário à fazenda na tabela usuario_fazenda
+  // Passo 2: Criar controller
+  const senha = `${params.acesso_id}2026`
+  const nomeController = controller_nome || `Controller ${params.nome}`
+
+  const user = await signUp(controller_email, senha, nomeController, undefined, 'controller')
+
+  if (!user) {
+    // Rollback: deletar fazenda criada
+    await deleteFazenda(fazenda.id)
+    return {
+      fazenda: null,
+      controller: null,
+      error: 'Erro ao criar usuário controller'
+    }
+  }
+
+  // Passo 3: Associar usuário à fazenda na tabela usuario_fazenda
   const { error: associationError } = await supabase
     .from('usuario_fazenda')
     .insert({
@@ -204,8 +201,9 @@ export async function createFazendaWithController(
 
   if (associationError) {
     console.error('Erro ao associar usuário à fazenda:', associationError)
-    // Rollback: deletar fazenda e usuário criados via Edge Function
-    await rollbackUserCreation(user.id, fazenda.id)
+    // Rollback: deletar usuário e fazenda
+    await rollbackUserCreation(user.id)
+    await deleteFazenda(fazenda.id)
     return {
       fazenda: null,
       controller: null,
@@ -213,12 +211,11 @@ export async function createFazendaWithController(
     }
   }
 
-  // Criar peão para acesso do app mobile
+  // Passo 4: Criar peão para acesso do app mobile
   const peaoEmail = `peao.${params.acesso_id}@gestaup.internal`
   const peaoPassword = `${params.acesso_id}2026!`
 
   try {
-    // Criar usuário peão no Supabase Auth via Edge Function com papel peao
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) {
       console.error('No session found for peão creation')
@@ -231,7 +228,6 @@ export async function createFazendaWithController(
       }
     }
 
-    // Criar usuário peão apenas no Supabase Auth usando Edge Function específica
     const peaoResponse = await fetch(
       `${supabaseUrl}/functions/v1/create-auth-user-only`,
       {
@@ -251,7 +247,6 @@ export async function createFazendaWithController(
     if (peaoResponse.ok) {
       const peaoResult = await peaoResponse.json()
       if (peaoResult.success) {
-        // Inserir peão na tabela peoes
         const { error: peaoError } = await supabase
           .from('peoes')
           .insert({
@@ -263,7 +258,6 @@ export async function createFazendaWithController(
 
         if (peaoError) {
           console.error('Erro ao inserir peão na tabela peoes:', peaoError)
-          // Não é fatal, continua com o fluxo
         }
       }
     } else {
@@ -271,7 +265,6 @@ export async function createFazendaWithController(
     }
   } catch (error) {
     console.error('Exception ao criar peão:', error)
-    // Não é fatal, continua com o fluxo
   }
 
   return {
