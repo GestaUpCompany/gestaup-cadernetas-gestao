@@ -17,8 +17,6 @@ export interface Session {
 }
 
 export async function signIn(email: string, password: string): Promise<Session | null> {
-  console.log('Tentando fazer login com:', email)
-  
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -28,8 +26,6 @@ export async function signIn(email: string, password: string): Promise<Session |
     console.error('Erro ao fazer login (Auth):', error)
     return null
   }
-
-  console.log('Login no Auth bem-sucedido, buscando dados do usuário...')
 
   // Buscar dados adicionais do usuário
   const { data: userData, error: userError } = await supabase
@@ -48,7 +44,6 @@ export async function signIn(email: string, password: string): Promise<Session |
     return null
   }
 
-  console.log('Usuário encontrado:', userData)
   return {
     user: userData as User,
     token: data.session.access_token,
@@ -97,40 +92,47 @@ export async function signOut(): Promise<void> {
 }
 
 export async function getCurrentUser(): Promise<User | null> {
-  console.log('getCurrentUser: Buscando usuário do Supabase Auth...')
-  
   const { data: { user }, error } = await supabase.auth.getUser()
 
   if (error) {
-    console.error('getCurrentUser: Erro ao buscar usuário do Auth:', error)
+    console.error('Erro ao buscar usuário do Auth:', error)
     return null
   }
 
   if (!user) {
-    console.log('getCurrentUser: Nenhum usuário logado no Auth')
     return null
   }
 
-  console.log('getCurrentUser: Usuário encontrado no Auth, buscando dados na tabela usuarios...')
-
-  const { data: userData, error: userError } = await supabase
+  // Tentar buscar por auth_id primeiro
+  const { data: userDataByAuthId } = await supabase
     .from('usuarios')
     .select('*')
-    .eq('id', user.id)
-    .single()
+    .eq('auth_id', user.id)
+    .maybeSingle()
 
-  if (userError) {
-    console.error('getCurrentUser: Erro ao buscar dados do usuário (DB):', userError)
+  // Se encontrou por auth_id, retorna
+  if (userDataByAuthId) {
+    return userDataByAuthId as User
+  }
+
+  // Se não encontrar por auth_id, tentar buscar por email
+  const { data: userDataByEmail, error: emailError } = await supabase
+    .from('usuarios')
+    .select('*')
+    .eq('email', user.email)
+    .maybeSingle()
+
+  if (emailError) {
+    console.error('Erro ao buscar dados do usuário (DB):', emailError)
     return null
   }
 
-  if (!userData) {
-    console.error('getCurrentUser: Usuário não encontrado na tabela usuarios')
+  if (!userDataByEmail) {
+    console.error('Usuário não encontrado na tabela usuarios')
     return null
   }
 
-  console.log('getCurrentUser: Usuário encontrado:', userData)
-  return userData as User
+  return userDataByEmail as User
 }
 
 export async function onAuthStateChange(callback: (user: User | null) => void) {

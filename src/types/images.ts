@@ -6,6 +6,7 @@ export type CadernetaImage =
   | 'rodeio'
   | 'suplementacao'
   | 'enfermaria'
+  | 'morte'
 
 export const CADERNETA_IMAGES: Record<CadernetaImage, string> = {
   maternidade: '/images/cadernetas/maternidade.png',
@@ -15,6 +16,7 @@ export const CADERNETA_IMAGES: Record<CadernetaImage, string> = {
   rodeio: '/images/cadernetas/rodeio.png',
   suplementacao: '/images/cadernetas/suplementacao.png',
   enfermaria: '/images/cadernetas/enfermaria.png',
+  morte: '/images/cadernetas/morte.png',
 }
 
 export const CADERNETA_TITLES: Record<CadernetaImage, string> = {
@@ -25,6 +27,7 @@ export const CADERNETA_TITLES: Record<CadernetaImage, string> = {
   rodeio: 'Rodeio',
   suplementacao: 'Suplementação',
   enfermaria: 'Enfermaria',
+  morte: 'Registros de Morte',
 }
 
 export const CADERNETA_DESCRIPTIONS: Record<CadernetaImage, string> = {
@@ -35,6 +38,7 @@ export const CADERNETA_DESCRIPTIONS: Record<CadernetaImage, string> = {
   rodeio: 'Registros de manejos e rodeios',
   suplementacao: 'Registros de suplementação alimentar',
   enfermaria: 'Registros de tratamentos e enfermidades',
+  morte: 'Registros de óbitos e mortes',
 }
 
 export const LOGO_GESTAUP = '/images/logo/logo-gestaup.png'

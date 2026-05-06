@@ -33,10 +33,10 @@ export function Login() {
         <div className="flex flex-col items-center">
           <img 
             src={LOGO_GESTAUP} 
-            alt="Gesta'Up Logo" 
+            alt="Manej'Us Logo" 
             className="h-20 w-auto mb-4"
           />
-          <h2 className="text-2xl font-bold text-gray-800">Gesta'Up Cadernetas Digitais</h2>
+          <h2 className="text-2xl font-bold text-gray-800">Manej'Us</h2>
           <p className="text-gray-500">Faça login para acessar sua fazenda</p>
         </div>
 

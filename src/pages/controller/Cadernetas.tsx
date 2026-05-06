@@ -48,6 +48,12 @@ export function Cadernetas() {
       image: CADERNETA_IMAGES.enfermaria,
       path: '/controller/enfermaria',
     },
+    {
+      title: CADERNETA_TITLES.morte,
+      description: CADERNETA_DESCRIPTIONS.morte,
+      image: CADERNETA_IMAGES.morte,
+      path: '/controller/morte',
+    },
   ]
 
   return (

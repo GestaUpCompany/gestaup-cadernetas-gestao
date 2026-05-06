@@ -41,6 +41,9 @@ import { Fornecedores } from './pages/controller/Fornecedores'
 import { Frigorificos } from './pages/controller/Frigorificos'
 import { CausasMorte } from './pages/controller/CausasMorte'
 import { BebedourosCadastro } from './pages/controller/BebedourosCadastro'
+import { RegistrosMorte } from './pages/controller/RegistrosMorte'
+import { RegistrosMorteDetalhes } from './pages/controller/RegistrosMorteDetalhes'
+import { Pluviometros } from './pages/controller/Pluviometros'
 
 // Redirecionamento baseado no papel do usuário
 function RoleRedirect() {
@@ -434,6 +437,36 @@ function App() {
             <ControllerRoute>
               <ControllerLayout>
                 <MovimentacaoDetalhes />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/morte"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <RegistrosMorte />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/morte/:id"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <RegistrosMorteDetalhes />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/pluviometros"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <Pluviometros />
               </ControllerLayout>
             </ControllerRoute>
           }

@@ -35,6 +35,7 @@ export function ControllerDashboard() {
     lotes: 0,
     funcionarios: 0,
     insumos: 0,
+    pluviometros: 0,
   })
   const [cadernetaStats, setCadernetaStats] = useState({
     maternidade: 0,
@@ -44,6 +45,7 @@ export function ControllerDashboard() {
     suplementacao: 0,
     bebedouros: 0,
     movimentacao: 0,
+    morte: 0,
   })
 
   const [registrosHoje, setRegistrosHoje] = useState(0)
@@ -189,11 +191,13 @@ export function ControllerDashboard() {
       { count: lotesCount },
       { count: funcionariosCount },
       { count: insumosCount },
+      { count: pluviometrosCount },
     ] = await Promise.all([
       supabase.from('pastos').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
       supabase.from('lotes').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
       supabase.from('funcionarios').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
       supabase.from('insumos').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
+      supabase.from('pluviometros').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
     ])
 
     // Buscar estatísticas de cadernetas
@@ -205,6 +209,7 @@ export function ControllerDashboard() {
       { count: suplementacaoCount },
       { count: bebedourosCount },
       { count: movimentacaoCount },
+      { count: morteCount },
     ] = await Promise.all([
       supabase.from('registros_maternidade').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
       supabase.from('registros_enfermaria').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
@@ -213,6 +218,7 @@ export function ControllerDashboard() {
       supabase.from('registros_suplementacao').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
       supabase.from('registros_bebedouros').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
       supabase.from('registros_movimentacao').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
+      supabase.from('registros_morte').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
     ])
 
     // Buscar registros de hoje
@@ -230,6 +236,7 @@ export function ControllerDashboard() {
       { count: suplementacaoHoje },
       { count: bebedourosHoje },
       { count: movimentacaoHoje },
+      { count: morteHoje },
     ] = await Promise.all([
       supabase.from('registros_maternidade').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('data', todayStr),
       supabase.from('registros_enfermaria').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('data', todayStr),
@@ -238,9 +245,10 @@ export function ControllerDashboard() {
       supabase.from('registros_suplementacao').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('data', todayStr),
       supabase.from('registros_bebedouros').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('data', todayStr),
       supabase.from('registros_movimentacao').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('data', todayStr),
+      supabase.from('registros_morte').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('data', todayStr),
     ])
 
-    const totalHoje = (maternidadeHoje || 0) + (enfermariaHoje || 0) + (pastagensHoje || 0) + (rodeioHoje || 0) + (suplementacaoHoje || 0) + (bebedourosHoje || 0) + (movimentacaoHoje || 0)
+    const totalHoje = (maternidadeHoje || 0) + (enfermariaHoje || 0) + (pastagensHoje || 0) + (rodeioHoje || 0) + (suplementacaoHoje || 0) + (bebedourosHoje || 0) + (movimentacaoHoje || 0) + (morteHoje || 0)
     setRegistrosHoje(totalHoje)
 
     setCadastroStats({
@@ -248,6 +256,7 @@ export function ControllerDashboard() {
       lotes: lotesCount || 0,
       funcionarios: funcionariosCount || 0,
       insumos: insumosCount || 0,
+      pluviometros: pluviometrosCount || 0,
     })
 
     setCadernetaStats({
@@ -258,6 +267,7 @@ export function ControllerDashboard() {
       suplementacao: suplementacaoCount || 0,
       bebedouros: bebedourosCount || 0,
       movimentacao: movimentacaoCount || 0,
+      morte: morteCount || 0,
     })
   }
 
@@ -310,13 +320,13 @@ export function ControllerDashboard() {
           <Card className="bg-white p-6 border-0 shadow-sm">
             <p className="text-sm text-gray-500 mb-2">Total Cadastros</p>
             <p className="text-4xl font-bold text-gray-800">
-              {cadastroStats.pastos + cadastroStats.lotes + cadastroStats.funcionarios + cadastroStats.insumos}
+              {cadastroStats.pastos + cadastroStats.lotes + cadastroStats.funcionarios + cadastroStats.insumos + cadastroStats.pluviometros}
             </p>
           </Card>
           <Card className="bg-white p-6 border-0 shadow-sm">
             <p className="text-sm text-gray-500 mb-2">Total Registros</p>
             <p className="text-4xl font-bold text-gray-800">
-              {cadernetaStats.maternidade + cadernetaStats.enfermaria + cadernetaStats.pastagens + cadernetaStats.rodeio + cadernetaStats.suplementacao + cadernetaStats.bebedouros + cadernetaStats.movimentacao}
+              {cadernetaStats.maternidade + cadernetaStats.enfermaria + cadernetaStats.pastagens + cadernetaStats.rodeio + cadernetaStats.suplementacao + cadernetaStats.bebedouros + cadernetaStats.movimentacao + cadernetaStats.morte}
             </p>
           </Card>
         </div>
@@ -366,6 +376,17 @@ export function ControllerDashboard() {
               variant="secondary"
               className="mt-4 w-full"
               onClick={() => navigate('/controller/insumos')}
+            >
+              Gerenciar
+            </Button>
+          </Card>
+          <Card className="bg-white p-6 border-0 shadow-sm">
+            <p className="text-sm text-gray-500 mb-2">Pluviômetros</p>
+            <p className="text-4xl font-bold text-gray-800">{cadastroStats.pluviometros}</p>
+            <Button
+              variant="secondary"
+              className="mt-4 w-full"
+              onClick={() => navigate('/controller/pluviometros')}
             >
               Gerenciar
             </Button>
@@ -458,6 +479,18 @@ export function ControllerDashboard() {
               <div>
                 <p className="text-sm text-gray-500 mb-1">{CADERNETA_TITLES.enfermaria}</p>
                 <p className="text-4xl font-bold text-gray-800">{cadernetaStats.enfermaria}</p>
+              </div>
+            </div>
+          </Card>
+          <Card 
+            className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+            onClick={() => navigate('/controller/morte')}
+          >
+            <div className="flex items-center gap-4 mb-3">
+              <img src={CADERNETA_IMAGES.morte} alt={CADERNETA_TITLES.morte} className="w-16 h-16 rounded-[32px]" />
+              <div>
+                <p className="text-sm text-gray-500 mb-1">{CADERNETA_TITLES.morte}</p>
+                <p className="text-4xl font-bold text-gray-800">{cadernetaStats.morte}</p>
               </div>
             </div>
           </Card>

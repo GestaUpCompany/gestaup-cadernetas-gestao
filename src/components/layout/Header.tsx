@@ -15,11 +15,11 @@ export function Header() {
         <div className="flex items-center gap-4">
           <img 
             src={LOGO_GESTAUP} 
-            alt="Gesta'Up Logo" 
+            alt="Manej'Us Logo" 
             className="h-10 w-auto"
           />
           <div>
-            <h1 className="text-2xl font-bold text-white">Gesta'Up Cadernetas Digitais</h1>
+            <h1 className="text-2xl font-bold text-white">Manej'Us</h1>
           </div>
         </div>
         <div className="flex items-center gap-4">

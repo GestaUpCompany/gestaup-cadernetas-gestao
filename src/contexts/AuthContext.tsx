@@ -28,7 +28,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Verificar usuário atual
     getCurrentUser()
       .then((currentUser) => {
-        console.log('AuthProvider: Usuário encontrado:', currentUser)
         clearTimeout(timeoutId)
         setUser(currentUser)
         setLoading(false)
