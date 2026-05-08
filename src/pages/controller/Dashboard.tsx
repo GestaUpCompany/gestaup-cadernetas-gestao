@@ -46,6 +46,9 @@ export function ControllerDashboard() {
     bebedouros: 0,
     movimentacao: 0,
     morte: 0,
+    clima: 0,
+    abastecimento: 0,
+    cantina: 0,
   })
 
   const [registrosHoje, setRegistrosHoje] = useState(0)
@@ -210,6 +213,9 @@ export function ControllerDashboard() {
       { count: bebedourosCount },
       { count: movimentacaoCount },
       { count: morteCount },
+      { count: climaCount },
+      { count: abastecimentoCount },
+      { count: cantinaCount },
     ] = await Promise.all([
       supabase.from('registros_maternidade').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
       supabase.from('registros_enfermaria').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
@@ -219,6 +225,9 @@ export function ControllerDashboard() {
       supabase.from('registros_bebedouros').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
       supabase.from('registros_movimentacao').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
       supabase.from('registros_morte').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
+      supabase.from('registros_clima').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
+      supabase.from('registros_abastecimento').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
+      supabase.from('registros_cantina').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
     ])
 
     // Buscar registros de hoje
@@ -268,6 +277,9 @@ export function ControllerDashboard() {
       bebedouros: bebedourosCount || 0,
       movimentacao: movimentacaoCount || 0,
       morte: morteCount || 0,
+      clima: climaCount || 0,
+      abastecimento: abastecimentoCount || 0,
+      cantina: cantinaCount || 0,
     })
   }
 
@@ -293,7 +305,7 @@ export function ControllerDashboard() {
             <img
               src={fazenda.logo_url}
               alt={fazenda.nome}
-              className="w-16 h-16 rounded-lg object-cover"
+              className="w-32 h-16 rounded-lg object-contain"
             />
           ) : (
             <div className="w-16 h-16 rounded-lg bg-gray-200 flex items-center justify-center">
@@ -326,7 +338,7 @@ export function ControllerDashboard() {
           <Card className="bg-white p-6 border-0 shadow-sm">
             <p className="text-sm text-gray-500 mb-2">Total Registros</p>
             <p className="text-4xl font-bold text-gray-800">
-              {cadernetaStats.maternidade + cadernetaStats.enfermaria + cadernetaStats.pastagens + cadernetaStats.rodeio + cadernetaStats.suplementacao + cadernetaStats.bebedouros + cadernetaStats.movimentacao + cadernetaStats.morte}
+              {cadernetaStats.maternidade + cadernetaStats.enfermaria + cadernetaStats.pastagens + cadernetaStats.rodeio + cadernetaStats.suplementacao + cadernetaStats.bebedouros + cadernetaStats.movimentacao + cadernetaStats.morte + cadernetaStats.clima + cadernetaStats.abastecimento + cadernetaStats.cantina}
             </p>
           </Card>
         </div>
@@ -491,6 +503,42 @@ export function ControllerDashboard() {
               <div>
                 <p className="text-sm text-gray-500 mb-1">{CADERNETA_TITLES.morte}</p>
                 <p className="text-4xl font-bold text-gray-800">{cadernetaStats.morte}</p>
+              </div>
+            </div>
+          </Card>
+          <Card 
+            className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+            onClick={() => navigate('/controller/clima')}
+          >
+            <div className="flex items-center gap-4 mb-3">
+              <img src={CADERNETA_IMAGES.clima} alt={CADERNETA_TITLES.clima} className="w-16 h-16 rounded-[32px]" />
+              <div>
+                <p className="text-sm text-gray-500 mb-1">{CADERNETA_TITLES.clima}</p>
+                <p className="text-4xl font-bold text-gray-800">{cadernetaStats.clima}</p>
+              </div>
+            </div>
+          </Card>
+          <Card 
+            className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+            onClick={() => navigate('/controller/abastecimento')}
+          >
+            <div className="flex items-center gap-4 mb-3">
+              <img src={CADERNETA_IMAGES.abastecimento} alt={CADERNETA_TITLES.abastecimento} className="w-16 h-16 rounded-[32px]" />
+              <div>
+                <p className="text-sm text-gray-500 mb-1">{CADERNETA_TITLES.abastecimento}</p>
+                <p className="text-4xl font-bold text-gray-800">{cadernetaStats.abastecimento}</p>
+              </div>
+            </div>
+          </Card>
+          <Card 
+            className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+            onClick={() => navigate('/controller/cantina')}
+          >
+            <div className="flex items-center gap-4 mb-3">
+              <img src={CADERNETA_IMAGES.cantina} alt={CADERNETA_TITLES.cantina} className="w-16 h-16 rounded-[32px]" />
+              <div>
+                <p className="text-sm text-gray-500 mb-1">{CADERNETA_TITLES.cantina}</p>
+                <p className="text-4xl font-bold text-gray-800">{cadernetaStats.cantina}</p>
               </div>
             </div>
           </Card>

@@ -44,6 +44,12 @@ import { BebedourosCadastro } from './pages/controller/BebedourosCadastro'
 import { RegistrosMorte } from './pages/controller/RegistrosMorte'
 import { RegistrosMorteDetalhes } from './pages/controller/RegistrosMorteDetalhes'
 import { Pluviometros } from './pages/controller/Pluviometros'
+import { RegistrosClima } from './pages/controller/RegistrosClima'
+import { RegistrosClimaDetalhes } from './pages/controller/RegistrosClimaDetalhes'
+import { RegistrosAbastecimento } from './pages/controller/RegistrosAbastecimento'
+import { RegistrosAbastecimentoDetalhes } from './pages/controller/RegistrosAbastecimentoDetalhes'
+import { RegistrosCantina } from './pages/controller/RegistrosCantina'
+import { RegistrosCantinaDetalhes } from './pages/controller/RegistrosCantinaDetalhes'
 
 // Redirecionamento baseado no papel do usuário
 function RoleRedirect() {
@@ -467,6 +473,66 @@ function App() {
             <ControllerRoute>
               <ControllerLayout>
                 <Pluviometros />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/clima"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <RegistrosClima />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/clima/:id"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <RegistrosClimaDetalhes />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/abastecimento"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <RegistrosAbastecimento />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/abastecimento/:id"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <RegistrosAbastecimentoDetalhes />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/cantina"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <RegistrosCantina />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/cantina/:id"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <RegistrosCantinaDetalhes />
               </ControllerLayout>
             </ControllerRoute>
           }

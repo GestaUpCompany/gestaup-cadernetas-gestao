@@ -54,6 +54,24 @@ export function Cadernetas() {
       image: CADERNETA_IMAGES.morte,
       path: '/controller/morte',
     },
+    {
+      title: CADERNETA_TITLES.clima,
+      description: CADERNETA_DESCRIPTIONS.clima,
+      image: CADERNETA_IMAGES.clima,
+      path: '/controller/clima',
+    },
+    {
+      title: CADERNETA_TITLES.abastecimento,
+      description: CADERNETA_DESCRIPTIONS.abastecimento,
+      image: CADERNETA_IMAGES.abastecimento,
+      path: '/controller/abastecimento',
+    },
+    {
+      title: CADERNETA_TITLES.cantina,
+      description: CADERNETA_DESCRIPTIONS.cantina,
+      image: CADERNETA_IMAGES.cantina,
+      path: '/controller/cantina',
+    },
   ]
 
   return (

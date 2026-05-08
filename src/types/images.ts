@@ -1,4 +1,4 @@
-export type CadernetaImage = 
+export type CadernetaImage =
   | 'maternidade'
   | 'movimentacao'
   | 'pastagens'
@@ -7,6 +7,9 @@ export type CadernetaImage =
   | 'suplementacao'
   | 'enfermaria'
   | 'morte'
+  | 'clima'
+  | 'abastecimento'
+  | 'cantina'
 
 export const CADERNETA_IMAGES: Record<CadernetaImage, string> = {
   maternidade: '/images/cadernetas/maternidade.png',
@@ -17,6 +20,9 @@ export const CADERNETA_IMAGES: Record<CadernetaImage, string> = {
   suplementacao: '/images/cadernetas/suplementacao.png',
   enfermaria: '/images/cadernetas/enfermaria.png',
   morte: '/images/cadernetas/morte.png',
+  clima: '/images/cadernetas/clima.png',
+  abastecimento: '/images/cadernetas/abastecimento.png',
+  cantina: '/images/cadernetas/cantina.png',
 }
 
 export const CADERNETA_TITLES: Record<CadernetaImage, string> = {
@@ -27,7 +33,10 @@ export const CADERNETA_TITLES: Record<CadernetaImage, string> = {
   rodeio: 'Rodeio',
   suplementacao: 'Suplementação',
   enfermaria: 'Enfermaria',
-  morte: 'Registros de Morte',
+  morte: 'Morte',
+  clima: 'Clima',
+  abastecimento: 'Abastecimento',
+  cantina: 'Cantina',
 }
 
 export const CADERNETA_DESCRIPTIONS: Record<CadernetaImage, string> = {
@@ -39,6 +48,9 @@ export const CADERNETA_DESCRIPTIONS: Record<CadernetaImage, string> = {
   suplementacao: 'Registros de suplementação alimentar',
   enfermaria: 'Registros de tratamentos e enfermidades',
   morte: 'Registros de óbitos e mortes',
+  clima: 'Registros de clima e temperatura',
+  abastecimento: 'Registros de abastecimento de veículos',
+  cantina: 'Registros de cantina e alimentação',
 }
 
 export const LOGO_GESTAUP = '/images/logo/logo-gestaup.png'
