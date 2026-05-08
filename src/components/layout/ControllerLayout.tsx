@@ -2,6 +2,7 @@ import { ReactNode, useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { Header } from './Header'
+import { Breadcrumbs } from '../ui'
 
 interface ControllerLayoutProps {
   children: ReactNode
@@ -110,6 +111,7 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
   return (
     <div className="min-h-screen bg-gray-100">
       <Header />
+      <Breadcrumbs />
       
       <div className="flex">
         {/* Sidebar - Desktop */}

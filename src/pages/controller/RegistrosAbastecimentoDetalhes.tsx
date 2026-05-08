@@ -79,7 +79,7 @@ export function RegistrosAbastecimentoDetalhes() {
         <Button variant="secondary" onClick={() => navigate('/controller/abastecimento')}>
           Voltar
         </Button>
-        <Card className="bg-white p-6 text-center">
+        <Card className="bg-white p-6 text-center" disableHover>
           <p className="text-gray-600">Registro não encontrado</p>
         </Card>
       </div>
@@ -95,7 +95,7 @@ export function RegistrosAbastecimentoDetalhes() {
         </Button>
       </div>
 
-      <Card className="bg-white p-6">
+      <Card className="bg-white p-6" disableHover>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Informações Gerais</h3>

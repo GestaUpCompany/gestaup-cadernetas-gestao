@@ -98,7 +98,7 @@ export function Bebedouros() {
         <h2 className="text-2xl font-bold text-gray-800">Caderneta de Bebedouros</h2>
       </div>
 
-      <Card className="bg-white p-6">
+      <Card className="bg-white p-6" disableHover>
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold text-gray-800">Filtros</h3>
           <Button
@@ -148,11 +148,11 @@ export function Bebedouros() {
       </Card>
 
       {registros.length === 0 ? (
-        <Card className="bg-white p-6 text-center">
+        <Card className="bg-white p-6 text-center" disableHover>
           <p className="text-gray-600">Nenhum registro de bebedouros encontrado</p>
         </Card>
       ) : (
-        <Card className="bg-white overflow-x-auto">
+        <Card className="bg-white overflow-x-auto" disableHover>
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>

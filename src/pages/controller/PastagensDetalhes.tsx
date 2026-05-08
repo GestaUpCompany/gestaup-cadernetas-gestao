@@ -79,7 +79,7 @@ export function PastagensDetalhes() {
         <Button variant="secondary" onClick={() => navigate('/controller/pastagens-caderneta')}>
           Voltar
         </Button>
-        <Card className="bg-white p-6 text-center">
+        <Card className="bg-white p-6" disableHover text-center>
           <p className="text-gray-600">Registro não encontrado</p>
         </Card>
       </div>
@@ -98,7 +98,7 @@ export function PastagensDetalhes() {
         </Button>
       </div>
 
-      <Card className="bg-white p-6 border-0 shadow-sm">
+      <Card className="bg-white p-6" disableHover border-0 shadow-sm>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Informações Gerais</h3>

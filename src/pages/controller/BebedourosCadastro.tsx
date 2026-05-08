@@ -198,7 +198,7 @@ export function BebedourosCadastro() {
       </div>
 
       {showForm && (
-        <Card className="bg-white p-6 border-0 shadow-sm">
+        <Card className="bg-white p-6 border-0 shadow-sm" disableHover>
           <h3 className="text-xl font-semibold text-gray-800 mb-4">
             {editingBebedouro ? 'Editar Bebedouro' : 'Novo Bebedouro'}
           </h3>
@@ -270,7 +270,7 @@ export function BebedourosCadastro() {
       )}
 
       {!showForm && bebedouros.length === 0 ? (
-        <Card className="bg-white p-12 border-0 shadow-sm text-center">
+        <Card className="bg-white p-12 border-0 shadow-sm text-center" disableHover>
           <p className="text-gray-600 mb-4">Nenhum bebedouro cadastrado</p>
           <Button onClick={() => setShowForm(true)}>Criar Primeiro Bebedouro</Button>
         </Card>
@@ -283,8 +283,9 @@ export function BebedourosCadastro() {
             .map((bebedouro) => (
               <Card 
                 key={bebedouro.id} 
-                className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+                className="bg-white p-6 border-0 shadow-sm cursor-pointer"
                 onClick={() => handleEdit(bebedouro)}
+                disableHover
               >
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex-1">

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
 
 interface Funcionario {
   id: string
@@ -27,6 +27,8 @@ export function Funcionarios() {
     cargo: '',
   })
   const [submitting, setSubmitting] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [funcionarioToDelete, setFuncionarioToDelete] = useState<string | null>(null)
 
   useEffect(() => {
     loadFuncionarios()
@@ -147,184 +149,211 @@ export function Funcionarios() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este funcionário?')) return
+    setFuncionarioToDelete(id)
+    setDeleteConfirmOpen(true)
+  }
 
-    const { error } = await supabase.from('funcionarios').delete().eq('id', id)
+  const confirmDelete = async () => {
+    if (!funcionarioToDelete) return
+
+    const { error } = await supabase.from('funcionarios').delete().eq('id', funcionarioToDelete)
 
     if (error) {
       console.error('Erro ao excluir funcionário:', error)
     } else {
       loadFuncionarios()
     }
+
+    setFuncionarioToDelete(null)
   }
 
   if (loading) {
-    return <p className="text-gray-600">Carregando...</p>
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <CardSkeleton />
+        <CardSkeleton />
+        <CardSkeleton />
+        <CardSkeleton />
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-2xl font-bold text-gray-800">Funcionários</h2>
-        <div className="flex gap-2 items-start">
-          <Input
-            type="text"
-            placeholder="Buscar funcionário..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-xs border-gray-200 focus:border-accent h-10"
-          />
-          <Button onClick={() => setShowForm(true)} className="h-10">Novo Funcionário</Button>
+    <>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <h2 className="text-2xl font-bold text-gray-800">Funcionários</h2>
+          <div className="flex gap-2 items-start">
+            <Input
+              type="text"
+              placeholder="Buscar funcionário..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="max-w-xs border-gray-200 focus:border-accent h-10"
+            />
+            <Button onClick={() => setShowForm(true)} className="h-10">Novo Funcionário</Button>
+          </div>
         </div>
-      </div>
 
-      {showForm && (
-        <Card className="bg-white p-6 border-0 shadow-sm">
-          <h3 className="text-xl font-semibold text-gray-800 mb-4">
-            {editingFuncionario ? 'Editar Funcionário' : 'Novo Funcionário'}
-          </h3>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nome *
-              </label>
-              <Input
-                type="text"
-                value={formData.nome}
-                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                required
-                placeholder="Nome completo"
-                className="border-gray-200 focus:border-accent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                CPF
-              </label>
-              <Input
-                type="text"
-                value={formData.cpf}
-                onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
-                placeholder="000.000.000-00"
-                className="border-gray-200 focus:border-accent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Telefone
-              </label>
-              <Input
-                type="text"
-                value={formData.telefone}
-                onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
-                placeholder="(00) 00000-0000"
-                className="border-gray-200 focus:border-accent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Cargo
-              </label>
-              <Input
-                type="text"
-                value={formData.cargo}
-                onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
-                placeholder="Ex: Peão, Tratorista, Administrador"
-                className="border-gray-200 focus:border-accent"
-              />
-            </div>
-
-            <div className="flex gap-2">
-              <Button type="submit" disabled={submitting}>
-                {submitting ? 'Salvando...' : 'Salvar'}
-              </Button>
-              <Button variant="secondary" onClick={handleCancel}>
-                Cancelar
-              </Button>
-            </div>
-          </form>
-        </Card>
-      )}
-
-      {!showForm && funcionarios.length === 0 ? (
-        <Card className="bg-white p-12 border-0 shadow-sm text-center">
-          <p className="text-gray-600 mb-4">Nenhum funcionário cadastrado</p>
-          <Button onClick={() => setShowForm(true)}>Criar Primeiro Funcionário</Button>
-        </Card>
-      ) : !showForm ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {funcionarios
-            .filter((funcionario) =>
-              funcionario.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              (funcionario.cargo && funcionario.cargo.toLowerCase().includes(searchTerm.toLowerCase())) ||
-              (funcionario.cpf && funcionario.cpf.includes(searchTerm))
-            )
-            .map((funcionario) => (
-            <Card 
-              key={funcionario.id} 
-              className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
-              onClick={() => handleEdit(funcionario)}
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="font-semibold text-gray-800 text-lg">{funcionario.nome}</h3>
-                  {funcionario.cargo && (
-                    <p className="text-sm text-gray-500">{funcionario.cargo}</p>
-                  )}
-                </div>
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    funcionario.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}
-                >
-                  {funcionario.ativo ? 'Ativo' : 'Inativo'}
-                </span>
+        {showForm && (
+          <Card className="bg-white p-6 border-0 shadow-sm">
+            <h3 className="text-xl font-semibold text-gray-800 mb-4">
+              {editingFuncionario ? 'Editar Funcionário' : 'Novo Funcionário'}
+            </h3>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nome *
+                </label>
+                <Input
+                  type="text"
+                  value={formData.nome}
+                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                  required
+                  placeholder="Nome completo"
+                  className="border-gray-200 focus:border-accent"
+                />
               </div>
 
-              <div className="space-y-2 mb-4">
-                {funcionario.cpf && (
-                  <p className="text-sm text-gray-500">
-                    <span className="font-medium">CPF:</span> {funcionario.cpf}
-                  </p>
-                )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  CPF
+                </label>
+                <Input
+                  type="text"
+                  value={formData.cpf}
+                  onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
+                  placeholder="000.000.000-00"
+                  className="border-gray-200 focus:border-accent"
+                />
+              </div>
 
-                {funcionario.telefone && (
-                  <p className="text-sm text-gray-500">
-                    <span className="font-medium">Telefone:</span> {funcionario.telefone}
-                  </p>
-                )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Telefone
+                </label>
+                <Input
+                  type="text"
+                  value={formData.telefone}
+                  onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+                  placeholder="(00) 00000-0000"
+                  className="border-gray-200 focus:border-accent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Cargo
+                </label>
+                <Input
+                  type="text"
+                  value={formData.cargo}
+                  onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
+                  placeholder="Ex: Peão, Tratorista, Administrador"
+                  className="border-gray-200 focus:border-accent"
+                />
               </div>
 
               <div className="flex gap-2">
-                <Button 
-                  variant="secondary" 
-                  className="flex-1"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleEdit(funcionario)
-                  }}
-                >
-                  Editar
+                <Button type="submit" disabled={submitting}>
+                  {submitting ? 'Salvando...' : 'Salvar'}
                 </Button>
-                <Button 
-                  variant="secondary" 
-                  className="flex-1"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleDelete(funcionario.id)
-                  }}
-                >
-                  Excluir
+                <Button variant="secondary" onClick={handleCancel}>
+                  Cancelar
                 </Button>
               </div>
-            </Card>
-          ))}
-        </div>
-      ) : null}
-    </div>
+            </form>
+          </Card>
+        )}
+
+        {!showForm && funcionarios.length === 0 ? (
+          <Card className="bg-white p-12 border-0 shadow-sm text-center">
+            <p className="text-gray-600 mb-4">Nenhum funcionário cadastrado</p>
+            <Button onClick={() => setShowForm(true)}>Criar Primeiro Funcionário</Button>
+          </Card>
+        ) : !showForm ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {funcionarios
+              .filter((funcionario) =>
+                funcionario.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (funcionario.cargo && funcionario.cargo.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (funcionario.cpf && funcionario.cpf.includes(searchTerm))
+              )
+              .map((funcionario) => (
+              <Card 
+                key={funcionario.id} 
+                className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+                onClick={() => handleEdit(funcionario)}
+              >
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="font-semibold text-gray-800 text-lg">{funcionario.nome}</h3>
+                    {funcionario.cargo && (
+                      <p className="text-sm text-gray-500">{funcionario.cargo}</p>
+                    )}
+                  </div>
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      funcionario.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}
+                  >
+                    {funcionario.ativo ? 'Ativo' : 'Inativo'}
+                  </span>
+                </div>
+
+                <div className="space-y-2 mb-4">
+                  {funcionario.cpf && (
+                    <p className="text-sm text-gray-500">
+                      <span className="font-medium">CPF:</span> {funcionario.cpf}
+                    </p>
+                  )}
+
+                  {funcionario.telefone && (
+                    <p className="text-sm text-gray-500">
+                      <span className="font-medium">Telefone:</span> {funcionario.telefone}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <Button 
+                    variant="secondary" 
+                    className="flex-1"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleEdit(funcionario)
+                    }}
+                  >
+                    Editar
+                  </Button>
+                  <Button 
+                    variant="secondary" 
+                    className="flex-1"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleDelete(funcionario.id)
+                    }}
+                  >
+                    Excluir
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        ) : null}
+      </div>
+
+      <ConfirmModal
+        isOpen={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        onConfirm={confirmDelete}
+        title="Excluir Funcionário"
+        message="Tem certeza que deseja excluir este funcionário? Esta ação não pode ser desfeita."
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        variant="danger"
+      />
+    </>
   )
 }
