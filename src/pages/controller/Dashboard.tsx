@@ -49,6 +49,8 @@ export function ControllerDashboard() {
     clima: 0,
     abastecimento: 0,
     cantina: 0,
+    limpeza: 0,
+    'operacoes-maquinas': 0,
   })
 
   const [registrosHoje, setRegistrosHoje] = useState(0)
@@ -216,6 +218,8 @@ export function ControllerDashboard() {
       { count: climaCount },
       { count: abastecimentoCount },
       { count: cantinaCount },
+      { count: limpezaCount },
+      { count: operacoesMaquinasCount },
     ] = await Promise.all([
       supabase.from('registros_maternidade').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
       supabase.from('registros_enfermaria').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
@@ -228,6 +232,8 @@ export function ControllerDashboard() {
       supabase.from('registros_clima').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
       supabase.from('registros_abastecimento').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
       supabase.from('registros_cantina').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
+      supabase.from('registros_limpeza').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
+      supabase.from('registros_operacoes_maquinas').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
     ])
 
     // Buscar registros de hoje
@@ -280,6 +286,8 @@ export function ControllerDashboard() {
       clima: climaCount || 0,
       abastecimento: abastecimentoCount || 0,
       cantina: cantinaCount || 0,
+      limpeza: limpezaCount || 0,
+      'operacoes-maquinas': operacoesMaquinasCount || 0,
     })
   }
 
@@ -338,7 +346,7 @@ export function ControllerDashboard() {
           <Card className="bg-white p-6 border-0 shadow-sm">
             <p className="text-sm text-gray-500 mb-2">Total Registros</p>
             <p className="text-4xl font-bold text-gray-800">
-              {cadernetaStats.maternidade + cadernetaStats.enfermaria + cadernetaStats.pastagens + cadernetaStats.rodeio + cadernetaStats.suplementacao + cadernetaStats.bebedouros + cadernetaStats.movimentacao + cadernetaStats.morte + cadernetaStats.clima + cadernetaStats.abastecimento + cadernetaStats.cantina}
+              {cadernetaStats.maternidade + cadernetaStats.enfermaria + cadernetaStats.pastagens + cadernetaStats.rodeio + cadernetaStats.suplementacao + cadernetaStats.bebedouros + cadernetaStats.movimentacao + cadernetaStats.morte + cadernetaStats.clima + cadernetaStats.abastecimento + cadernetaStats.cantina + cadernetaStats.limpeza + cadernetaStats['operacoes-maquinas']}
             </p>
           </Card>
         </div>
@@ -539,6 +547,30 @@ export function ControllerDashboard() {
               <div>
                 <p className="text-sm text-gray-500 mb-1">{CADERNETA_TITLES.cantina}</p>
                 <p className="text-4xl font-bold text-gray-800">{cadernetaStats.cantina}</p>
+              </div>
+            </div>
+          </Card>
+          <Card 
+            className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+            onClick={() => navigate('/controller/limpeza')}
+          >
+            <div className="flex items-center gap-4 mb-3">
+              <img src={CADERNETA_IMAGES.limpeza} alt={CADERNETA_TITLES.limpeza} className="w-16 h-16 rounded-[32px]" />
+              <div>
+                <p className="text-sm text-gray-500 mb-1">{CADERNETA_TITLES.limpeza}</p>
+                <p className="text-4xl font-bold text-gray-800">{cadernetaStats.limpeza}</p>
+              </div>
+            </div>
+          </Card>
+          <Card 
+            className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+            onClick={() => navigate('/controller/operacoes-maquinas')}
+          >
+            <div className="flex items-center gap-4 mb-3">
+              <img src={CADERNETA_IMAGES['operacoes-maquinas']} alt={CADERNETA_TITLES['operacoes-maquinas']} className="w-16 h-16 rounded-[32px]" />
+              <div>
+                <p className="text-sm text-gray-500 mb-1">{CADERNETA_TITLES['operacoes-maquinas']}</p>
+                <p className="text-4xl font-bold text-gray-800">{cadernetaStats['operacoes-maquinas']}</p>
               </div>
             </div>
           </Card>

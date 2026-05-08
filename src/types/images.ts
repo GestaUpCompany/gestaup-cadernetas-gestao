@@ -10,6 +10,8 @@ export type CadernetaImage =
   | 'clima'
   | 'abastecimento'
   | 'cantina'
+  | 'limpeza'
+  | 'operacoes-maquinas'
 
 export const CADERNETA_IMAGES: Record<CadernetaImage, string> = {
   maternidade: '/images/cadernetas/maternidade.png',
@@ -23,6 +25,8 @@ export const CADERNETA_IMAGES: Record<CadernetaImage, string> = {
   clima: '/images/cadernetas/clima.png',
   abastecimento: '/images/cadernetas/abastecimento.png',
   cantina: '/images/cadernetas/cantina.png',
+  limpeza: '/images/cadernetas/limpeza.png',
+  'operacoes-maquinas': '/images/cadernetas/operacoes-maquinas.png',
 }
 
 export const CADERNETA_TITLES: Record<CadernetaImage, string> = {
@@ -37,6 +41,8 @@ export const CADERNETA_TITLES: Record<CadernetaImage, string> = {
   clima: 'Clima',
   abastecimento: 'Abastecimento',
   cantina: 'Cantina',
+  limpeza: 'Limpeza',
+  'operacoes-maquinas': 'Operações de Máquinas',
 }
 
 export const CADERNETA_DESCRIPTIONS: Record<CadernetaImage, string> = {
@@ -51,6 +57,8 @@ export const CADERNETA_DESCRIPTIONS: Record<CadernetaImage, string> = {
   clima: 'Registros de clima e temperatura',
   abastecimento: 'Registros de abastecimento de veículos',
   cantina: 'Registros de cantina e alimentação',
+  limpeza: 'Registros de limpeza e manutenção',
+  'operacoes-maquinas': 'Registros de operações de máquinas',
 }
 
 export const LOGO_GESTAUP = '/images/logo/logo-gestaup.png'

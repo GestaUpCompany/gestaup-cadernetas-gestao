@@ -50,6 +50,10 @@ import { RegistrosAbastecimento } from './pages/controller/RegistrosAbasteciment
 import { RegistrosAbastecimentoDetalhes } from './pages/controller/RegistrosAbastecimentoDetalhes'
 import { RegistrosCantina } from './pages/controller/RegistrosCantina'
 import { RegistrosCantinaDetalhes } from './pages/controller/RegistrosCantinaDetalhes'
+import { RegistrosLimpeza } from './pages/controller/RegistrosLimpeza'
+import { RegistrosLimpezaDetalhes } from './pages/controller/RegistrosLimpezaDetalhes'
+import { RegistrosOperacoesMaquinas } from './pages/controller/RegistrosOperacoesMaquinas'
+import { RegistrosOperacoesMaquinasDetalhes } from './pages/controller/RegistrosOperacoesMaquinasDetalhes'
 
 // Redirecionamento baseado no papel do usuário
 function RoleRedirect() {
@@ -533,6 +537,46 @@ function App() {
             <ControllerRoute>
               <ControllerLayout>
                 <RegistrosCantinaDetalhes />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/limpeza"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <RegistrosLimpeza />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/limpeza/:id"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <RegistrosLimpezaDetalhes />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/operacoes-maquinas"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <RegistrosOperacoesMaquinas />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/operacoes-maquinas/:id"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <RegistrosOperacoesMaquinasDetalhes />
               </ControllerLayout>
             </ControllerRoute>
           }

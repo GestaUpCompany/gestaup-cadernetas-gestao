@@ -294,8 +294,8 @@ export function Mineral() {
           <p className="text-gray-600 mb-4">Nenhum mineral cadastrado</p>
           <Button onClick={() => setShowForm(true)}>Criar Primeiro Mineral</Button>
         </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      ) : !showForm ? (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {minerais
             .filter((mineral) =>
               mineral.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -368,7 +368,7 @@ export function Mineral() {
             </Card>
           ))}
         </div>
-      )}
+      ) : null}
     </div>
   )
 }

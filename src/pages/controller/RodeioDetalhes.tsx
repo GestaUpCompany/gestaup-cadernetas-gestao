@@ -24,7 +24,7 @@ interface RegistroRodeio {
   escore_gado_ideal?: boolean
   agua_boa_bebedouro?: boolean
   pastagem_adequada?: boolean
-  animais_doentes?: boolean
+  animais_doentes_bichados?: boolean
   cercas_cochos?: boolean
   carrapatos_moscas?: boolean
   animais_entrevero?: boolean
@@ -96,7 +96,7 @@ export function RodeioDetalhes() {
   if (!registro.escore_gado_ideal) problemas.push('Escore')
   if (!registro.agua_boa_bebedouro) problemas.push('Água')
   if (!registro.pastagem_adequada) problemas.push('Pastagem')
-  if (registro.animais_doentes) problemas.push('Doentes')
+  if (registro.animais_doentes_bichados) problemas.push('Doentes')
   if (!registro.cercas_cochos) problemas.push('Cercas')
   if (registro.carrapatos_moscas) problemas.push('Carrapatos')
   if (registro.animais_entrevero) problemas.push('Entrevero')

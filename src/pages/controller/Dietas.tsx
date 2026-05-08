@@ -256,8 +256,8 @@ export function Dietas() {
           <p className="text-gray-600 mb-4">Nenhuma dieta cadastrada</p>
           <Button onClick={() => setShowForm(true)}>Criar Primeira Dieta</Button>
         </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      ) : !showForm ? (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {dietas
             .filter((dieta) =>
               dieta.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -324,7 +324,7 @@ export function Dietas() {
             </Card>
           ))}
         </div>
-      )}
+      ) : null}
     </div>
   )
 }

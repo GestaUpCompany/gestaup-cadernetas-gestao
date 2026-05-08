@@ -31,12 +31,14 @@ export function Login() {
       <div className="w-full max-w-md space-y-8">
         {/* Logo Centralizado */}
         <div className="flex flex-col items-center">
-          <img 
-            src={LOGO_GESTAUP} 
-            alt="Manej'Us Logo" 
-            className="h-20 w-auto mb-4"
+          <img
+            src="/images/logo/logo-gestaup.png"
+            alt="Base de Dados - Cadernetas"
+            className="w-32 h-32 mb-6"
           />
-          <h2 className="text-2xl font-bold text-gray-800">Manej'Us</h2>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">
+            Base de Dados - Cadernetas
+          </h1>
           <p className="text-gray-500">Faça login para acessar sua fazenda</p>
         </div>
 

@@ -294,8 +294,8 @@ export function Racao() {
           <p className="text-gray-600 mb-4">Nenhuma ração cadastrada</p>
           <Button onClick={() => setShowForm(true)}>Criar Primeira Ração</Button>
         </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      ) : !showForm ? (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {racoes
             .filter((racao) =>
               racao.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -368,7 +368,7 @@ export function Racao() {
             </Card>
           ))}
         </div>
-      )}
+      ) : null}
     </div>
   )
 }

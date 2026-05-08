@@ -9,9 +9,11 @@ interface Bebedouro {
   nome: string
   capacidade?: number
   data_ultima_limpeza?: string
+  meta_intervalo_limpeza?: number
   ativo: boolean
   created_at: string
   updated_at?: string
+  data_ultima_limpeza_historico?: string
 }
 
 export function BebedourosCadastro() {
@@ -26,7 +28,8 @@ export function BebedourosCadastro() {
   const [formData, setFormData] = useState({
     nome: '',
     capacidade: '',
-    data_ultima_limpeza: ''
+    data_ultima_limpeza: '',
+    meta_intervalo_limpeza: ''
   })
 
   useEffect(() => {
@@ -50,12 +53,28 @@ export function BebedourosCadastro() {
       .from('bebedouros')
       .select('*')
       .eq('fazenda_id', fazendaId)
-      .order('created_at', { ascending: false })
+      .order('nome', { ascending: true })
 
     if (error) {
       console.error('Erro ao buscar bebedouros:', error)
     } else {
-      setBebedouros(data as Bebedouro[])
+      const bebedourosWithHistorico = await Promise.all(
+        (data as Bebedouro[]).map(async (bebedouro) => {
+          const { data: ultimaLimpeza } = await supabase
+            .from('historico_limpezas_bebedouros')
+            .select('data_limpeza')
+            .eq('bebedouro_id', bebedouro.id)
+            .order('data_limpeza', { ascending: false })
+            .limit(1)
+            .single()
+
+          return {
+            ...bebedouro,
+            data_ultima_limpeza_historico: ultimaLimpeza?.data_limpeza || null
+          }
+        })
+      )
+      setBebedouros(bebedourosWithHistorico)
     }
 
     setLoading(false)
@@ -85,6 +104,7 @@ export function BebedourosCadastro() {
       nome: formData.nome,
       capacidade: formData.capacidade ? parseFloat(formData.capacidade) : null,
       data_ultima_limpeza: formData.data_ultima_limpeza || null,
+      meta_intervalo_limpeza: formData.meta_intervalo_limpeza ? parseInt(formData.meta_intervalo_limpeza) : null,
       ativo: true
     }
 
@@ -117,7 +137,8 @@ export function BebedourosCadastro() {
     setFormData({
       nome: bebedouro.nome,
       capacidade: bebedouro.capacidade?.toString() || '',
-      data_ultima_limpeza: bebedouro.data_ultima_limpeza || ''
+      data_ultima_limpeza: bebedouro.data_ultima_limpeza_historico || '',
+      meta_intervalo_limpeza: bebedouro.meta_intervalo_limpeza?.toString() || ''
     })
     setShowForm(true)
   }
@@ -153,7 +174,7 @@ export function BebedourosCadastro() {
   const handleCancel = () => {
     setShowForm(false)
     setEditingBebedouro(null)
-    setFormData({ nome: '', capacidade: '', data_ultima_limpeza: '' })
+    setFormData({ nome: '', capacidade: '', data_ultima_limpeza: '', meta_intervalo_limpeza: '' })
   }
 
   if (loading) {
@@ -222,6 +243,20 @@ export function BebedourosCadastro() {
               />
             </div>
 
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Meta de Intervalo de Limpeza (dias)
+              </label>
+              <Input
+                type="number"
+                value={formData.meta_intervalo_limpeza}
+                onChange={(e) => setFormData({ ...formData, meta_intervalo_limpeza: e.target.value })}
+                placeholder="Intervalo em dias"
+                className="border-gray-200 focus:border-accent"
+                min="1"
+              />
+            </div>
+
             <div className="flex gap-2">
               <Button type="submit" disabled={submitting}>
                 {submitting ? 'Salvando...' : 'Salvar'}
@@ -240,7 +275,7 @@ export function BebedourosCadastro() {
           <Button onClick={() => setShowForm(true)}>Criar Primeiro Bebedouro</Button>
         </Card>
       ) : !showForm ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {bebedouros
             .filter((bebedouro) =>
               bebedouro.nome.toLowerCase().includes(searchTerm.toLowerCase())
@@ -257,10 +292,10 @@ export function BebedourosCadastro() {
                     {bebedouro.capacidade && (
                       <p className="text-sm text-gray-500 mt-1">Capacidade: {bebedouro.capacidade} L</p>
                     )}
-                    {bebedouro.data_ultima_limpeza && (
+                    {bebedouro.data_ultima_limpeza_historico && (
                       <p className="text-sm text-gray-500 mt-1">
                         Última limpeza: {(() => {
-                          const [year, month, day] = bebedouro.data_ultima_limpeza!.split('-')
+                          const [year, month, day] = bebedouro.data_ultima_limpeza_historico!.split('-')
                           return `${day}/${month}/${year}`
                         })()}
                       </p>

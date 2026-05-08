@@ -13,14 +13,14 @@ export function Header() {
     <header className="bg-primary border-b border-gray-200 px-6 py-4 sticky top-0 z-50">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <img 
-            src={LOGO_GESTAUP} 
-            alt="Manej'Us Logo" 
+          <img
+            src="/images/logo/logo-gestaup.png"
+            alt="Base de Dados - Cadernetas"
             className="h-10 w-auto"
           />
-          <div>
-            <h1 className="text-2xl font-bold text-white">Manej'Us</h1>
-          </div>
+          <h1 className="text-xl font-bold text-white ml-3">
+            Base de Dados - Cadernetas
+          </h1>
         </div>
         <div className="flex items-center gap-4">
           <div className="text-right">

@@ -72,6 +72,18 @@ export function Cadernetas() {
       image: CADERNETA_IMAGES.cantina,
       path: '/controller/cantina',
     },
+    {
+      title: CADERNETA_TITLES.limpeza,
+      description: CADERNETA_DESCRIPTIONS.limpeza,
+      image: CADERNETA_IMAGES.limpeza,
+      path: '/controller/limpeza',
+    },
+    {
+      title: CADERNETA_TITLES['operacoes-maquinas'],
+      description: CADERNETA_DESCRIPTIONS['operacoes-maquinas'],
+      image: CADERNETA_IMAGES['operacoes-maquinas'],
+      path: '/controller/operacoes-maquinas',
+    },
   ]
 
   return (
