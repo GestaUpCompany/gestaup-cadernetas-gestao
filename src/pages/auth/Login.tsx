@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { Button, Input, Card } from '../../components/ui'
-import { LOGO_GESTAUP } from '../../types/images'
 
 export function Login() {
   const { signIn } = useAuth()
