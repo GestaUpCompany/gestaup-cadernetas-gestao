@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
+import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
@@ -17,6 +18,7 @@ interface Lote {
 
 export function Lotes() {
   const { user } = useAuth()
+  const queryClient = useQueryClient()
   const [lotes, setLotes] = useState<Lote[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -28,11 +30,26 @@ export function Lotes() {
     categorias: [] as string[],
     categoria_outros: '',
     peso_vivo_kg: '',
+    peso_vivo_meta_kg: '',
+    data_meta: '',
     quantidade_bezerros: '',
+    quant_inicial: '',
+    data: '',
+    peso_entrada: '',
+    gmd: '',
+    periodo: '',
+    morte: '',
+    consumo: '',
+    abate: '',
+    transf_entrada: '',
+    transf_saida: '',
+    quant_atual: '',
+    ativo: true,
   })
   const [submitting, setSubmitting] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [loteToDelete, setLoteToDelete] = useState<string | null>(null)
+  const [originalAtivo, setOriginalAtivo] = useState(true)
 
   const categoriasOpcoes = [
     'vaca',
@@ -63,6 +80,42 @@ export function Lotes() {
     loadLotes()
   }, [user])
 
+  // Calcular período automaticamente quando a data de pesagem mudar
+  useEffect(() => {
+    if (formData.data) {
+      const dataPesagem = new Date(formData.data)
+      const dataAtual = new Date()
+      const diffTime = Math.abs(dataAtual.getTime() - dataPesagem.getTime())
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+      setFormData({ ...formData, periodo: diffDays.toString() })
+    } else {
+      setFormData({ ...formData, periodo: '' })
+    }
+  }, [formData.data])
+
+  // Calcular data meta automaticamente quando peso_vivo_meta_kg, peso_vivo_kg ou gmd mudarem
+  useEffect(() => {
+    const pesoMeta = parseFloat(formData.peso_vivo_meta_kg)
+    const pesoAtual = parseFloat(formData.peso_vivo_kg)
+    const gmd = parseFloat(formData.gmd)
+
+    if (pesoMeta && pesoAtual && gmd && gmd > 0) {
+      const diasParaMeta = (pesoMeta - pesoAtual) / gmd
+      const dataHoje = new Date()
+      const dataMeta = new Date(dataHoje.getTime() + (diasParaMeta * 24 * 60 * 60 * 1000))
+      
+      // Formatar data como yyyy-mm-dd
+      const year = dataMeta.getFullYear()
+      const month = String(dataMeta.getMonth() + 1).padStart(2, '0')
+      const day = String(dataMeta.getDate()).padStart(2, '0')
+      const dataMetaFormatada = `${year}-${month}-${day}`
+      
+      setFormData({ ...formData, data_meta: dataMetaFormatada })
+    } else {
+      setFormData({ ...formData, data_meta: '' })
+    }
+  }, [formData.peso_vivo_meta_kg, formData.peso_vivo_kg, formData.gmd])
+
   const loadLotes = async () => {
     if (!user) return
 
@@ -81,7 +134,7 @@ export function Lotes() {
       .from('lotes')
       .select('*')
       .eq('fazenda_id', fazendaId)
-      .order('created_at', { ascending: false })
+      .order('nome', { ascending: true })
 
     if (error) {
       console.error('Erro ao buscar lotes:', error)
@@ -128,6 +181,7 @@ export function Lotes() {
       categorias: categoriasFinal.length > 0 ? categoriasFinal : null,
       peso_vivo_kg: formData.peso_vivo_kg ? parseFloat(formData.peso_vivo_kg) : null,
       qtd_bezerros: formData.quantidade_bezerros ? parseInt(formData.quantidade_bezerros) : null,
+      ativo: formData.ativo,
     }
 
     let error
@@ -154,11 +208,33 @@ export function Lotes() {
         categorias: [],
         categoria_outros: '',
         peso_vivo_kg: '',
+        peso_vivo_meta_kg: '',
+        data_meta: '',
         quantidade_bezerros: '',
+        quant_inicial: '',
+        data: '',
+        peso_entrada: '',
+        gmd: '',
+        periodo: '',
+        morte: '',
+        consumo: '',
+        abate: '',
+        transf_entrada: '',
+        transf_saida: '',
+        quant_atual: '',
+        ativo: true,
       })
       setShowForm(false)
       setEditingLote(null)
+      setOriginalAtivo(true)
       loadLotes()
+      // Invalidar cache do Dashboard para atualizar KPIs
+      if (user?.id) {
+        queryClient.invalidateQueries({ queryKey: ['fazenda', user.id] })
+        queryClient.invalidateQueries({ queryKey: ['dashboard-stats', user.id] })
+        queryClient.invalidateQueries({ queryKey: ['gado-stats', user.id] })
+        queryClient.invalidateQueries({ queryKey: ['recent-activities', user.id] })
+      }
     }
 
     setSubmitting(false)
@@ -186,8 +262,23 @@ export function Lotes() {
       categorias: cats,
       categoria_outros: '',
       peso_vivo_kg: lote.peso_vivo_kg?.toString() || '',
+      peso_vivo_meta_kg: '',
+      data_meta: '',
       quantidade_bezerros: lote.qtd_bezerros?.toString() || '',
+      quant_inicial: '',
+      data: '',
+      peso_entrada: '',
+      gmd: '',
+      periodo: '',
+      morte: '',
+      consumo: '',
+      abate: '',
+      transf_entrada: '',
+      transf_saida: '',
+      quant_atual: '',
+      ativo: lote.ativo ?? true,
     })
+    setOriginalAtivo(lote.ativo ?? true)
     setShowForm(true)
   }
 
@@ -199,8 +290,23 @@ export function Lotes() {
       categorias: [],
       categoria_outros: '',
       peso_vivo_kg: '',
+      peso_vivo_meta_kg: '',
+      data_meta: '',
       quantidade_bezerros: '',
+      quant_inicial: '',
+      data: '',
+      peso_entrada: '',
+      gmd: '',
+      periodo: '',
+      morte: '',
+      consumo: '',
+      abate: '',
+      transf_entrada: '',
+      transf_saida: '',
+      quant_atual: '',
+      ativo: true,
     })
+    setOriginalAtivo(true)
     setShowForm(false)
   }
 
@@ -265,19 +371,21 @@ export function Lotes() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-2xl font-bold text-gray-800">Lotes</h2>
-        <div className="flex gap-2 items-start">
-          <Input
-            type="text"
-            placeholder="Buscar lote..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-xs border-gray-200 focus:border-accent h-10"
-          />
-          <Button onClick={() => setShowForm(true)} className="h-10">Novo Lote</Button>
+      {!showForm && (
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <h2 className="text-2xl font-bold text-gray-800">Lotes</h2>
+          <div className="flex gap-2 items-start">
+            <Input
+              type="text"
+              placeholder="Buscar lote..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="max-w-xs border-gray-200 focus:border-accent h-10"
+            />
+            <Button onClick={() => setShowForm(true)} className="h-10">Novo Lote</Button>
+          </div>
         </div>
-      </div>
+      )}
 
       {showForm && (
         <Card className="bg-white p-6 border-0 shadow-sm">
@@ -285,24 +393,87 @@ export function Lotes() {
             {editingLote ? 'Editar Lote' : 'Novo Lote'}
           </h3>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nome *
-              </label>
-              <Input
-                type="text"
-                value={formData.nome}
-                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                required
-                placeholder="Nome do lote"
-                className="border-gray-200 focus:border-accent"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-6 gap-2">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Número de Cabeças *
+                  Nome
+                </label>
+                <Input
+                  type="text"
+                  value={formData.nome}
+                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                  required
+                  placeholder="Nome do lote"
+                  className="border-gray-200 focus:border-accent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Quant. Inicial
+                </label>
+                <Input
+                  type="number"
+                  value={formData.quant_inicial}
+                  onChange={(e) => setFormData({ ...formData, quant_inicial: e.target.value })}
+                  placeholder="0"
+                  className="border-gray-200 focus:border-accent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Data Pesagem
+                </label>
+                <Input
+                  type="date"
+                  value={formData.data}
+                  onChange={(e) => setFormData({ ...formData, data: e.target.value })}
+                  className="border-gray-200 focus:border-accent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Peso Entrada (kg)
+                </label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={formData.peso_entrada}
+                  onChange={(e) => setFormData({ ...formData, peso_entrada: e.target.value })}
+                  placeholder="0"
+                  className="border-gray-200 focus:border-accent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  GMD (kg/cab/dia)
+                </label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={formData.gmd}
+                  onChange={(e) => setFormData({ ...formData, gmd: e.target.value })}
+                  placeholder="0"
+                  className="border-gray-200 focus:border-accent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Período (dias)
+                </label>
+                <Input
+                  type="number"
+                  value={formData.periodo}
+                  onChange={(e) => setFormData({ ...formData, periodo: e.target.value })}
+                  placeholder="0"
+                  className="border-gray-200 focus:border-accent"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-4 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Quant. Atual (cab)
                 </label>
                 <Input
                   type="number"
@@ -316,7 +487,7 @@ export function Lotes() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Peso Vivo Médio (kg)
+                  Peso Vivo Atual (kg)
                 </label>
                 <Input
                   type="number"
@@ -327,6 +498,107 @@ export function Lotes() {
                   className="border-gray-200 focus:border-accent"
                 />
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Peso Vivo Meta (kg)
+                </label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={formData.peso_vivo_meta_kg}
+                  onChange={(e) => setFormData({ ...formData, peso_vivo_meta_kg: e.target.value })}
+                  placeholder="Ex: 500"
+                  className="border-gray-200 focus:border-accent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Data Meta
+                </label>
+                <Input
+                  type="date"
+                  value={formData.data_meta}
+                  onChange={(e) => setFormData({ ...formData, data_meta: e.target.value })}
+                  className="border-gray-200 focus:border-accent"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-6 gap-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Morte (cab)
+                </label>
+                <Input
+                  type="number"
+                  value={formData.morte}
+                  onChange={(e) => setFormData({ ...formData, morte: e.target.value })}
+                  placeholder="0"
+                  className="border-gray-200 focus:border-accent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Consumo (cab)
+                </label>
+                <Input
+                  type="number"
+                  value={formData.consumo}
+                  onChange={(e) => setFormData({ ...formData, consumo: e.target.value })}
+                  placeholder="0"
+                  className="border-gray-200 focus:border-accent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Abate (cab)
+                </label>
+                <Input
+                  type="number"
+                  value={formData.abate}
+                  onChange={(e) => setFormData({ ...formData, abate: e.target.value })}
+                  placeholder="0"
+                  className="border-gray-200 focus:border-accent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Transf. Entrada (cab)
+                </label>
+                <Input
+                  type="number"
+                  value={formData.transf_entrada}
+                  onChange={(e) => setFormData({ ...formData, transf_entrada: e.target.value })}
+                  placeholder="0"
+                  className="border-gray-200 focus:border-accent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Transf. Saída (cab)
+                </label>
+                <Input
+                  type="number"
+                  value={formData.transf_saida}
+                  onChange={(e) => setFormData({ ...formData, transf_saida: e.target.value })}
+                  placeholder="0"
+                  className="border-gray-200 focus:border-accent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Quant. Atual (cab)
+                </label>
+                <Input
+                  type="number"
+                  value={formData.quant_atual}
+                  onChange={(e) => setFormData({ ...formData, quant_atual: e.target.value })}
+                  placeholder="0"
+                  className="border-gray-200 focus:border-accent"
+                />
+              </div>
             </div>
 
             <div>
@@ -334,21 +606,32 @@ export function Lotes() {
                 Categorias
               </label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
-                {categoriasOpcoes.map((categoria) => (
-                  <label key={categoria} className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      checked={formData.categorias.includes(categoria)}
-                      onChange={() => handleCategoriaToggle(categoria)}
-                      className="rounded text-primary focus:ring-primary"
-                    />
-                    <span className="text-sm text-gray-700 capitalize">{categoria}</span>
-                  </label>
-                ))}
+                {categoriasOpcoes.map((categoria) => {
+                  const isSelected = formData.categorias.includes(categoria)
+                  return (
+                    <button
+                      key={categoria}
+                      type="button"
+                      onClick={() => handleCategoriaToggle(categoria)}
+                      className={`px-4 py-2.5 rounded-lg border-2 text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
+                        isSelected
+                          ? 'bg-primary text-white border-primary hover:bg-primary/90'
+                          : 'bg-white text-gray-700 border-gray-200 hover:border-primary hover:text-primary'
+                      }`}
+                    >
+                      {isSelected && (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                      <span className="capitalize">{categoria}</span>
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
-            <div>
+            <div className="w-1/4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Outra Categoria
               </label>
@@ -361,7 +644,7 @@ export function Lotes() {
               />
             </div>
 
-            <div>
+            <div className="w-1/4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Quantidade de Bezerros
               </label>
@@ -374,13 +657,31 @@ export function Lotes() {
               />
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center">
               <Button type="submit" disabled={submitting}>
                 {submitting ? 'Salvando...' : 'Salvar'}
               </Button>
               <Button variant="secondary" onClick={handleCancel}>
                 Cancelar
               </Button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, ativo: !formData.ativo })}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                    formData.ativo
+                      ? 'bg-green-100 text-green-800 border-2 border-green-300 hover:bg-green-200'
+                      : 'bg-red-100 text-red-800 border-2 border-red-300 hover:bg-red-200'
+                  }`}
+                >
+                  {formData.ativo ? '✓ Ativo' : '✗ Inativo'}
+                </button>
+                {formData.ativo !== originalAtivo && (
+                  <span className="text-xs text-yellow-700 bg-yellow-50 px-2 py-1 rounded border border-yellow-200">
+                    ⚠️ Salve para aplicar
+                  </span>
+                )}
+              </div>
             </div>
           </form>
         </Card>

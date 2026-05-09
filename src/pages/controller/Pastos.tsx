@@ -8,7 +8,12 @@ interface Pasto {
   id: string
   fazenda_id: string
   nome: string
+  setor?: string
+  tipo?: string
+  metragem_cocho_m?: number
+  nivel_degradacao?: number
   area_util_ha?: number
+  area_util_porcentagem?: number
   especie?: string
   altura_entrada_cm?: number
   altura_saida_cm?: number
@@ -24,7 +29,12 @@ export function Pastos() {
   const [searchTerm, setSearchTerm] = useState('')
   const [formData, setFormData] = useState({
     nome: '',
+    setor: '',
+    tipo: '',
+    metragem_cocho_m: '',
+    nivel_degradacao: '',
     area_util_ha: '',
+    area_util_porcentagem: '',
     especie: '',
     altura_entrada_cm: '',
     altura_saida_cm: '',
@@ -92,7 +102,12 @@ export function Pastos() {
     const data = {
       fazenda_id: fazendaId,
       nome: formData.nome,
+      setor: formData.setor || null,
+      tipo: formData.tipo || null,
+      metragem_cocho_m: formData.metragem_cocho_m ? parseFloat(formData.metragem_cocho_m) : null,
+      nivel_degradacao: formData.nivel_degradacao ? parseInt(formData.nivel_degradacao) : null,
       area_util_ha: formData.area_util_ha ? parseFloat(formData.area_util_ha) : null,
+      area_util_porcentagem: formData.area_util_porcentagem ? parseFloat(formData.area_util_porcentagem) : null,
       especie: formData.especie || null,
       altura_entrada_cm: formData.altura_entrada_cm ? parseFloat(formData.altura_entrada_cm) : null,
       altura_saida_cm: formData.altura_saida_cm ? parseFloat(formData.altura_saida_cm) : null,
@@ -118,7 +133,12 @@ export function Pastos() {
     } else {
       setFormData({
         nome: '',
+        setor: '',
+        tipo: '',
+        metragem_cocho_m: '',
+        nivel_degradacao: '',
         area_util_ha: '',
+        area_util_porcentagem: '',
         especie: '',
         altura_entrada_cm: '',
         altura_saida_cm: '',
@@ -135,7 +155,12 @@ export function Pastos() {
     setEditingPasto(pasto)
     setFormData({
       nome: pasto.nome,
+      setor: pasto.setor || '',
+      tipo: pasto.tipo || '',
+      metragem_cocho_m: pasto.metragem_cocho_m?.toString() || '',
+      nivel_degradacao: pasto.nivel_degradacao?.toString() || '',
       area_util_ha: pasto.area_util_ha?.toString() || '',
+      area_util_porcentagem: pasto.area_util_porcentagem?.toString() || '',
       especie: pasto.especie || '',
       altura_entrada_cm: pasto.altura_entrada_cm?.toString() || '',
       altura_saida_cm: pasto.altura_saida_cm?.toString() || '',
@@ -147,7 +172,12 @@ export function Pastos() {
     setEditingPasto(null)
     setFormData({
       nome: '',
+      setor: '',
+      tipo: '',
+      metragem_cocho_m: '',
+      nivel_degradacao: '',
       area_util_ha: '',
+      area_util_porcentagem: '',
       especie: '',
       altura_entrada_cm: '',
       altura_saida_cm: '',
@@ -216,19 +246,21 @@ export function Pastos() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-2xl font-bold text-gray-800">Pastos</h2>
-        <div className="flex gap-2 items-start">
-          <Input
-            type="text"
-            placeholder="Buscar pasto..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-xs border-gray-200 focus:border-accent h-10"
-          />
-          <Button onClick={() => setShowForm(true)} className="h-10">Novo Pasto</Button>
+      {!showForm && (
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <h2 className="text-2xl font-bold text-gray-800">Pastos</h2>
+          <div className="flex gap-2 items-start">
+            <Input
+              type="text"
+              placeholder="Buscar pasto..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="max-w-xs border-gray-200 focus:border-accent h-10"
+            />
+            <Button onClick={() => setShowForm(true)} className="h-10">Novo Pasto</Button>
+          </div>
         </div>
-      </div>
+      )}
 
       {showForm && (
         <Card className="bg-white p-6 border-0 shadow-sm">
@@ -236,32 +268,110 @@ export function Pastos() {
             {editingPasto ? 'Editar Pasto' : 'Novo Pasto'}
           </h3>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nome *
-              </label>
-              <Input
-                type="text"
-                value={formData.nome}
-                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                required
-                placeholder="Nome do pasto"
-                className="border-gray-200 focus:border-accent"
-              />
+            <div className="grid grid-cols-5 gap-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nome *
+                </label>
+                <Input
+                  type="text"
+                  value={formData.nome}
+                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                  required
+                  placeholder="Nome do pasto"
+                  className="border-gray-200 focus:border-accent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Setor
+                </label>
+                <Input
+                  type="text"
+                  value={formData.setor}
+                  onChange={(e) => setFormData({ ...formData, setor: e.target.value })}
+                  placeholder="Setor"
+                  className="border-gray-200 focus:border-accent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Tipo
+                </label>
+                <select
+                  value={formData.tipo}
+                  onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
+                  className="w-full h-10 px-3 py-2 rounded-lg border-2 border-gray-200 focus:border-accent bg-white text-gray-700 transition-all"
+                >
+                  <option value="">Selecione...</option>
+                  <option value="Cria">Cria</option>
+                  <option value="Recria">Recria</option>
+                  <option value="Engorda">Engorda</option>
+                  <option value="TIP">TIP</option>
+                  <option value="Confinamento">Confinamento</option>
+                  <option value="Volumosos">Volumosos</option>
+                  <option value="Enfermaria">Enfermaria</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Metragem Cocho (m)
+                </label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={formData.metragem_cocho_m}
+                  onChange={(e) => setFormData({ ...formData, metragem_cocho_m: e.target.value })}
+                  placeholder="0"
+                  className="border-gray-200 focus:border-accent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nível Degradação
+                </label>
+                <select
+                  value={formData.nivel_degradacao}
+                  onChange={(e) => setFormData({ ...formData, nivel_degradacao: e.target.value })}
+                  className="w-full h-10 px-3 py-2 rounded-lg border-2 border-gray-200 focus:border-accent bg-white text-gray-700 transition-all"
+                >
+                  <option value="">Selecione...</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                </select>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Área Útil (ha)
-              </label>
-              <Input
-                type="number"
-                step="0.01"
-                value={formData.area_util_ha}
-                onChange={(e) => setFormData({ ...formData, area_util_ha: e.target.value })}
-                placeholder="Ex: 50.5"
-                className="border-gray-200 focus:border-accent"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Área Útil (ha)
+                </label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={formData.area_util_ha}
+                  onChange={(e) => setFormData({ ...formData, area_util_ha: e.target.value })}
+                  placeholder="Ex: 50.5"
+                  className="border-gray-200 focus:border-accent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Área Útil (%)
+                </label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={formData.area_util_porcentagem}
+                  onChange={(e) => setFormData({ ...formData, area_util_porcentagem: e.target.value })}
+                  placeholder="Ex: 85.5"
+                  className="border-gray-200 focus:border-accent"
+                />
+              </div>
             </div>
 
             <div>

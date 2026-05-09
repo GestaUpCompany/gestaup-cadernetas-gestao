@@ -83,6 +83,7 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [openMenus, setOpenMenus] = useState<Set<string>>(new Set())
   const [showHelpModal, setShowHelpModal] = useState(false)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
 
   const shortcuts = [
     {
@@ -133,9 +134,25 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
       
       <div className="flex">
         {/* Sidebar - Desktop */}
-        <aside className="hidden md:block w-64 bg-white border-r-2 border-gray-200 fixed top-0 h-screen overflow-y-auto z-10">
+        <aside className={`${isSidebarCollapsed ? 'w-20' : 'w-64'} hidden md:block bg-white border-r-2 border-gray-200 fixed top-0 h-screen overflow-y-auto z-10 transition-all duration-300`}>
           <div className="p-4 pt-24">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Navegação</p>
+            <div className="flex items-center justify-between mb-4">
+              {!isSidebarCollapsed && <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Navegação</p>}
+              <button
+                onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                className="p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-600"
+                title={isSidebarCollapsed ? 'Expandir menu' : 'Colapsar menu'}
+              >
+                <svg
+                  className={`w-5 h-5 transition-transform ${isSidebarCollapsed ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                </svg>
+              </button>
+            </div>
             <nav className="space-y-1">
               {menuStructure.map((menu, index) => {
                 if (menu.standalone && menu.path) {
@@ -150,7 +167,7 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
                       }`}
                     >
                       {menu.icon && <span className="flex-shrink-0">{menu.icon}</span>}
-                      <span>{menu.label}</span>
+                      {!isSidebarCollapsed && <span>{menu.label}</span>}
                     </button>
                   )
                 }
@@ -169,16 +186,18 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
                       >
                         <div className="flex items-center gap-3">
                           {menu.icon && <span className="flex-shrink-0">{menu.icon}</span>}
-                          <span>{menu.label}</span>
+                          {!isSidebarCollapsed && <span>{menu.label}</span>}
                         </div>
-                        <svg
-                          className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`}
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
+                        {!isSidebarCollapsed && (
+                          <svg
+                            className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`}
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        )}
                       </button>
                       {isOpen && (
                         <div className="ml-6 mt-1 space-y-1 animate-slide-in">
@@ -193,7 +212,7 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
                               }`}
                             >
                               <span className="w-2 h-2 rounded-full bg-gray-300 flex-shrink-0" />
-                              <span>{item.label}</span>
+                              {!isSidebarCollapsed && <span>{item.label}</span>}
                             </button>
                           ))}
                         </div>
@@ -207,12 +226,14 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
             </nav>
           </div>
           
-          <div className="border-t-2 border-gray-200 p-4 mt-auto">
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <p className="text-sm font-medium text-gray-800">{user?.nome}</p>
-              <p className="text-xs text-gray-500 capitalize">{user?.papel}</p>
+          {!isSidebarCollapsed && (
+            <div className="border-t-2 border-gray-200 p-4 mt-auto">
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <p className="text-sm font-medium text-gray-800">{user?.nome}</p>
+                <p className="text-xs text-gray-500 capitalize">{user?.papel}</p>
+              </div>
             </div>
-          </div>
+          )}
         </aside>
 
         {/* Mobile Menu */}
@@ -310,7 +331,7 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
         )}
 
         {/* Main Content */}
-        <main className="flex-1 p-6 md:p-8 md:ml-64">
+        <main className={`flex-1 p-6 md:p-8 transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
           {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileMenuOpen(true)}
