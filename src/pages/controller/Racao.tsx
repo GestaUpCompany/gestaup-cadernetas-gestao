@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 
 interface Racao {
   id: string
@@ -180,6 +181,20 @@ export function Racao() {
     setShowDeleteModal(false)
     setRacaoToDelete(null)
   }
+
+  const shortcuts = [
+    {
+      key: 'f',
+      ctrl: true,
+      description: 'Buscar rações',
+      action: () => {
+        const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement
+        searchInput?.focus()
+      },
+    },
+  ]
+
+  useKeyboardShortcuts(shortcuts)
 
   if (loading) {
     return (

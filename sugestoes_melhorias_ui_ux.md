@@ -327,26 +327,26 @@
 
 ---
 
-### 8. Atalhos de teclado
+### 8. Atalhos de teclado ✅
 
-**Fase 1: Preparação**
-- Mapear ações comuns para atalhos
-- Criar componente de gerenciador de atalhos
-- Definir conflitos potenciais
+**Fase 1: Preparação** ✅
+- Mapear ações comuns para atalhos ✅
+- Criar componente de gerenciador de atalhos ✅
+- Definir conflitos potenciais ✅
 
-**Fase 2: Implementação**
-- Implementar atalhos básicos (Ctrl+N, Ctrl+F, ESC)
-- Adicionar tooltip mostrando atalhos
-- Implementar modal de ajuda com atalhos
+**Fase 2: Implementação** ✅
+- Implementar atalhos básicos (Ctrl+N, Ctrl+F, ESC) ⚠️ (Ctrl+F e ESC implementados, Ctrl+N removido por conflito com navegador)
+- Adicionar tooltip mostrando atalhos ❌
+- Implementar modal de ajuda com atalhos ✅
 
-**Fase 3: Refinamento**
+**Fase 3: Refinamento** ❌
 - Adicionar customização de atalhos pelo usuário
 - Implementar atalhos contextuais (diferentes por tela)
 - Testar em diferentes sistemas operacionais
 
 ---
 
-### 9. Indicadores de carregamento
+**### 9. Indicadores de carregamento**
 
 **Fase 1: Preparação**
 - Identificar todos os botões com ações assíncronas

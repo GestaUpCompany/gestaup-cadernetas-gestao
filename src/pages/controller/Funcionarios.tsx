@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 
 interface Funcionario {
   id: string
@@ -153,7 +154,7 @@ export function Funcionarios() {
     setDeleteConfirmOpen(true)
   }
 
-  const confirmDelete = async () => {
+  const handleDeleteConfirm = async () => {
     if (!funcionarioToDelete) return
 
     const { error } = await supabase.from('funcionarios').delete().eq('id', funcionarioToDelete)
@@ -164,8 +165,23 @@ export function Funcionarios() {
       loadFuncionarios()
     }
 
+    setDeleteConfirmOpen(false)
     setFuncionarioToDelete(null)
   }
+
+  const shortcuts = [
+    {
+      key: 'f',
+      ctrl: true,
+      description: 'Buscar funcionários',
+      action: () => {
+        const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement
+        searchInput?.focus()
+      },
+    },
+  ]
+
+  useKeyboardShortcuts(shortcuts)
 
   if (loading) {
     return (
@@ -347,7 +363,7 @@ export function Funcionarios() {
       <ConfirmModal
         isOpen={deleteConfirmOpen}
         onClose={() => setDeleteConfirmOpen(false)}
-        onConfirm={confirmDelete}
+        onConfirm={handleDeleteConfirm}
         title="Excluir Funcionário"
         message="Tem certeza que deseja excluir este funcionário? Esta ação não pode ser desfeita."
         confirmText="Excluir"

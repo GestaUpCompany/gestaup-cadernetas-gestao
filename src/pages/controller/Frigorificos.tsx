@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 
 interface Frigorifico {
   id: string
@@ -40,6 +41,8 @@ export function Frigorificos() {
     ativo: true,
   })
   const [submitting, setSubmitting] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [frigorificoToDelete, setFrigorificoToDelete] = useState<Frigorifico | null>(null)
 
   useEffect(() => {
     loadFrigorificos()
@@ -184,16 +187,41 @@ export function Frigorificos() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este frigorífico?')) return
+    const frigorifico = frigorificos.find((f) => f.id === id)
+    if (!frigorifico) return
 
-    const { error } = await supabase.from('frigorificos').delete().eq('id', id)
+    setFrigorificoToDelete(frigorifico)
+    setShowDeleteModal(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!frigorificoToDelete) return
+
+    const { error } = await supabase.from('frigorificos').delete().eq('id', frigorificoToDelete.id)
 
     if (error) {
       console.error('Erro ao excluir frigorífico:', error)
     } else {
       loadFrigorificos()
     }
+
+    setShowDeleteModal(false)
+    setFrigorificoToDelete(null)
   }
+
+  const shortcuts = [
+    {
+      key: 'f',
+      ctrl: true,
+      description: 'Buscar frigoríficos',
+      action: () => {
+        const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement
+        searchInput?.focus()
+      },
+    },
+  ]
+
+  useKeyboardShortcuts(shortcuts)
 
   if (loading) {
     return (

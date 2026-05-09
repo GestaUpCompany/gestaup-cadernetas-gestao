@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 
 interface Lote {
   id: string
@@ -223,6 +224,33 @@ export function Lotes() {
     setLoteToDelete(null)
   }
 
+  const handleToggleActive = async (lote: Lote) => {
+    const { error } = await supabase
+      .from('lotes')
+      .update({ ativo: !lote.ativo })
+      .eq('id', lote.id)
+
+    if (error) {
+      console.error('Erro ao atualizar lote:', error)
+    } else {
+      loadLotes()
+    }
+  }
+
+  const shortcuts = [
+    {
+      key: 'f',
+      ctrl: true,
+      description: 'Buscar lotes',
+      action: () => {
+        const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement
+        searchInput?.focus()
+      },
+    },
+  ]
+
+  useKeyboardShortcuts(shortcuts)
+
   if (loading) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -288,7 +316,7 @@ export function Lotes() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Peso Vivo (kg)
+                  Peso Vivo Médio (kg)
                 </label>
                 <Input
                   type="number"
@@ -363,7 +391,7 @@ export function Lotes() {
           <p className="text-gray-600 mb-4">Nenhum lote cadastrado</p>
           <Button onClick={() => setShowForm(true)}>Criar Primeiro Lote</Button>
         </Card>
-      ) : (
+      ) : !showForm ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {lotes
             .filter((lote) =>
@@ -437,8 +465,18 @@ export function Lotes() {
               </div>
 
               <div className="flex gap-2">
-                <Button 
-                  variant="secondary" 
+                <Button
+                  variant="secondary"
+                  className="flex-1 text-sm"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleToggleActive(lote)
+                  }}
+                >
+                  {lote.ativo ? 'Desativar' : 'Ativar'}
+                </Button>
+                <Button
+                  variant="secondary"
                   className="flex-1"
                   onClick={(e) => {
                     e.stopPropagation()
@@ -447,8 +485,8 @@ export function Lotes() {
                 >
                   Editar
                 </Button>
-                <Button 
-                  variant="secondary" 
+                <Button
+                  variant="secondary"
                   className="flex-1"
                   onClick={(e) => {
                     e.stopPropagation()
@@ -461,7 +499,7 @@ export function Lotes() {
             </Card>
           ))}
         </div>
-      )}
+      ) : null}
 
       <ConfirmModal
         isOpen={showDeleteModal}

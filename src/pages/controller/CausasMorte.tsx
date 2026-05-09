@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 
 interface CausaMorte {
   id: string
@@ -155,6 +156,20 @@ export function CausasMorte() {
     setShowDeleteModal(false)
     setCausaToDelete(null)
   }
+
+  const shortcuts = [
+    {
+      key: 'f',
+      ctrl: true,
+      description: 'Buscar causas de morte',
+      action: () => {
+        const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement
+        searchInput?.focus()
+      },
+    },
+  ]
+
+  useKeyboardShortcuts(shortcuts)
 
   const handleToggleActive = async (causa: CausaMorte) => {
     const { error } = await supabase

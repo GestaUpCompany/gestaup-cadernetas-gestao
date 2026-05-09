@@ -1,298 +1,39 @@
-import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { Card, Button } from '../../components/ui'
-import { supabase } from '../../services/supabaseClient'
 import { CADERNETA_IMAGES, CADERNETA_TITLES } from '../../types/images'
+import { useFazenda, useDashboardStats, useGadoStats, useRecentActivities } from '../../hooks/useDashboardQueries'
 
-interface Fazenda {
-  id: string
-  nome: string
-  acesso_id: string
-  cnpj?: string
-  email?: string
-  telefone?: string
-  endereco?: string
-  logo_url?: string
-  ativo: boolean
-}
-
-interface RecentActivity {
-  id: string
-  type: string
-  title: string
-  date: string
-  path: string
-}
 
 export function ControllerDashboard() {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const [fazenda, setFazenda] = useState<Fazenda | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [cadastroStats, setCadastroStats] = useState({
-    pastos: 0,
-    lotes: 0,
-    funcionarios: 0,
-    insumos: 0,
-    pluviometros: 0,
-  })
-  const [cadernetaStats, setCadernetaStats] = useState({
-    maternidade: 0,
-    enfermaria: 0,
-    pastagens: 0,
-    rodeio: 0,
-    suplementacao: 0,
-    bebedouros: 0,
-    movimentacao: 0,
-    morte: 0,
-    clima: 0,
-    abastecimento: 0,
-    cantina: 0,
-    limpeza: 0,
-    'operacoes-maquinas': 0,
-  })
 
-  const [registrosHoje, setRegistrosHoje] = useState(0)
-  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([])
+  const { data: fazenda, isLoading: loadingFazenda } = useFazenda(user?.id)
+  const { data: stats, isLoading: loadingStats } = useDashboardStats(user?.id)
+  const { data: gadoStats } = useGadoStats(user?.id)
+  const { data: recentActivities } = useRecentActivities(user?.id)
 
-  useEffect(() => {
-    loadFazenda()
-    loadStats()
-    loadRecentActivities()
-  }, [user])
+  const loading = loadingFazenda || loadingStats
 
-  const loadRecentActivities = async () => {
-    if (!user) return
-
-    // Buscar fazenda vinculada
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
-
-    if (!vinculos || vinculos.length === 0) return
-
-    const fazendaId = vinculos[0].fazenda_id
-
-    // Buscar registros recentes de todas as cadernetas
-    const activities: RecentActivity[] = []
-
-    // Maternidade
-    const { data: maternidadeData } = await supabase
-      .from('registros_maternidade')
-      .select('id, data')
-      .eq('fazenda_id', fazendaId)
-      .order('data', { ascending: false })
-      .limit(1)
-
-    if (maternidadeData && maternidadeData.length > 0) {
-      const [year, day, month] = maternidadeData[0].data.split('-')
-      const dataFormatada = `${day}/${month}/${year}`
-      activities.push({
-        id: maternidadeData[0].id,
-        type: 'Maternidade',
-        title: 'Registro de parto',
-        date: dataFormatada,
-        path: '/controller/maternidade',
-      })
-    }
-
-    // Enfermaria
-    const { data: enfermariaData } = await supabase
-      .from('registros_enfermaria')
-      .select('id, data')
-      .eq('fazenda_id', fazendaId)
-      .order('data', { ascending: false })
-      .limit(1)
-
-    if (enfermariaData && enfermariaData.length > 0) {
-      const [year, day, month] = enfermariaData[0].data.split('-')
-      const dataFormatada = `${day}/${month}/${year}`
-      activities.push({
-        id: enfermariaData[0].id,
-        type: 'Enfermaria',
-        title: 'Registro de tratamento',
-        date: dataFormatada,
-        path: '/controller/enfermaria',
-      })
-    }
-
-    // Rodeio
-    const { data: rodeioData } = await supabase
-      .from('registros_rodeio')
-      .select('id, data')
-      .eq('fazenda_id', fazendaId)
-      .order('data', { ascending: false })
-      .limit(1)
-
-    if (rodeioData && rodeioData.length > 0) {
-      const [year, day, month] = rodeioData[0].data.split('-')
-      const dataFormatada = `${day}/${month}/${year}`
-      activities.push({
-        id: rodeioData[0].id,
-        type: 'Rodeio',
-        title: 'Registro de rodeio',
-        date: dataFormatada,
-        path: '/controller/rodeio',
-      })
-    }
-
-    // Ordenar por data e pegar os 5 mais recentes
-    setRecentActivities(activities.slice(0, 5))
+  const cadastroStats = stats?.cadastroStats ?? { pastos: 0, lotes: 0, funcionarios: 0, insumos: 0, pluviometros: 0 }
+  const cadernetaStats = stats?.cadernetaStats ?? {
+    maternidade: 0, enfermaria: 0, pastagens: 0, rodeio: 0, suplementacao: 0,
+    bebedouros: 0, movimentacao: 0, morte: 0, clima: 0, abastecimento: 0,
+    cantina: 0, limpeza: 0, 'operacoes-maquinas': 0,
   }
-
-  const loadFazenda = async () => {
-    if (!user) return
-
-    // Buscar fazenda vinculada ao controller
-    const { data: vinculos, error: vinculoError } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
-
-    if (vinculoError || !vinculos || vinculos.length === 0) {
-      console.error('Erro ao buscar fazenda vinculada:', vinculoError)
-      setLoading(false)
-      return
-    }
-
-    const fazendaId = vinculos[0].fazenda_id
-
-    const { data: fazendaData, error: fazendaError } = await supabase
-      .from('fazendas')
-      .select('*')
-      .eq('id', fazendaId)
-      .single()
-
-    if (fazendaError) {
-      console.error('Erro ao buscar fazenda:', fazendaError)
-    } else {
-      setFazenda(fazendaData as Fazenda)
-    }
-
-    setLoading(false)
-  }
-
-  const loadStats = async () => {
-    if (!user) return
-
-    // Buscar fazenda vinculada
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
-
-    if (!vinculos || vinculos.length === 0) return
-
-    const fazendaId = vinculos[0].fazenda_id
-
-    // Buscar estatísticas de cadastros
-    const [
-      { count: pastosCount },
-      { count: lotesCount },
-      { count: funcionariosCount },
-      { count: insumosCount },
-      { count: pluviometrosCount },
-    ] = await Promise.all([
-      supabase.from('pastos').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
-      supabase.from('lotes').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
-      supabase.from('funcionarios').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
-      supabase.from('insumos').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
-      supabase.from('pluviometros').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
-    ])
-
-    // Buscar estatísticas de cadernetas
-    const [
-      { count: maternidadeCount },
-      { count: enfermariaCount },
-      { count: pastagensCount },
-      { count: rodeioCount },
-      { count: suplementacaoCount },
-      { count: bebedourosCount },
-      { count: movimentacaoCount },
-      { count: morteCount },
-      { count: climaCount },
-      { count: abastecimentoCount },
-      { count: cantinaCount },
-      { count: limpezaCount },
-      { count: operacoesMaquinasCount },
-    ] = await Promise.all([
-      supabase.from('registros_maternidade').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
-      supabase.from('registros_enfermaria').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
-      supabase.from('registros_pastagens').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
-      supabase.from('registros_rodeio').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
-      supabase.from('registros_suplementacao').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
-      supabase.from('registros_bebedouros').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
-      supabase.from('registros_movimentacao').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
-      supabase.from('registros_morte').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
-      supabase.from('registros_clima').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
-      supabase.from('registros_abastecimento').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
-      supabase.from('registros_cantina').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
-      supabase.from('registros_limpeza').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
-      supabase.from('registros_operacoes_maquinas').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
-    ])
-
-    // Buscar registros de hoje
-    const today = new Date()
-    const year = today.getFullYear()
-    const month = String(today.getMonth() + 1).padStart(2, '0')
-    const day = String(today.getDate()).padStart(2, '0')
-    const todayStr = `${year}-${day}-${month}` // Formato yyyy-dd-mm
-
-    const [
-      { count: maternidadeHoje },
-      { count: enfermariaHoje },
-      { count: pastagensHoje },
-      { count: rodeioHoje },
-      { count: suplementacaoHoje },
-      { count: bebedourosHoje },
-      { count: movimentacaoHoje },
-      { count: morteHoje },
-    ] = await Promise.all([
-      supabase.from('registros_maternidade').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('data', todayStr),
-      supabase.from('registros_enfermaria').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('data', todayStr),
-      supabase.from('registros_pastagens').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('data', todayStr),
-      supabase.from('registros_rodeio').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('data', todayStr),
-      supabase.from('registros_suplementacao').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('data', todayStr),
-      supabase.from('registros_bebedouros').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('data', todayStr),
-      supabase.from('registros_movimentacao').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('data', todayStr),
-      supabase.from('registros_morte').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('data', todayStr),
-    ])
-
-    const totalHoje = (maternidadeHoje || 0) + (enfermariaHoje || 0) + (pastagensHoje || 0) + (rodeioHoje || 0) + (suplementacaoHoje || 0) + (bebedourosHoje || 0) + (movimentacaoHoje || 0) + (morteHoje || 0)
-    setRegistrosHoje(totalHoje)
-
-    setCadastroStats({
-      pastos: pastosCount || 0,
-      lotes: lotesCount || 0,
-      funcionarios: funcionariosCount || 0,
-      insumos: insumosCount || 0,
-      pluviometros: pluviometrosCount || 0,
-    })
-
-    setCadernetaStats({
-      maternidade: maternidadeCount || 0,
-      enfermaria: enfermariaCount || 0,
-      pastagens: pastagensCount || 0,
-      rodeio: rodeioCount || 0,
-      suplementacao: suplementacaoCount || 0,
-      bebedouros: bebedourosCount || 0,
-      movimentacao: movimentacaoCount || 0,
-      morte: morteCount || 0,
-      clima: climaCount || 0,
-      abastecimento: abastecimentoCount || 0,
-      cantina: cantinaCount || 0,
-      limpeza: limpezaCount || 0,
-      'operacoes-maquinas': operacoesMaquinasCount || 0,
-    })
+  const registrosHoje = stats?.registrosHoje ?? 0
+  const gadoData = gadoStats ?? {
+    totalAnimais: 0, animaisPorLote: [], mortesMesAtual: 0,
+    pesoMedioLotes: 0, enfermariaMesAtual: 0, causasMorteFrequentes: [],
   }
 
   if (loading) {
-    return <p className="text-gray-600">Carregando...</p>
+    return (
+      <div className="flex items-center justify-center py-12 animate-fade-in">
+        <p className="text-gray-600">Carregando...</p>
+      </div>
+    )
   }
 
   if (!fazenda) {
@@ -305,18 +46,18 @@ export function ControllerDashboard() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 page-transition">
       {/* Header da Fazenda */}
-      <div className="bg-white rounded-lg p-4 shadow-sm border-0">
-        <div className="flex items-center gap-3">
+      <div className="bg-white rounded-xl p-6 shadow-md border border-gray-100">
+        <div className="flex items-center gap-4">
           {fazenda.logo_url ? (
             <img
               src={fazenda.logo_url}
               alt={fazenda.nome}
-              className="w-32 h-16 rounded-lg object-contain"
+              className="w-32 h-16 rounded-xl object-contain"
             />
           ) : (
-            <div className="w-16 h-16 rounded-lg bg-gray-200 flex items-center justify-center">
+            <div className="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center border border-gray-200">
               <span className="text-3xl text-gray-400">F</span>
             </div>
           )}
@@ -329,34 +70,88 @@ export function ControllerDashboard() {
 
       {/* Resumo Consolidado */}
       <div>
-        <h3 className="text-xl font-semibold text-gray-800 mb-4">Resumo Consolidado</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="bg-white p-6 border-0 shadow-sm">
+        <h3 className="text-xl font-semibold text-gray-800 mb-6">Resumo Consolidado</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
+          <Card className="bg-white p-6 shadow-md rounded-xl border border-gray-100 border-l-4 border-l-blue-500 hover:shadow-lg transition-shadow">
             <p className="text-sm text-gray-500 mb-2">Registros Hoje</p>
-            <p className="text-4xl font-bold text-gray-800">
+            <p className="text-4xl font-bold text-blue-600">
               {registrosHoje}
             </p>
           </Card>
-          <Card className="bg-white p-6 border-0 shadow-sm">
+          <Card className="bg-white p-6 shadow-md rounded-xl border border-gray-100 border-l-4 border-l-green-500 hover:shadow-lg transition-shadow">
             <p className="text-sm text-gray-500 mb-2">Total Cadastros</p>
-            <p className="text-4xl font-bold text-gray-800">
+            <p className="text-4xl font-bold text-green-600">
               {cadastroStats.pastos + cadastroStats.lotes + cadastroStats.funcionarios + cadastroStats.insumos + cadastroStats.pluviometros}
             </p>
           </Card>
-          <Card className="bg-white p-6 border-0 shadow-sm">
+          <Card className="bg-white p-6 shadow-md rounded-xl border border-gray-100 border-l-4 border-l-purple-500 hover:shadow-lg transition-shadow">
             <p className="text-sm text-gray-500 mb-2">Total Registros</p>
-            <p className="text-4xl font-bold text-gray-800">
+            <p className="text-4xl font-bold text-purple-600">
               {cadernetaStats.maternidade + cadernetaStats.enfermaria + cadernetaStats.pastagens + cadernetaStats.rodeio + cadernetaStats.suplementacao + cadernetaStats.bebedouros + cadernetaStats.movimentacao + cadernetaStats.morte + cadernetaStats.clima + cadernetaStats.abastecimento + cadernetaStats.cantina + cadernetaStats.limpeza + cadernetaStats['operacoes-maquinas']}
             </p>
           </Card>
         </div>
       </div>
 
+      {/* Métricas de Produção (Gado + Saúde) */}
+      <div>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+          <h3 className="text-xl font-semibold text-gray-800">Métricas de Produção</h3>
+          <div className="flex gap-2 w-full md:w-auto">
+            <Button variant="secondary" onClick={() => navigate('/controller/relatorios/gado')} className="flex-1 md:flex-none">
+              Relatório Rebanho
+            </Button>
+            <Button variant="secondary" onClick={() => navigate('/controller/relatorios/saude')} className="flex-1 md:flex-none">
+              Relatório Saúde
+            </Button>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+          <Card className="bg-white p-6 shadow-md rounded-xl border border-gray-100 border-l-4 border-l-green-500 hover:shadow-lg transition-shadow">
+            <p className="text-sm text-gray-500 mb-2">Total de Animais</p>
+            <p className="text-4xl font-bold text-green-600">{gadoData.totalAnimais}</p>
+            <p className="text-xs text-gray-400 mt-2">Cabeças</p>
+          </Card>
+          <Card className="bg-white p-6 shadow-md rounded-xl border border-gray-100 border-l-4 border-l-red-500 hover:shadow-lg transition-shadow">
+            <p className="text-sm text-gray-500 mb-2">Mortes Totais</p>
+            <p className="text-4xl font-bold text-red-600">{gadoData.mortesMesAtual}</p>
+            <p className="text-xs text-gray-400 mt-2">Registros totais</p>
+          </Card>
+          <Card className="bg-white p-6 shadow-md rounded-xl border border-gray-100 border-l-4 border-l-blue-500 hover:shadow-lg transition-shadow">
+            <p className="text-sm text-gray-500 mb-2">Peso Vivo Médio</p>
+            <p className="text-4xl font-bold text-blue-600">{gadoData.pesoMedioLotes.toFixed(0)}</p>
+            <p className="text-xs text-gray-400 mt-2">kg por animal</p>
+          </Card>
+          <Card className="bg-white p-6 shadow-md rounded-xl border border-gray-100 border-l-4 border-l-orange-500 hover:shadow-lg transition-shadow">
+            <p className="text-sm text-gray-500 mb-2">Casos Enfermaria</p>
+            <p className="text-4xl font-bold text-orange-600">{gadoData.enfermariaMesAtual}</p>
+            <p className="text-xs text-gray-400 mt-2">Registros totais</p>
+          </Card>
+        </div>
+      </div>
+
+      {/* Animais por Lote */}
+      {gadoData.animaisPorLote.length > 0 && (
+        <div>
+          <h3 className="text-xl font-semibold text-gray-800 mb-6">Animais por Lote</h3>
+          <Card className="bg-white p-6 shadow-md rounded-xl border border-gray-100">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {gadoData.animaisPorLote.map((item) => (
+                <div key={item.nome} className="flex justify-between items-center p-4 bg-gray-50 rounded-xl border border-gray-100 hover:bg-gray-100 transition-colors">
+                  <p className="font-medium text-gray-800">{item.nome}</p>
+                  <p className="text-lg font-bold text-gray-800">{item.cabecas}</p>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      )}
+
       {/* Estatísticas de Cadastros */}
       <div>
-        <h3 className="text-xl font-semibold text-gray-800 mb-4">Resumo</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="bg-white p-6 border-0 shadow-sm">
+        <h3 className="text-xl font-semibold text-gray-800 mb-6">Resumo</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
+          <Card className="bg-white p-6 shadow-md rounded-xl border border-gray-100 hover:shadow-lg transition-shadow">
             <p className="text-sm text-gray-500 mb-2">Pastos</p>
             <p className="text-4xl font-bold text-gray-800">{cadastroStats.pastos}</p>
             <Button
@@ -367,7 +162,7 @@ export function ControllerDashboard() {
               Gerenciar
             </Button>
           </Card>
-          <Card className="bg-white p-6 border-0 shadow-sm">
+          <Card className="bg-white p-6 shadow-md rounded-xl border border-gray-100 hover:shadow-lg transition-shadow">
             <p className="text-sm text-gray-500 mb-2">Lotes</p>
             <p className="text-4xl font-bold text-gray-800">{cadastroStats.lotes}</p>
             <Button
@@ -378,7 +173,7 @@ export function ControllerDashboard() {
               Gerenciar
             </Button>
           </Card>
-          <Card className="bg-white p-6 border-0 shadow-sm">
+          <Card className="bg-white p-6 shadow-md rounded-xl border border-gray-100 hover:shadow-lg transition-shadow">
             <p className="text-sm text-gray-500 mb-2">Funcionários</p>
             <p className="text-4xl font-bold text-gray-800">{cadastroStats.funcionarios}</p>
             <Button
@@ -389,7 +184,7 @@ export function ControllerDashboard() {
               Gerenciar
             </Button>
           </Card>
-          <Card className="bg-white p-6 border-0 shadow-sm">
+          <Card className="bg-white p-6 shadow-md rounded-xl border border-gray-100 hover:shadow-lg transition-shadow">
             <p className="text-sm text-gray-500 mb-2">Insumos</p>
             <p className="text-4xl font-bold text-gray-800">{cadastroStats.insumos}</p>
             <Button
@@ -400,7 +195,7 @@ export function ControllerDashboard() {
               Gerenciar
             </Button>
           </Card>
-          <Card className="bg-white p-6 border-0 shadow-sm">
+          <Card className="bg-white p-6 shadow-md rounded-xl border border-gray-100 hover:shadow-lg transition-shadow">
             <p className="text-sm text-gray-500 mb-2">Pluviômetros</p>
             <p className="text-4xl font-bold text-gray-800">{cadastroStats.pluviometros}</p>
             <Button
@@ -416,10 +211,10 @@ export function ControllerDashboard() {
 
       {/* Estatísticas de Cadernetas */}
       <div>
-        <h3 className="text-xl font-semibold text-gray-800 mb-4">Cadernetas</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <h3 className="text-xl font-semibold text-gray-800 mb-6">Cadernetas</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           <Card 
-            className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
+            className="bg-white p-6 shadow-md rounded-xl border border-gray-100 cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() => navigate('/controller/maternidade')}
           >
             <div className="flex items-center gap-4 mb-3">
@@ -431,7 +226,7 @@ export function ControllerDashboard() {
             </div>
           </Card>
           <Card 
-            className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
+            className="bg-white p-6 shadow-md rounded-xl border border-gray-100 cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() => navigate('/controller/pastagens-caderneta')}
           >
             <div className="flex items-center gap-4 mb-3">
@@ -443,7 +238,7 @@ export function ControllerDashboard() {
             </div>
           </Card>
           <Card 
-            className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
+            className="bg-white p-6 shadow-md rounded-xl border border-gray-100 cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() => navigate('/controller/rodeio')}
           >
             <div className="flex items-center gap-4 mb-3">
@@ -455,7 +250,7 @@ export function ControllerDashboard() {
             </div>
           </Card>
           <Card 
-            className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
+            className="bg-white p-6 shadow-md rounded-xl border border-gray-100 cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() => navigate('/controller/suplementacao')}
           >
             <div className="flex items-center gap-4 mb-3">
@@ -467,7 +262,7 @@ export function ControllerDashboard() {
             </div>
           </Card>
           <Card 
-            className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
+            className="bg-white p-6 shadow-md rounded-xl border border-gray-100 cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() => navigate('/controller/bebedouros')}
           >
             <div className="flex items-center gap-4 mb-3">
@@ -479,7 +274,7 @@ export function ControllerDashboard() {
             </div>
           </Card>
           <Card 
-            className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
+            className="bg-white p-6 shadow-md rounded-xl border border-gray-100 cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() => navigate('/controller/movimentacao')}
           >
             <div className="flex items-center gap-4 mb-3">
@@ -491,19 +286,7 @@ export function ControllerDashboard() {
             </div>
           </Card>
           <Card 
-            className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
-            onClick={() => navigate('/controller/enfermaria')}
-          >
-            <div className="flex items-center gap-4 mb-3">
-              <img src={CADERNETA_IMAGES.enfermaria} alt={CADERNETA_TITLES.enfermaria} className="w-16 h-16 rounded-[32px]" />
-              <div>
-                <p className="text-sm text-gray-500 mb-1">{CADERNETA_TITLES.enfermaria}</p>
-                <p className="text-4xl font-bold text-gray-800">{cadernetaStats.enfermaria}</p>
-              </div>
-            </div>
-          </Card>
-          <Card 
-            className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
+            className="bg-white p-6 shadow-md rounded-xl border border-gray-100 cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() => navigate('/controller/morte')}
           >
             <div className="flex items-center gap-4 mb-3">
@@ -515,7 +298,7 @@ export function ControllerDashboard() {
             </div>
           </Card>
           <Card 
-            className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
+            className="bg-white p-6 shadow-md rounded-xl border border-gray-100 cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() => navigate('/controller/clima')}
           >
             <div className="flex items-center gap-4 mb-3">
@@ -527,7 +310,7 @@ export function ControllerDashboard() {
             </div>
           </Card>
           <Card 
-            className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
+            className="bg-white p-6 shadow-md rounded-xl border border-gray-100 cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() => navigate('/controller/abastecimento')}
           >
             <div className="flex items-center gap-4 mb-3">
@@ -539,7 +322,7 @@ export function ControllerDashboard() {
             </div>
           </Card>
           <Card 
-            className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
+            className="bg-white p-6 shadow-md rounded-xl border border-gray-100 cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() => navigate('/controller/cantina')}
           >
             <div className="flex items-center gap-4 mb-3">
@@ -551,7 +334,7 @@ export function ControllerDashboard() {
             </div>
           </Card>
           <Card 
-            className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
+            className="bg-white p-6 shadow-md rounded-xl border border-gray-100 cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() => navigate('/controller/limpeza')}
           >
             <div className="flex items-center gap-4 mb-3">
@@ -563,7 +346,7 @@ export function ControllerDashboard() {
             </div>
           </Card>
           <Card 
-            className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
+            className="bg-white p-6 shadow-md rounded-xl border border-gray-100 cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() => navigate('/controller/operacoes-maquinas')}
           >
             <div className="flex items-center gap-4 mb-3">
@@ -578,11 +361,11 @@ export function ControllerDashboard() {
       </div>
 
       {/* Atividades Recentes */}
-      {recentActivities.length > 0 && (
+      {(recentActivities ?? []).length > 0 && (
         <Card className="bg-white p-6 border-0 shadow-sm">
           <h3 className="text-xl font-semibold text-gray-800 mb-4">Atividades Recentes</h3>
           <div className="space-y-3">
-            {recentActivities.map((activity) => (
+            {(recentActivities ?? []).map((activity) => (
               <div
                 key={activity.id}
                 className="flex items-center justify-between p-4 bg-gray-50 rounded-lg  cursor-pointer"

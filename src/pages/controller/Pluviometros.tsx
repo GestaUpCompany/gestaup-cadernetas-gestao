@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 
 interface Pluviometro {
   id: string
@@ -163,6 +164,33 @@ export function Pluviometros() {
     setPluviometroToDelete(null)
   }
 
+  const handleToggleActive = async (pluviometro: Pluviometro) => {
+    const { error } = await supabase
+      .from('pluviometros')
+      .update({ ativo: !pluviometro.ativo })
+      .eq('id', pluviometro.id)
+
+    if (error) {
+      console.error('Erro ao atualizar pluviômetro:', error)
+    } else {
+      loadPluviometros()
+    }
+  }
+
+  const shortcuts = [
+    {
+      key: 'f',
+      ctrl: true,
+      description: 'Buscar pluviômetros',
+      action: () => {
+        const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement
+        searchInput?.focus()
+      },
+    },
+  ]
+
+  useKeyboardShortcuts(shortcuts)
+
   if (loading) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -283,8 +311,18 @@ export function Pluviometros() {
               </div>
 
               <div className="flex gap-2">
-                <Button 
-                  variant="secondary" 
+                <Button
+                  variant="secondary"
+                  className="flex-1 text-sm"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleToggleActive(pluviometro)
+                  }}
+                >
+                  {pluviometro.ativo ? 'Desativar' : 'Ativar'}
+                </Button>
+                <Button
+                  variant="secondary"
                   className="flex-1"
                   onClick={(e) => {
                     e.stopPropagation()
@@ -293,8 +331,8 @@ export function Pluviometros() {
                 >
                   Editar
                 </Button>
-                <Button 
-                  variant="secondary" 
+                <Button
+                  variant="secondary"
                   className="flex-1"
                   onClick={(e) => {
                     e.stopPropagation()

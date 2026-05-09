@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, ConfirmModal } from '../../components/ui'
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 
 interface Bebedouro {
   id: string
@@ -168,6 +169,20 @@ export function BebedourosCadastro() {
     setBebedouroToDelete(null)
   }
 
+  const shortcuts = [
+    {
+      key: 'f',
+      ctrl: true,
+      description: 'Buscar bebedouros',
+      action: () => {
+        const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement
+        searchInput?.focus()
+      },
+    },
+  ]
+
+  useKeyboardShortcuts(shortcuts)
+
   const handleToggleActive = async (bebedouro: Bebedouro) => {
     const { error } = await supabase
       .from('bebedouros')
@@ -295,7 +310,6 @@ export function BebedourosCadastro() {
                 key={bebedouro.id} 
                 className="bg-white p-6 border-0 shadow-sm cursor-pointer"
                 onClick={() => handleEdit(bebedouro)}
-                disableHover
               >
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex-1">

@@ -42,13 +42,13 @@ export function Header() {
   ]
 
   return (
-    <header className="bg-primary border-b border-gray-200 px-4 md:px-6 py-4 sticky top-0 z-50">
+    <header className="bg-primary border-b border-gray-200 px-4 md:px-6 py-4 sticky top-0 z-50 transition-shadow duration-300">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 md:gap-4">
           <img
             src="/images/logo/logo-gestaup.png"
             alt="Base de Dados - Cadernetas"
-            className="h-8 md:h-10 w-auto"
+            className="h-8 md:h-10 w-auto hover-scale cursor-pointer rounded-lg"
           />
           <h1 className="text-base md:text-xl font-bold text-white ml-2 md:ml-3 hidden sm:block">
             Base de Dados - Cadernetas
@@ -63,7 +63,7 @@ export function Header() {
           </div>
           <Dropdown
             trigger={
-              <button className="flex items-center gap-2 px-3 py-2 bg-white/10 rounded-lg transition-all text-white">
+              <button className="flex items-center gap-2 px-3 py-2 bg-white/10 rounded-lg transition-all text-white hover-scale button-press hover:bg-white/20">
                 <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>

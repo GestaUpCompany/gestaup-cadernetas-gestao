@@ -54,6 +54,8 @@ import { RegistrosLimpeza } from './pages/controller/RegistrosLimpeza'
 import { RegistrosLimpezaDetalhes } from './pages/controller/RegistrosLimpezaDetalhes'
 import { RegistrosOperacoesMaquinas } from './pages/controller/RegistrosOperacoesMaquinas'
 import { RegistrosOperacoesMaquinasDetalhes } from './pages/controller/RegistrosOperacoesMaquinasDetalhes'
+import { RelatorioGado } from './pages/controller/RelatorioGado'
+import { RelatorioSaude } from './pages/controller/RelatorioSaude'
 
 // Redirecionamento baseado no papel do usuário
 function RoleRedirect() {
@@ -577,6 +579,26 @@ function App() {
             <ControllerRoute>
               <ControllerLayout>
                 <RegistrosOperacoesMaquinasDetalhes />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/relatorios/gado"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <RelatorioGado />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/relatorios/saude"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <RelatorioSaude />
               </ControllerLayout>
             </ControllerRoute>
           }

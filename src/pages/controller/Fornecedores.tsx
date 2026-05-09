@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 
 interface Fornecedor {
   id: string
@@ -40,6 +41,8 @@ export function Fornecedores() {
     ativo: true,
   })
   const [submitting, setSubmitting] = useState(false)
+  const [fornecedorToDelete, setFornecedorToDelete] = useState<Fornecedor | null>(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   useEffect(() => {
     loadFornecedores()
@@ -184,16 +187,41 @@ export function Fornecedores() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este fornecedor?')) return
+    const fornecedor = fornecedores.find((fornecedor) => fornecedor.id === id)
+    if (!fornecedor) return
 
-    const { error } = await supabase.from('fornecedores').delete().eq('id', id)
+    setFornecedorToDelete(fornecedor)
+    setShowDeleteModal(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!fornecedorToDelete) return
+
+    const { error } = await supabase.from('fornecedores').delete().eq('id', fornecedorToDelete.id)
 
     if (error) {
       console.error('Erro ao excluir fornecedor:', error)
     } else {
       loadFornecedores()
     }
+
+    setShowDeleteModal(false)
+    setFornecedorToDelete(null)
   }
+
+  const shortcuts = [
+    {
+      key: 'f',
+      ctrl: true,
+      description: 'Buscar fornecedores',
+      action: () => {
+        const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement
+        searchInput?.focus()
+      },
+    },
+  ]
+
+  useKeyboardShortcuts(shortcuts)
 
   if (loading) {
     return (

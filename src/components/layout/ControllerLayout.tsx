@@ -3,6 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { Header } from './Header'
 import { Breadcrumbs } from '../ui'
+import { KeyboardHelpModal } from '../ui/KeyboardHelpModal'
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 
 interface ControllerLayoutProps {
   children: ReactNode
@@ -80,6 +82,22 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
   const { user } = useAuth()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [openMenus, setOpenMenus] = useState<Set<string>>(new Set())
+  const [showHelpModal, setShowHelpModal] = useState(false)
+
+  const shortcuts = [
+    {
+      key: 'F1',
+      description: 'Abrir ajuda de atalhos',
+      action: () => setShowHelpModal(true),
+    },
+    {
+      key: 'Escape',
+      description: 'Fechar modal',
+      action: () => setShowHelpModal(false),
+    },
+  ]
+
+  useKeyboardShortcuts(shortcuts)
 
   // Auto-open submenu if current path is in it
   useEffect(() => {
@@ -115,8 +133,8 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
       
       <div className="flex">
         {/* Sidebar - Desktop */}
-        <aside className="hidden md:block w-64 bg-white border-r-2 border-gray-200 min-h-screen">
-          <div className="p-4">
+        <aside className="hidden md:block w-64 bg-white border-r-2 border-gray-200 fixed top-0 h-screen overflow-y-auto z-10">
+          <div className="p-4 pt-24">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Navegação</p>
             <nav className="space-y-1">
               {menuStructure.map((menu, index) => {
@@ -163,7 +181,7 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
                         </svg>
                       </button>
                       {isOpen && (
-                        <div className="ml-6 mt-1 space-y-1 animate-in slide-in-from-left-2 duration-200">
+                        <div className="ml-6 mt-1 space-y-1 animate-slide-in">
                           {menu.items.map((item) => (
                             <button
                               key={item.path}
@@ -199,8 +217,8 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-50 animate-in fade-in duration-200">
-            <div className="bg-white w-64 h-full p-4 overflow-y-auto animate-in slide-in-from-left duration-200">
+          <div className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-50 animate-fade-in">
+            <div className="bg-white w-64 h-full p-4 overflow-y-auto animate-slide-in">
               <div className="flex items-center justify-between mb-4">
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Navegação</p>
                 <button
@@ -260,7 +278,7 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
                           </svg>
                         </button>
                         {isOpen && (
-                          <div className="ml-6 mt-1 space-y-1 animate-in slide-in-from-left-2 duration-200">
+                          <div className="ml-6 mt-1 space-y-1 animate-slide-in">
                             {menu.items.map((item) => (
                               <button
                                 key={item.path}
@@ -292,7 +310,7 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
         )}
 
         {/* Main Content */}
-        <main className="flex-1 p-6 md:p-8">
+        <main className="flex-1 p-6 md:p-8 md:ml-64">
           {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileMenuOpen(true)}
@@ -306,6 +324,16 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
           {children}
         </main>
       </div>
+
+      <KeyboardHelpModal
+        isOpen={showHelpModal}
+        onClose={() => setShowHelpModal(false)}
+        shortcuts={[
+          { key: 'F1', description: 'Abrir ajuda de atalhos' },
+          { key: 'Escape', description: 'Fechar modal' },
+          { key: 'f', ctrl: true, description: 'Buscar' },
+        ]}
+      />
     </div>
   )
 }

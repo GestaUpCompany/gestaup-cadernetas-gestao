@@ -178,7 +178,7 @@ export function Bebedouros() {
                 <tr
                   key={registro.id}
                   onClick={() => navigate(`/controller/bebedouros/${registro.id}`)}
-                  className=" cursor-pointer"
+                  className="cursor-pointer hover:bg-gray-50 transition-colors"
                 >
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {(() => {

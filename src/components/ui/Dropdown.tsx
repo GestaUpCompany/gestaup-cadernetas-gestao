@@ -47,7 +47,7 @@ export function Dropdown({ trigger, options, align = 'right' }: DropdownProps) {
 
       {isOpen && (
         <div
-          className={`absolute z-50 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 animate-in fade-in slide-in-from-top-2 duration-200 ${
+          className={`absolute z-50 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 animate-slide-down ${
             align === 'right' ? 'right-0' : 'left-0'
           }`}
         >
@@ -59,8 +59,8 @@ export function Dropdown({ trigger, options, align = 'right' }: DropdownProps) {
                     option.onClick?.()
                     setIsOpen(false)
                   }}
-                  className={`w-full px-4 py-2 text-left flex items-center gap-3 transition-all ${
-                    option.danger ? 'text-red-600' : 'text-gray-700'
+                  className={`w-full px-4 py-2 text-left flex items-center gap-3 transition-all hover-scale button-press ${
+                    option.danger ? 'text-red-600 hover:bg-red-50' : 'text-gray-700 hover:bg-gray-100'
                   }`}
                 >
                   {option.icon}

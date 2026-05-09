@@ -59,7 +59,7 @@ export function Breadcrumbs({ maxItems = 3 }: BreadcrumbsProps) {
     : breadcrumbs
 
   return (
-    <nav className="flex items-center space-x-2 text-sm text-gray-600 py-2 px-4 md:px-6 bg-gray-50 border-b border-gray-200">
+    <nav className="flex items-center space-x-2 text-sm text-gray-600 py-2 px-4 md:px-6 bg-gray-50 border-b border-gray-200 breadcrumb-fade-in">
       {displayBreadcrumbs.map((breadcrumb, index) => (
         <div key={breadcrumb.path} className="flex items-center">
           {index > 0 && (
@@ -72,7 +72,7 @@ export function Breadcrumbs({ maxItems = 3 }: BreadcrumbsProps) {
           ) : (
             <button
               onClick={() => navigate(breadcrumb.path)}
-              className={`transition-all ${
+              className={`link-hover ${
                 index === displayBreadcrumbs.length - 1 ? 'text-gray-900 font-medium cursor-default' : ''
               }`}
               disabled={index === displayBreadcrumbs.length - 1}

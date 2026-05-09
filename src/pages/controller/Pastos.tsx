@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 
 interface Pasto {
   id: string
@@ -174,6 +175,33 @@ export function Pastos() {
     setPastoToDelete(null)
   }
 
+  const handleToggleActive = async (pasto: Pasto) => {
+    const { error } = await supabase
+      .from('pastos')
+      .update({ ativo: !pasto.ativo })
+      .eq('id', pasto.id)
+
+    if (error) {
+      console.error('Erro ao atualizar pasto:', error)
+    } else {
+      loadPastos()
+    }
+  }
+
+  const shortcuts = [
+    {
+      key: 'f',
+      ctrl: true,
+      description: 'Buscar pastos',
+      action: () => {
+        const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement
+        searchInput?.focus()
+      },
+    },
+  ]
+
+  useKeyboardShortcuts(shortcuts)
+
   if (loading) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -296,7 +324,7 @@ export function Pastos() {
           <p className="text-gray-600 mb-4">Nenhum pasto cadastrado</p>
           <Button onClick={() => setShowForm(true)}>Criar Primeiro Pasto</Button>
         </Card>
-      ) : (
+      ) : !showForm ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {pastos
             .filter((pasto) =>
@@ -341,8 +369,18 @@ export function Pastos() {
                 )}
 
                 <div className="flex gap-2">
-                  <Button 
-                    variant="secondary" 
+                  <Button
+                    variant="secondary"
+                    className="flex-1 text-sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleToggleActive(pasto)
+                    }}
+                  >
+                    {pasto.ativo ? 'Desativar' : 'Ativar'}
+                  </Button>
+                  <Button
+                    variant="secondary"
                     className="flex-1"
                     onClick={(e) => {
                       e.stopPropagation()
@@ -351,8 +389,8 @@ export function Pastos() {
                   >
                     Editar
                   </Button>
-                  <Button 
-                    variant="secondary" 
+                  <Button
+                    variant="secondary"
                     className="flex-1"
                     onClick={(e) => {
                       e.stopPropagation()
@@ -365,7 +403,7 @@ export function Pastos() {
               </Card>
             ))}
         </div>
-      )}
+      ) : null}
 
       <ConfirmModal
         isOpen={showDeleteModal}
