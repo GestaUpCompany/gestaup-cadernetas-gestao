@@ -64,7 +64,7 @@ export function AdminDashboard() {
             {fazendas.slice(0, 5).map((fazenda) => (
               <div
                 key={fazenda.id}
-                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg  cursor-pointer"
                 onClick={() => navigate(`/admin/fazendas/${fazenda.id}/detalhes`)}
               >
                 <div className="flex items-center gap-4">
@@ -100,7 +100,7 @@ export function AdminDashboard() {
       {/* Botão Flutuante Nova Fazenda */}
       <Button
         onClick={() => navigate('/admin/fazendas/nova')}
-        className="bg-accent text-gray-800 hover:bg-yellow-400"
+        className="bg-accent text-gray-800"
       >
         Nova Fazenda
       </Button>

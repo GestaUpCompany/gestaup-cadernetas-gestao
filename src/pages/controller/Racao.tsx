@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
 
 interface Racao {
   id: string
@@ -32,6 +32,8 @@ export function Racao() {
     ativo: true,
   })
   const [submitting, setSubmitting] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [racaoToDelete, setRacaoToDelete] = useState<string | null>(null)
 
   useEffect(() => {
     loadRacoes()
@@ -159,20 +161,35 @@ export function Racao() {
     setShowForm(false)
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir esta ração?')) return
+  const handleDeleteClick = (id: string) => {
+    setRacaoToDelete(id)
+    setShowDeleteModal(true)
+  }
 
-    const { error } = await supabase.from('racao').delete().eq('id', id)
+  const handleDeleteConfirm = async () => {
+    if (!racaoToDelete) return
+
+    const { error } = await supabase.from('racao').delete().eq('id', racaoToDelete)
 
     if (error) {
       console.error('Erro ao excluir ração:', error)
     } else {
       loadRacoes()
     }
+
+    setShowDeleteModal(false)
+    setRacaoToDelete(null)
   }
 
   if (loading) {
-    return <p className="text-gray-600">Carregando...</p>
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <CardSkeleton />
+        <CardSkeleton />
+        <CardSkeleton />
+        <CardSkeleton />
+      </div>
+    )
   }
 
   return (
@@ -304,7 +321,7 @@ export function Racao() {
             .map((racao) => (
             <Card 
               key={racao.id} 
-              className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+              className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
               onClick={() => handleEdit(racao)}
             >
               <div className="flex justify-between items-start mb-4">
@@ -359,7 +376,7 @@ export function Racao() {
                   className="flex-1"
                   onClick={(e) => {
                     e.stopPropagation()
-                    handleDelete(racao.id)
+                    handleDeleteClick(racao.id)
                   }}
                 >
                   Excluir
@@ -369,6 +386,17 @@ export function Racao() {
           ))}
         </div>
       ) : null}
+
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteConfirm}
+        title="Excluir Ração"
+        message="Tem certeza que deseja excluir esta ração? Esta ação não pode ser desfeita."
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        variant="danger"
+      />
     </div>
   )
 }

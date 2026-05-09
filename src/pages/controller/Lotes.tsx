@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
 
 interface Lote {
   id: string
@@ -30,6 +30,8 @@ export function Lotes() {
     quantidade_bezerros: '',
   })
   const [submitting, setSubmitting] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [loteToDelete, setLoteToDelete] = useState<string | null>(null)
 
   const categoriasOpcoes = [
     'vaca',
@@ -201,20 +203,35 @@ export function Lotes() {
     setShowForm(false)
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este lote?')) return
+  const handleDeleteClick = (id: string) => {
+    setLoteToDelete(id)
+    setShowDeleteModal(true)
+  }
 
-    const { error } = await supabase.from('lotes').delete().eq('id', id)
+  const handleDeleteConfirm = async () => {
+    if (!loteToDelete) return
+
+    const { error } = await supabase.from('lotes').delete().eq('id', loteToDelete)
 
     if (error) {
       console.error('Erro ao excluir lote:', error)
     } else {
       loadLotes()
     }
+
+    setShowDeleteModal(false)
+    setLoteToDelete(null)
   }
 
   if (loading) {
-    return <p className="text-gray-600">Carregando...</p>
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <CardSkeleton />
+        <CardSkeleton />
+        <CardSkeleton />
+        <CardSkeleton />
+      </div>
+    )
   }
 
   return (
@@ -355,7 +372,7 @@ export function Lotes() {
             .map((lote) => (
             <Card 
               key={lote.id} 
-              className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+              className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
               onClick={() => handleEdit(lote)}
             >
               <div className="flex justify-between items-start mb-4">
@@ -435,7 +452,7 @@ export function Lotes() {
                   className="flex-1"
                   onClick={(e) => {
                     e.stopPropagation()
-                    handleDelete(lote.id)
+                    handleDeleteClick(lote.id)
                   }}
                 >
                   Excluir
@@ -445,6 +462,17 @@ export function Lotes() {
           ))}
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteConfirm}
+        title="Excluir Lote"
+        message="Tem certeza que deseja excluir este lote? Esta ação não pode ser desfeita."
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        variant="danger"
+      />
     </div>
   )
 }

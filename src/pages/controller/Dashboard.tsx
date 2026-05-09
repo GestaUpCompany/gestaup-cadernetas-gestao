@@ -419,7 +419,7 @@ export function ControllerDashboard() {
         <h3 className="text-xl font-semibold text-gray-800 mb-4">Cadernetas</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card 
-            className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+            className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
             onClick={() => navigate('/controller/maternidade')}
           >
             <div className="flex items-center gap-4 mb-3">
@@ -431,7 +431,7 @@ export function ControllerDashboard() {
             </div>
           </Card>
           <Card 
-            className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+            className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
             onClick={() => navigate('/controller/pastagens-caderneta')}
           >
             <div className="flex items-center gap-4 mb-3">
@@ -443,7 +443,7 @@ export function ControllerDashboard() {
             </div>
           </Card>
           <Card 
-            className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+            className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
             onClick={() => navigate('/controller/rodeio')}
           >
             <div className="flex items-center gap-4 mb-3">
@@ -455,7 +455,7 @@ export function ControllerDashboard() {
             </div>
           </Card>
           <Card 
-            className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+            className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
             onClick={() => navigate('/controller/suplementacao')}
           >
             <div className="flex items-center gap-4 mb-3">
@@ -467,7 +467,7 @@ export function ControllerDashboard() {
             </div>
           </Card>
           <Card 
-            className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+            className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
             onClick={() => navigate('/controller/bebedouros')}
           >
             <div className="flex items-center gap-4 mb-3">
@@ -479,7 +479,7 @@ export function ControllerDashboard() {
             </div>
           </Card>
           <Card 
-            className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+            className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
             onClick={() => navigate('/controller/movimentacao')}
           >
             <div className="flex items-center gap-4 mb-3">
@@ -491,7 +491,7 @@ export function ControllerDashboard() {
             </div>
           </Card>
           <Card 
-            className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+            className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
             onClick={() => navigate('/controller/enfermaria')}
           >
             <div className="flex items-center gap-4 mb-3">
@@ -503,7 +503,7 @@ export function ControllerDashboard() {
             </div>
           </Card>
           <Card 
-            className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+            className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
             onClick={() => navigate('/controller/morte')}
           >
             <div className="flex items-center gap-4 mb-3">
@@ -515,7 +515,7 @@ export function ControllerDashboard() {
             </div>
           </Card>
           <Card 
-            className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+            className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
             onClick={() => navigate('/controller/clima')}
           >
             <div className="flex items-center gap-4 mb-3">
@@ -527,7 +527,7 @@ export function ControllerDashboard() {
             </div>
           </Card>
           <Card 
-            className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+            className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
             onClick={() => navigate('/controller/abastecimento')}
           >
             <div className="flex items-center gap-4 mb-3">
@@ -539,7 +539,7 @@ export function ControllerDashboard() {
             </div>
           </Card>
           <Card 
-            className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+            className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
             onClick={() => navigate('/controller/cantina')}
           >
             <div className="flex items-center gap-4 mb-3">
@@ -551,7 +551,7 @@ export function ControllerDashboard() {
             </div>
           </Card>
           <Card 
-            className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+            className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
             onClick={() => navigate('/controller/limpeza')}
           >
             <div className="flex items-center gap-4 mb-3">
@@ -563,7 +563,7 @@ export function ControllerDashboard() {
             </div>
           </Card>
           <Card 
-            className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+            className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
             onClick={() => navigate('/controller/operacoes-maquinas')}
           >
             <div className="flex items-center gap-4 mb-3">
@@ -585,7 +585,7 @@ export function ControllerDashboard() {
             {recentActivities.map((activity) => (
               <div
                 key={activity.id}
-                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg  cursor-pointer"
                 onClick={() => navigate(activity.path)}
               >
                 <div className="flex items-center gap-4">

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton } from '../../components/ui'
 
 interface Frigorifico {
   id: string
@@ -196,7 +196,14 @@ export function Frigorificos() {
   }
 
   if (loading) {
-    return <p className="text-gray-600">Carregando...</p>
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <CardSkeleton />
+        <CardSkeleton />
+        <CardSkeleton />
+        <CardSkeleton />
+      </div>
+    )
   }
 
   return (
@@ -380,7 +387,7 @@ export function Frigorificos() {
             .map((frigorifico) => (
             <Card 
               key={frigorifico.id} 
-              className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+              className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
               onClick={() => handleEdit(frigorifico)}
             >
               <div className="flex justify-between items-start mb-4">

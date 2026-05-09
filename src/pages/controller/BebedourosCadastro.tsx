@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input } from '../../components/ui'
+import { Button, Card, Input, ConfirmModal } from '../../components/ui'
 
 interface Bebedouro {
   id: string
@@ -24,6 +24,8 @@ export function BebedourosCadastro() {
   const [editingBebedouro, setEditingBebedouro] = useState<Bebedouro | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [bebedouroToDelete, setBebedouroToDelete] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
     nome: '',
@@ -143,19 +145,27 @@ export function BebedourosCadastro() {
     setShowForm(true)
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este bebedouro?')) return
+  const handleDeleteClick = (id: string) => {
+    setBebedouroToDelete(id)
+    setShowDeleteModal(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!bebedouroToDelete) return
 
     const { error } = await supabase
       .from('bebedouros')
       .delete()
-      .eq('id', id)
+      .eq('id', bebedouroToDelete)
 
     if (error) {
       console.error('Erro ao excluir bebedouro:', error)
     } else {
       loadBebedouros()
     }
+
+    setShowDeleteModal(false)
+    setBebedouroToDelete(null)
   }
 
   const handleToggleActive = async (bebedouro: Bebedouro) => {
@@ -337,7 +347,7 @@ export function BebedourosCadastro() {
                     className="flex-1 text-sm"
                     onClick={(e) => {
                       e.stopPropagation()
-                      handleDelete(bebedouro.id)
+                      handleDeleteClick(bebedouro.id)
                     }}
                   >
                     Excluir
@@ -347,6 +357,17 @@ export function BebedourosCadastro() {
             ))}
         </div>
       ) : null}
+
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteConfirm}
+        title="Excluir Bebedouro"
+        message="Tem certeza que deseja excluir este bebedouro? Esta ação não pode ser desfeita."
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        variant="danger"
+      />
     </div>
   )
 }

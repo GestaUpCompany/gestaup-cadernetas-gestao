@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
 
 interface Mineral {
   id: string
@@ -32,6 +32,8 @@ export function Mineral() {
     ativo: true,
   })
   const [submitting, setSubmitting] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [mineralToDelete, setMineralToDelete] = useState<string | null>(null)
 
   useEffect(() => {
     loadMinerais()
@@ -159,20 +161,35 @@ export function Mineral() {
     setShowForm(false)
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este mineral?')) return
+  const handleDeleteClick = (id: string) => {
+    setMineralToDelete(id)
+    setShowDeleteModal(true)
+  }
 
-    const { error } = await supabase.from('mineral').delete().eq('id', id)
+  const handleDeleteConfirm = async () => {
+    if (!mineralToDelete) return
+
+    const { error } = await supabase.from('mineral').delete().eq('id', mineralToDelete)
 
     if (error) {
       console.error('Erro ao excluir mineral:', error)
     } else {
       loadMinerais()
     }
+
+    setShowDeleteModal(false)
+    setMineralToDelete(null)
   }
 
   if (loading) {
-    return <p className="text-gray-600">Carregando...</p>
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <CardSkeleton />
+        <CardSkeleton />
+        <CardSkeleton />
+        <CardSkeleton />
+      </div>
+    )
   }
 
   return (
@@ -304,7 +321,7 @@ export function Mineral() {
             .map((mineral) => (
             <Card 
               key={mineral.id} 
-              className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+              className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
               onClick={() => handleEdit(mineral)}
             >
               <div className="flex justify-between items-start mb-4">
@@ -359,7 +376,7 @@ export function Mineral() {
                   className="flex-1"
                   onClick={(e) => {
                     e.stopPropagation()
-                    handleDelete(mineral.id)
+                    handleDeleteClick(mineral.id)
                   }}
                 >
                   Excluir
@@ -369,6 +386,17 @@ export function Mineral() {
           ))}
         </div>
       ) : null}
+
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteConfirm}
+        title="Excluir Mineral"
+        message="Tem certeza que deseja excluir este mineral? Esta ação não pode ser desfeita."
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        variant="danger"
+      />
     </div>
   )
 }

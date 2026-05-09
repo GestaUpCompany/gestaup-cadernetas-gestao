@@ -283,7 +283,7 @@ export function Funcionarios() {
               .map((funcionario) => (
               <Card 
                 key={funcionario.id} 
-                className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+                className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
                 onClick={() => handleEdit(funcionario)}
               >
                 <div className="flex justify-between items-start mb-4">

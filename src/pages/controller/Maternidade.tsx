@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton } from '../../components/ui'
 import { exportToCSV } from '../../utils/exportCSV'
 
 interface RegistroMaternidade {
@@ -92,7 +92,14 @@ export function Maternidade() {
   })
 
   if (loading) {
-    return <p className="text-gray-600">Carregando...</p>
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <CardSkeleton />
+        <CardSkeleton />
+        <CardSkeleton />
+        <CardSkeleton />
+      </div>
+    )
   }
 
   return (
@@ -179,7 +186,7 @@ export function Maternidade() {
                 <tr
                   key={registro.id}
                   onClick={() => navigate(`/controller/maternidade/${registro.id}`)}
-                  className="hover:bg-gray-50 cursor-pointer"
+                  className=" cursor-pointer"
                 >
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {(() => {

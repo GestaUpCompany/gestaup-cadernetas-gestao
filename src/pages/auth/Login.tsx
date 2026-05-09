@@ -42,7 +42,7 @@ export function Login() {
         </div>
 
         {/* Formulário */}
-        <Card className="bg-white shadow-lg border-0">
+        <Card className="bg-white shadow-lg border-0" disableHover>
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-6">
               <p className="text-sm text-red-600">{error}</p>

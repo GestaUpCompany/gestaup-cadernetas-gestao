@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
 
 interface Pasto {
   id: string
@@ -29,6 +29,8 @@ export function Pastos() {
     altura_saida_cm: '',
   })
   const [submitting, setSubmitting] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [pastoToDelete, setPastoToDelete] = useState<string | null>(null)
 
   useEffect(() => {
     loadPastos()
@@ -152,16 +154,24 @@ export function Pastos() {
     setShowForm(false)
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este pasto?')) return
+  const handleDeleteClick = (id: string) => {
+    setPastoToDelete(id)
+    setShowDeleteModal(true)
+  }
 
-    const { error } = await supabase.from('pastos').delete().eq('id', id)
+  const handleDeleteConfirm = async () => {
+    if (!pastoToDelete) return
+
+    const { error } = await supabase.from('pastos').delete().eq('id', pastoToDelete)
 
     if (error) {
       console.error('Erro ao excluir pasto:', error)
     } else {
       loadPastos()
     }
+
+    setShowDeleteModal(false)
+    setPastoToDelete(null)
   }
 
   if (loading) {
@@ -296,7 +306,7 @@ export function Pastos() {
             .map((pasto) => (
               <Card 
                 key={pasto.id} 
-                className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+                className="bg-white p-6 border-0 shadow-sm cursor-pointer transition-all"
                 onClick={() => handleEdit(pasto)}
               >
                 <div className="flex justify-between items-start mb-4">
@@ -346,7 +356,7 @@ export function Pastos() {
                     className="flex-1"
                     onClick={(e) => {
                       e.stopPropagation()
-                      handleDelete(pasto.id)
+                      handleDeleteClick(pasto.id)
                     }}
                   >
                     Excluir
@@ -356,6 +366,17 @@ export function Pastos() {
             ))}
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteConfirm}
+        title="Excluir Pasto"
+        message="Tem certeza que deseja excluir este pasto? Esta ação não pode ser desfeita."
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        variant="danger"
+      />
     </div>
   )
 }

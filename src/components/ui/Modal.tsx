@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react'
+
 interface ModalProps {
   isOpen: boolean
   onClose: () => void
@@ -7,6 +9,32 @@ interface ModalProps {
 }
 
 export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalProps) {
+  const cancelButtonRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    if (isOpen) {
+      // Focar no botão de cancelar quando modal abrir
+      cancelButtonRef.current?.focus()
+      
+      // Adicionar listener para ESC
+      const handleEscape = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          onClose()
+        }
+      }
+      
+      document.addEventListener('keydown', handleEscape)
+      
+      // Prevenir scroll do body
+      document.body.style.overflow = 'hidden'
+      
+      return () => {
+        document.removeEventListener('keydown', handleEscape)
+        document.body.style.overflow = 'unset'
+      }
+    }
+  }, [isOpen, onClose])
+
   if (!isOpen) return null
 
   const sizeClasses = {
@@ -19,7 +47,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
         onClick={onClose}
       />
 
@@ -29,8 +57,10 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
           <button
+            ref={cancelButtonRef}
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-gray-400 rounded transition-all"
+            aria-label="Fechar modal"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -73,19 +103,19 @@ export function ConfirmModal({
       icon: '⚠️',
       iconBg: 'bg-red-100',
       iconColor: 'text-red-600',
-      confirmBg: 'bg-red-600 hover:bg-red-700',
+      confirmBg: 'bg-red-600',
     },
     warning: {
       icon: '⚠️',
       iconBg: 'bg-yellow-100',
       iconColor: 'text-yellow-600',
-      confirmBg: 'bg-yellow-600 hover:bg-yellow-700',
+      confirmBg: 'bg-yellow-600',
     },
     info: {
       icon: 'ℹ️',
       iconBg: 'bg-blue-100',
       iconColor: 'text-blue-600',
-      confirmBg: 'bg-blue-600 hover:bg-blue-700',
+      confirmBg: 'bg-blue-600',
     },
   }
 
@@ -104,7 +134,7 @@ export function ConfirmModal({
       <div className="flex justify-end gap-3 mt-6">
         <button
           onClick={onClose}
-          className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+          className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg transition-all"
         >
           {cancelText}
         </button>

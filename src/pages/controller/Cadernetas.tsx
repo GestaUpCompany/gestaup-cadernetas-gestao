@@ -94,7 +94,7 @@ export function Cadernetas() {
         {cadernetas.map((caderneta) => (
           <Card
             key={caderneta.path}
-            className="bg-white p-6 cursor-pointer hover:shadow-lg hover:border-accent border-0 transition-all"
+            className="bg-white p-6 cursor-pointer  border-0 transition-all"
             onClick={() => navigate(caderneta.path)}
           >
             <div className="flex flex-col items-center">

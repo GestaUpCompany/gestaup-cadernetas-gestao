@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
 
 interface CausaMorte {
   id: string
@@ -23,6 +23,8 @@ export function CausasMorte() {
     descricao: '',
   })
   const [submitting, setSubmitting] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [causaToDelete, setCausaToDelete] = useState<string | null>(null)
 
   useEffect(() => {
     loadCausas()
@@ -134,16 +136,24 @@ export function CausasMorte() {
     setShowForm(false)
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir esta causa de morte?')) return
+  const handleDeleteClick = (id: string) => {
+    setCausaToDelete(id)
+    setShowDeleteModal(true)
+  }
 
-    const { error } = await supabase.from('causas_morte').delete().eq('id', id)
+  const handleDeleteConfirm = async () => {
+    if (!causaToDelete) return
+
+    const { error } = await supabase.from('causas_morte').delete().eq('id', causaToDelete)
 
     if (error) {
       console.error('Erro ao excluir causa de morte:', error)
     } else {
       loadCausas()
     }
+
+    setShowDeleteModal(false)
+    setCausaToDelete(null)
   }
 
   const handleToggleActive = async (causa: CausaMorte) => {
@@ -160,7 +170,14 @@ export function CausasMorte() {
   }
 
   if (loading) {
-    return <p className="text-gray-600">Carregando...</p>
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <CardSkeleton />
+        <CardSkeleton />
+        <CardSkeleton />
+        <CardSkeleton />
+      </div>
+    )
   }
 
   return (
@@ -240,7 +257,7 @@ export function CausasMorte() {
             .map((causa) => (
               <Card 
                 key={causa.id} 
-                className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+                className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
                 onClick={() => handleEdit(causa)}
               >
                 <div className="flex justify-between items-start mb-4">
@@ -285,7 +302,7 @@ export function CausasMorte() {
                     className="flex-1 text-sm"
                     onClick={(e) => {
                       e.stopPropagation()
-                      handleDelete(causa.id)
+                      handleDeleteClick(causa.id)
                     }}
                   >
                     Excluir
@@ -295,6 +312,17 @@ export function CausasMorte() {
             ))}
         </div>
       ) : null}
+
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteConfirm}
+        title="Excluir Causa de Morte"
+        message="Tem certeza que deseja excluir esta causa de morte? Esta ação não pode ser desfeita."
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        variant="danger"
+      />
     </div>
   )
 }

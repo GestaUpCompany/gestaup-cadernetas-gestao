@@ -180,7 +180,7 @@ export function RegistrosOperacoesMaquinas() {
                 <tr
                   key={registro.id}
                   onClick={() => navigate(`/controller/operacoes-maquinas/${registro.id}`)}
-                  className="hover:bg-gray-50 cursor-pointer"
+                  className=" cursor-pointer"
                 >
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {(() => {

@@ -27,10 +27,10 @@ export function Sidebar({ items }: SidebarProps) {
               <button
                 key={item.path}
                 onClick={() => navigate(item.path)}
-                className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
+                className={`w-full text-left px-4 py-3 rounded-lg transition-all ${
                   isActive
                     ? 'bg-primary text-white'
-                    : 'text-gray-700 hover:bg-gray-100'
+                    : 'text-gray-700'
                 }`}
               >
                 {item.label}

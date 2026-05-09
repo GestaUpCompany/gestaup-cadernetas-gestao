@@ -8,8 +8,8 @@ interface CardProps {
 export function Card({ children, className = '', onClick, disableHover = false }: CardProps) {
   const hoverClasses = disableHover 
     ? '' 
-    : 'transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-primary/30'
-  const onClickHover = onClick ? 'cursor-pointer hover:shadow-2xl hover:-translate-y-2' : ''
+    : 'transition-all duration-200'
+  const onClickHover = onClick ? 'cursor-pointer' : ''
   
   return (
     <div 

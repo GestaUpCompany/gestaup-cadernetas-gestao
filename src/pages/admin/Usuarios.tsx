@@ -70,7 +70,7 @@ export function UsuariosList() {
             {usuarios.map((usuario) => (
               <div
                 key={usuario.id}
-                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg  cursor-pointer"
                 onClick={() => navigate(`/admin/usuarios/${usuario.id}`)}
               >
                 <div className="flex items-center gap-4">

@@ -304,7 +304,6 @@
 
 **Fase 3: Refinamento**
 - Implementar edição de filtros salvos
-- Adicionar compartilhamento de filtros
 - Testar performance com muitos filtros
 
 ---

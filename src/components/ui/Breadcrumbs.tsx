@@ -72,7 +72,7 @@ export function Breadcrumbs({ maxItems = 3 }: BreadcrumbsProps) {
           ) : (
             <button
               onClick={() => navigate(breadcrumb.path)}
-              className={`hover:text-primary transition-colors ${
+              className={`transition-all ${
                 index === displayBreadcrumbs.length - 1 ? 'text-gray-900 font-medium cursor-default' : ''
               }`}
               disabled={index === displayBreadcrumbs.length - 1}

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
 
 interface Dieta {
   id: string
@@ -28,6 +28,8 @@ export function Dietas() {
     ativo: true,
   })
   const [submitting, setSubmitting] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [dietaToDelete, setDietaToDelete] = useState<string | null>(null)
 
   useEffect(() => {
     loadDietas()
@@ -147,20 +149,35 @@ export function Dietas() {
     setShowForm(false)
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir esta dieta?')) return
+  const handleDeleteClick = (id: string) => {
+    setDietaToDelete(id)
+    setShowDeleteModal(true)
+  }
 
-    const { error } = await supabase.from('dietas').delete().eq('id', id)
+  const handleDeleteConfirm = async () => {
+    if (!dietaToDelete) return
+
+    const { error } = await supabase.from('dietas').delete().eq('id', dietaToDelete)
 
     if (error) {
       console.error('Erro ao excluir dieta:', error)
     } else {
       loadDietas()
     }
+
+    setShowDeleteModal(false)
+    setDietaToDelete(null)
   }
 
   if (loading) {
-    return <p className="text-gray-600">Carregando...</p>
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <CardSkeleton />
+        <CardSkeleton />
+        <CardSkeleton />
+        <CardSkeleton />
+      </div>
+    )
   }
 
   return (
@@ -266,7 +283,7 @@ export function Dietas() {
             .map((dieta) => (
             <Card 
               key={dieta.id} 
-              className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+              className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
               onClick={() => handleEdit(dieta)}
             >
               <div className="flex justify-between items-start mb-4">
@@ -315,7 +332,7 @@ export function Dietas() {
                   className="flex-1"
                   onClick={(e) => {
                     e.stopPropagation()
-                    handleDelete(dieta.id)
+                    handleDeleteClick(dieta.id)
                   }}
                 >
                   Excluir
@@ -325,6 +342,17 @@ export function Dietas() {
           ))}
         </div>
       ) : null}
+
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteConfirm}
+        title="Excluir Dieta"
+        message="Tem certeza que deseja excluir esta dieta? Esta ação não pode ser desfeita."
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        variant="danger"
+      />
     </div>
   )
 }

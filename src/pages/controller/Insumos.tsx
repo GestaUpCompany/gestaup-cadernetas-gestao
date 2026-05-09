@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
 
 interface Insumo {
   id: string
@@ -32,6 +32,8 @@ export function Insumos() {
     ativo: true,
   })
   const [submitting, setSubmitting] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [insumoToDelete, setInsumoToDelete] = useState<string | null>(null)
 
   useEffect(() => {
     loadInsumos()
@@ -159,20 +161,35 @@ export function Insumos() {
     setShowForm(false)
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este insumo?')) return
+  const handleDeleteClick = (id: string) => {
+    setInsumoToDelete(id)
+    setShowDeleteModal(true)
+  }
 
-    const { error } = await supabase.from('insumos').delete().eq('id', id)
+  const handleDeleteConfirm = async () => {
+    if (!insumoToDelete) return
+
+    const { error } = await supabase.from('insumos').delete().eq('id', insumoToDelete)
 
     if (error) {
       console.error('Erro ao excluir insumo:', error)
     } else {
       loadInsumos()
     }
+
+    setShowDeleteModal(false)
+    setInsumoToDelete(null)
   }
 
   if (loading) {
-    return <p className="text-gray-600">Carregando...</p>
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <CardSkeleton />
+        <CardSkeleton />
+        <CardSkeleton />
+        <CardSkeleton />
+      </div>
+    )
   }
 
   return (
@@ -304,7 +321,7 @@ export function Insumos() {
             .map((insumo) => (
             <Card 
               key={insumo.id} 
-              className="bg-white p-6 border-0 shadow-sm cursor-pointer hover:shadow-md hover:border-accent transition-all"
+              className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
               onClick={() => handleEdit(insumo)}
             >
               <div className="flex justify-between items-start mb-4">
@@ -359,7 +376,7 @@ export function Insumos() {
                   className="flex-1"
                   onClick={(e) => {
                     e.stopPropagation()
-                    handleDelete(insumo.id)
+                    handleDeleteClick(insumo.id)
                   }}
                 >
                   Excluir
@@ -369,6 +386,17 @@ export function Insumos() {
           ))}
         </div>
       ) : null}
+
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteConfirm}
+        title="Excluir Insumo"
+        message="Tem certeza que deseja excluir este insumo? Esta ação não pode ser desfeita."
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        variant="danger"
+      />
     </div>
   )
 }
