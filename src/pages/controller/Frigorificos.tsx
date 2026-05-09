@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 
 interface Frigorifico {
@@ -41,8 +41,6 @@ export function Frigorificos() {
     ativo: true,
   })
   const [submitting, setSubmitting] = useState(false)
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [frigorificoToDelete, setFrigorificoToDelete] = useState<Frigorifico | null>(null)
 
   useEffect(() => {
     loadFrigorificos()
@@ -184,29 +182,6 @@ export function Frigorificos() {
       ativo: true,
     })
     setShowForm(false)
-  }
-
-  const handleDelete = async (id: string) => {
-    const frigorifico = frigorificos.find((f) => f.id === id)
-    if (!frigorifico) return
-
-    setFrigorificoToDelete(frigorifico)
-    setShowDeleteModal(true)
-  }
-
-  const handleDeleteConfirm = async () => {
-    if (!frigorificoToDelete) return
-
-    const { error } = await supabase.from('frigorificos').delete().eq('id', frigorificoToDelete.id)
-
-    if (error) {
-      console.error('Erro ao excluir frigorífico:', error)
-    } else {
-      loadFrigorificos()
-    }
-
-    setShowDeleteModal(false)
-    setFrigorificoToDelete(null)
   }
 
   const shortcuts = [
@@ -470,16 +445,6 @@ export function Frigorificos() {
                   }}
                 >
                   Editar
-                </Button>
-                <Button 
-                  variant="secondary" 
-                  className="flex-1"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleDelete(frigorifico.id)
-                  }}
-                >
-                  Excluir
                 </Button>
               </div>
             </Card>

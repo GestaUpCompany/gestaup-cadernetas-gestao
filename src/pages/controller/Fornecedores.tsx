@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 
 interface Fornecedor {
@@ -41,8 +41,6 @@ export function Fornecedores() {
     ativo: true,
   })
   const [submitting, setSubmitting] = useState(false)
-  const [fornecedorToDelete, setFornecedorToDelete] = useState<Fornecedor | null>(null)
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   useEffect(() => {
     loadFornecedores()
@@ -184,29 +182,6 @@ export function Fornecedores() {
       ativo: true,
     })
     setShowForm(false)
-  }
-
-  const handleDelete = async (id: string) => {
-    const fornecedor = fornecedores.find((fornecedor) => fornecedor.id === id)
-    if (!fornecedor) return
-
-    setFornecedorToDelete(fornecedor)
-    setShowDeleteModal(true)
-  }
-
-  const handleDeleteConfirm = async () => {
-    if (!fornecedorToDelete) return
-
-    const { error } = await supabase.from('fornecedores').delete().eq('id', fornecedorToDelete.id)
-
-    if (error) {
-      console.error('Erro ao excluir fornecedor:', error)
-    } else {
-      loadFornecedores()
-    }
-
-    setShowDeleteModal(false)
-    setFornecedorToDelete(null)
   }
 
   const shortcuts = [
@@ -470,16 +445,6 @@ export function Fornecedores() {
                   }}
                 >
                   Editar
-                </Button>
-                <Button 
-                  variant="secondary" 
-                  className="flex-1"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleDelete(fornecedor.id)
-                  }}
-                >
-                  Excluir
                 </Button>
               </div>
             </Card>
