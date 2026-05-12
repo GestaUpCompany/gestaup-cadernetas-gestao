@@ -13,7 +13,6 @@ interface Pasto {
   metragem_cocho_m?: number
   nivel_degradacao?: number
   area_util_ha?: number
-  area_util_porcentagem?: number
   especie?: string
   altura_entrada_cm?: number
   altura_saida_cm?: number
@@ -34,7 +33,6 @@ export function Pastos() {
     metragem_cocho_m: '',
     nivel_degradacao: '',
     area_util_ha: '',
-    area_util_porcentagem: '',
     especie: '',
     altura_entrada_cm: '',
     altura_saida_cm: '',
@@ -107,7 +105,6 @@ export function Pastos() {
       metragem_cocho_m: formData.metragem_cocho_m ? parseFloat(formData.metragem_cocho_m) : null,
       nivel_degradacao: formData.nivel_degradacao ? parseInt(formData.nivel_degradacao) : null,
       area_util_ha: formData.area_util_ha ? parseFloat(formData.area_util_ha) : null,
-      area_util_porcentagem: formData.area_util_porcentagem ? parseFloat(formData.area_util_porcentagem) : null,
       especie: formData.especie || null,
       altura_entrada_cm: formData.altura_entrada_cm ? parseFloat(formData.altura_entrada_cm) : null,
       altura_saida_cm: formData.altura_saida_cm ? parseFloat(formData.altura_saida_cm) : null,
@@ -138,7 +135,6 @@ export function Pastos() {
         metragem_cocho_m: '',
         nivel_degradacao: '',
         area_util_ha: '',
-        area_util_porcentagem: '',
         especie: '',
         altura_entrada_cm: '',
         altura_saida_cm: '',
@@ -160,7 +156,6 @@ export function Pastos() {
       metragem_cocho_m: pasto.metragem_cocho_m?.toString() || '',
       nivel_degradacao: pasto.nivel_degradacao?.toString() || '',
       area_util_ha: pasto.area_util_ha?.toString() || '',
-      area_util_porcentagem: pasto.area_util_porcentagem?.toString() || '',
       especie: pasto.especie || '',
       altura_entrada_cm: pasto.altura_entrada_cm?.toString() || '',
       altura_saida_cm: pasto.altura_saida_cm?.toString() || '',
@@ -177,7 +172,6 @@ export function Pastos() {
       metragem_cocho_m: '',
       nivel_degradacao: '',
       area_util_ha: '',
-      area_util_porcentagem: '',
       especie: '',
       altura_entrada_cm: '',
       altura_saida_cm: '',
@@ -271,7 +265,7 @@ export function Pastos() {
             <div className="grid grid-cols-5 gap-2">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nome *
+                  Nome <span className="text-red-500">*</span>
                 </label>
                 <Input
                   type="text"
@@ -345,33 +339,18 @@ export function Pastos() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Área Útil (ha)
-                </label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formData.area_util_ha}
-                  onChange={(e) => setFormData({ ...formData, area_util_ha: e.target.value })}
-                  placeholder="Ex: 50.5"
-                  className="border-gray-200 focus:border-accent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Área Útil (%)
-                </label>
-                <Input
-                  type="number"
-                  step="0.1"
-                  value={formData.area_util_porcentagem}
-                  onChange={(e) => setFormData({ ...formData, area_util_porcentagem: e.target.value })}
-                  placeholder="Ex: 85.5"
-                  className="border-gray-200 focus:border-accent"
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Área Útil (ha)
+              </label>
+              <Input
+                type="number"
+                step="0.01"
+                value={formData.area_util_ha}
+                onChange={(e) => setFormData({ ...formData, area_util_ha: e.target.value })}
+                placeholder="Ex: 50.5"
+                className="border-gray-200 focus:border-accent"
+              />
             </div>
 
             <div>

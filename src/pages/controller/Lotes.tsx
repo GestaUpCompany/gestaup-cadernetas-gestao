@@ -396,7 +396,7 @@ export function Lotes() {
             <div className="grid grid-cols-6 gap-2">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nome
+                  Nome <span className="text-red-500">*</span>
                 </label>
                 <Input
                   type="text"
@@ -427,7 +427,8 @@ export function Lotes() {
                   type="date"
                   value={formData.data}
                   onChange={(e) => setFormData({ ...formData, data: e.target.value })}
-                  className="border-gray-200 focus:border-accent"
+                  disabled
+                  className="border-gray-200 focus:border-accent opacity-60"
                 />
               </div>
               <div>
@@ -440,7 +441,8 @@ export function Lotes() {
                   value={formData.peso_entrada}
                   onChange={(e) => setFormData({ ...formData, peso_entrada: e.target.value })}
                   placeholder="0"
-                  className="border-gray-200 focus:border-accent"
+                  disabled
+                  className="border-gray-200 focus:border-accent opacity-60"
                 />
               </div>
               <div>
@@ -453,7 +455,8 @@ export function Lotes() {
                   value={formData.gmd}
                   onChange={(e) => setFormData({ ...formData, gmd: e.target.value })}
                   placeholder="0"
-                  className="border-gray-200 focus:border-accent"
+                  disabled
+                  className="border-gray-200 focus:border-accent opacity-60"
                 />
               </div>
               <div>
@@ -465,7 +468,8 @@ export function Lotes() {
                   value={formData.periodo}
                   onChange={(e) => setFormData({ ...formData, periodo: e.target.value })}
                   placeholder="0"
-                  className="border-gray-200 focus:border-accent"
+                  disabled
+                  className="border-gray-200 focus:border-accent opacity-60"
                 />
               </div>
             </div>
@@ -473,7 +477,7 @@ export function Lotes() {
             <div className="grid grid-cols-4 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Quant. Atual (cab)
+                  Quant. Atual (cab) <span className="text-red-500">*</span>
                 </label>
                 <Input
                   type="number"
@@ -495,7 +499,8 @@ export function Lotes() {
                   value={formData.peso_vivo_kg}
                   onChange={(e) => setFormData({ ...formData, peso_vivo_kg: e.target.value })}
                   placeholder="Ex: 450.5"
-                  className="border-gray-200 focus:border-accent"
+                  disabled
+                  className="border-gray-200 focus:border-accent opacity-60"
                 />
               </div>
 
@@ -509,7 +514,8 @@ export function Lotes() {
                   value={formData.peso_vivo_meta_kg}
                   onChange={(e) => setFormData({ ...formData, peso_vivo_meta_kg: e.target.value })}
                   placeholder="Ex: 500"
-                  className="border-gray-200 focus:border-accent"
+                  disabled
+                  className="border-gray-200 focus:border-accent opacity-60"
                 />
               </div>
 
@@ -521,7 +527,8 @@ export function Lotes() {
                   type="date"
                   value={formData.data_meta}
                   onChange={(e) => setFormData({ ...formData, data_meta: e.target.value })}
-                  className="border-gray-200 focus:border-accent"
+                  disabled
+                  className="border-gray-200 focus:border-accent opacity-60"
                 />
               </div>
             </div>
@@ -536,7 +543,8 @@ export function Lotes() {
                   value={formData.morte}
                   onChange={(e) => setFormData({ ...formData, morte: e.target.value })}
                   placeholder="0"
-                  className="border-gray-200 focus:border-accent"
+                  disabled
+                  className="border-gray-200 focus:border-accent opacity-60"
                 />
               </div>
               <div>
@@ -548,7 +556,8 @@ export function Lotes() {
                   value={formData.consumo}
                   onChange={(e) => setFormData({ ...formData, consumo: e.target.value })}
                   placeholder="0"
-                  className="border-gray-200 focus:border-accent"
+                  disabled
+                  className="border-gray-200 focus:border-accent opacity-60"
                 />
               </div>
               <div>
@@ -560,7 +569,8 @@ export function Lotes() {
                   value={formData.abate}
                   onChange={(e) => setFormData({ ...formData, abate: e.target.value })}
                   placeholder="0"
-                  className="border-gray-200 focus:border-accent"
+                  disabled
+                  className="border-gray-200 focus:border-accent opacity-60"
                 />
               </div>
               <div>
@@ -572,7 +582,8 @@ export function Lotes() {
                   value={formData.transf_entrada}
                   onChange={(e) => setFormData({ ...formData, transf_entrada: e.target.value })}
                   placeholder="0"
-                  className="border-gray-200 focus:border-accent"
+                  disabled
+                  className="border-gray-200 focus:border-accent opacity-60"
                 />
               </div>
               <div>
@@ -584,19 +595,8 @@ export function Lotes() {
                   value={formData.transf_saida}
                   onChange={(e) => setFormData({ ...formData, transf_saida: e.target.value })}
                   placeholder="0"
-                  className="border-gray-200 focus:border-accent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Quant. Atual (cab)
-                </label>
-                <Input
-                  type="number"
-                  value={formData.quant_atual}
-                  onChange={(e) => setFormData({ ...formData, quant_atual: e.target.value })}
-                  placeholder="0"
-                  className="border-gray-200 focus:border-accent"
+                  disabled
+                  className="border-gray-200 focus:border-accent opacity-60"
                 />
               </div>
             </div>
