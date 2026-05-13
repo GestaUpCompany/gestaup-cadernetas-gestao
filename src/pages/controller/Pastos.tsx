@@ -341,13 +341,14 @@ export function Pastos() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Área Útil (ha)
+                Área Útil (ha) <span className="text-red-500">*</span>
               </label>
               <Input
                 type="number"
                 step="0.01"
                 value={formData.area_util_ha}
                 onChange={(e) => setFormData({ ...formData, area_util_ha: e.target.value })}
+                required
                 placeholder="Ex: 50.5"
                 className="border-gray-200 focus:border-accent"
               />
@@ -355,12 +356,13 @@ export function Pastos() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Espécie
+                Espécie <span className="text-red-500">*</span>
               </label>
               <Input
                 type="text"
                 value={formData.especie}
                 onChange={(e) => setFormData({ ...formData, especie: e.target.value })}
+                required
                 placeholder="Ex: Brachiaria"
                 className="border-gray-200 focus:border-accent"
               />
@@ -369,13 +371,14 @@ export function Pastos() {
             <div className="grid grid-cols-2 gap-4 items-end">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Altura Entrada (cm)
+                  Altura Entrada (cm) <span className="text-red-500">*</span>
                 </label>
                 <Input
                   type="number"
                   step="0.1"
                   value={formData.altura_entrada_cm}
                   onChange={(e) => setFormData({ ...formData, altura_entrada_cm: e.target.value })}
+                  required
                   placeholder="Ex: 15.0"
                   className="border-gray-200 focus:border-accent"
                 />
@@ -383,13 +386,14 @@ export function Pastos() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Altura Saída (cm)
+                  Altura Saída (cm) <span className="text-red-500">*</span>
                 </label>
                 <Input
                   type="number"
                   step="0.1"
                   value={formData.altura_saida_cm}
                   onChange={(e) => setFormData({ ...formData, altura_saida_cm: e.target.value })}
+                  required
                   placeholder="Ex: 5.0"
                   className="border-gray-200 focus:border-accent"
                 />

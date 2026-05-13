@@ -174,6 +174,13 @@ export function Lotes() {
       categoriasFinal.push(formData.categoria_outros.trim())
     }
 
+    // Validar categorias
+    if (categoriasFinal.length === 0) {
+      alert('Selecione pelo menos uma categoria')
+      setSubmitting(false)
+      return
+    }
+
     const data = {
       fazenda_id: fazendaId,
       nome: formData.nome,
@@ -415,8 +422,9 @@ export function Lotes() {
                   type="number"
                   value={formData.quant_inicial}
                   onChange={(e) => setFormData({ ...formData, quant_inicial: e.target.value })}
+                  disabled
                   placeholder="0"
-                  className="border-gray-200 focus:border-accent"
+                  className="border-gray-200 focus:border-accent opacity-60"
                 />
               </div>
               <div>
@@ -603,7 +611,7 @@ export function Lotes() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Categorias
+                Categorias <span className="text-red-500">*</span>
               </label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
                 {categoriasOpcoes.map((categoria) => {
