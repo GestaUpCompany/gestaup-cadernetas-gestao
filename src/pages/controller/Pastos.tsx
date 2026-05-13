@@ -299,12 +299,13 @@ export function Pastos() {
                 >
                   <option value="">Selecione...</option>
                   <option value="Cria">Cria</option>
-                  <option value="Recria">Recria</option>
-                  <option value="Engorda">Engorda</option>
-                  <option value="TIP">TIP</option>
                   <option value="Confinamento">Confinamento</option>
-                  <option value="Volumosos">Volumosos</option>
+                  <option value="Engorda">Engorda</option>
                   <option value="Enfermaria">Enfermaria</option>
+                  <option value="Recria">Recria</option>
+                  <option value="RIP">RIP</option>
+                  <option value="TIP">TIP</option>
+                  <option value="Volumosos">Volumosos</option>
                 </select>
               </div>
               <div>
