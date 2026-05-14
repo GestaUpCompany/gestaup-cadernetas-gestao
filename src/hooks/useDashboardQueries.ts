@@ -83,7 +83,7 @@ export function useDashboardStats(userId: string | undefined) {
       const year = today.getFullYear()
       const month = String(today.getMonth() + 1).padStart(2, '0')
       const day = String(today.getDate()).padStart(2, '0')
-      const todayStr = `${year}-${day}-${month}`
+      const todayStr = `${year}-${month}-${day}`
 
       const [
         { count: maternidadeHoje },
