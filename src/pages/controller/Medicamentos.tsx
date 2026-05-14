@@ -4,11 +4,25 @@ import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 
+const tiposComuns = [
+  'Antibiótico',
+  'Anti-inflamatório',
+  'Vermífugo',
+  'Analgésico',
+  'Antiparasitário',
+  'Vitamina',
+  'Hormônio',
+  'Soro',
+  'Vacina',
+  'Suplemento Vitamínico',
+]
+
 interface Medicamento {
   id: string
   fazenda_id: string
   tipo: string
   nome_comercial: string
+  principio_ativo: string
   dose_recomendada?: string
   ativo: boolean
 }
@@ -23,11 +37,13 @@ export function Medicamentos() {
   const [formData, setFormData] = useState({
     tipo: '',
     nome_comercial: '',
+    principio_ativo: '',
     dose_recomendada: '',
   })
   const [submitting, setSubmitting] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [medicamentoToDelete, setMedicamentoToDelete] = useState<string | null>(null)
+  const [tiposDisponiveis, setTiposDisponiveis] = useState<string[]>(tiposComuns)
 
   useEffect(() => {
     loadMedicamentos()
@@ -66,6 +82,11 @@ export function Medicamentos() {
       console.error('Erro ao buscar medicamentos:', error)
     } else {
       setMedicamentos(data as Medicamento[])
+      
+      // Calcular tipos disponíveis (comuns + já cadastrados)
+      const tiposJaCadastrados = [...new Set(data.map((m: Medicamento) => m.tipo))]
+      const todosTipos = [...new Set([...tiposComuns, ...tiposJaCadastrados])]
+      setTiposDisponiveis(todosTipos)
     }
 
     setLoading(false)
@@ -97,6 +118,7 @@ export function Medicamentos() {
       fazenda_id: fazendaId,
       tipo: formData.tipo,
       nome_comercial: formData.nome_comercial,
+      principio_ativo: formData.principio_ativo,
       dose_recomendada: formData.dose_recomendada || null,
     }
 
@@ -119,6 +141,7 @@ export function Medicamentos() {
       setFormData({
         tipo: '',
         nome_comercial: '',
+        principio_ativo: '',
         dose_recomendada: '',
       })
       setShowForm(false)
@@ -134,6 +157,7 @@ export function Medicamentos() {
     setFormData({
       tipo: medicamento.tipo,
       nome_comercial: medicamento.nome_comercial,
+      principio_ativo: medicamento.principio_ativo,
       dose_recomendada: medicamento.dose_recomendada || '',
     })
     setShowForm(true)
@@ -144,6 +168,7 @@ export function Medicamentos() {
     setFormData({
       tipo: '',
       nome_comercial: '',
+      principio_ativo: '',
       dose_recomendada: '',
     })
     setShowForm(false)
@@ -212,12 +237,18 @@ export function Medicamentos() {
               </label>
               <Input
                 type="text"
+                list="tipos-medicamentos"
                 value={formData.tipo}
                 onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
                 required
                 placeholder="Ex: Antibiótico, Anti-inflamatório"
                 className="border-gray-200 focus:border-accent"
               />
+              <datalist id="tipos-medicamentos">
+                {tiposDisponiveis.map((tipo) => (
+                  <option key={tipo} value={tipo} />
+                ))}
+              </datalist>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -229,6 +260,19 @@ export function Medicamentos() {
                 onChange={(e) => setFormData({ ...formData, nome_comercial: e.target.value })}
                 required
                 placeholder="Ex: Penicilina, Dipirona"
+                className="border-gray-200 focus:border-accent"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Princípio Ativo <span className="text-red-500">*</span>
+              </label>
+              <Input
+                type="text"
+                value={formData.principio_ativo}
+                onChange={(e) => setFormData({ ...formData, principio_ativo: e.target.value })}
+                required
+                placeholder="Ex: Amoxicilina"
                 className="border-gray-200 focus:border-accent"
               />
             </div>
@@ -277,6 +321,7 @@ export function Medicamentos() {
                 </div>
               </div>
               <p className="text-sm text-gray-600 mb-1">Tipo: {medicamento.tipo}</p>
+              <p className="text-sm text-gray-600 mb-1">Princípio Ativo: {medicamento.principio_ativo}</p>
               {medicamento.dose_recomendada && (
                 <p className="text-sm text-gray-600">Dose: {medicamento.dose_recomendada}</p>
               )}
