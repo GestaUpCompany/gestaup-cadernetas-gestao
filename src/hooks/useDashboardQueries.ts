@@ -43,6 +43,7 @@ export function useDashboardStats(userId: string | undefined) {
         { count: funcionariosCount },
         { count: insumosCount },
         { count: pluviometrosCount },
+        { count: medicamentosCount },
         { count: maternidadeCount },
         { count: enfermariaCount },
         { count: pastagensCount },
@@ -62,6 +63,7 @@ export function useDashboardStats(userId: string | undefined) {
         supabase.from('funcionarios').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
         supabase.from('insumos').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
         supabase.from('pluviometros').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
+        supabase.from('medicamentos').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
         supabase.from('registros_maternidade').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
         supabase.from('registros_enfermaria').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
         supabase.from('registros_pastagens').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
@@ -110,6 +112,7 @@ export function useDashboardStats(userId: string | undefined) {
           funcionarios: funcionariosCount || 0,
           insumos: insumosCount || 0,
           pluviometros: pluviometrosCount || 0,
+          medicamentos: medicamentosCount || 0,
         },
         cadernetaStats: {
           maternidade: maternidadeCount || 0,

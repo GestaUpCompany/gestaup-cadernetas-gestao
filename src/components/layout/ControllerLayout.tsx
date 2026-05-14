@@ -32,6 +32,7 @@ const menuStructure = [
       { label: 'Pastos', path: '/controller/pastos' },
       { label: 'Lotes', path: '/controller/lotes' },
       { label: 'Funcionários', path: '/controller/funcionarios' },
+      { label: 'Medicamentos', path: '/controller/medicamentos' },
       { label: 'Bebedouros', path: '/controller/bebedouros-cadastro' },
       { label: 'Pluviômetros', path: '/controller/pluviometros' },
       { label: 'Causas de Morte', path: '/controller/causas-morte' },

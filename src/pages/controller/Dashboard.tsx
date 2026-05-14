@@ -16,7 +16,7 @@ export function ControllerDashboard() {
 
   const loading = loadingFazenda || loadingStats
 
-  const cadastroStats = stats?.cadastroStats ?? { pastos: 0, lotes: 0, funcionarios: 0, insumos: 0, pluviometros: 0 }
+  const cadastroStats = stats?.cadastroStats ?? { pastos: 0, lotes: 0, funcionarios: 0, insumos: 0, pluviometros: 0, medicamentos: 0 }
   const cadernetaStats = stats?.cadernetaStats ?? {
     maternidade: 0, enfermaria: 0, pastagens: 0, rodeio: 0, suplementacao: 0,
     bebedouros: 0, movimentacao: 0, morte: 0, clima: 0, abastecimento: 0,
@@ -81,7 +81,7 @@ export function ControllerDashboard() {
           <Card className="bg-white p-6 shadow-md rounded-xl border border-gray-100 border-l-4 border-l-green-500 hover:shadow-lg transition-shadow">
             <p className="text-sm text-gray-500 mb-2">Total Cadastros</p>
             <p className="text-4xl font-bold text-green-600">
-              {cadastroStats.pastos + cadastroStats.lotes + cadastroStats.funcionarios + cadastroStats.insumos + cadastroStats.pluviometros}
+              {cadastroStats.pastos + cadastroStats.lotes + cadastroStats.funcionarios + cadastroStats.insumos + cadastroStats.pluviometros + cadastroStats.medicamentos}
             </p>
           </Card>
           <Card className="bg-white p-6 shadow-md rounded-xl border border-gray-100 border-l-4 border-l-purple-500 hover:shadow-lg transition-shadow">
@@ -202,6 +202,17 @@ export function ControllerDashboard() {
               variant="secondary"
               className="mt-4 w-full"
               onClick={() => navigate('/controller/pluviometros')}
+            >
+              Gerenciar
+            </Button>
+          </Card>
+          <Card className="bg-white p-6 shadow-md rounded-xl border border-gray-100 hover:shadow-lg transition-shadow">
+            <p className="text-sm text-gray-500 mb-2">Medicamentos</p>
+            <p className="text-4xl font-bold text-gray-800">{cadastroStats.medicamentos}</p>
+            <Button
+              variant="secondary"
+              className="mt-4 w-full"
+              onClick={() => navigate('/controller/medicamentos')}
             >
               Gerenciar
             </Button>

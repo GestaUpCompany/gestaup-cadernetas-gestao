@@ -18,6 +18,7 @@ import { Pastos } from './pages/controller/Pastos'
 import { Lotes } from './pages/controller/Lotes'
 import { Funcionarios } from './pages/controller/Funcionarios'
 import { Insumos } from './pages/controller/Insumos'
+import { Medicamentos } from './pages/controller/Medicamentos'
 import { Cadernetas } from './pages/controller/Cadernetas'
 import { Maternidade } from './pages/controller/Maternidade'
 import { MaternidadeDetalhes } from './pages/controller/MaternidadeDetalhes'
@@ -209,6 +210,16 @@ function App() {
             <ControllerRoute>
               <ControllerLayout>
                 <Funcionarios />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/medicamentos"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <Medicamentos />
               </ControllerLayout>
             </ControllerRoute>
           }
