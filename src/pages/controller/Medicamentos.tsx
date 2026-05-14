@@ -1,0 +1,300 @@
+import { useEffect, useState } from 'react'
+import { useAuth } from '../../contexts/AuthContext'
+import { supabase } from '../../services/supabaseClient'
+import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
+
+interface Medicamento {
+  id: string
+  fazenda_id: string
+  tipo: string
+  nome_comercial: string
+  dose_recomendada?: string
+  ativo: boolean
+}
+
+export function Medicamentos() {
+  const { user } = useAuth()
+  const [medicamentos, setMedicamentos] = useState<Medicamento[]>([])
+  const [loading, setLoading] = useState(true)
+  const [showForm, setShowForm] = useState(false)
+  const [editingMedicamento, setEditingMedicamento] = useState<Medicamento | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [formData, setFormData] = useState({
+    tipo: '',
+    nome_comercial: '',
+    dose_recomendada: '',
+  })
+  const [submitting, setSubmitting] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [medicamentoToDelete, setMedicamentoToDelete] = useState<string | null>(null)
+
+  useEffect(() => {
+    loadMedicamentos()
+  }, [user])
+
+  useKeyboardShortcuts([
+    {
+      key: 'Escape',
+      description: 'Cancelar formulário',
+      action: () => {
+        if (showForm) handleCancel()
+      }
+    }
+  ])
+
+  const loadMedicamentos = async () => {
+    if (!user) return
+
+    const { data: vinculos } = await supabase
+      .from('usuario_fazenda')
+      .select('fazenda_id')
+      .eq('usuario_id', user.id)
+      .eq('ativo', true)
+
+    if (!vinculos || vinculos.length === 0) return
+
+    const fazendaId = vinculos[0].fazenda_id
+
+    const { data, error } = await supabase
+      .from('medicamentos')
+      .select('*')
+      .eq('fazenda_id', fazendaId)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Erro ao buscar medicamentos:', error)
+    } else {
+      setMedicamentos(data as Medicamento[])
+    }
+
+    setLoading(false)
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubmitting(true)
+
+    if (!user) {
+      setSubmitting(false)
+      return
+    }
+
+    const { data: vinculos } = await supabase
+      .from('usuario_fazenda')
+      .select('fazenda_id')
+      .eq('usuario_id', user.id)
+      .eq('ativo', true)
+
+    if (!vinculos || vinculos.length === 0) {
+      setSubmitting(false)
+      return
+    }
+
+    const fazendaId = vinculos[0].fazenda_id
+
+    const data = {
+      fazenda_id: fazendaId,
+      tipo: formData.tipo,
+      nome_comercial: formData.nome_comercial,
+      dose_recomendada: formData.dose_recomendada || null,
+    }
+
+    let error
+
+    if (editingMedicamento) {
+      const { error: updateError } = await supabase
+        .from('medicamentos')
+        .update(data)
+        .eq('id', editingMedicamento.id)
+      error = updateError
+    } else {
+      const { error: insertError } = await supabase.from('medicamentos').insert(data)
+      error = insertError
+    }
+
+    if (error) {
+      console.error('Erro ao salvar medicamento:', error)
+    } else {
+      setFormData({
+        tipo: '',
+        nome_comercial: '',
+        dose_recomendada: '',
+      })
+      setShowForm(false)
+      setEditingMedicamento(null)
+      loadMedicamentos()
+    }
+
+    setSubmitting(false)
+  }
+
+  const handleEdit = (medicamento: Medicamento) => {
+    setEditingMedicamento(medicamento)
+    setFormData({
+      tipo: medicamento.tipo,
+      nome_comercial: medicamento.nome_comercial,
+      dose_recomendada: medicamento.dose_recomendada || '',
+    })
+    setShowForm(true)
+  }
+
+  const handleCancel = () => {
+    setEditingMedicamento(null)
+    setFormData({
+      tipo: '',
+      nome_comercial: '',
+      dose_recomendada: '',
+    })
+    setShowForm(false)
+  }
+
+  const handleDeleteClick = (id: string) => {
+    setMedicamentoToDelete(id)
+    setDeleteConfirmOpen(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!medicamentoToDelete) return
+    const { error } = await supabase.from('medicamentos').delete().eq('id', medicamentoToDelete)
+    if (error) {
+      console.error('Erro ao excluir medicamento:', error)
+    } else {
+      loadMedicamentos()
+    }
+    setMedicamentoToDelete(null)
+    setDeleteConfirmOpen(false)
+  }
+
+  const filteredMedicamentos = medicamentos.filter((medicamento) =>
+    medicamento.nome_comercial.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    medicamento.tipo.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <CardSkeleton />
+        <CardSkeleton />
+        <CardSkeleton />
+        <CardSkeleton />
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-900">Medicamentos</h1>
+        {!showForm && (
+          <Button onClick={() => setShowForm(true)}>Novo Medicamento</Button>
+        )}
+      </div>
+
+      {!showForm && (
+        <Input
+          placeholder="Buscar medicamentos..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="max-w-md"
+        />
+      )}
+
+      {showForm && (
+        <Card className="bg-white p-6 border-0 shadow-sm">
+          <h2 className="text-lg font-semibold mb-4">
+            {editingMedicamento ? 'Editar Medicamento' : 'Novo Medicamento'}
+          </h2>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tipo <span className="text-red-500">*</span>
+              </label>
+              <Input
+                type="text"
+                value={formData.tipo}
+                onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
+                required
+                placeholder="Ex: Antibiótico, Anti-inflamatório"
+                className="border-gray-200 focus:border-accent"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Nome Comercial <span className="text-red-500">*</span>
+              </label>
+              <Input
+                type="text"
+                value={formData.nome_comercial}
+                onChange={(e) => setFormData({ ...formData, nome_comercial: e.target.value })}
+                required
+                placeholder="Ex: Penicilina, Dipirona"
+                className="border-gray-200 focus:border-accent"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Dose Recomendada
+              </label>
+              <Input
+                type="text"
+                value={formData.dose_recomendada}
+                onChange={(e) => setFormData({ ...formData, dose_recomendada: e.target.value })}
+                placeholder="Ex: 10mg/kg"
+                className="border-gray-200 focus:border-accent"
+              />
+            </div>
+            <div className="flex gap-2 items-center">
+              <Button type="submit" disabled={submitting}>
+                {submitting ? 'Salvando...' : 'Salvar'}
+              </Button>
+              <Button variant="secondary" onClick={handleCancel}>
+                Cancelar
+              </Button>
+            </div>
+          </form>
+        </Card>
+      )}
+
+      {!showForm && medicamentos.length === 0 ? (
+        <Card className="bg-white p-12 border-0 shadow-sm text-center">
+          <p className="text-gray-600 mb-4">Nenhum medicamento cadastrado</p>
+          <Button onClick={() => setShowForm(true)}>Criar Primeiro Medicamento</Button>
+        </Card>
+      ) : !showForm ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredMedicamentos.map((medicamento) => (
+            <Card key={medicamento.id} className="bg-white p-6 border-0 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex justify-between items-start mb-3">
+                <h3 className="font-semibold text-gray-900">{medicamento.nome_comercial}</h3>
+                <div className="flex gap-1">
+                  <Button variant="secondary" onClick={() => handleEdit(medicamento)}>
+                    Editar
+                  </Button>
+                  <Button variant="secondary" onClick={() => handleDeleteClick(medicamento.id)}>
+                    Excluir
+                  </Button>
+                </div>
+              </div>
+              <p className="text-sm text-gray-600 mb-1">Tipo: {medicamento.tipo}</p>
+              {medicamento.dose_recomendada && (
+                <p className="text-sm text-gray-600">Dose: {medicamento.dose_recomendada}</p>
+              )}
+            </Card>
+          ))}
+        </div>
+      ) : null}
+
+      <ConfirmModal
+        isOpen={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        onConfirm={confirmDelete}
+        title="Excluir Medicamento"
+        message="Tem certeza que deseja excluir este medicamento? Esta ação não pode ser desfeita."
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        variant="danger"
+      />
+    </div>
+  )
+}
