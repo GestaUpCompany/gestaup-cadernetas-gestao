@@ -56,27 +56,27 @@ Este plano descreve a abordagem Mobile First para tornar toda a aplicação Gest
 ---
 
 ### 1.3 Sidebar Genérico
-**Status:** ⚠️ Não tem menu mobile
+**Status:** ✅ Menu mobile implementado
 
 **Tarefas:**
-- [ ] Adicionar propriedade para habilitar menu mobile
-- [ ] Implementar menu mobile drawer
-- [ ] Adicionar animações suaves
-- [ ] Garantir que sidebar seja colapsável em mobile
+- [x] Adicionar propriedade para habilitar menu mobile
+- [x] Implementar menu mobile drawer
+- [x] Adicionar animações suaves
+- [x] Garantir que sidebar seja colapsável em mobile
 
 **Arquivo:** `src/components/layout/Sidebar.tsx`
 
 ---
 
 ### 1.4 Header
-**Status:** ✅ Parcialmente responsivo
+**Status:** ✅ Responsivo otimizado
 
 **Tarefas:**
-- [ ] Revisar layout em telas muito pequenas (< 360px)
-- [ ] Otimizar espaçamento entre elementos
-- [ ] Considerar esconder logo em telas muito pequenas
-- [ ] Testar dropdown do usuário em mobile
-- [ ] Otimizar GlobalSearch para mobile (considerar fullscreen modal)
+- [x] Revisar layout em telas muito pequenas (< 360px)
+- [x] Otimizar espaçamento entre elementos
+- [x] Considerar esconder logo em telas muito pequenas
+- [x] Testar dropdown do usuário em mobile
+- [x] Otimizar GlobalSearch para mobile (considerar fullscreen modal)
 
 **Arquivo:** `src/components/layout/Header.tsx`
 

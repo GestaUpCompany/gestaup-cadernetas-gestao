@@ -448,10 +448,10 @@ export function Pastos() {
                   </div>
                 )}
 
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-1 sm:gap-2">
                   <Button
                     variant="secondary"
-                    className="flex-1 text-sm"
+                    className="flex-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleToggleActive(pasto)
@@ -461,7 +461,7 @@ export function Pastos() {
                   </Button>
                   <Button
                     variant="secondary"
-                    className="flex-1"
+                    className="flex-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleEdit(pasto)
@@ -471,7 +471,7 @@ export function Pastos() {
                   </Button>
                   <Button
                     variant="secondary"
-                    className="flex-1"
+                    className="flex-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleDeleteClick(pasto.id)

@@ -42,29 +42,29 @@ export function Header() {
   ]
 
   return (
-    <header className="bg-primary border-b border-gray-200 px-4 md:px-6 py-4 sticky top-0 z-50 transition-shadow duration-300">
+    <header className="bg-primary border-b border-gray-200 px-3 sm:px-4 md:px-6 py-3 md:py-4 sticky top-0 z-50 transition-shadow duration-300">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 md:gap-4">
           <img
             src="/images/logo/logo-gestaup.png"
             alt="Base de Dados - Cadernetas"
-            className="h-8 md:h-10 w-auto hover-scale cursor-pointer rounded-lg"
+            className="h-7 sm:h-8 md:h-10 w-auto hover-scale cursor-pointer rounded-lg"
           />
-          <h1 className="text-base md:text-xl font-bold text-white ml-2 md:ml-3 hidden sm:block">
+          <h1 className="text-sm sm:text-base md:text-xl font-bold text-white ml-1 sm:ml-2 md:ml-3 hidden sm:block">
             Base de Dados - Cadernetas
           </h1>
         </div>
-        <div className="flex items-center gap-2 md:gap-4">
+        <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
           <GlobalSearch />
           <Notifications />
           <div className="hidden md:block text-right">
-            <p className="font-semibold text-white">{user?.nome}</p>
-            <p className="text-sm text-gray-200 capitalize">{user?.papel}</p>
+            <p className="font-semibold text-white text-sm">{user?.nome}</p>
+            <p className="text-xs text-gray-200 capitalize">{user?.papel}</p>
           </div>
           <Dropdown
             trigger={
-              <button className="flex items-center gap-2 px-3 py-2 bg-white/10 rounded-lg transition-all text-white hover-scale button-press hover:bg-white/20">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <button className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-white/10 rounded-lg transition-all text-white hover-scale button-press hover:bg-white/20">
+                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
                 <svg className="hidden md:block w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">

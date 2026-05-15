@@ -162,7 +162,6 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
   return (
     <div className="min-h-screen bg-gray-100">
       <Header />
-      <Breadcrumbs />
       
       <div className="flex">
         {/* Sidebar - Desktop */}
@@ -382,6 +381,11 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
+          
+          {/* Breadcrumbs */}
+          <div className="mb-4">
+            <Breadcrumbs />
+          </div>
           
           {children}
         </main>
