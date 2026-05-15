@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, ConfirmModal, CardItem } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 
 interface Funcionario {
@@ -297,27 +297,13 @@ export function Funcionarios() {
                 (funcionario.cpf && funcionario.cpf.includes(searchTerm))
               )
               .map((funcionario) => (
-              <Card 
-                key={funcionario.id} 
-                className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
+              <CardItem
+                key={funcionario.id}
+                title={funcionario.nome}
+                subtitle={funcionario.cargo}
+                status={funcionario.ativo}
                 onClick={() => handleEdit(funcionario)}
               >
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="font-semibold text-gray-800 text-lg">{funcionario.nome}</h3>
-                    {funcionario.cargo && (
-                      <p className="text-sm text-gray-500">{funcionario.cargo}</p>
-                    )}
-                  </div>
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      funcionario.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}
-                  >
-                    {funcionario.ativo ? 'Ativo' : 'Inativo'}
-                  </span>
-                </div>
-
                 <div className="space-y-2 mb-4">
                   {funcionario.cpf && (
                     <p className="text-sm text-gray-500">
@@ -354,7 +340,7 @@ export function Funcionarios() {
                     Excluir
                   </Button>
                 </div>
-              </Card>
+              </CardItem>
             ))}
           </div>
         ) : null}

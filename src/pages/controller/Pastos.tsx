@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, ConfirmModal, CardItem } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 
 interface Pasto {
@@ -426,27 +426,13 @@ export function Pastos() {
               (pasto.especie && pasto.especie.toLowerCase().includes(searchTerm.toLowerCase()))
             )
             .map((pasto) => (
-              <Card 
-                key={pasto.id} 
-                className="bg-white p-6 border-0 shadow-sm cursor-pointer transition-all"
+              <CardItem
+                key={pasto.id}
+                title={pasto.nome}
+                subtitle={pasto.area_util_ha ? `Área: ${pasto.area_util_ha} ha` : undefined}
+                status={pasto.ativo}
                 onClick={() => handleEdit(pasto)}
               >
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="font-semibold text-gray-800 text-lg">{pasto.nome}</h3>
-                    {pasto.area_util_ha && (
-                      <p className="text-sm text-gray-500">Área: {pasto.area_util_ha} ha</p>
-                    )}
-                  </div>
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      pasto.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}
-                  >
-                    {pasto.ativo ? 'Ativo' : 'Inativo'}
-                  </span>
-                </div>
-
                 {pasto.especie && (
                   <p className="text-sm text-gray-500 mb-2">Espécie: {pasto.especie}</p>
                 )}
@@ -494,7 +480,7 @@ export function Pastos() {
                     Excluir
                   </Button>
                 </div>
-              </Card>
+              </CardItem>
             ))}
         </div>
       ) : null}

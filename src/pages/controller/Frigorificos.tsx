@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, CardItem } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 
 interface Frigorifico {
@@ -388,67 +388,53 @@ export function Frigorificos() {
               (frigorifico.razao_social && frigorifico.razao_social.toLowerCase().includes(searchTerm.toLowerCase()))
             )
             .map((frigorifico) => (
-            <Card 
-              key={frigorifico.id} 
-              className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
-              onClick={() => handleEdit(frigorifico)}
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="font-semibold text-gray-800 text-lg">{frigorifico.nome}</h3>
-                  {frigorifico.razao_social && (
-                    <p className="text-sm text-gray-500">{frigorifico.razao_social}</p>
+              <CardItem
+                key={frigorifico.id}
+                title={frigorifico.nome}
+                subtitle={frigorifico.razao_social}
+                status={frigorifico.ativo}
+                onClick={() => handleEdit(frigorifico)}
+              >
+                <div className="space-y-2 mb-4">
+                  {frigorifico.telefone && (
+                    <p className="text-sm text-gray-500">
+                      <span className="font-medium">Telefone:</span> {frigorifico.telefone}
+                    </p>
+                  )}
+
+                  {frigorifico.email && (
+                    <p className="text-sm text-gray-500">
+                      <span className="font-medium">Email:</span> {frigorifico.email}
+                    </p>
+                  )}
+
+                  {frigorifico.cidade && frigorifico.estado && (
+                    <p className="text-sm text-gray-500">
+                      <span className="font-medium">Cidade:</span> {frigorifico.cidade}/{frigorifico.estado}
+                    </p>
+                  )}
+
+                  {frigorifico.cnpj && (
+                    <p className="text-sm text-gray-500">
+                      <span className="font-medium">CNPJ:</span> {frigorifico.cnpj}
+                    </p>
                   )}
                 </div>
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    frigorifico.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}
-                >
-                  {frigorifico.ativo ? 'Ativo' : 'Inativo'}
-                </span>
-              </div>
 
-              <div className="space-y-2 mb-4">
-                {frigorifico.telefone && (
-                  <p className="text-sm text-gray-500">
-                    <span className="font-medium">Telefone:</span> {frigorifico.telefone}
-                  </p>
-                )}
-
-                {frigorifico.email && (
-                  <p className="text-sm text-gray-500">
-                    <span className="font-medium">Email:</span> {frigorifico.email}
-                  </p>
-                )}
-
-                {frigorifico.cidade && frigorifico.estado && (
-                  <p className="text-sm text-gray-500">
-                    <span className="font-medium">Cidade:</span> {frigorifico.cidade}/{frigorifico.estado}
-                  </p>
-                )}
-
-                {frigorifico.cnpj && (
-                  <p className="text-sm text-gray-500">
-                    <span className="font-medium">CNPJ:</span> {frigorifico.cnpj}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex gap-2">
-                <Button 
-                  variant="secondary" 
-                  className="flex-1"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleEdit(frigorifico)
-                  }}
-                >
-                  Editar
-                </Button>
-              </div>
-            </Card>
-          ))}
+                <div className="flex gap-2">
+                  <Button 
+                    variant="secondary" 
+                    className="flex-1"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleEdit(frigorifico)
+                    }}
+                  >
+                    Editar
+                  </Button>
+                </div>
+              </CardItem>
+            ))}
         </div>
       ) : null}
     </div>

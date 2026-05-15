@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, ConfirmModal } from '../../components/ui'
+import { Button, Card, Input, ConfirmModal, CardItem } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 
 interface Bebedouro {
@@ -306,14 +306,11 @@ export function BebedourosCadastro() {
               bebedouro.nome.toLowerCase().includes(searchTerm.toLowerCase())
             )
             .map((bebedouro) => (
-              <Card 
-                key={bebedouro.id} 
-                className="bg-white p-6 border-0 shadow-sm cursor-pointer"
-                onClick={() => handleEdit(bebedouro)}
-              >
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-800 text-lg">{bebedouro.nome}</h3>
+              <CardItem
+                key={bebedouro.id}
+                title={bebedouro.nome}
+                subtitle={
+                  <>
                     {bebedouro.capacidade && (
                       <p className="text-sm text-gray-500 mt-1">Capacidade: {bebedouro.capacidade} L</p>
                     )}
@@ -325,16 +322,11 @@ export function BebedourosCadastro() {
                         })()}
                       </p>
                     )}
-                  </div>
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      bebedouro.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}
-                  >
-                    {bebedouro.ativo ? 'Ativo' : 'Inativo'}
-                  </span>
-                </div>
-
+                  </>
+                }
+                status={bebedouro.ativo}
+                onClick={() => handleEdit(bebedouro)}
+              >
                 <div className="flex gap-2 mt-4">
                   <Button 
                     variant="secondary" 
@@ -367,7 +359,7 @@ export function BebedourosCadastro() {
                     Excluir
                   </Button>
                 </div>
-              </Card>
+              </CardItem>
             ))}
         </div>
       ) : null}

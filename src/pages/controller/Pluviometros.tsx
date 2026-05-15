@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, ConfirmModal, CardItem } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 
 interface Pluviometro {
@@ -291,59 +291,47 @@ export function Pluviometros() {
               pluviometro.localizacao.toLowerCase().includes(searchTerm.toLowerCase())
             )
             .map((pluviometro) => (
-            <Card 
-              key={pluviometro.id} 
-              className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
-              onClick={() => handleEdit(pluviometro)}
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-800 text-lg">{pluviometro.nome}</h3>
-                  <p className="text-sm text-gray-500">{pluviometro.localizacao}</p>
+              <CardItem
+                key={pluviometro.id}
+                title={pluviometro.nome}
+                subtitle={pluviometro.localizacao}
+                status={pluviometro.ativo}
+                onClick={() => handleEdit(pluviometro)}
+              >
+                <div className="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    className="flex-1 text-sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleToggleActive(pluviometro)
+                    }}
+                  >
+                    {pluviometro.ativo ? 'Desativar' : 'Ativar'}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="flex-1"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleEdit(pluviometro)
+                    }}
+                  >
+                    Editar
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="flex-1"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleDeleteClick(pluviometro.id)
+                    }}
+                  >
+                    Excluir
+                  </Button>
                 </div>
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    pluviometro.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}
-                >
-                  {pluviometro.ativo ? 'Ativo' : 'Inativo'}
-                </span>
-              </div>
-
-              <div className="flex gap-2">
-                <Button
-                  variant="secondary"
-                  className="flex-1 text-sm"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleToggleActive(pluviometro)
-                  }}
-                >
-                  {pluviometro.ativo ? 'Desativar' : 'Ativar'}
-                </Button>
-                <Button
-                  variant="secondary"
-                  className="flex-1"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleEdit(pluviometro)
-                  }}
-                >
-                  Editar
-                </Button>
-                <Button
-                  variant="secondary"
-                  className="flex-1"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleDeleteClick(pluviometro.id)
-                  }}
-                >
-                  Excluir
-                </Button>
-              </div>
-            </Card>
-          ))}
+              </CardItem>
+            ))}
         </div>
       ) : null}
 

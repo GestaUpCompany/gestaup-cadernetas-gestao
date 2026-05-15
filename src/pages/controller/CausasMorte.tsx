@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, ConfirmModal, CardItem } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 
 interface CausaMorte {
@@ -270,27 +270,13 @@ export function CausasMorte() {
               (causa.descricao && causa.descricao.toLowerCase().includes(searchTerm.toLowerCase()))
             )
             .map((causa) => (
-              <Card 
-                key={causa.id} 
-                className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
+              <CardItem
+                key={causa.id}
+                title={causa.nome}
+                subtitle={causa.descricao}
+                status={causa.ativo}
                 onClick={() => handleEdit(causa)}
               >
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-800 text-lg">{causa.nome}</h3>
-                    {causa.descricao && (
-                      <p className="text-sm text-gray-500 mt-1">{causa.descricao}</p>
-                    )}
-                  </div>
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      causa.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}
-                  >
-                    {causa.ativo ? 'Ativo' : 'Inativo'}
-                  </span>
-                </div>
-
                 <div className="flex gap-2 mt-4">
                   <Button 
                     variant="secondary" 
@@ -323,7 +309,7 @@ export function CausasMorte() {
                     Excluir
                   </Button>
                 </div>
-              </Card>
+              </CardItem>
             ))}
         </div>
       ) : null}

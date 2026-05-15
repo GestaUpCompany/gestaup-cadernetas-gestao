@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, CardItem } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 
 interface Fornecedor {
@@ -388,67 +388,53 @@ export function Fornecedores() {
               (fornecedor.razao_social && fornecedor.razao_social.toLowerCase().includes(searchTerm.toLowerCase()))
             )
             .map((fornecedor) => (
-            <Card 
-              key={fornecedor.id} 
-              className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
-              onClick={() => handleEdit(fornecedor)}
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="font-semibold text-gray-800 text-lg">{fornecedor.nome}</h3>
-                  {fornecedor.razao_social && (
-                    <p className="text-sm text-gray-500">{fornecedor.razao_social}</p>
+              <CardItem
+                key={fornecedor.id}
+                title={fornecedor.nome}
+                subtitle={fornecedor.razao_social}
+                status={fornecedor.ativo}
+                onClick={() => handleEdit(fornecedor)}
+              >
+                <div className="space-y-2 mb-4">
+                  {fornecedor.telefone && (
+                    <p className="text-sm text-gray-500">
+                      <span className="font-medium">Telefone:</span> {fornecedor.telefone}
+                    </p>
+                  )}
+
+                  {fornecedor.email && (
+                    <p className="text-sm text-gray-500">
+                      <span className="font-medium">Email:</span> {fornecedor.email}
+                    </p>
+                  )}
+
+                  {fornecedor.cidade && fornecedor.estado && (
+                    <p className="text-sm text-gray-500">
+                      <span className="font-medium">Cidade:</span> {fornecedor.cidade}/{fornecedor.estado}
+                    </p>
+                  )}
+
+                  {fornecedor.cnpj && (
+                    <p className="text-sm text-gray-500">
+                      <span className="font-medium">CNPJ:</span> {fornecedor.cnpj}
+                    </p>
                   )}
                 </div>
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    fornecedor.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}
-                >
-                  {fornecedor.ativo ? 'Ativo' : 'Inativo'}
-                </span>
-              </div>
 
-              <div className="space-y-2 mb-4">
-                {fornecedor.telefone && (
-                  <p className="text-sm text-gray-500">
-                    <span className="font-medium">Telefone:</span> {fornecedor.telefone}
-                  </p>
-                )}
-
-                {fornecedor.email && (
-                  <p className="text-sm text-gray-500">
-                    <span className="font-medium">Email:</span> {fornecedor.email}
-                  </p>
-                )}
-
-                {fornecedor.cidade && fornecedor.estado && (
-                  <p className="text-sm text-gray-500">
-                    <span className="font-medium">Cidade:</span> {fornecedor.cidade}/{fornecedor.estado}
-                  </p>
-                )}
-
-                {fornecedor.cnpj && (
-                  <p className="text-sm text-gray-500">
-                    <span className="font-medium">CNPJ:</span> {fornecedor.cnpj}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex gap-2">
-                <Button 
-                  variant="secondary" 
-                  className="flex-1"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleEdit(fornecedor)
-                  }}
-                >
-                  Editar
-                </Button>
-              </div>
-            </Card>
-          ))}
+                <div className="flex gap-2">
+                  <Button 
+                    variant="secondary" 
+                    className="flex-1"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleEdit(fornecedor)
+                    }}
+                  >
+                    Editar
+                  </Button>
+                </div>
+              </CardItem>
+            ))}
         </div>
       ) : null}
     </div>

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, ConfirmModal, CardItem } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 
 interface Lote {
@@ -707,106 +707,90 @@ export function Lotes() {
               lote.nome.toLowerCase().includes(searchTerm.toLowerCase())
             )
             .map((lote) => (
-            <Card 
-              key={lote.id} 
-              className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
-              onClick={() => handleEdit(lote)}
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="font-semibold text-gray-800 text-lg">{lote.nome}</h3>
-                  {lote.n_cabecas && (
+              <CardItem
+                key={lote.id}
+                title={lote.nome}
+                subtitle={lote.n_cabecas ? `${lote.n_cabecas} cabeças` : undefined}
+                status={lote.ativo}
+                onClick={() => handleEdit(lote)}
+              >
+                <div className="space-y-2 mb-4">
+                  {lote.peso_vivo_kg && (
                     <p className="text-sm text-gray-500">
-                      {lote.n_cabecas} cabeças
+                      <span className="font-medium">Peso Vivo:</span> {lote.peso_vivo_kg} kg
+                    </p>
+                  )}
+
+                  {lote.categorias && (
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Categorias:</p>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {(() => {
+                          let cats: string[] = []
+                          if (Array.isArray(lote.categorias)) {
+                            cats = lote.categorias
+                          } else if (typeof lote.categorias === 'string') {
+                            try {
+                              const parsed = JSON.parse(lote.categorias)
+                              cats = Array.isArray(parsed) ? parsed : []
+                            } catch (e) {
+                              cats = []
+                            }
+                          }
+                          return cats.map((cat: string, index: number) => (
+                            <span
+                              key={index}
+                              className="px-2 py-1 bg-gray-100 rounded text-xs capitalize"
+                            >
+                              {cat}
+                            </span>
+                          ))
+                        })()}
+                      </div>
+                    </div>
+                  )}
+
+                  {lote.qtd_bezerros && (
+                    <p className="text-sm text-gray-500">
+                      <span className="font-medium">Bezerros:</span> {lote.qtd_bezerros}
                     </p>
                   )}
                 </div>
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    lote.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}
-                >
-                  {lote.ativo ? 'Ativo' : 'Inativo'}
-                </span>
-              </div>
 
-              <div className="space-y-2 mb-4">
-                {lote.peso_vivo_kg && (
-                  <p className="text-sm text-gray-500">
-                    <span className="font-medium">Peso Vivo:</span> {lote.peso_vivo_kg} kg
-                  </p>
-                )}
-
-                {lote.categorias && (
-                  <div>
-                    <p className="text-sm font-medium text-gray-700">Categorias:</p>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {(() => {
-                        let cats: string[] = []
-                        if (Array.isArray(lote.categorias)) {
-                          cats = lote.categorias
-                        } else if (typeof lote.categorias === 'string') {
-                          try {
-                            const parsed = JSON.parse(lote.categorias)
-                            cats = Array.isArray(parsed) ? parsed : []
-                          } catch (e) {
-                            cats = []
-                          }
-                        }
-                        return cats.map((cat: string, index: number) => (
-                          <span
-                            key={index}
-                            className="px-2 py-1 bg-gray-100 rounded text-xs capitalize"
-                          >
-                            {cat}
-                          </span>
-                        ))
-                      })()}
-                    </div>
-                  </div>
-                )}
-
-                {lote.qtd_bezerros && (
-                  <p className="text-sm text-gray-500">
-                    <span className="font-medium">Bezerros:</span> {lote.qtd_bezerros}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex gap-2">
-                <Button
-                  variant="secondary"
-                  className="flex-1 text-sm"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleToggleActive(lote)
-                  }}
-                >
-                  {lote.ativo ? 'Desativar' : 'Ativar'}
-                </Button>
-                <Button
-                  variant="secondary"
-                  className="flex-1"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleEdit(lote)
-                  }}
-                >
-                  Editar
-                </Button>
-                <Button
-                  variant="secondary"
-                  className="flex-1"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleDeleteClick(lote.id)
-                  }}
-                >
-                  Excluir
-                </Button>
-              </div>
-            </Card>
-          ))}
+                <div className="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    className="flex-1 text-sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleToggleActive(lote)
+                    }}
+                  >
+                    {lote.ativo ? 'Desativar' : 'Ativar'}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="flex-1"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleEdit(lote)
+                    }}
+                  >
+                    Editar
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="flex-1"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleDeleteClick(lote.id)
+                    }}
+                  >
+                    Excluir
+                  </Button>
+                </div>
+              </CardItem>
+            ))}
         </div>
       ) : null}
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, ConfirmModal, CardItem } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 
 interface Insumo {
@@ -334,71 +334,57 @@ export function Insumos() {
               (insumo.tipo && insumo.tipo.toLowerCase().includes(searchTerm.toLowerCase()))
             )
             .map((insumo) => (
-            <Card 
-              key={insumo.id} 
-              className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
-              onClick={() => handleEdit(insumo)}
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="font-semibold text-gray-800 text-lg">{insumo.nome}</h3>
-                  {insumo.tipo && (
-                    <p className="text-sm text-gray-500">{insumo.tipo}</p>
+              <CardItem
+                key={insumo.id}
+                title={insumo.nome}
+                subtitle={insumo.tipo}
+                status={insumo.ativo}
+                onClick={() => handleEdit(insumo)}
+              >
+                <div className="space-y-2 mb-4">
+                  {insumo.marca && (
+                    <p className="text-sm text-gray-500">
+                      <span className="font-medium">Marca:</span> {insumo.marca}
+                    </p>
+                  )}
+
+                  {insumo.fabricante && (
+                    <p className="text-sm text-gray-500">
+                      <span className="font-medium">Fabricante:</span> {insumo.fabricante}
+                    </p>
+                  )}
+
+                  {insumo.fornecedor && (
+                    <p className="text-sm text-gray-500">
+                      <span className="font-medium">Fornecedor:</span> {insumo.fornecedor}
+                    </p>
                   )}
                 </div>
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    insumo.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}
-                >
-                  {insumo.ativo ? 'Ativo' : 'Inativo'}
-                </span>
-              </div>
 
-              <div className="space-y-2 mb-4">
-                {insumo.marca && (
-                  <p className="text-sm text-gray-500">
-                    <span className="font-medium">Marca:</span> {insumo.marca}
-                  </p>
-                )}
-
-                {insumo.fabricante && (
-                  <p className="text-sm text-gray-500">
-                    <span className="font-medium">Fabricante:</span> {insumo.fabricante}
-                  </p>
-                )}
-
-                {insumo.fornecedor && (
-                  <p className="text-sm text-gray-500">
-                    <span className="font-medium">Fornecedor:</span> {insumo.fornecedor}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex gap-2">
-                <Button 
-                  variant="secondary" 
-                  className="flex-1"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleEdit(insumo)
-                  }}
-                >
-                  Editar
-                </Button>
-                <Button 
-                  variant="secondary" 
-                  className="flex-1"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleDeleteClick(insumo.id)
-                  }}
-                >
-                  Excluir
-                </Button>
-              </div>
-            </Card>
-          ))}
+                <div className="flex gap-2">
+                  <Button 
+                    variant="secondary" 
+                    className="flex-1"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleEdit(insumo)
+                    }}
+                  >
+                    Editar
+                  </Button>
+                  <Button 
+                    variant="secondary" 
+                    className="flex-1"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleDeleteClick(insumo.id)
+                    }}
+                  >
+                    Excluir
+                  </Button>
+                </div>
+              </CardItem>
+            ))}
         </div>
       ) : null}
 

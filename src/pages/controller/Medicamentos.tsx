@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, ConfirmModal, CardItem } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 
 const tiposComuns = [
@@ -308,24 +308,27 @@ export function Medicamentos() {
       ) : !showForm ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredMedicamentos.map((medicamento) => (
-            <Card key={medicamento.id} className="bg-white p-6 border-0 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex justify-between items-start mb-3">
-                <h3 className="font-semibold text-gray-900">{medicamento.nome_comercial}</h3>
-                <div className="flex gap-1">
-                  <Button variant="secondary" onClick={() => handleEdit(medicamento)}>
+            <CardItem
+              key={medicamento.id}
+              title={medicamento.nome_comercial}
+              headerActions={
+                <div className="flex gap-1 w-full md:w-auto">
+                  <Button variant="secondary" onClick={(e) => { e.stopPropagation(); handleEdit(medicamento) }} className="flex-1 md:flex-none">
                     Editar
                   </Button>
-                  <Button variant="secondary" onClick={() => handleDeleteClick(medicamento.id)}>
+                  <Button variant="secondary" onClick={(e) => { e.stopPropagation(); handleDeleteClick(medicamento.id) }} className="flex-1 md:flex-none">
                     Excluir
                   </Button>
                 </div>
-              </div>
+              }
+              className="hover:shadow-md"
+            >
               <p className="text-sm text-gray-600 mb-1">Tipo: {medicamento.tipo}</p>
               <p className="text-sm text-gray-600 mb-1">Princípio Ativo: {medicamento.principio_ativo}</p>
               {medicamento.dose_recomendada && (
                 <p className="text-sm text-gray-600">Dose: {medicamento.dose_recomendada}</p>
               )}
-            </Card>
+            </CardItem>
           ))}
         </div>
       ) : null}

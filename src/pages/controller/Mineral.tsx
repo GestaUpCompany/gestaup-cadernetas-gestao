@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, ConfirmModal, CardItem } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 
 interface Mineral {
@@ -334,71 +334,57 @@ export function Mineral() {
               (mineral.tipo && mineral.tipo.toLowerCase().includes(searchTerm.toLowerCase()))
             )
             .map((mineral) => (
-            <Card 
-              key={mineral.id} 
-              className="bg-white p-6 border-0 shadow-sm cursor-pointer  transition-all"
-              onClick={() => handleEdit(mineral)}
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="font-semibold text-gray-800 text-lg">{mineral.nome}</h3>
-                  {mineral.tipo && (
-                    <p className="text-sm text-gray-500">{mineral.tipo}</p>
+              <CardItem
+                key={mineral.id}
+                title={mineral.nome}
+                subtitle={mineral.tipo}
+                status={mineral.ativo}
+                onClick={() => handleEdit(mineral)}
+              >
+                <div className="space-y-2 mb-4">
+                  {mineral.marca && (
+                    <p className="text-sm text-gray-500">
+                      <span className="font-medium">Marca:</span> {mineral.marca}
+                    </p>
+                  )}
+
+                  {mineral.fabricante && (
+                    <p className="text-sm text-gray-500">
+                      <span className="font-medium">Fabricante:</span> {mineral.fabricante}
+                    </p>
+                  )}
+
+                  {mineral.fornecedor && (
+                    <p className="text-sm text-gray-500">
+                      <span className="font-medium">Fornecedor:</span> {mineral.fornecedor}
+                    </p>
                   )}
                 </div>
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    mineral.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}
-                >
-                  {mineral.ativo ? 'Ativo' : 'Inativo'}
-                </span>
-              </div>
 
-              <div className="space-y-2 mb-4">
-                {mineral.marca && (
-                  <p className="text-sm text-gray-500">
-                    <span className="font-medium">Marca:</span> {mineral.marca}
-                  </p>
-                )}
-
-                {mineral.fabricante && (
-                  <p className="text-sm text-gray-500">
-                    <span className="font-medium">Fabricante:</span> {mineral.fabricante}
-                  </p>
-                )}
-
-                {mineral.fornecedor && (
-                  <p className="text-sm text-gray-500">
-                    <span className="font-medium">Fornecedor:</span> {mineral.fornecedor}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex gap-2">
-                <Button 
-                  variant="secondary" 
-                  className="flex-1"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleEdit(mineral)
-                  }}
-                >
-                  Editar
-                </Button>
-                <Button 
-                  variant="secondary" 
-                  className="flex-1"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleDeleteClick(mineral.id)
-                  }}
-                >
-                  Excluir
-                </Button>
-              </div>
-            </Card>
-          ))}
+                <div className="flex gap-2">
+                  <Button 
+                    variant="secondary" 
+                    className="flex-1"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleEdit(mineral)
+                    }}
+                  >
+                    Editar
+                  </Button>
+                  <Button 
+                    variant="secondary" 
+                    className="flex-1"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleDeleteClick(mineral.id)
+                    }}
+                  >
+                    Excluir
+                  </Button>
+                </div>
+              </CardItem>
+            ))}
         </div>
       ) : null}
 
