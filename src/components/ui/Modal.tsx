@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface ModalProps {
   isOpen: boolean
@@ -10,6 +10,8 @@ interface ModalProps {
 
 export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalProps) {
   const cancelButtonRef = useRef<HTMLButtonElement>(null)
+  const modalRef = useRef<HTMLDivElement>(null)
+  const [touchStartY, setTouchStartY] = useState(0)
 
   useEffect(() => {
     if (isOpen) {
@@ -35,16 +37,36 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
     }
   }, [isOpen, onClose])
 
+  // Swipe down gesture para fechar modal em mobile
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStartY(e.touches[0].clientY)
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartY === 0) return
+    const touchY = e.touches[0].clientY
+    const diff = touchY - touchStartY
+    
+    // Se swipe down mais de 100px, fecha o modal
+    if (diff > 100) {
+      onClose()
+    }
+  }
+
+  const handleTouchEnd = () => {
+    setTouchStartY(0)
+  }
+
   if (!isOpen) return null
 
   const sizeClasses = {
-    sm: 'max-w-md',
-    md: 'max-w-lg',
-    lg: 'max-w-2xl',
+    sm: 'max-w-md w-full mx-4',
+    md: 'max-w-lg w-full mx-4',
+    lg: 'max-w-2xl w-full mx-4',
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
@@ -52,14 +74,20 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
       />
 
       {/* Modal */}
-      <div className={`relative bg-white rounded-2xl shadow-2xl w-full ${sizeClasses[size]} animate-in fade-in zoom-in duration-200`}>
+      <div
+        ref={modalRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        className={`relative bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl ${sizeClasses[size]} animate-in fade-in zoom-in duration-200 max-h-[90vh] flex flex-col`}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 shrink-0">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900">{title}</h2>
           <button
             ref={cancelButtonRef}
             onClick={onClose}
-            className="text-gray-400 rounded transition-all"
+            className="text-gray-400 rounded transition-all p-1"
             aria-label="Fechar modal"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -69,7 +97,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
         </div>
 
         {/* Content */}
-        <div className="p-6">{children}</div>
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1">{children}</div>
       </div>
     </div>
   )
@@ -131,10 +159,10 @@ export function ConfirmModal({
           <p className="text-gray-700">{message}</p>
         </div>
       </div>
-      <div className="flex justify-end gap-3 mt-6">
+      <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6">
         <button
           onClick={onClose}
-          className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg transition-all"
+          className="flex-1 sm:flex-none px-4 py-2 text-gray-700 bg-gray-100 rounded-lg transition-all min-h-[44px]"
         >
           {cancelText}
         </button>
@@ -143,7 +171,7 @@ export function ConfirmModal({
             onConfirm()
             onClose()
           }}
-          className={`px-4 py-2 text-white rounded-lg transition-colors ${style.confirmBg}`}
+          className={`flex-1 sm:flex-none px-4 py-2 text-white rounded-lg transition-colors min-h-[44px] ${style.confirmBg}`}
         >
           {confirmText}
         </button>

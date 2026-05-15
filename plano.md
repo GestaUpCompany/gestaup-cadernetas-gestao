@@ -85,96 +85,96 @@ Este plano descreve a abordagem Mobile First para tornar toda a aplicação Gest
 ## Fase 2: Componentes UI
 
 ### 2.1 Button
-**Status:** ⚠️ Precisa de revisão
+**Status:** ✅ Responsivo otimizado
 
 **Tarefas:**
-- [ ] Adicionar tamanhos mobile específicos (xs, sm)
-- [ ] Ajustar padding em telas pequenas
-- [ ] Garantir que texto não quebre em botões
-- [ ] Testar todos os variantes em mobile
-- [ ] Otimizar tamanho de toque (mínimo 44x44px)
+- [x] Adicionar tamanhos mobile específicos (xs, sm)
+- [x] Ajustar padding em telas pequenas
+- [x] Garantir que texto não quebre em botões
+- [x] Testar todos os variantes em mobile
+- [x] Otimizar tamanho de toque (mínimo 44x44px)
 
 **Arquivo:** `src/components/ui/Button.tsx`
 
 ---
 
 ### 2.2 Input
-**Status:** ⚠️ Precisa de revisão
+**Status:** ✅ Responsivo otimizado
 
 **Tarefas:**
-- [ ] Ajustar tamanho de fonte em mobile
-- [ ] Otimizar padding para toque fácil
-- [ ] Testar inputs com labels em mobile
-- [ ] Garantir que placeholder seja legível
-- [ ] Ajustar tamanho de inputs em formulários
+- [x] Ajustar tamanho de fonte em mobile
+- [x] Otimizar padding para toque fácil
+- [x] Testar inputs com labels em mobile
+- [x] Garantir que placeholder seja legível
+- [x] Ajustar tamanho de inputs em formulários
 
 **Arquivo:** `src/components/ui/Input.tsx`
 
 ---
 
 ### 2.3 Modal
-**Status:** ⚠️ Precisa de revisão
+**Status:** ✅ Responsivo otimizado
 
 **Tarefas:**
-- [ ] Garantir que modal seja fullscreen em mobile
-- [ ] Adicionar scroll interno quando necessário
-- [ ] Otimizar botões de ação em mobile
-- [ ] Testar fechamento com gesture de swipe down
-- [ ] Ajustar z-index para não cobrir header
+- [x] Garantir que modal seja fullscreen em mobile
+- [x] Adicionar scroll interno quando necessário
+- [x] Otimizar botões de ação em mobile
+- [x] Testar fechamento com gesture de swipe down
+- [x] Ajustar z-index para não cobrir header
 
 **Arquivo:** `src/components/ui/Modal.tsx`
 
 ---
 
 ### 2.4 Dropdown
-**Status:** ⚠️ Precisa de revisão
+**Status:** ✅ Responsivo otimizado
 
 **Tarefas:**
-- [ ] Garantir que dropdown não seja cortado em mobile
-- [ ] Ajustar posicionamento em telas pequenas
-- [ ] Testar dropdown do usuário em mobile
-- [ ] Considerar usar bottom sheet em mobile
-- [ ] Otimizar animações de abertura/fechamento
+- [x] Garantir que dropdown não seja cortado em mobile
+- [x] Ajustar posicionamento em telas pequenas
+- [x] Testar dropdown do usuário em mobile
+- [x] Considerar usar bottom sheet em mobile
+- [x] Otimizar animações de abertura/fechamento
 
 **Arquivo:** `src/components/ui/Dropdown.tsx`
 
 ---
 
 ### 2.5 CardItem
-**Status:** ✅ Já responsivo
+**Status:** ✅ Responsivo otimizado
 
 **Tarefas:**
-- [ ] Revisar breakpoint `md` para garantir que funciona
-- [ ] Testar em diferentes tamanhos de mobile
-- [ ] Otimizar espaçamento em telas muito pequenas
-- [ ] Garantir que botões não overflow
+- [x] Revisar breakpoint `md` para garantir que funciona
+- [x] Testar em diferentes tamanhos de mobile
+- [x] Otimizar espaçamento em telas muito pequenas
+- [x] Garantir que botões não overflow
 
 **Arquivo:** `src/components/ui/CardItem.tsx`
 
 ---
 
 ### 2.6 GlobalSearch
-**Status:** ⚠️ Precisa de revisão
+**Status:** ✅ Responsivo otimizado
 
 **Tarefas:**
-- [ ] Implementar modal fullscreen para mobile
-- [ ] Otimizar layout de resultados em mobile
-- [ ] Testar teclado virtual em mobile
-- [ ] Garantir que input seja fácil de focar
-- [ ] Considerar adicionar botão de busca no header mobile
+- [x] Implementar modal fullscreen para mobile
+- [x] Otimizar layout de resultados em mobile
+- [x] Testar teclado virtual em mobile
+- [x] Garantir que input seja fácil de focar
+- [x] Considerar adicionar botão de busca no header mobile
 
 **Arquivo:** `src/components/ui/GlobalSearch.tsx`
 
 ---
 
 ### 2.7 Notifications
-**Status:** ⚠️ Precisa de revisão
+**Status:** ✅ Responsivo otimizado
 
 **Tarefas:**
-- [ ] Otimizar layout de notificações em mobile
-- [ ] Ajustar posicionamento para não cobrir header
-- [ ] Testar dropdown de notificações em mobile
-- [ ] Considerar usar bottom sheet em mobile
+- [x] Otimizar layout de notificações em mobile
+- [x] Ajustar posicionamento para não cobrir header
+- [x] Testar dropdown de notificações em mobile
+- [x] Considerar usar bottom sheet em mobile
 
 **Arquivo:** `src/components/ui/Notifications.tsx`
 
@@ -224,21 +224,22 @@ Este plano descreve a abordagem Mobile First para tornar toda a aplicação Gest
 ---
 
 ### 3.2 Páginas de Detalhes
-**Status:** ⚠️ Precisam de revisão
+**Status:** ✅ Responsivo otimizado
 
 **Arquivos:**
 - BebedourosDetalhes.tsx
 - EnfermariaDetalhes.tsx
 - MaternidadeDetalhes.tsx
 - MovimentacaoDetalhes.tsx
-- PastagensCaderneta.tsx
+- PastagensDetalhes.tsx
+- Maternidade.tsx
 
 **Tarefas:**
-- [ ] Revisar layout de detalhes em mobile
-- [ ] Otimizar tabelas/lists em mobile
-- [ ] Ajustar formulários de edição
-- [ ] Testar gráficos/charts em mobile
-- [ ] Otimizar botões de ação
+- [x] Revisar layout de detalhes em mobile
+- [x] Otimizar tabelas/lists em mobile
+- [x] Ajustar formulários de edição
+- [x] Testar gráficos/charts em mobile
+- [x] Otimizar botões de ação
 
 ---
 

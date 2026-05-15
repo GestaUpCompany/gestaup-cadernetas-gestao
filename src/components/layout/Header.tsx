@@ -46,12 +46,12 @@ export function Header() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 md:gap-4">
           <img
-            src="/images/logo/logo-gestaup.png"
-            alt="Base de Dados - Cadernetas"
+            src="/images/manejus360.png"
+            alt="Manej'Us 360"
             className="h-7 sm:h-8 md:h-10 w-auto hover-scale cursor-pointer rounded-lg"
           />
           <h1 className="text-sm sm:text-base md:text-xl font-bold text-white ml-1 sm:ml-2 md:ml-3 hidden sm:block">
-            Base de Dados - Cadernetas
+            Manej'Us <span className="text-yellow-500">360</span>
           </h1>
         </div>
         <div className="flex items-center gap-1 sm:gap-2 md:gap-4">

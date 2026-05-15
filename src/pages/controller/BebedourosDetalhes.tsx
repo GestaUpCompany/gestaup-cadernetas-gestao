@@ -82,61 +82,61 @@ export function BebedourosDetalhes() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">Detalhes do Registro de Bebedouros</h2>
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Detalhes do Registro de Bebedouros</h2>
         <Button variant="secondary" onClick={() => navigate('/controller/bebedouros')}>
           Voltar
         </Button>
       </div>
 
-      <Card className="bg-white p-6" disableHover>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <Card className="bg-white p-4 sm:p-6" disableHover>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Informações Gerais</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Data:</span> {(() => {
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Informações Gerais</h3>
+            <div className="space-y-1.5 sm:space-y-2">
+              <p className="text-sm sm:text-base"><span className="font-medium">Data:</span> {(() => {
                 const [year, day, month] = registro.data.split('-')
                 return `${day}/${month}/${year}`
               })()}</p>
-              <p><span className="font-medium">Responsável:</span> {registro.responsavel || '-'}</p>
-              <p><span className="font-medium">Pasto:</span> {registro.pasto || '-'}</p>
-              <p><span className="font-medium">Lote:</span> {registro.lote || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium">Responsável:</span> {registro.responsavel || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium">Pasto:</span> {registro.pasto || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium">Lote:</span> {registro.lote || '-'}</p>
             </div>
           </div>
 
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Gado</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Gado:</span> {registro.gado || '-'}</p>
-              <p><span className="font-medium">Categoria:</span> {registro.categoria || '-'}</p>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Gado</h3>
+            <div className="space-y-1.5 sm:space-y-2">
+              <p className="text-sm sm:text-base"><span className="font-medium">Gado:</span> {registro.gado || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium">Categoria:</span> {registro.categoria || '-'}</p>
             </div>
           </div>
 
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Bebedouro</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Nº Bebedouro:</span> {registro.numero_bebedouro || '-'}</p>
-              <p><span className="font-medium">Leitura:</span> {registro.leitura_bebedouro || 0}</p>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Bebedouro</h3>
+            <div className="space-y-1.5 sm:space-y-2">
+              <p className="text-sm sm:text-base"><span className="font-medium">Nº Bebedouro:</span> {registro.numero_bebedouro || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium">Leitura:</span> {registro.leitura_bebedouro || 0}</p>
             </div>
           </div>
 
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Observações</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Observação:</span> {registro.observacao || '-'}</p>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Observações</h3>
+            <div className="space-y-1.5 sm:space-y-2">
+              <p className="text-sm sm:text-base"><span className="font-medium">Observação:</span> {registro.observacao || '-'}</p>
             </div>
           </div>
 
           <div className="md:col-span-2">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Metadados</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Usuário:</span> {registro.nome_usuario || '-'}</p>
-              <p><span className="font-medium">Criado em:</span> {new Date(registro.created_at).toLocaleString('pt-BR')}</p>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Metadados</h3>
+            <div className="space-y-1.5 sm:space-y-2">
+              <p className="text-sm sm:text-base"><span className="font-medium">Usuário:</span> {registro.nome_usuario || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium">Criado em:</span> {new Date(registro.created_at).toLocaleString('pt-BR')}</p>
               {registro.updated_at && (
-                <p><span className="font-medium">Atualizado em:</span> {new Date(registro.updated_at).toLocaleString('pt-BR')}</p>
+                <p className="text-sm sm:text-base"><span className="font-medium">Atualizado em:</span> {new Date(registro.updated_at).toLocaleString('pt-BR')}</p>
               )}
-              <p><span className="font-medium">Sync Status:</span> {registro.sync_status || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium">Sync Status:</span> {registro.sync_status || '-'}</p>
             </div>
           </div>
         </div>

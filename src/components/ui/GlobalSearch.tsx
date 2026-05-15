@@ -192,88 +192,101 @@ export function GlobalSearch() {
           setIsOpen(true)
           inputRef.current?.focus()
         }}
-        className="flex items-center gap-2 px-4 py-2 bg-white/10  rounded-lg transition-all text-white"
+        className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white/10 rounded-lg transition-all text-white"
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
-        <span className="hidden md:inline">Buscar...</span>
+        <span className="hidden md:inline text-sm">Buscar...</span>
         <kbd className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-white/20 rounded">
           <span>⌘ + </span>
-          <span>K</span>
-          <span className="mx-1">/</span>
-          <span>Ctrl + </span>
           <span>K</span>
         </kbd>
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-96 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden animate-scale-in z-50">
-          <div className="p-3 border-b border-gray-200">
-            <div className="relative">
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <input
-                ref={inputRef}
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Digite para buscar..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                autoFocus
-              />
+        <>
+          {/* Backdrop para mobile */}
+          <div 
+            className="fixed inset-0 z-50 sm:hidden"
+            onClick={() => setIsOpen(false)}
+          />
+          
+          {/* Search Modal/Panel */}
+          <div className="fixed sm:absolute inset-x-4 sm:inset-auto top-4 bottom-4 sm:top-auto sm:bottom-auto right-0 mt-2 w-[calc(100%-2rem)] sm:w-96 bg-white sm:rounded-lg shadow-xl border border-gray-200 overflow-hidden animate-scale-in z-[60] flex flex-col max-h-[70vh] sm:max-h-96 rounded-2xl">
+            <div className="p-3 sm:p-4 border-b border-gray-200 shrink-0 flex items-center gap-3">
+              <div className="relative flex-1">
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Digite para buscar..."
+                  className="w-full pl-10 pr-4 py-3 sm:py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm sm:text-base"
+                  autoFocus
+                />
+              </div>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="p-2 text-gray-400 rounded-lg hover:bg-gray-100 transition-colors sm:hidden"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-gray-500 px-3 sm:px-4 pb-3 border-b border-gray-200">
               Pesquise em: Pastos, Lotes, Bebedouros, Pluviômetros, Funcionários
             </p>
+
+            <div className="overflow-y-auto flex-1">
+              {loading && (
+                <div className="p-4 text-center text-gray-500">
+                  <svg className="animate-spin h-6 w-6 mx-auto mb-2" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Buscando...
+                </div>
+              )}
+
+              {!loading && searchTerm.length < 2 && (
+                <div className="p-4 text-center text-gray-500">
+                  <p className="text-sm sm:text-base">Digite pelo menos 2 caracteres para buscar</p>
+                </div>
+              )}
+
+              {!loading && searchTerm.length >= 2 && results.length === 0 && (
+                <div className="p-4 text-center text-gray-500">
+                  <p className="text-sm sm:text-base">Nenhum resultado encontrado para "{searchTerm}"</p>
+                </div>
+              )}
+
+              {!loading && searchTerm.length >= 2 && results.length > 0 && (
+                <div>
+                  {results.map((result) => (
+                    <button
+                      key={result.id}
+                      onClick={() => handleResultClick(result)}
+                      className="w-full px-4 py-3 sm:py-3 text-left transition-all flex items-center gap-3 hover:bg-gray-50 min-h-[48px]"
+                    >
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900 text-sm sm:text-base">{result.label}</p>
+                        <p className="text-xs sm:text-sm text-gray-500">{result.type}</p>
+                      </div>
+                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-
-          <div className="max-h-96 overflow-y-auto">
-            {loading && (
-              <div className="p-4 text-center text-gray-500">
-                <svg className="animate-spin h-6 w-6 mx-auto mb-2" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Buscando...
-              </div>
-            )}
-
-            {!loading && searchTerm.length < 2 && (
-              <div className="p-4 text-center text-gray-500">
-                <p>Digite pelo menos 2 caracteres para buscar</p>
-                <p className="text-sm mt-2 text-gray-400">Pressione ESC para fechar</p>
-              </div>
-            )}
-
-            {!loading && searchTerm.length >= 2 && results.length === 0 && (
-              <div className="p-4 text-center text-gray-500">
-                <p>Nenhum resultado encontrado para "{searchTerm}"</p>
-              </div>
-            )}
-
-            {!loading && searchTerm.length >= 2 && results.length > 0 && (
-              <div>
-                {results.map((result) => (
-                  <button
-                    key={result.id}
-                    onClick={() => handleResultClick(result)}
-                    className="w-full px-4 py-3 text-left transition-all flex items-center gap-3"
-                  >
-                    <div className="flex-1">
-                      <p className="font-medium text-gray-900">{result.label}</p>
-                      <p className="text-sm text-gray-500">{result.type}</p>
-                    </div>
-                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        </>
       )}
     </div>
   )

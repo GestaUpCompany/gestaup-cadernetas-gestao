@@ -107,23 +107,23 @@ export function EnfermariaDetalhes() {
   if (registro.andar_cambaleante) sintomas.push('Andar Cambaleante')
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-2xl font-bold text-gray-800">Detalhes do Registro de Enfermaria</h2>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Detalhes do Registro de Enfermaria</h2>
         <Button variant="secondary" onClick={() => navigate('/controller/enfermaria')}>
           Voltar
         </Button>
       </div>
 
-      <Card className="bg-white p-6" disableHover border-0 shadow-sm>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <Card className="bg-white p-4 sm:p-6" disableHover border-0 shadow-sm>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Identificação</h3>
-            <div className="space-y-2">
-              <p className="text-sm"><span className="font-medium text-gray-700">Brinco/Chip:</span> {registro.brinco_chip || '-'}</p>
-              <p className="text-sm"><span className="font-medium text-gray-700">Categoria:</span> {registro.categoria || '-'}</p>
-              <p className="text-sm"><span className="font-medium text-gray-700">Data:</span> {(() => {
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Identificação</h3>
+            <div className="space-y-1.5 sm:space-y-2">
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Brinco/Chip:</span> {registro.brinco_chip || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Categoria:</span> {registro.categoria || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Data:</span> {(() => {
                 const [year, day, month] = registro.data.split('-')
                 return `${day}/${month}/${year}`
               })()}</p>
@@ -131,42 +131,42 @@ export function EnfermariaDetalhes() {
           </div>
 
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Localização</h3>
-            <div className="space-y-2">
-              <p className="text-sm"><span className="font-medium text-gray-700">Lote:</span> {registro.lote || '-'}</p>
-              <p className="text-sm"><span className="font-medium text-gray-700">Pasto:</span> {registro.pasto || '-'}</p>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Localização</h3>
+            <div className="space-y-1.5 sm:space-y-2">
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Lote:</span> {registro.lote || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Pasto:</span> {registro.pasto || '-'}</p>
             </div>
           </div>
 
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Tratamento</h3>
-            <div className="space-y-2">
-              <p className="text-sm"><span className="font-medium text-gray-700">Tratamento:</span> {registro.tratamento || '-'}</p>
-              {registro.tratamento_obs && <p className="text-sm"><span className="font-medium text-gray-700">Obs Tratamento:</span> {registro.tratamento_obs}</p>}
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Tratamento</h3>
+            <div className="space-y-1.5 sm:space-y-2">
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Tratamento:</span> {registro.tratamento || '-'}</p>
+              {registro.tratamento_obs && <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Obs Tratamento:</span> {registro.tratamento_obs}</p>}
             </div>
           </div>
 
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Sintomas</h3>
-            <div className="space-y-2">
-              <p className="text-sm"><span className="font-medium text-gray-700">Sintomas:</span> {sintomas.length > 0 ? sintomas.join(', ') : 'Nenhum'}</p>
-              {registro.problema_casco_obs && <p className="text-sm"><span className="font-medium text-gray-700">Obs Cascos:</span> {registro.problema_casco_obs}</p>}
-              {registro.fraturas_obs && <p className="text-sm"><span className="font-medium text-gray-700">Obs Fraturas:</span> {registro.fraturas_obs}</p>}
-              {registro.desordens_digestivas_obs && <p className="text-sm"><span className="font-medium text-gray-700">Obs Digestivo:</span> {registro.desordens_digestivas_obs}</p>}
-              {registro.cegueira_obs && <p className="text-sm"><span className="font-medium text-gray-700">Obs Cegueira:</span> {registro.cegueira_obs}</p>}
-              {registro.andar_cambaleante_obs && <p className="text-sm"><span className="font-medium text-gray-700">Obs Andar Cambaleante:</span> {registro.andar_cambaleante_obs}</p>}
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Sintomas</h3>
+            <div className="space-y-1.5 sm:space-y-2">
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Sintomas:</span> {sintomas.length > 0 ? sintomas.join(', ') : 'Nenhum'}</p>
+              {registro.problema_casco_obs && <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Obs Cascos:</span> {registro.problema_casco_obs}</p>}
+              {registro.fraturas_obs && <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Obs Fraturas:</span> {registro.fraturas_obs}</p>}
+              {registro.desordens_digestivas_obs && <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Obs Digestivo:</span> {registro.desordens_digestivas_obs}</p>}
+              {registro.cegueira_obs && <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Obs Cegueira:</span> {registro.cegueira_obs}</p>}
+              {registro.andar_cambaleante_obs && <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Obs Andar Cambaleante:</span> {registro.andar_cambaleante_obs}</p>}
             </div>
           </div>
 
           <div className="md:col-span-2">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Metadados</h3>
-            <div className="space-y-2">
-              <p className="text-sm"><span className="font-medium text-gray-700">Usuário:</span> {registro.nome_usuario || '-'}</p>
-              <p className="text-sm"><span className="font-medium text-gray-700">Criado em:</span> {new Date(registro.created_at).toLocaleString('pt-BR')}</p>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Metadados</h3>
+            <div className="space-y-1.5 sm:space-y-2">
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Usuário:</span> {registro.nome_usuario || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Criado em:</span> {new Date(registro.created_at).toLocaleString('pt-BR')}</p>
               {registro.updated_at && (
-                <p className="text-sm"><span className="font-medium text-gray-700">Atualizado em:</span> {new Date(registro.updated_at).toLocaleString('pt-BR')}</p>
+                <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Atualizado em:</span> {new Date(registro.updated_at).toLocaleString('pt-BR')}</p>
               )}
-              <p className="text-sm"><span className="font-medium text-gray-700">Sync Status:</span> {registro.sync_status || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Sync Status:</span> {registro.sync_status || '-'}</p>
             </div>
           </div>
         </div>

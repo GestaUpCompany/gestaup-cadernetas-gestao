@@ -185,70 +185,90 @@ export function Notifications() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-96 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden animate-scale-in z-50">
-          <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-            <h3 className="font-semibold text-gray-800">Notificações</h3>
-            {unreadCount > 0 && (
+        <>
+          {/* Backdrop para mobile */}
+          <div 
+            className="fixed inset-0 z-50 sm:hidden"
+            onClick={() => setIsOpen(false)}
+          />
+          
+          {/* Notifications Dropdown/Bottom Sheet */}
+          <div className="fixed sm:absolute inset-x-4 sm:inset-auto top-4 bottom-4 sm:top-auto sm:bottom-auto right-0 sm:right-4 mt-2 w-[calc(100%-2rem)] sm:w-96 bg-white sm:rounded-lg shadow-xl border border-gray-200 overflow-hidden animate-scale-in z-[60] flex flex-col max-h-[70vh] sm:max-h-96 rounded-2xl">
+            <div className="p-3 sm:p-4 border-b border-gray-200 flex items-center gap-3 shrink-0">
+              <h3 className="font-semibold text-gray-800 text-base sm:text-lg flex-1">Notificações</h3>
+              {unreadCount > 0 && (
+                <button
+                  onClick={markAllAsRead}
+                  className="text-sm text-primary transition-all shrink-0"
+                >
+                  Marcar todas como lidas
+                </button>
+              )}
               <button
-                onClick={markAllAsRead}
-                className="text-sm text-primary transition-all"
+                onClick={() => setIsOpen(false)}
+                className="p-2 text-gray-400 rounded-lg hover:bg-gray-100 transition-colors sm:hidden shrink-0"
               >
-                Marcar todas como lidas
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
-            )}
-          </div>
+            </div>
+            <div className="flex justify-center sm:hidden mb-2 pt-2">
+              <div className="w-12 h-1 bg-gray-300 rounded-full"></div>
+            </div>
 
-          <div className="max-h-96 overflow-y-auto">
-            {loading && (
-              <div className="p-4 text-center text-gray-500">
-                <svg className="animate-spin h-6 w-6 mx-auto mb-2" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Carregando...
-              </div>
-            )}
+            <div className="overflow-y-auto flex-1">
+              {loading && (
+                <div className="p-4 text-center text-gray-500">
+                  <svg className="animate-spin h-6 w-6 mx-auto mb-2" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Carregando...
+                </div>
+              )}
 
-            {!loading && notifications.length === 0 && (
-              <div className="p-4 text-center text-gray-500">
-                <svg className="w-12 h-12 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                </svg>
-                <p>Nenhuma notificação</p>
-              </div>
-            )}
+              {!loading && notifications.length === 0 && (
+                <div className="p-4 text-center text-gray-500">
+                  <svg className="w-12 h-12 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  </svg>
+                  <p className="text-sm sm:text-base">Nenhuma notificação</p>
+                </div>
+              )}
 
-            {!loading && notifications.length > 0 && (
-              <div>
-                {notifications.map((notification) => (
-                  <div
-                    key={notification.id}
-                    onClick={() => handleNotificationClick(notification)}
-                    className={`p-4 border-b border-gray-100 cursor-pointer transition-all ${
-                      !notification.lida ? 'bg-blue-50' : ''
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 mt-0.5">
-                        {getNotificationIcon(notification.tipo)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 text-sm">{notification.titulo}</p>
-                        <p className="text-sm text-gray-600 mt-1">{notification.mensagem}</p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <span className="text-xs text-gray-400">{formatTime(notification.created_at)}</span>
-                          {notification.acao_label && (
-                            <span className="text-xs text-primary font-medium">{notification.acao_label}</span>
-                          )}
+              {!loading && notifications.length > 0 && (
+                <div>
+                  {notifications.map((notification) => (
+                    <div
+                      key={notification.id}
+                      onClick={() => handleNotificationClick(notification)}
+                      className={`p-3 sm:p-4 border-b border-gray-100 cursor-pointer transition-all min-h-[48px] ${
+                        !notification.lida ? 'bg-blue-50' : ''
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0 mt-0.5">
+                          {getNotificationIcon(notification.tipo)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900 text-sm sm:text-base">{notification.titulo}</p>
+                          <p className="text-xs sm:text-sm text-gray-600 mt-1">{notification.mensagem}</p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className="text-xs text-gray-400">{formatTime(notification.created_at)}</span>
+                            {notification.acao_label && (
+                              <span className="text-xs text-primary font-medium">{notification.acao_label}</span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   )

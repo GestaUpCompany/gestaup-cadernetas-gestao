@@ -89,62 +89,62 @@ export function PastagensDetalhes() {
   const totalAnimais = (registro.vaca || 0) + (registro.touro || 0) + (registro.bezerro || 0) + (registro.boi_magro || 0) + (registro.garrote || 0) + (registro.novilha || 0)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-2xl font-bold text-gray-800">Detalhes do Registro de Pastagens</h2>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Detalhes do Registro de Pastagens</h2>
         <Button variant="secondary" onClick={() => navigate('/controller/pastagens-caderneta')}>
           Voltar
         </Button>
       </div>
 
-      <Card className="bg-white p-6" disableHover border-0 shadow-sm>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <Card className="bg-white p-4 sm:p-6" disableHover border-0 shadow-sm>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Informações Gerais</h3>
-            <div className="space-y-2">
-              <p className="text-sm"><span className="font-medium text-gray-700">Data:</span> {(() => {
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Informações Gerais</h3>
+            <div className="space-y-1.5 sm:space-y-2">
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Data:</span> {(() => {
                 const [year, day, month] = registro.data.split('-')
                 return `${day}/${month}/${year}`
               })()}</p>
-              <p className="text-sm"><span className="font-medium text-gray-700">Manejador:</span> {registro.manejador || '-'}</p>
-              <p className="text-sm"><span className="font-medium text-gray-700">Lote:</span> {registro.lote || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Manejador:</span> {registro.manejador || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Lote:</span> {registro.lote || '-'}</p>
             </div>
           </div>
 
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Movimentação</h3>
-            <div className="space-y-2">
-              <p className="text-sm"><span className="font-medium text-gray-700">Pasto Saída:</span> {registro.pasto_saida || '-'}</p>
-              <p className="text-sm"><span className="font-medium text-gray-700">Avaliação Saída:</span> {registro.avaliacao_saida || '-'}</p>
-              <p className="text-sm"><span className="font-medium text-gray-700">Pasto Entrada:</span> {registro.pasto_entrada || '-'}</p>
-              <p className="text-sm"><span className="font-medium text-gray-700">Avaliação Entrada:</span> {registro.avaliacao_entrada || '-'}</p>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Movimentação</h3>
+            <div className="space-y-1.5 sm:space-y-2">
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Pasto Saída:</span> {registro.pasto_saida || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Avaliação Saída:</span> {registro.avaliacao_saida || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Pasto Entrada:</span> {registro.pasto_entrada || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Avaliação Entrada:</span> {registro.avaliacao_entrada || '-'}</p>
             </div>
           </div>
 
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Contagem de Animais</h3>
-            <div className="space-y-2">
-              <p className="text-sm"><span className="font-medium text-gray-700">Vaca:</span> {registro.vaca || 0}</p>
-              <p className="text-sm"><span className="font-medium text-gray-700">Touro:</span> {registro.touro || 0}</p>
-              <p className="text-sm"><span className="font-medium text-gray-700">Bezerro:</span> {registro.bezerro || 0}</p>
-              <p className="text-sm"><span className="font-medium text-gray-700">Boi Magro:</span> {registro.boi_magro || 0}</p>
-              <p className="text-sm"><span className="font-medium text-gray-700">Garrote:</span> {registro.garrote || 0}</p>
-              <p className="text-sm"><span className="font-medium text-gray-700">Novilha:</span> {registro.novilha || 0}</p>
-              <p className="font-bold text-gray-800 mt-2">Total: {totalAnimais}</p>
-              <p className="text-sm"><span className="font-medium text-gray-700">Escore Gado:</span> {registro.escore_gado || '-'}</p>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Contagem de Animais</h3>
+            <div className="space-y-1.5 sm:space-y-2">
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Vaca:</span> {registro.vaca || 0}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Touro:</span> {registro.touro || 0}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Bezerro:</span> {registro.bezerro || 0}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Boi Magro:</span> {registro.boi_magro || 0}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Garrote:</span> {registro.garrote || 0}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Novilha:</span> {registro.novilha || 0}</p>
+              <p className="font-bold text-gray-800 mt-2 text-sm sm:text-base">Total: {totalAnimais}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Escore Gado:</span> {registro.escore_gado || '-'}</p>
             </div>
           </div>
 
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Metadados</h3>
-            <div className="space-y-2">
-              <p className="text-sm"><span className="font-medium text-gray-700">Usuário:</span> {registro.nome_usuario || '-'}</p>
-              <p className="text-sm"><span className="font-medium text-gray-700">Criado em:</span> {new Date(registro.created_at).toLocaleString('pt-BR')}</p>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Metadados</h3>
+            <div className="space-y-1.5 sm:space-y-2">
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Usuário:</span> {registro.nome_usuario || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Criado em:</span> {new Date(registro.created_at).toLocaleString('pt-BR')}</p>
               {registro.updated_at && (
-                <p className="text-sm"><span className="font-medium text-gray-700">Atualizado em:</span> {new Date(registro.updated_at).toLocaleString('pt-BR')}</p>
+                <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Atualizado em:</span> {new Date(registro.updated_at).toLocaleString('pt-BR')}</p>
               )}
-              <p className="text-sm"><span className="font-medium text-gray-700">Sync Status:</span> {registro.sync_status || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Sync Status:</span> {registro.sync_status || '-'}</p>
             </div>
           </div>
         </div>

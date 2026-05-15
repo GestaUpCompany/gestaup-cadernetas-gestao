@@ -41,7 +41,6 @@ export function Maternidade() {
   const loadRegistros = async () => {
     if (!user) return
 
-    // Buscar fazenda vinculada
     const { data: vinculos } = await supabase
       .from('usuario_fazenda')
       .select('fazenda_id')
@@ -52,15 +51,13 @@ export function Maternidade() {
 
     const fazendaId = vinculos[0].fazenda_id
 
-    let query = supabase
+    const { data, error } = await supabase
       .from('registros_maternidade')
       .select('*')
       .eq('fazenda_id', fazendaId)
       .is('deleted_at', null)
       .order('data', { ascending: false })
       .order('created_at', { ascending: false })
-
-    const { data, error } = await query
 
     if (error) {
       console.error('Erro ao buscar registros de maternidade:', error)
@@ -78,7 +75,6 @@ export function Maternidade() {
       (registro.pasto && registro.pasto.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.numero_cria && registro.numero_cria.toLowerCase().includes(searchTerm.toLowerCase()))
 
-    // Converter data do input (yyyy-mm-dd) para formato do banco (yyyy-dd-mm)
     const convertDate = (dateStr: string) => {
       if (!dateStr) return ''
       const [year, month, day] = dateStr.split('-')
@@ -108,7 +104,7 @@ export function Maternidade() {
         <h2 className="text-2xl font-bold text-gray-800">Caderneta de Maternidade</h2>
       </div>
 
-      <Card className="bg-white p-6">
+      <Card className="bg-white p-6" disableHover>
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold text-gray-800">Filtros</h3>
           <Button
@@ -158,15 +154,11 @@ export function Maternidade() {
       </Card>
 
       {registros.length === 0 ? (
-        <Card className="bg-white p-6 text-center">
+        <Card className="bg-white p-6 text-center" disableHover>
           <p className="text-gray-600">Nenhum registro de maternidade encontrado</p>
         </Card>
-      ) : filteredRegistros.length === 0 ? (
-        <Card className="bg-white p-6 text-center">
-          <p className="text-gray-600">Nenhum registro encontrado com os filtros aplicados</p>
-        </Card>
       ) : (
-        <Card className="bg-white overflow-x-auto">
+        <Card className="bg-white overflow-x-auto" disableHover>
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -186,7 +178,7 @@ export function Maternidade() {
                 <tr
                   key={registro.id}
                   onClick={() => navigate(`/controller/maternidade/${registro.id}`)}
-                  className=" cursor-pointer"
+                  className="cursor-pointer hover:bg-gray-50 transition-colors"
                 >
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {(() => {

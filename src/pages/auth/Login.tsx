@@ -59,14 +59,13 @@ export function Login() {
         {/* Logo Centralizado */}
         <div className="flex flex-col items-center animate-fade-in">
           <img
-            src="/images/logo/logo-gestaup.png"
-            alt="Base de Dados - Cadernetas"
+            src="/images/manejus360.png"
+            alt="Manej'Us 360"
             className="w-32 h-32 mb-6 rounded-lg"
           />
           <h1 className="text-4xl font-extrabold text-primary mb-3 tracking-wider leading-tight text-center">
-            Gesta'Up
-            <br />
-            Cadernetas Digitais
+            Manej'Us 
+            <span className="text-yellow-500"> 360</span>
           </h1>
           <p className="text-gray-600 text-lg mb-1">Sistema de Gestão Pecuária</p>
           <p className="text-gray-500">Faça login para acessar sua fazenda</p>
