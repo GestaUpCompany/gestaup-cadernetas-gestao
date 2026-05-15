@@ -178,8 +178,21 @@ export function Mineral() {
       loadMinerais()
     }
 
-    setShowDeleteModal(false)
     setMineralToDelete(null)
+    setShowDeleteModal(false)
+  }
+
+  const handleToggleActive = async (mineral: Mineral) => {
+    const { error } = await supabase
+      .from('mineral')
+      .update({ ativo: !mineral.ativo })
+      .eq('id', mineral.id)
+
+    if (error) {
+      console.error('Erro ao atualizar mineral:', error)
+    } else {
+      loadMinerais()
+    }
   }
 
   const shortcuts = [
@@ -327,7 +340,7 @@ export function Mineral() {
           <Button onClick={() => setShowForm(true)}>Criar Primeiro Mineral</Button>
         </Card>
       ) : !showForm ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {minerais
             .filter((mineral) =>
               mineral.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -362,8 +375,18 @@ export function Mineral() {
                 </div>
 
                 <div className="flex gap-2">
-                  <Button 
-                    variant="secondary" 
+                  <Button
+                    variant="secondary"
+                    className="flex-1 text-sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleToggleActive(mineral)
+                    }}
+                  >
+                    {mineral.ativo ? 'Desativar' : 'Ativar'}
+                  </Button>
+                  <Button
+                    variant="secondary"
                     className="flex-1"
                     onClick={(e) => {
                       e.stopPropagation()
@@ -372,8 +395,8 @@ export function Mineral() {
                   >
                     Editar
                   </Button>
-                  <Button 
-                    variant="secondary" 
+                  <Button
+                    variant="secondary"
                     className="flex-1"
                     onClick={(e) => {
                       e.stopPropagation()

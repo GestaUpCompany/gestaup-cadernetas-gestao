@@ -178,8 +178,21 @@ export function Racao() {
       loadRacoes()
     }
 
-    setShowDeleteModal(false)
     setRacaoToDelete(null)
+    setShowDeleteModal(false)
+  }
+
+  const handleToggleActive = async (racao: Racao) => {
+    const { error } = await supabase
+      .from('racao')
+      .update({ ativo: !racao.ativo })
+      .eq('id', racao.id)
+
+    if (error) {
+      console.error('Erro ao atualizar ração:', error)
+    } else {
+      loadRacoes()
+    }
   }
 
   const shortcuts = [
@@ -327,7 +340,7 @@ export function Racao() {
           <Button onClick={() => setShowForm(true)}>Criar Primeira Ração</Button>
         </Card>
       ) : !showForm ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {racoes
             .filter((racao) =>
               racao.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -362,8 +375,18 @@ export function Racao() {
                 </div>
 
                 <div className="flex gap-2">
-                  <Button 
-                    variant="secondary" 
+                  <Button
+                    variant="secondary"
+                    className="flex-1 text-sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleToggleActive(racao)
+                    }}
+                  >
+                    {racao.ativo ? 'Desativar' : 'Ativar'}
+                  </Button>
+                  <Button
+                    variant="secondary"
                     className="flex-1"
                     onClick={(e) => {
                       e.stopPropagation()
@@ -372,8 +395,8 @@ export function Racao() {
                   >
                     Editar
                   </Button>
-                  <Button 
-                    variant="secondary" 
+                  <Button
+                    variant="secondary"
                     className="flex-1"
                     onClick={(e) => {
                       e.stopPropagation()

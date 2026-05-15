@@ -300,7 +300,7 @@ export function BebedourosCadastro() {
           <Button onClick={() => setShowForm(true)}>Criar Primeiro Bebedouro</Button>
         </Card>
       ) : !showForm ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {bebedouros
             .filter((bebedouro) =>
               bebedouro.nome.toLowerCase().includes(searchTerm.toLowerCase())
@@ -309,25 +309,19 @@ export function BebedourosCadastro() {
               <CardItem
                 key={bebedouro.id}
                 title={bebedouro.nome}
-                subtitle={
-                  <>
-                    {bebedouro.capacidade && (
-                      <p className="text-sm text-gray-500 mt-1">Capacidade: {bebedouro.capacidade} L</p>
-                    )}
-                    {bebedouro.data_ultima_limpeza_historico && (
-                      <p className="text-sm text-gray-500 mt-1">
-                        Última limpeza: {(() => {
-                          const [year, month, day] = bebedouro.data_ultima_limpeza_historico!.split('-')
-                          return `${day}/${month}/${year}`
-                        })()}
-                      </p>
-                    )}
-                  </>
-                }
+                subtitle={bebedouro.capacidade ? `Capacidade: ${bebedouro.capacidade} L` : undefined}
                 status={bebedouro.ativo}
                 onClick={() => handleEdit(bebedouro)}
               >
-                <div className="flex gap-2 mt-4">
+                {bebedouro.data_ultima_limpeza_historico && (
+                  <p className="text-sm text-gray-500 mb-4">
+                    Última limpeza: {(() => {
+                      const [year, month, day] = bebedouro.data_ultima_limpeza_historico!.split('-')
+                      return `${day}/${month}/${year}`
+                    })()}
+                  </p>
+                )}
+                <div className="flex gap-2">
                   <Button 
                     variant="secondary" 
                     className="flex-1 text-sm"
@@ -340,7 +334,7 @@ export function BebedourosCadastro() {
                   </Button>
                   <Button 
                     variant="secondary" 
-                    className="flex-1 text-sm"
+                    className="flex-1"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleEdit(bebedouro)
@@ -350,7 +344,7 @@ export function BebedourosCadastro() {
                   </Button>
                   <Button 
                     variant="secondary" 
-                    className="flex-1 text-sm"
+                    className="flex-1"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleDeleteClick(bebedouro.id)

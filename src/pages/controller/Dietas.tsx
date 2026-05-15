@@ -166,8 +166,21 @@ export function Dietas() {
       loadDietas()
     }
 
-    setShowDeleteModal(false)
     setDietaToDelete(null)
+    setShowDeleteModal(false)
+  }
+
+  const handleToggleActive = async (dieta: Dieta) => {
+    const { error } = await supabase
+      .from('dietas')
+      .update({ ativo: !dieta.ativo })
+      .eq('id', dieta.id)
+
+    if (error) {
+      console.error('Erro ao atualizar dieta:', error)
+    } else {
+      loadDietas()
+    }
   }
 
   const shortcuts = [
@@ -289,7 +302,7 @@ export function Dietas() {
           <Button onClick={() => setShowForm(true)}>Criar Primeira Dieta</Button>
         </Card>
       ) : !showForm ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {dietas
             .filter((dieta) =>
               dieta.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -312,8 +325,18 @@ export function Dietas() {
                 </div>
 
                 <div className="flex gap-2">
-                  <Button 
-                    variant="secondary" 
+                  <Button
+                    variant="secondary"
+                    className="flex-1 text-sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleToggleActive(dieta)
+                    }}
+                  >
+                    {dieta.ativo ? 'Desativar' : 'Ativar'}
+                  </Button>
+                  <Button
+                    variant="secondary"
                     className="flex-1"
                     onClick={(e) => {
                       e.stopPropagation()
@@ -322,8 +345,8 @@ export function Dietas() {
                   >
                     Editar
                   </Button>
-                  <Button 
-                    variant="secondary" 
+                  <Button
+                    variant="secondary"
                     className="flex-1"
                     onClick={(e) => {
                       e.stopPropagation()

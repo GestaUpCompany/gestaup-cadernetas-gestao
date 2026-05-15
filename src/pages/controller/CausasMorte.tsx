@@ -263,7 +263,7 @@ export function CausasMorte() {
           <Button onClick={() => setShowForm(true)}>Criar Primeira Causa</Button>
         </Card>
       ) : !showForm ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {causas
             .filter((causa) =>
               causa.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -277,7 +277,7 @@ export function CausasMorte() {
                 status={causa.ativo}
                 onClick={() => handleEdit(causa)}
               >
-                <div className="flex gap-2 mt-4">
+                <div className="flex gap-2">
                   <Button 
                     variant="secondary" 
                     className="flex-1 text-sm"
@@ -290,7 +290,7 @@ export function CausasMorte() {
                   </Button>
                   <Button 
                     variant="secondary" 
-                    className="flex-1 text-sm"
+                    className="flex-1"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleEdit(causa)
@@ -300,7 +300,7 @@ export function CausasMorte() {
                   </Button>
                   <Button 
                     variant="secondary" 
-                    className="flex-1 text-sm"
+                    className="flex-1"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleDeleteClick(causa.id)

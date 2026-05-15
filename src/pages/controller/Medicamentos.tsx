@@ -179,6 +179,19 @@ export function Medicamentos() {
     setDeleteConfirmOpen(true)
   }
 
+  const handleToggleActive = async (medicamento: Medicamento) => {
+    const { error } = await supabase
+      .from('medicamentos')
+      .update({ ativo: !medicamento.ativo })
+      .eq('id', medicamento.id)
+
+    if (error) {
+      console.error('Erro ao atualizar medicamento:', error)
+    } else {
+      loadMedicamentos()
+    }
+  }
+
   const confirmDelete = async () => {
     if (!medicamentoToDelete) return
     const { error } = await supabase.from('medicamentos').delete().eq('id', medicamentoToDelete)
@@ -311,23 +324,46 @@ export function Medicamentos() {
             <CardItem
               key={medicamento.id}
               title={medicamento.nome_comercial}
-              headerActions={
-                <div className="flex gap-1 w-full md:w-auto">
-                  <Button variant="secondary" onClick={(e) => { e.stopPropagation(); handleEdit(medicamento) }} className="flex-1 md:flex-none">
-                    Editar
-                  </Button>
-                  <Button variant="secondary" onClick={(e) => { e.stopPropagation(); handleDeleteClick(medicamento.id) }} className="flex-1 md:flex-none">
-                    Excluir
-                  </Button>
-                </div>
-              }
-              className="hover:shadow-md"
+              subtitle={medicamento.tipo}
+              status={medicamento.ativo}
+              onClick={() => handleEdit(medicamento)}
             >
-              <p className="text-sm text-gray-600 mb-1">Tipo: {medicamento.tipo}</p>
-              <p className="text-sm text-gray-600 mb-1">Princípio Ativo: {medicamento.principio_ativo}</p>
+              <p className="text-sm text-gray-500 mb-2">Princípio Ativo: {medicamento.principio_ativo}</p>
               {medicamento.dose_recomendada && (
-                <p className="text-sm text-gray-600">Dose: {medicamento.dose_recomendada}</p>
+                <p className="text-sm text-gray-500 mb-4">Dose: {medicamento.dose_recomendada}</p>
               )}
+              <div className="flex gap-2">
+                <Button
+                  variant="secondary"
+                  className="flex-1 text-sm"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleToggleActive(medicamento)
+                  }}
+                >
+                  {medicamento.ativo ? 'Desativar' : 'Ativar'}
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="flex-1"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleEdit(medicamento)
+                  }}
+                >
+                  Editar
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="flex-1"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleDeleteClick(medicamento.id)
+                  }}
+                >
+                  Excluir
+                </Button>
+              </div>
             </CardItem>
           ))}
         </div>

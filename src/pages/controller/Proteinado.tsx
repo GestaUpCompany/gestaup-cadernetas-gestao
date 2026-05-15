@@ -178,8 +178,21 @@ export function Proteinado() {
       loadProteinados()
     }
 
-    setShowDeleteModal(false)
     setProteinadoToDelete(null)
+    setShowDeleteModal(false)
+  }
+
+  const handleToggleActive = async (proteinado: Proteinado) => {
+    const { error } = await supabase
+      .from('proteinado')
+      .update({ ativo: !proteinado.ativo })
+      .eq('id', proteinado.id)
+
+    if (error) {
+      console.error('Erro ao atualizar proteinado:', error)
+    } else {
+      loadProteinados()
+    }
   }
 
   const shortcuts = [
@@ -327,7 +340,7 @@ export function Proteinado() {
           <Button onClick={() => setShowForm(true)}>Criar Primeiro Proteinado</Button>
         </Card>
       ) : !showForm ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {proteinados
             .filter((proteinado) =>
               proteinado.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -362,8 +375,18 @@ export function Proteinado() {
                 </div>
 
                 <div className="flex gap-2">
-                  <Button 
-                    variant="secondary" 
+                  <Button
+                    variant="secondary"
+                    className="flex-1 text-sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleToggleActive(proteinado)
+                    }}
+                  >
+                    {proteinado.ativo ? 'Desativar' : 'Ativar'}
+                  </Button>
+                  <Button
+                    variant="secondary"
                     className="flex-1"
                     onClick={(e) => {
                       e.stopPropagation()
@@ -372,8 +395,8 @@ export function Proteinado() {
                   >
                     Editar
                   </Button>
-                  <Button 
-                    variant="secondary" 
+                  <Button
+                    variant="secondary"
                     className="flex-1"
                     onClick={(e) => {
                       e.stopPropagation()

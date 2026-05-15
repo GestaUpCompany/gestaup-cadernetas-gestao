@@ -1,4 +1,4 @@
-import { ReactNode, useState, useEffect } from 'react'
+import { ReactNode, useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { Header } from './Header'
@@ -85,6 +85,7 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
   const [openMenus, setOpenMenus] = useState<Set<string>>(new Set())
   const [showHelpModal, setShowHelpModal] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const drawerRef = useRef<HTMLDivElement>(null)
 
   const shortcuts = [
     {
@@ -100,6 +101,36 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
   ]
 
   useKeyboardShortcuts(shortcuts)
+
+  // Swipe gesture para fechar menu mobile
+  useEffect(() => {
+    const drawer = drawerRef.current
+    if (!drawer) return
+
+    let startX = 0
+
+    const handleTouchStart = (e: TouchEvent) => {
+      startX = e.touches[0].clientX
+    }
+
+    const handleTouchMove = (e: TouchEvent) => {
+      const currentX = e.touches[0].clientX
+      const diff = startX - currentX
+      
+      // Se swipe para a esquerda com velocidade suficiente
+      if (diff > 50) {
+        setMobileMenuOpen(false)
+      }
+    }
+
+    drawer.addEventListener('touchstart', handleTouchStart)
+    drawer.addEventListener('touchmove', handleTouchMove)
+
+    return () => {
+      drawer.removeEventListener('touchstart', handleTouchStart)
+      drawer.removeEventListener('touchmove', handleTouchMove)
+    }
+  }, [mobileMenuOpen])
 
   // Auto-open submenu if current path is in it
   useEffect(() => {
@@ -239,13 +270,21 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-50 animate-fade-in">
-            <div className="bg-white w-64 h-full p-4 overflow-y-auto animate-slide-in">
+          <div 
+            className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-50 animate-fade-in"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <div 
+              ref={drawerRef}
+              className="bg-white w-64 h-full p-4 overflow-y-auto animate-slide-in"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="flex items-center justify-between mb-4">
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Navegação</p>
                 <button
                   onClick={() => setMobileMenuOpen(false)}
-                  className="p-2 rounded-lg transition-all"
+                  className="p-2 rounded-lg transition-all hover:bg-gray-100"
+                  aria-label="Fechar menu"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -265,10 +304,11 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
                         className={`w-full text-left px-3 py-2.5 rounded-lg transition-all duration-200 flex items-center gap-3 ${
                           isPathActive(menu.path!)
                             ? 'bg-primary/10 text-primary border-l-4 border-primary font-medium'
-                            : 'text-gray-700 border-l-4 border-transparent'
+                            : 'text-gray-700 border-l-4 border-transparent hover:bg-gray-50'
                         }`}
+                        aria-label={`Ir para ${menu.label}`}
                       >
-                        {menu.icon && <span className="flex-shrink-0">{menu.icon}</span>}
+                        {menu.icon && <span className="flex-shrink-0" aria-hidden="true">{menu.icon}</span>}
                         <span>{menu.label}</span>
                       </button>
                     )
@@ -283,7 +323,7 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
                         <button
                           onClick={() => toggleMenu(menu.label)}
                           className={`w-full text-left px-3 py-2.5 rounded-lg transition-all duration-200 flex items-center justify-between ${
-                            isActive ? 'bg-primary/10 text-primary border-l-4 border-primary font-medium' : 'text-gray-700 border-l-4 border-transparent'
+                            isActive ? 'bg-primary/10 text-primary border-l-4 border-primary font-medium' : 'text-gray-700 border-l-4 border-transparent hover:bg-gray-50'
                           }`}
                         >
                           <div className="flex items-center gap-3">
@@ -311,7 +351,7 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
                                 className={`w-full text-left px-3 py-2 rounded-lg transition-all duration-200 text-sm flex items-center gap-3 ${
                                   isPathActive(item.path)
                                     ? 'bg-primary text-white font-medium'
-                                    : 'text-gray-600'
+                                    : 'text-gray-600 hover:bg-gray-50'
                                 }`}
                               >
                                 <span className="w-2 h-2 rounded-full bg-gray-300 flex-shrink-0" />

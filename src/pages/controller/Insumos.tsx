@@ -178,8 +178,21 @@ export function Insumos() {
       loadInsumos()
     }
 
-    setShowDeleteModal(false)
     setInsumoToDelete(null)
+    setShowDeleteModal(false)
+  }
+
+  const handleToggleActive = async (insumo: Insumo) => {
+    const { error } = await supabase
+      .from('insumos')
+      .update({ ativo: !insumo.ativo })
+      .eq('id', insumo.id)
+
+    if (error) {
+      console.error('Erro ao atualizar insumo:', error)
+    } else {
+      loadInsumos()
+    }
   }
 
   const shortcuts = [
@@ -327,7 +340,7 @@ export function Insumos() {
           <Button onClick={() => setShowForm(true)}>Criar Primeiro Insumo</Button>
         </Card>
       ) : !showForm ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {insumos
             .filter((insumo) =>
               insumo.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -362,8 +375,18 @@ export function Insumos() {
                 </div>
 
                 <div className="flex gap-2">
-                  <Button 
-                    variant="secondary" 
+                  <Button
+                    variant="secondary"
+                    className="flex-1 text-sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleToggleActive(insumo)
+                    }}
+                  >
+                    {insumo.ativo ? 'Desativar' : 'Ativar'}
+                  </Button>
+                  <Button
+                    variant="secondary"
                     className="flex-1"
                     onClick={(e) => {
                       e.stopPropagation()
@@ -372,8 +395,8 @@ export function Insumos() {
                   >
                     Editar
                   </Button>
-                  <Button 
-                    variant="secondary" 
+                  <Button
+                    variant="secondary"
                     className="flex-1"
                     onClick={(e) => {
                       e.stopPropagation()
