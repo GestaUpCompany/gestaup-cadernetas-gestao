@@ -507,8 +507,7 @@ export function Lotes() {
                   value={formData.peso_vivo_kg}
                   onChange={(e) => setFormData({ ...formData, peso_vivo_kg: e.target.value })}
                   placeholder="Ex: 450.5"
-                  disabled
-                  className="border-gray-200 focus:border-accent opacity-60"
+                  className="border-gray-200 focus:border-accent"
                 />
               </div>
 
