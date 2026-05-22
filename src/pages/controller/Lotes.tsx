@@ -614,7 +614,7 @@ setFormData({
                     value={formData.pasto_id}
                     onChange={(e) => setFormData({ ...formData, pasto_id: e.target.value })}
                     required
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-accent"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-gray-200 rounded-lg focus:outline-none focus:border-accent"
                   >
                     <option value="">Selecione</option>
                     {pastos.map((pasto) => (
@@ -656,7 +656,7 @@ setFormData({
                     value={formData.sexo}
                     onChange={(e) => setFormData({ ...formData, sexo: e.target.value })}
                     required
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-accent"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-gray-200 rounded-lg focus:outline-none focus:border-accent"
                   >
                     <option value="">Selecione</option>
                     <option value="macho">Macho</option>
@@ -1006,7 +1006,7 @@ setFormData({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1 whitespace-nowrap">
                     Custo Operacional (R$/cab/Per.)
                   </label>
                   <Input

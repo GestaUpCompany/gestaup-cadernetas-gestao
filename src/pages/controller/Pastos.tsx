@@ -295,7 +295,7 @@ export function Pastos() {
                 <select
                   value={formData.tipo}
                   onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
-                  className="w-full h-10 px-3 py-2 rounded-lg border-2 border-gray-200 focus:border-accent bg-white text-gray-700 transition-all"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] rounded-lg border-2 border-gray-200 focus:border-accent bg-white text-gray-700 transition-all"
                 >
                   <option value="">Selecione...</option>
                   <option value="Cria">Cria</option>
@@ -328,7 +328,7 @@ export function Pastos() {
                 <select
                   value={formData.nivel_degradacao}
                   onChange={(e) => setFormData({ ...formData, nivel_degradacao: e.target.value })}
-                  className="w-full h-10 px-3 py-2 rounded-lg border-2 border-gray-200 focus:border-accent bg-white text-gray-700 transition-all"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] rounded-lg border-2 border-gray-200 focus:border-accent bg-white text-gray-700 transition-all"
                 >
                   <option value="">Selecione...</option>
                   <option value="1">1</option>
