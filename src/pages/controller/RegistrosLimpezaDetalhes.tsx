@@ -83,60 +83,65 @@ export function RegistrosLimpezaDetalhes() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">Detalhes do Registro de Limpeza</h2>
+    <div className="space-y-4 sm:space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Detalhes do Registro de Limpeza</h2>
         <Button variant="secondary" onClick={() => navigate('/controller/limpeza')}>
           Voltar
         </Button>
       </div>
 
-      <Card className="bg-white p-6" disableHover>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
+        <div className="space-y-6">
+          {/* Informações Gerais */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Informações Gerais</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Data:</span> {registro.data}</p>
-              <p><span className="font-medium">Nº Equipe:</span> {registro.numero_equipe || '-'}</p>
-              <p><span className="font-medium">Setor:</span> {registro.setor || '-'}</p>
-              <p><span className="font-medium">Local:</span> {registro.local || '-'}</p>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Informações Gerais</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Data:</span> {(() => {
+                const [year, month, day] = registro.data.split('-')
+                return `${day}/${month}/${year}`
+              })()}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Nº Equipe:</span> {registro.numero_equipe || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Setor:</span> {registro.setor || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Local:</span> {registro.local || '-'}</p>
             </div>
           </div>
 
+          {/* Horários */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Horários</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Hora Início:</span> {registro.hora_inicio || '-'}</p>
-              <p><span className="font-medium">Hora Final:</span> {registro.hora_final || '-'}</p>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Horários</h3>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <p className="text-sm"><span className="font-medium text-gray-700">Hora Início:</span> {registro.hora_inicio || '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Hora Final:</span> {registro.hora_final || '-'}</p>
+              </div>
             </div>
           </div>
 
-          <div className="md:col-span-2">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Limpeza Realizada</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Itens:</span> {registro.limpeza_realizada && registro.limpeza_realizada.length > 0 ? JSON.stringify(registro.limpeza_realizada, null, 2) : 'Nenhum item registrado'}</p>
+          {/* Limpeza Realizada */}
+          {registro.limpeza_realizada && registro.limpeza_realizada.length > 0 && (
+            <div>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Limpeza Realizada</h3>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm font-medium text-gray-700">
+                  {registro.limpeza_realizada.map((item: string) => 
+                    item.charAt(0).toUpperCase() + item.slice(1)
+                  ).join(', ')}
+                </p>
+              </div>
             </div>
-          </div>
+          )}
 
-          <div className="md:col-span-2">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Observações</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Observação:</span> {registro.observacao || '-'}</p>
+          {/* Observação */}
+          {registro.observacao && (
+            <div>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Observação</h3>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm">{registro.observacao}</p>
+              </div>
             </div>
-          </div>
-
-          <div className="md:col-span-2">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Metadados</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Usuário:</span> {registro.nome_usuario || '-'}</p>
-              <p><span className="font-medium">Criado em:</span> {new Date(registro.created_at).toLocaleString('pt-BR')}</p>
-              {registro.updated_at && (
-                <p><span className="font-medium">Atualizado em:</span> {new Date(registro.updated_at).toLocaleString('pt-BR')}</p>
-              )}
-              <p><span className="font-medium">Sync Status:</span> {registro.sync_status || '-'}</p>
-              <p><span className="font-medium">Version:</span> {registro.version || '-'}</p>
-            </div>
-          </div>
+          )}
         </div>
       </Card>
     </div>

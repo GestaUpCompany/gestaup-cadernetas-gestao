@@ -37,6 +37,7 @@ export function RegistrosAbastecimento() {
   const [searchTerm, setSearchTerm] = useState('')
   const [dataInicio, setDataInicio] = useState('')
   const [dataFim, setDataFim] = useState('')
+  const [dateSortOrder, setDateSortOrder] = useState<'asc' | 'desc'>('desc')
 
   useEffect(() => {
     loadRegistros()
@@ -80,6 +81,7 @@ export function RegistrosAbastecimento() {
       (registro.operador_motorista && registro.operador_motorista.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.veiculo_trator && registro.veiculo_trator.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.placa && registro.placa.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.total_abastecido && registro.total_abastecido.toString().includes(searchTerm.toLowerCase())) ||
       (registro.combustivel && registro.combustivel.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.observacao && registro.observacao.toLowerCase().includes(searchTerm.toLowerCase()))
 
@@ -94,6 +96,10 @@ export function RegistrosAbastecimento() {
     const matchesDataFim = !dataFim || registro.data <= convertDate(dataFim)
 
     return matchesSearch && matchesDataInicio && matchesDataFim
+  }).sort((a, b) => {
+    const dateA = new Date(a.data)
+    const dateB = new Date(b.data)
+    return dateSortOrder === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime()
   })
 
   if (loading) {
@@ -121,7 +127,7 @@ export function RegistrosAbastecimento() {
             <label className="block text-sm font-medium text-gray-700 mb-1">Buscar</label>
             <Input
               type="text"
-              placeholder="Quem abasteceu, operador, veículo, placa..."
+              placeholder="Quem abasteceu, operador, veículo, placa, total, combustível..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -168,7 +174,12 @@ export function RegistrosAbastecimento() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
+                <th
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                  onClick={() => setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')}
+                >
+                  Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quem Abasteceu</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Operador/Motorista</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Veículo/Trator</th>
@@ -186,7 +197,7 @@ export function RegistrosAbastecimento() {
                 >
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {(() => {
-                      const [year, day, month] = registro.data.split('-')
+                      const [year, month, day] = registro.data.split('-')
                       return `${day}/${month}/${year}`
                     })()}
                   </td>

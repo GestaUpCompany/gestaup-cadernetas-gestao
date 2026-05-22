@@ -87,62 +87,63 @@ export function RegistrosAbastecimentoDetalhes() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">Detalhes do Registro de Abastecimento</h2>
+    <div className="space-y-4 sm:space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Detalhes do Registro de Abastecimento</h2>
         <Button variant="secondary" onClick={() => navigate('/controller/abastecimento')}>
           Voltar
         </Button>
       </div>
 
-      <Card className="bg-white p-6" disableHover>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
+        <div className="space-y-6">
+          {/* Informações Gerais */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Informações Gerais</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Data:</span> {registro.data}</p>
-              <p><span className="font-medium">Quem Abasteceu:</span> {registro.quem_abasteceu}</p>
-              <p><span className="font-medium">Operador/Motorista:</span> {registro.operador_motorista}</p>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Informações Gerais</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Data:</span> {(() => {
+                const [year, month, day] = registro.data.split('-')
+                return `${day}/${month}/${year}`
+              })()}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Quem Abasteceu:</span> {registro.quem_abasteceu}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Operador/Motorista:</span> {registro.operador_motorista}</p>
             </div>
           </div>
 
+          {/* Veículo */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Veículo</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Veículo/Trator:</span> {registro.veiculo_trator}</p>
-              <p><span className="font-medium">Placa:</span> {registro.placa}</p>
-              <p><span className="font-medium">Combustível:</span> {registro.combustivel}</p>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Veículo</h3>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <p className="text-sm"><span className="font-medium text-gray-700">Veículo/Trator:</span> {registro.veiculo_trator}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Placa:</span> {registro.placa}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Combustível:</span> {registro.combustivel}</p>
+              </div>
             </div>
           </div>
 
+          {/* Medições */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Medições</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Hidrômetro Inicial:</span> {registro.hidrometro_inicial}</p>
-              <p><span className="font-medium">Hidrômetro Final:</span> {registro.hidrometro_final}</p>
-              <p><span className="font-medium">Total Abastecido:</span> {registro.total_abastecido} L</p>
-              <p><span className="font-medium">Odômetro:</span> {registro.odometro}</p>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Medições</h3>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <p className="text-sm"><span className="font-medium text-gray-700">Hidrômetro Inicial:</span> {registro.hidrometro_inicial}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Hidrômetro Final:</span> {registro.hidrometro_final}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Total Abastecido:</span> {registro.total_abastecido} L</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Odômetro:</span> {registro.odometro}</p>
+              </div>
             </div>
           </div>
 
+          {/* Operação */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Operação</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Tipo de Operação:</span> {registro.tipo_operacao}</p>
-              <p><span className="font-medium">Observação:</span> {registro.observacao || '-'}</p>
-            </div>
-          </div>
-
-          <div className="md:col-span-2">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Metadados</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Usuário:</span> {registro.nome_usuario || '-'}</p>
-              <p><span className="font-medium">Criado em:</span> {new Date(registro.created_at).toLocaleString('pt-BR')}</p>
-              {registro.updated_at && (
-                <p><span className="font-medium">Atualizado em:</span> {new Date(registro.updated_at).toLocaleString('pt-BR')}</p>
-              )}
-              <p><span className="font-medium">Sync Status:</span> {registro.sync_status || '-'}</p>
-              <p><span className="font-medium">Version:</span> {registro.version || '-'}</p>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Operação</h3>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <p className="text-sm"><span className="font-medium text-gray-700">Tipo de Operação:</span> {registro.tipo_operacao}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Observação:</span> {registro.observacao || '-'}</p>
+              </div>
             </div>
           </div>
         </div>

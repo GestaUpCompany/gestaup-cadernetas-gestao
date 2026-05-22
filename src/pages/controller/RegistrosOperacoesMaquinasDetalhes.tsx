@@ -93,88 +93,104 @@ export function RegistrosOperacoesMaquinasDetalhes() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">Detalhes do Registro de Operações de Máquinas</h2>
+    <div className="space-y-4 sm:space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Detalhes do Registro de Operações de Máquinas</h2>
         <Button variant="secondary" onClick={() => navigate('/controller/operacoes-maquinas')}>
           Voltar
         </Button>
       </div>
 
-      <Card className="bg-white p-6" disableHover>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
+        <div className="space-y-6">
+          {/* Informações Gerais */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Informações Gerais</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Data:</span> {registro.data}</p>
-              <p><span className="font-medium">Veículo/Trator:</span> {registro.veiculo_trator}</p>
-              <p><span className="font-medium">Implemento Utilizado:</span> {registro.implemento_utilizado}</p>
-              <p><span className="font-medium">Tipo Operação:</span> {registro.tipo_operacao}</p>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Informações Gerais</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Data:</span> {(() => {
+                const [year, month, day] = registro.data.split('-')
+                return `${day}/${month}/${year}`
+              })()}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Veículo/Trator:</span> {registro.veiculo_trator}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Implemento Utilizado:</span> {registro.implemento_utilizado}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Tipo Operação:</span> {registro.tipo_operacao.charAt(0).toUpperCase() + registro.tipo_operacao.slice(1)}</p>
             </div>
           </div>
 
+          {/* Horários */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Horários</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Hora Inicial:</span> {registro.hora_inicial || '-'}</p>
-              <p><span className="font-medium">Hora Final:</span> {registro.hora_final || '-'}</p>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Horários</h3>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <p className="text-sm"><span className="font-medium text-gray-700">Hora Inicial:</span> {registro.hora_inicial || '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Hora Final:</span> {registro.hora_final || '-'}</p>
+              </div>
             </div>
           </div>
 
+          {/* Odômetro */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Odômetro</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Odômetro Inicial:</span> {registro.odometro_inicial}</p>
-              <p><span className="font-medium">Odômetro Final:</span> {registro.odometro_final}</p>
-              <p><span className="font-medium">Total Odômetro:</span> {registro.total_odometro || '-'}</p>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Odômetro</h3>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <p className="text-sm"><span className="font-medium text-gray-700">Odômetro Inicial:</span> {registro.odometro_inicial}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Odômetro Final:</span> {registro.odometro_final}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Total Odômetro:</span> {registro.total_odometro || '-'}</p>
+              </div>
             </div>
           </div>
 
-          <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Aplicação</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Produto Aplicado:</span> {registro.produto_aplicado || '-'}</p>
-              <p><span className="font-medium">Quantidade Total Aplicada:</span> {registro.quantidade_total_aplicada || '-'}</p>
-              <p><span className="font-medium">Área Trabalhada:</span> {registro.area_trabalhada || '-'}</p>
-              <p><span className="font-medium">Dose Aplicada:</span> {registro.dose_aplicada || '-'}</p>
+          {/* Aplicação */}
+          {(registro.produto_aplicado || registro.quantidade_total_aplicada || registro.area_trabalhada || registro.dose_aplicada) && (
+            <div>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Aplicação</h3>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                  <p className="text-sm"><span className="font-medium text-gray-700">Produto Aplicado:</span> {registro.produto_aplicado || '-'}</p>
+                  <p className="text-sm"><span className="font-medium text-gray-700">Quantidade Total Aplicada:</span> {registro.quantidade_total_aplicada || '-'}</p>
+                  <p className="text-sm"><span className="font-medium text-gray-700">Área Trabalhada:</span> {registro.area_trabalhada || '-'}</p>
+                  <p className="text-sm"><span className="font-medium text-gray-700">Dose Aplicada:</span> {registro.dose_aplicada || '-'}</p>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
 
-          <div className="md:col-span-2">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Meta Diária</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Meta Diária Batida:</span> {registro.meta_diaria_batida || '-'}</p>
-              <p><span className="font-medium">Meta Diária Batida Obs:</span> {registro.meta_diaria_batida_obs || '-'}</p>
+          {/* Meta Diária */}
+          {(registro.meta_diaria_batida || registro.meta_diaria_batida_obs) && (
+            <div>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Meta Diária</h3>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <p className="text-sm"><span className="font-medium text-gray-700">Meta Diária Batida:</span> {registro.meta_diaria_batida === 'S' ? 'Sim' : registro.meta_diaria_batida === 'N' ? 'Não' : registro.meta_diaria_batida || '-'}</p>
+                  <p className="text-sm"><span className="font-medium text-gray-700">Meta Diária Batida Obs:</span> {registro.meta_diaria_batida_obs || '-'}</p>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
 
-          <div className="md:col-span-2">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Imprevistos</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Algun Imprevisto:</span> {registro.algum_imprevisto || '-'}</p>
-              <p><span className="font-medium">Algun Imprevisto Obs:</span> {registro.algum_imprevisto_obs || '-'}</p>
+          {/* Imprevistos */}
+          {(registro.algum_imprevisto || registro.algum_imprevisto_obs) && (
+            <div>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Imprevistos</h3>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <p className="text-sm"><span className="font-medium text-gray-700">Algun Imprevisto:</span> {registro.algum_imprevisto === 'S' ? 'Sim' : registro.algum_imprevisto === 'N' ? 'Não' : registro.algum_imprevisto || '-'}</p>
+                  <p className="text-sm"><span className="font-medium text-gray-700">Algun Imprevisto Obs:</span> {registro.algum_imprevisto_obs || '-'}</p>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
 
-          <div className="md:col-span-2">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Observações</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Observação:</span> {registro.observacao || '-'}</p>
+          {/* Observação */}
+          {registro.observacao && (
+            <div>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Observação</h3>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm">{registro.observacao}</p>
+              </div>
             </div>
-          </div>
-
-          <div className="md:col-span-2">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Metadados</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Usuário:</span> {registro.nome_usuario || '-'}</p>
-              <p><span className="font-medium">Criado em:</span> {new Date(registro.created_at).toLocaleString('pt-BR')}</p>
-              {registro.updated_at && (
-                <p><span className="font-medium">Atualizado em:</span> {new Date(registro.updated_at).toLocaleString('pt-BR')}</p>
-              )}
-              <p><span className="font-medium">Sync Status:</span> {registro.sync_status || '-'}</p>
-              <p><span className="font-medium">Version:</span> {registro.version || '-'}</p>
-            </div>
-          </div>
+          )}
         </div>
       </Card>
     </div>

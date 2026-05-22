@@ -33,6 +33,7 @@ export function RegistrosLimpeza() {
   const [searchTerm, setSearchTerm] = useState('')
   const [dataInicio, setDataInicio] = useState('')
   const [dataFim, setDataFim] = useState('')
+  const [dateSortOrder, setDateSortOrder] = useState<'asc' | 'desc'>('desc')
 
   useEffect(() => {
     loadRegistros()
@@ -74,12 +75,19 @@ export function RegistrosLimpeza() {
     const matchesSearch =
       (registro.setor && registro.setor.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.local && registro.local.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.numero_equipe && registro.numero_equipe.toString().includes(searchTerm.toLowerCase())) ||
+      (registro.hora_inicio && registro.hora_inicio.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.hora_final && registro.hora_final.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.observacao && registro.observacao.toLowerCase().includes(searchTerm.toLowerCase()))
 
     const matchesDataInicio = !dataInicio || registro.data >= dataInicio
     const matchesDataFim = !dataFim || registro.data <= dataFim
 
     return matchesSearch && matchesDataInicio && matchesDataFim
+  }).sort((a, b) => {
+    const dateA = new Date(a.data)
+    const dateB = new Date(b.data)
+    return dateSortOrder === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime()
   })
 
   if (loading) {
@@ -107,7 +115,7 @@ export function RegistrosLimpeza() {
             <label className="block text-sm font-medium text-gray-700 mb-1">Buscar</label>
             <Input
               type="text"
-              placeholder="Setor, local, observação..."
+              placeholder="Setor, local, equipe, horários, observação..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -154,7 +162,12 @@ export function RegistrosLimpeza() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
+                <th
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                  onClick={() => setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')}
+                >
+                  Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nº Equipe</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Setor</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Local</th>
@@ -172,7 +185,7 @@ export function RegistrosLimpeza() {
                 >
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {(() => {
-                      const [year, day, month] = registro.data.split('-')
+                      const [year, month, day] = registro.data.split('-')
                       return `${day}/${month}/${year}`
                     })()}
                   </td>

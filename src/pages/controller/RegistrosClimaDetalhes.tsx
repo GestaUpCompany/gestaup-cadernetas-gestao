@@ -80,45 +80,41 @@ export function RegistrosClimaDetalhes() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">Detalhes do Registro de Clima</h2>
+    <div className="space-y-4 sm:space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Detalhes do Registro de Clima</h2>
         <Button variant="secondary" onClick={() => navigate('/controller/clima')}>
           Voltar
         </Button>
       </div>
 
-      <Card className="bg-white p-6" disableHover>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
+        <div className="space-y-6">
+          {/* Informações Gerais */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Informações Gerais</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Data:</span> {(() => {
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Informações Gerais</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Data:</span> {(() => {
                 const [year, month, day] = registro.data.split('-')
                 return `${day}/${month}/${year}`
               })()}</p>
-              <p><span className="font-medium">Responsável:</span> {registro.responsavel}</p>
-              <p><span className="font-medium">Temperatura Média:</span> {registro.temperatura_media ? `${registro.temperatura_media}°C` : '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Responsável:</span> {registro.responsavel}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Temperatura Média:</span> {registro.temperatura_media ? `${registro.temperatura_media}°C` : '-'}</p>
             </div>
           </div>
 
-          <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Observações</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Observação:</span> {registro.observacao || '-'}</p>
-            </div>
-          </div>
-
-          <div className="md:col-span-2">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Medições</h3>
-            {registro.medicoes && registro.medicoes.length > 0 ? (
-              <div className="overflow-x-auto">
+          {/* Medições */}
+          {registro.medicoes && registro.medicoes.length > 0 && (
+            <div>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Medições</h3>
+              <div className="bg-gray-50 p-4 rounded-lg overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-gray-100">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pluviômetro</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Localização</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medição (mm)</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Pluviômetro</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Localização</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Medição (mm)</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -138,11 +134,18 @@ export function RegistrosClimaDetalhes() {
                   </tbody>
                 </table>
               </div>
-            ) : (
-              <p className="text-gray-600">Nenhuma medição registrada</p>
-            )}
-          </div>
+            </div>
+          )}
 
+          {/* Observação */}
+          {registro.observacao && (
+            <div>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Observação</h3>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm">{registro.observacao}</p>
+              </div>
+            </div>
+          )}
         </div>
       </Card>
     </div>

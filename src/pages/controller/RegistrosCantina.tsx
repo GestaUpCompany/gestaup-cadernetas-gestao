@@ -35,6 +35,7 @@ export function RegistrosCantina() {
   const [searchTerm, setSearchTerm] = useState('')
   const [dataInicio, setDataInicio] = useState('')
   const [dataFim, setDataFim] = useState('')
+  const [dateSortOrder, setDateSortOrder] = useState<'asc' | 'desc'>('desc')
 
   useEffect(() => {
     loadRegistros()
@@ -76,12 +77,21 @@ export function RegistrosCantina() {
     const matchesSearch =
       (registro.quem_cozinhou && registro.quem_cozinhou.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.quem_ajudou && registro.quem_ajudou.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.numero_cozinheiras && registro.numero_cozinheiras.toString().includes(searchTerm.toLowerCase())) ||
+      (registro.numero_cafe_manha && registro.numero_cafe_manha.toString().includes(searchTerm.toLowerCase())) ||
+      (registro.numero_lanches && registro.numero_lanches.toString().includes(searchTerm.toLowerCase())) ||
+      (registro.numero_refeicoes_almoco && registro.numero_refeicoes_almoco.toString().includes(searchTerm.toLowerCase())) ||
+      (registro.numero_refeicoes_jantar && registro.numero_refeicoes_jantar.toString().includes(searchTerm.toLowerCase())) ||
       (registro.observacao && registro.observacao.toLowerCase().includes(searchTerm.toLowerCase()))
 
     const matchesDataInicio = !dataInicio || registro.data >= dataInicio
     const matchesDataFim = !dataFim || registro.data <= dataFim
 
     return matchesSearch && matchesDataInicio && matchesDataFim
+  }).sort((a, b) => {
+    const dateA = new Date(a.data)
+    const dateB = new Date(b.data)
+    return dateSortOrder === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime()
   })
 
   if (loading) {
@@ -109,7 +119,7 @@ export function RegistrosCantina() {
             <label className="block text-sm font-medium text-gray-700 mb-1">Buscar</label>
             <Input
               type="text"
-              placeholder="Quem cozinhou, quem ajudou..."
+              placeholder="Quem cozinhou, quem ajudou, cozinheiras, refeições..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -156,7 +166,12 @@ export function RegistrosCantina() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
+                <th
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                  onClick={() => setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')}
+                >
+                  Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quem Cozinhou</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quem Ajudou</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nº Cozinheiras</th>
@@ -174,7 +189,10 @@ export function RegistrosCantina() {
                   className=" cursor-pointer"
                 >
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {registro.data}
+                    {(() => {
+                      const [year, month, day] = registro.data.split('-')
+                      return `${day}/${month}/${year}`
+                    })()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {registro.quem_cozinhou || '-'}
