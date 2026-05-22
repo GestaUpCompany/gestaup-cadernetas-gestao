@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton, ConfirmModal, CardItem } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
+import * as XLSX from 'xlsx'
 
 interface Pasto {
   id: string
@@ -40,6 +41,9 @@ export function Pastos() {
   const [submitting, setSubmitting] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [pastoToDelete, setPastoToDelete] = useState<string | null>(null)
+  const [importing, setImporting] = useState(false)
+  const [importError, setImportError] = useState<string | null>(null)
+  const [importSuccess, setImportSuccess] = useState<string | null>(null)
 
   useEffect(() => {
     loadPastos()
@@ -212,6 +216,214 @@ export function Pastos() {
     }
   }
 
+  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0]) return
+
+    const file = e.target.files[0]
+    setImporting(true)
+    setImportError(null)
+    setImportSuccess(null)
+
+    try {
+      if (!user) {
+        setImportError('Usuário não autenticado')
+        setImporting(false)
+        return
+      }
+
+      // Buscar fazenda vinculada
+      const { data: vinculos } = await supabase
+        .from('usuario_fazenda')
+        .select('fazenda_id')
+        .eq('usuario_id', user.id)
+        .eq('ativo', true)
+
+      if (!vinculos || vinculos.length === 0) {
+        setImportError('Nenhuma fazenda vinculada ao usuário')
+        setImporting(false)
+        return
+      }
+
+      const fazendaId = vinculos[0].fazenda_id
+
+      // Buscar pastos existentes para verificar duplicatas
+      const { data: existingPastos } = await supabase
+        .from('pastos')
+        .select('nome')
+        .eq('fazenda_id', fazendaId)
+
+      const existingNames = new Set(existingPastos?.map(p => p.nome.toLowerCase()) || [])
+
+      // Ler arquivo Excel
+      const data = await file.arrayBuffer()
+      const workbook = XLSX.read(data, { type: 'array' })
+      const sheetName = workbook.SheetNames[0]
+      const worksheet = workbook.Sheets[sheetName]
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][]
+
+      if (jsonData.length < 2) {
+        setImportError('Arquivo vazio ou sem dados')
+        setImporting(false)
+        return
+      }
+
+      // Mapear colunas (linha 0 são os cabeçalhos)
+      const headers = jsonData[0].map((h: any) => h?.toString().trim())
+      const rows = jsonData.slice(1)
+
+      console.log('Headers encontrados:', headers)
+
+      // Validar colunas obrigatórias (case-insensitive)
+      const requiredColumns = ['Nome', 'Especie', 'Area Util (ha)', 'Altura Entrada (cm)', 'Altura Saida (cm)', 'Tipo', 'Metragem Cocho (m)']
+      const headersLower = headers.map(h => h.toLowerCase())
+      const missingColumns = requiredColumns.filter(col => !headersLower.includes(col.toLowerCase()))
+
+      if (missingColumns.length > 0) {
+        setImportError(`Colunas obrigatórias faltando: ${missingColumns.join(', ')}`)
+        setImporting(false)
+        return
+      }
+
+      // Mapear índices das colunas (case-insensitive)
+      const colIndices: { [key: string]: number } = {}
+      headers.forEach((header, index) => {
+        colIndices[header.toLowerCase()] = index
+      })
+
+      console.log('Índices das colunas:', colIndices)
+
+      // Validar e processar dados
+      const pastosToInsert: any[] = []
+      const duplicates: { row: number; name: string }[] = []
+      const invalidRows: { row: number; name: string; missingFields: string[] }[] = []
+      let totalRowsProcessed = 0
+
+      rows.forEach((row, rowIndex) => {
+        const rowNum = rowIndex + 2 // Excel row number (1-indexed + header)
+
+        console.log(`Linha ${rowNum}:`, row)
+
+        // Skip empty rows (only check first 9 columns - the actual data columns)
+        const dataColumns = row.slice(0, 9)
+        if (!row || row.length === 0 || dataColumns.every(cell => cell === undefined || cell === null || cell === '')) {
+          console.log(`Linha ${rowNum}: pulando linha vazia`)
+          return
+        }
+
+        totalRowsProcessed++
+
+        try {
+          const nome = row[colIndices['nome']]?.toString().trim()
+          const especie = row[colIndices['especie']]?.toString().trim()
+          const areaUtil = parseFloat(row[colIndices['area util (ha)']])
+          const alturaEntrada = parseFloat(row[colIndices['altura entrada (cm)']])
+          const alturaSaida = parseFloat(row[colIndices['altura saida (cm)']])
+          const tipo = row[colIndices['tipo']]?.toString().trim()
+          const setor = colIndices['setor'] !== undefined ? row[colIndices['setor']]?.toString().trim() || null : null
+          const metragemCocho = colIndices['metragem cocho (m)'] !== undefined ? row[colIndices['metragem cocho (m)']] ? parseFloat(row[colIndices['metragem cocho (m)']]) : null : null
+          const nivelDegradacao = colIndices['nivel degradacao'] !== undefined ? row[colIndices['nivel degradacao']] ? parseInt(row[colIndices['nivel degradacao']]) : null : null
+
+          // Verificar duplicata de nome
+          if (nome && existingNames.has(nome.toLowerCase())) {
+            duplicates.push({ row: rowNum, name: nome })
+            console.log(`Linha ${rowNum}: pulando nome duplicado - ${nome}`)
+            return
+          }
+
+          // Validações - coletar campos faltantes
+          const missingFields: string[] = []
+          if (!nome) missingFields.push('Nome')
+          if (!especie) missingFields.push('Especie')
+          if (isNaN(areaUtil) || areaUtil <= 0) missingFields.push('Area Util (ha) - deve ser número positivo')
+          if (isNaN(alturaEntrada) || alturaEntrada <= 0) missingFields.push('Altura Entrada (cm) - deve ser número positivo')
+          if (isNaN(alturaSaida) || alturaSaida <= 0) missingFields.push('Altura Saida (cm) - deve ser número positivo')
+          if (!tipo) missingFields.push('Tipo')
+          if (metragemCocho === null || metragemCocho === undefined || isNaN(metragemCocho) || metragemCocho <= 0) missingFields.push('Metragem Cocho (m) - deve ser número positivo')
+
+          const tiposValidos = ['Cria', 'Confinamento', 'Engorda', 'Enfermaria', 'Recria', 'RIP', 'TIP', 'Volumosos']
+          if (tipo && !tiposValidos.includes(tipo)) {
+            missingFields.push(`Tipo - deve ser um dos seguintes: ${tiposValidos.join(', ')}`)
+          }
+
+          if (nivelDegradacao !== null && (isNaN(nivelDegradacao) || nivelDegradacao < 1 || nivelDegradacao > 5)) {
+            missingFields.push('Nivel Degradacao - deve ser entre 1 e 5')
+          }
+
+          // Se houver erros de validação, adicionar a invalidRows e continuar
+          if (missingFields.length > 0) {
+            invalidRows.push({ row: rowNum, name: nome || '(sem nome)', missingFields })
+            console.log(`Linha ${rowNum}: linha inválida - ${missingFields.join(', ')}`)
+            return
+          }
+
+          // Se passou todas as validações, adicionar para inserção
+          pastosToInsert.push({
+            fazenda_id: fazendaId,
+            nome,
+            setor,
+            tipo,
+            metragem_cocho_m: metragemCocho,
+            nivel_degradacao: nivelDegradacao,
+            area_util_ha: areaUtil,
+            especie,
+            altura_entrada_cm: alturaEntrada,
+            altura_saida_cm: alturaSaida,
+            ativo: true,
+          })
+        } catch (err) {
+          invalidRows.push({ row: rowNum, name: '(erro ao processar)', missingFields: ['Erro ao processar dados'] })
+        }
+      })
+
+      if (pastosToInsert.length === 0) {
+        setImportError('Nenhum dado válido para importar')
+        setImporting(false)
+        return
+      }
+
+      // Inserir no banco de dados
+      const { error: insertError } = await supabase.from('pastos').insert(pastosToInsert)
+
+      if (insertError) {
+        setImportError(`Erro ao inserir dados: ${insertError.message}`)
+        setImporting(false)
+        return
+      }
+
+      let successMessage = ''
+      const totalSkipped = duplicates.length + invalidRows.length
+
+      if (totalSkipped > 0) {
+        successMessage = `${pastosToInsert.length} de ${totalRowsProcessed} pastos importados com sucesso!`
+      } else {
+        successMessage = `${pastosToInsert.length} pastos importados com sucesso!`
+      }
+
+      if (duplicates.length > 0) {
+        successMessage += `\n\n${duplicates.length} linhas puladas porque já existem:\n${duplicates.map(d => `- Linha ${d.row}: "${d.name}"`).join('\n')}`
+      }
+
+      if (invalidRows.length > 0) {
+        successMessage += `\n\n${invalidRows.length} linhas com erros de validação:\n${invalidRows.map(i => `- Linha ${i.row}: "${i.name}" - Campos inválidos: ${i.missingFields.join(', ')}`).join('\n')}`
+        successMessage += '\n\nVolte à planilha, localize os pastos com dados irregulares/faltantes, realize as correções indicadas acima e faça upload do arquivo novamente.'
+      }
+
+      setImportSuccess(successMessage)
+      loadPastos()
+
+      // Limpar input
+      e.target.value = ''
+    } catch (error) {
+      setImportError(`Erro ao processar arquivo: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  const downloadTemplate = () => {
+    window.location.href = '/Modelo Pastos - Gesta\'Up.xlsx'
+  }
+
   const shortcuts = [
     {
       key: 'f',
@@ -252,7 +464,38 @@ export function Pastos() {
               className="max-w-xs border-gray-200 focus:border-accent h-10"
             />
             <Button onClick={() => setShowForm(true)} className="h-10">Novo Pasto</Button>
+            <Button onClick={downloadTemplate} variant="secondary" className="h-10">Baixar Modelo</Button>
+            <input
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={handleImportExcel}
+              disabled={importing}
+              className="hidden"
+              id="import-excel"
+            />
+            <Button
+              onClick={() => document.getElementById('import-excel')?.click()}
+              variant="secondary"
+              className="h-10"
+              disabled={importing}
+            >
+              {importing ? 'Importando...' : 'Importar Excel'}
+            </Button>
           </div>
+        </div>
+      )}
+
+      {/* Import Messages */}
+      {importError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          <p className="font-medium">Erro na importação:</p>
+          <pre className="text-sm mt-1 whitespace-pre-wrap">{importError}</pre>
+        </div>
+      )}
+
+      {importSuccess && (
+        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+          <p className="font-medium whitespace-pre-line">{importSuccess}</p>
         </div>
       )}
 
