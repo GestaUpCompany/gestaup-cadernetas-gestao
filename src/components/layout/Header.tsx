@@ -73,6 +73,7 @@ export function Header() {
               </button>
             }
             options={userMenuOptions}
+            align="left"
           />
         </div>
       </div>

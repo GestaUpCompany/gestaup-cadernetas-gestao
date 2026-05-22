@@ -21,6 +21,11 @@ interface RegistroMaternidade {
   numero_mae?: string
   categoria_mae?: string
   escore_matriz?: string
+  id_brinco_mae?: string
+  id_chip_mae?: string
+  id_brinco_cria?: string
+  id_chip_cria?: string
+  id_provisorio_cria?: string
   sync_status?: string
   created_at: string
   updated_at?: string
@@ -97,9 +102,18 @@ export function MaternidadeDetalhes() {
       <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           <div>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Localização</h3>
+            <div className="space-y-1.5 sm:space-y-2">
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Lote:</span> {registro.lote || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Pasto:</span> {registro.pasto || '-'}</p>
+            </div>
+          </div>
+
+          <div>
             <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Informações da Mãe</h3>
             <div className="space-y-1.5 sm:space-y-2">
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Nº Mãe:</span> {registro.numero_mae || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">ID Brinco:</span> {registro.id_brinco_mae || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">ID Chip:</span> {registro.id_chip_mae || '-'}</p>
               <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Categoria Mãe:</span> {registro.categoria_mae || '-'}</p>
               <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Raça:</span> {registro.raca || '-'}</p>
             </div>
@@ -108,7 +122,9 @@ export function MaternidadeDetalhes() {
           <div>
             <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Informações da Cria</h3>
             <div className="space-y-1.5 sm:space-y-2">
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Nº Cria:</span> {registro.numero_cria || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">ID Provisório:</span> {registro.id_provisorio_cria || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">ID Brinco:</span> {registro.id_brinco_cria || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">ID Chip:</span> {registro.id_chip_cria || '-'}</p>
               <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Sexo:</span> {registro.sexo || '-'}</p>
               <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Peso (kg):</span> {registro.peso_cria_kg || '-'}</p>
             </div>
@@ -123,29 +139,6 @@ export function MaternidadeDetalhes() {
             </div>
           </div>
 
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Localização</h3>
-            <div className="space-y-1.5 sm:space-y-2">
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Lote:</span> {registro.lote || '-'}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Pasto:</span> {registro.pasto || '-'}</p>
-            </div>
-          </div>
-
-          <div className="md:col-span-2">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Metadados</h3>
-            <div className="space-y-1.5 sm:space-y-2">
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Data:</span> {(() => {
-                const [year, day, month] = registro.data.split('-')
-                return `${day}/${month}/${year}`
-              })()}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Usuário:</span> {registro.nome_usuario || '-'}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Criado em:</span> {new Date(registro.created_at).toLocaleString('pt-BR')}</p>
-              {registro.updated_at && (
-                <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Atualizado em:</span> {new Date(registro.updated_at).toLocaleString('pt-BR')}</p>
-              )}
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Sync Status:</span> {registro.sync_status || '-'}</p>
-            </div>
-          </div>
         </div>
       </Card>
     </div>

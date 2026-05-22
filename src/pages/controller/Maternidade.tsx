@@ -21,6 +21,9 @@ interface RegistroMaternidade {
   raca?: string
   numero_mae?: string
   categoria_mae?: string
+  id_brinco_mae?: string
+  id_chip_mae?: string
+  id_provisorio_cria?: string
   sync_status?: string
   created_at: string
 }
@@ -33,6 +36,7 @@ export function Maternidade() {
   const [searchTerm, setSearchTerm] = useState('')
   const [dataInicio, setDataInicio] = useState('')
   const [dataFim, setDataFim] = useState('')
+  const [dateSortOrder, setDateSortOrder] = useState<'asc' | 'desc'>('desc')
 
   useEffect(() => {
     loadRegistros()
@@ -70,10 +74,15 @@ export function Maternidade() {
 
   const filteredRegistros = registros.filter((registro) => {
     const matchesSearch =
-      (registro.numero_mae && registro.numero_mae.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.id_brinco_mae && registro.id_brinco_mae.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.id_chip_mae && registro.id_chip_mae.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.categoria_mae && registro.categoria_mae.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.lote && registro.lote.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.pasto && registro.pasto.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.numero_cria && registro.numero_cria.toLowerCase().includes(searchTerm.toLowerCase()))
+      (registro.id_provisorio_cria && registro.id_provisorio_cria.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.sexo && registro.sexo.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.peso_cria_kg && registro.peso_cria_kg.toString().includes(searchTerm.toLowerCase())) ||
+      (registro.tipo_parto && registro.tipo_parto.toLowerCase().includes(searchTerm.toLowerCase()))
 
     const convertDate = (dateStr: string) => {
       if (!dateStr) return ''
@@ -85,6 +94,10 @@ export function Maternidade() {
     const matchesDataFim = !dataFim || registro.data <= convertDate(dataFim)
 
     return matchesSearch && matchesDataInicio && matchesDataFim
+  }).sort((a, b) => {
+    const dateA = new Date(a.data)
+    const dateB = new Date(b.data)
+    return dateSortOrder === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime()
   })
 
   if (loading) {
@@ -119,7 +132,7 @@ export function Maternidade() {
             <label className="block text-sm font-medium text-gray-700 mb-1">Buscar</label>
             <Input
               type="text"
-              placeholder="Nº mãe, lote, pasto, Nº cria..."
+              placeholder="ID brinco, ID chip, lote, pasto, ID provisório..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -162,10 +175,16 @@ export function Maternidade() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nº Mãe</th>
+                <th
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                  onClick={() => setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')}
+                >
+                  Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Brinco</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Chip</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoria Mãe</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nº Cria</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Provisório</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sexo</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Peso (kg)</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo Parto</th>
@@ -187,13 +206,16 @@ export function Maternidade() {
                     })()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {registro.numero_mae || '-'}
+                    {registro.id_brinco_mae || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {registro.id_chip_mae || '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {registro.categoria_mae || '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {registro.numero_cria || '-'}
+                    {registro.id_provisorio_cria || '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {registro.sexo || '-'}

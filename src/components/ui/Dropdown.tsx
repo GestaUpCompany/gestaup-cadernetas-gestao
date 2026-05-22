@@ -55,8 +55,8 @@ export function Dropdown({ trigger, options, align = 'right' }: DropdownProps) {
           
           {/* Dropdown/Bottom Sheet */}
           <div
-            className={`z-50 bg-white rounded-t-2xl sm:rounded-lg shadow-lg border border-gray-200 py-1 animate-slide-down sm:absolute sm:mt-2 sm:w-56 fixed sm:relative bottom-0 left-0 right-0 sm:bottom-auto sm:left-auto sm:right-auto ${
-              align === 'right' ? 'sm:right-0' : 'sm:left-0'
+            className={`z-50 bg-white rounded-t-2xl sm:rounded-lg shadow-lg border border-gray-200 py-1 animate-slide-down sm:absolute sm:mt-2 sm:w-56 fixed bottom-0 left-0 right-0 sm:bottom-auto sm:left-auto ${
+              align === 'right' ? 'sm:right-0' : 'sm:right-0'
             }`}
           >
             <div className="flex justify-center sm:hidden mb-2 pt-2">

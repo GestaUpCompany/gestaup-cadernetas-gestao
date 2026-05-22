@@ -93,7 +93,10 @@ export function RegistrosClimaDetalhes() {
           <div>
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Informações Gerais</h3>
             <div className="space-y-2">
-              <p><span className="font-medium">Data:</span> {registro.data}</p>
+              <p><span className="font-medium">Data:</span> {(() => {
+                const [year, month, day] = registro.data.split('-')
+                return `${day}/${month}/${year}`
+              })()}</p>
               <p><span className="font-medium">Responsável:</span> {registro.responsavel}</p>
               <p><span className="font-medium">Temperatura Média:</span> {registro.temperatura_media ? `${registro.temperatura_media}°C` : '-'}</p>
             </div>
@@ -108,23 +111,38 @@ export function RegistrosClimaDetalhes() {
 
           <div className="md:col-span-2">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Medições</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Medições:</span> {registro.medicoes && registro.medicoes.length > 0 ? JSON.stringify(registro.medicoes, null, 2) : 'Nenhuma medição registrada'}</p>
-            </div>
+            {registro.medicoes && registro.medicoes.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pluviômetro</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Localização</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medição (mm)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {registro.medicoes.map((medicao: any, index: number) => (
+                      <tr key={index}>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                          {medicao.pluviometro_nome || '-'}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                          {medicao.pluviometro_localizacao || '-'}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                          {medicao.medicao !== undefined ? `${medicao.medicao} mm` : '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-gray-600">Nenhuma medição registrada</p>
+            )}
           </div>
 
-          <div className="md:col-span-2">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Metadados</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Usuário:</span> {registro.nome_usuario || '-'}</p>
-              <p><span className="font-medium">Criado em:</span> {new Date(registro.created_at).toLocaleString('pt-BR')}</p>
-              {registro.updated_at && (
-                <p><span className="font-medium">Atualizado em:</span> {new Date(registro.updated_at).toLocaleString('pt-BR')}</p>
-              )}
-              <p><span className="font-medium">Sync Status:</span> {registro.sync_status || '-'}</p>
-              <p><span className="font-medium">Version:</span> {registro.version || '-'}</p>
-            </div>
-          </div>
         </div>
       </Card>
     </div>
