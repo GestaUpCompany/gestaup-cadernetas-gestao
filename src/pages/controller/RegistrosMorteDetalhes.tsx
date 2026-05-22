@@ -17,24 +17,14 @@ interface RegistroMorte {
   idade?: string
   peso_vivo?: number
   causa_morte?: string
-  secrecao_orificios: boolean
-  secrecao_orificios_obs?: string
-  sintomas_pneumonia: boolean
-  sintomas_pneumonia_obs?: string
-  inchaco: boolean
-  inchaco_obs?: string
-  incoordenacao_tremores: boolean
-  incoordenacao_tremores_obs?: string
-  apatia_fraqueza: boolean
-  apatia_fraqueza_obs?: string
-  presenca_sangue: boolean
-  presenca_sangue_obs?: string
-  desordens_digestivas: boolean
-  desordens_digestivas_obs?: string
   brinco?: string
   chip?: string
   categoria?: string
   categoria_outros?: string
+  diagnosticos?: Record<string, any>
+  escore?: number
+  nutricao_atual?: string
+  nutricao_anterior?: string
   sync_status?: string
   version?: number
   created_at: string
@@ -100,83 +90,106 @@ export function RegistrosMorteDetalhes() {
     )
   }
 
-  const sinaisClinicos = []
-  if (registro.secrecao_orificios) sinaisClinicos.push(`Secreção pelos orifícios${registro.secrecao_orificios_obs ? ` (${registro.secrecao_orificios_obs})` : ''}`)
-  if (registro.sintomas_pneumonia) sinaisClinicos.push(`Sintomas de pneumonia${registro.sintomas_pneumonia_obs ? ` (${registro.sintomas_pneumonia_obs})` : ''}`)
-  if (registro.inchaco) sinaisClinicos.push(`Inchaço${registro.inchaco_obs ? ` (${registro.inchaco_obs})` : ''}`)
-  if (registro.incoordenacao_tremores) sinaisClinicos.push(`Incoordenação/Tremores${registro.incoordenacao_tremores_obs ? ` (${registro.incoordenacao_tremores_obs})` : ''}`)
-  if (registro.apatia_fraqueza) sinaisClinicos.push(`Apatia/Fraqueza${registro.apatia_fraqueza_obs ? ` (${registro.apatia_fraqueza_obs})` : ''}`)
-  if (registro.presenca_sangue) sinaisClinicos.push(`Presença de sangue${registro.presenca_sangue_obs ? ` (${registro.presenca_sangue_obs})` : ''}`)
-  if (registro.desordens_digestivas) sinaisClinicos.push(`Desordens digestivas${registro.desordens_digestivas_obs ? ` (${registro.desordens_digestivas_obs})` : ''}`)
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">Detalhes do Registro de Morte</h2>
+    <div className="space-y-4 sm:space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Detalhes do Registro de Morte</h2>
         <Button variant="secondary" onClick={() => navigate('/controller/morte')}>
           Voltar
         </Button>
       </div>
 
-      <Card className="bg-white p-6" disableHover>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
+        <div className="space-y-6">
+          {/* Informações Gerais */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Informações Gerais</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Data:</span> {(() => {
-                const [year, day, month] = registro.data.split('-')
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Informações Gerais</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Data:</span> {(() => {
+                const [year, month, day] = registro.data.split('-')
                 return `${day}/${month}/${year}`
               })()}</p>
-              <p><span className="font-medium">Lote:</span> {registro.lote || '-'}</p>
-              <p><span className="font-medium">Pasto:</span> {registro.pasto || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Lote:</span> {registro.lote || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Pasto:</span> {registro.pasto || '-'}</p>
             </div>
           </div>
 
+          {/* Identificação do Animal */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Identificação</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Brinco:</span> {registro.brinco || '-'}</p>
-              <p><span className="font-medium">Chip:</span> {registro.chip || '-'}</p>
-              <p><span className="font-medium">Categoria:</span> {registro.categoria || '-'}{registro.categoria === 'outros' && registro.categoria_outros ? ` (${registro.categoria_outros})` : ''}</p>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Identificação do Animal</h3>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <p className="text-sm"><span className="font-medium text-gray-700">Brinco:</span> {registro.brinco || '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Chip:</span> {registro.chip || '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Categoria:</span> {registro.categoria || '-'}{registro.categoria === 'outros' && registro.categoria_outros ? ` (${registro.categoria_outros})` : ''}</p>
+              </div>
             </div>
           </div>
 
+          {/* Características */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Características</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Sexo:</span> {registro.sexo || '-'}</p>
-              <p><span className="font-medium">Raça:</span> {registro.raca || '-'}</p>
-              <p><span className="font-medium">Idade:</span> {registro.idade || '-'}</p>
-              <p><span className="font-medium">Peso Vivo (kg):</span> {registro.peso_vivo || '-'}</p>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Características</h3>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
+                <p className="text-sm"><span className="font-medium text-gray-700">Sexo:</span> {registro.sexo || '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Raça:</span> {registro.raca || '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Idade:</span> {registro.idade || '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Peso Vivo (kg):</span> {registro.peso_vivo || '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Escore:</span> {registro.escore !== undefined && registro.escore !== null ? registro.escore : '-'}</p>
+              </div>
             </div>
           </div>
 
+          {/* Causa da Morte */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Causa da Morte</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Causa:</span> {registro.causa_morte || '-'}</p>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Causa da Morte</h3>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <p className="text-sm"><span className="font-medium text-gray-700">Causa:</span> {registro.causa_morte || '-'}</p>
             </div>
           </div>
 
-          <div className="md:col-span-2">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Sinais Clínicos</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Sinais:</span> {sinaisClinicos.length > 0 ? sinaisClinicos.join(', ') : 'Nenhum sinal clínico registrado'}</p>
+          {/* Sinais Clínicos */}
+          {registro.diagnosticos && Object.keys(registro.diagnosticos).length > 0 && (
+            <div>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Sinais Clínicos</h3>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm font-medium text-gray-700">
+                  {Object.entries(registro.diagnosticos)
+                    .filter(([_, value]: [string, any]) => value.valor === 'S')
+                    .map(([key]: [string, any]) => {
+                      const mapping: Record<string, string> = {
+                        secrecaoOrificios: 'Secreção pelos orifícios',
+                        sintomasPneumonia: 'Sintomas de pneumonia',
+                        inchaco: 'Inchaço',
+                        incoordenacaoTremores: 'Incoordenação/Tremores',
+                        apatiaFraqueza: 'Apatia/Fraqueza',
+                        presencaSangue: 'Presença de sangue',
+                        desordensDigestivas: 'Desordens digestivas',
+                        morteSubita: 'Morte Súbita',
+                        animalSozinho: 'Animal Sozinho'
+                      }
+                      return mapping[key] || key
+                    })
+                    .join(', ') || 'Nenhum sinal clínico registrado'}
+                </p>
+              </div>
             </div>
-          </div>
+          )}
 
-          <div className="md:col-span-2">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Metadados</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Usuário:</span> {registro.nome_usuario || '-'}</p>
-              <p><span className="font-medium">Criado em:</span> {new Date(registro.created_at).toLocaleString('pt-BR')}</p>
-              {registro.updated_at && (
-                <p><span className="font-medium">Atualizado em:</span> {new Date(registro.updated_at).toLocaleString('pt-BR')}</p>
-              )}
-              <p><span className="font-medium">Sync Status:</span> {registro.sync_status || '-'}</p>
-              <p><span className="font-medium">Version:</span> {registro.version || '-'}</p>
+          {/* Nutrição */}
+          {(registro.nutricao_atual || registro.nutricao_anterior) && (
+            <div>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Nutrição</h3>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <p className="text-sm"><span className="font-medium text-gray-700">Nutrição Atual:</span> {registro.nutricao_atual || '-'}</p>
+                  <p className="text-sm"><span className="font-medium text-gray-700">Nutrição Anterior:</span> {registro.nutricao_anterior || '-'}</p>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </Card>
     </div>

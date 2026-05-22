@@ -31,6 +31,7 @@ export function Bebedouros() {
   const [searchTerm, setSearchTerm] = useState('')
   const [dataInicio, setDataInicio] = useState('')
   const [dataFim, setDataFim] = useState('')
+  const [dateSortOrder, setDateSortOrder] = useState<'asc' | 'desc'>('desc')
 
   useEffect(() => {
     loadRegistros()
@@ -73,7 +74,9 @@ export function Bebedouros() {
       (registro.responsavel && registro.responsavel.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.lote && registro.lote.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.pasto && registro.pasto.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.categoria && registro.categoria.toLowerCase().includes(searchTerm.toLowerCase()))
+      (registro.numero_bebedouro && registro.numero_bebedouro.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.leitura_bebedouro && registro.leitura_bebedouro.toString().includes(searchTerm.toLowerCase())) ||
+      (registro.observacao && registro.observacao.toLowerCase().includes(searchTerm.toLowerCase()))
 
     // Converter data do input (yyyy-mm-dd) para formato do banco (yyyy-dd-mm)
     const convertDate = (dateStr: string) => {
@@ -86,6 +89,10 @@ export function Bebedouros() {
     const matchesDataFim = !dataFim || registro.data <= convertDate(dataFim)
 
     return matchesSearch && matchesDataInicio && matchesDataFim
+  }).sort((a, b) => {
+    const dateA = new Date(a.data)
+    const dateB = new Date(b.data)
+    return dateSortOrder === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime()
   })
 
   if (loading) {
@@ -120,7 +127,7 @@ export function Bebedouros() {
             <label className="block text-sm font-medium text-gray-700 mb-1">Buscar</label>
             <Input
               type="text"
-              placeholder="Responsável, lote, pasto, categoria..."
+              placeholder="Responsável, lote, pasto, nº bebedouro, leitura, observação..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -163,11 +170,15 @@ export function Bebedouros() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
+                <th
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                  onClick={() => setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')}
+                >
+                  Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Responsável</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lote</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pasto</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoria</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nº Bebedouro</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leitura</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Observação</th>
@@ -182,7 +193,7 @@ export function Bebedouros() {
                 >
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {(() => {
-                      const [year, day, month] = registro.data.split('-')
+                      const [year, month, day] = registro.data.split('-')
                       return `${day}/${month}/${year}`
                     })()}
                   </td>
@@ -194,9 +205,6 @@ export function Bebedouros() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {registro.pasto || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {registro.categoria || '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {registro.numero_bebedouro || '-'}

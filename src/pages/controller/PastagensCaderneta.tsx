@@ -35,6 +35,7 @@ export function PastagensCaderneta() {
   const [searchTerm, setSearchTerm] = useState('')
   const [dataInicio, setDataInicio] = useState('')
   const [dataFim, setDataFim] = useState('')
+  const [dateSortOrder, setDateSortOrder] = useState<'asc' | 'desc'>('desc')
 
   useEffect(() => {
     loadRegistros()
@@ -73,11 +74,22 @@ export function PastagensCaderneta() {
   }
 
   const filteredRegistros = registros.filter((registro) => {
+    const totalAnimais = (registro.vaca || 0) + (registro.touro || 0) + (registro.bezerro || 0) + (registro.boi_magro || 0) + (registro.garrote || 0) + (registro.novilha || 0)
+
     const matchesSearch =
       (registro.manejador && registro.manejador.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.lote && registro.lote.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.pasto_saida && registro.pasto_saida.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.pasto_entrada && registro.pasto_entrada.toLowerCase().includes(searchTerm.toLowerCase()))
+      (registro.avaliacao_saida && registro.avaliacao_saida.toString().includes(searchTerm.toLowerCase())) ||
+      (registro.pasto_entrada && registro.pasto_entrada.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.avaliacao_entrada && registro.avaliacao_entrada.toString().includes(searchTerm.toLowerCase())) ||
+      (registro.vaca && registro.vaca.toString().includes(searchTerm.toLowerCase())) ||
+      (registro.touro && registro.touro.toString().includes(searchTerm.toLowerCase())) ||
+      (registro.bezerro && registro.bezerro.toString().includes(searchTerm.toLowerCase())) ||
+      (registro.boi_magro && registro.boi_magro.toString().includes(searchTerm.toLowerCase())) ||
+      (registro.garrote && registro.garrote.toString().includes(searchTerm.toLowerCase())) ||
+      (registro.novilha && registro.novilha.toString().includes(searchTerm.toLowerCase())) ||
+      totalAnimais.toString().includes(searchTerm.toLowerCase())
 
     // Converter data do input (yyyy-mm-dd) para formato do banco (yyyy-dd-mm)
     const convertDate = (dateStr: string) => {
@@ -90,6 +102,10 @@ export function PastagensCaderneta() {
     const matchesDataFim = !dataFim || registro.data <= convertDate(dataFim)
 
     return matchesSearch && matchesDataInicio && matchesDataFim
+  }).sort((a, b) => {
+    const dateA = new Date(a.data)
+    const dateB = new Date(b.data)
+    return dateSortOrder === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime()
   })
 
   if (loading) {
@@ -171,7 +187,12 @@ export function PastagensCaderneta() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
+                <th
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                  onClick={() => setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')}
+                >
+                  Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Manejador</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lote</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pasto Saída</th>
@@ -193,7 +214,7 @@ export function PastagensCaderneta() {
                   >
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {(() => {
-                        const [year, day, month] = registro.data.split('-')
+                        const [year, month, day] = registro.data.split('-')
                         return `${day}/${month}/${year}`
                       })()}
                     </td>

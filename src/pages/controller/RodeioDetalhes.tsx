@@ -18,17 +18,11 @@ interface RegistroRodeio {
   boi?: number
   garrote?: number
   novilha?: number
+  total_cabecas?: number
   escore_fezes?: number
   escore_gado?: number
   equipe?: number
-  escore_gado_ideal?: boolean
-  agua_boa_bebedouro?: boolean
-  pastagem_adequada?: boolean
-  animais_doentes_bichados?: boolean
-  cercas_cochos?: boolean
-  carrapatos_moscas?: boolean
-  animais_entrevero?: boolean
-  animal_morto?: boolean
+  diagnosticos?: any
   sync_status?: string
   created_at: string
   updated_at?: string
@@ -92,15 +86,14 @@ export function RodeioDetalhes() {
     )
   }
 
-  const problemas = []
-  if (!registro.escore_gado_ideal) problemas.push('Escore')
-  if (!registro.agua_boa_bebedouro) problemas.push('Água')
-  if (!registro.pastagem_adequada) problemas.push('Pastagem')
-  if (registro.animais_doentes_bichados) problemas.push('Doentes')
-  if (!registro.cercas_cochos) problemas.push('Cercas')
-  if (registro.carrapatos_moscas) problemas.push('Carrapatos')
-  if (registro.animais_entrevero) problemas.push('Entrevero')
-  if (registro.animal_morto) problemas.push('Morto')
+  const formatProblemKey = (key: string) => {
+    return key
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/^./, str => str.toUpperCase())
+      .trim()
+  }
+
+  const problemas = registro.diagnosticos ? Object.keys(registro.diagnosticos).filter(key => registro.diagnosticos[key]).map(formatProblemKey) : []
 
   return (
     <div className="space-y-6">
@@ -111,57 +104,67 @@ export function RodeioDetalhes() {
         </Button>
       </div>
 
-      <Card className="bg-white p-6" disableHover>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
+        <div className="space-y-6">
+          {/* Informações Gerais */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Informações Gerais</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Data:</span> {(() => {
-                const [year, day, month] = registro.data.split('-')
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Informações Gerais</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Data:</span> {(() => {
+                const [year, month, day] = registro.data.split('-')
                 return `${day}/${month}/${year}`
               })()}</p>
-              <p><span className="font-medium">Pasto:</span> {registro.pasto || '-'}</p>
-              <p><span className="font-medium">Lote:</span> {registro.lote || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Pasto:</span> {registro.pasto || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Lote:</span> {registro.lote || '-'}</p>
             </div>
           </div>
 
+          {/* Contagem de Animais */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Contagem de Animais</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Vaca:</span> {registro.vaca || 0}</p>
-              <p><span className="font-medium">Touro:</span> {registro.touro || 0}</p>
-              <p><span className="font-medium">Bezerro:</span> {registro.bezerro || 0}</p>
-              <p><span className="font-medium">Boi:</span> {registro.boi || 0}</p>
-              <p><span className="font-medium">Garrote:</span> {registro.garrote || 0}</p>
-              <p><span className="font-medium">Novilha:</span> {registro.novilha || 0}</p>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Contagem de Animais</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Categoria</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Quantidade</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  <tr><td className="px-4 py-2 text-sm text-gray-900">Vaca</td><td className="px-4 py-2 text-sm text-gray-900 text-right">{registro.vaca || 0}</td></tr>
+                  <tr><td className="px-4 py-2 text-sm text-gray-900">Touro</td><td className="px-4 py-2 text-sm text-gray-900 text-right">{registro.touro || 0}</td></tr>
+                  <tr><td className="px-4 py-2 text-sm text-gray-900">Bezerro</td><td className="px-4 py-2 text-sm text-gray-900 text-right">{registro.bezerro || 0}</td></tr>
+                  <tr><td className="px-4 py-2 text-sm text-gray-900">Boi</td><td className="px-4 py-2 text-sm text-gray-900 text-right">{registro.boi || 0}</td></tr>
+                  <tr><td className="px-4 py-2 text-sm text-gray-900">Garrote</td><td className="px-4 py-2 text-sm text-gray-900 text-right">{registro.garrote || 0}</td></tr>
+                  <tr><td className="px-4 py-2 text-sm text-gray-900">Novilha</td><td className="px-4 py-2 text-sm text-gray-900 text-right">{registro.novilha || 0}</td></tr>
+                  {registro.total_cabecas !== undefined && (
+                    <tr className="bg-gray-50 font-bold">
+                      <td className="px-4 py-2 text-sm text-gray-900">Total Cabeças</td>
+                      <td className="px-4 py-2 text-sm text-gray-900 text-right">{registro.total_cabecas}</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
 
+          {/* Indicadores */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Indicadores</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Escore Fezes:</span> {registro.escore_fezes || '-'}</p>
-              <p><span className="font-medium">Escore Gado:</span> {registro.escore_gado || '-'}</p>
-              <p><span className="font-medium">Equipe:</span> {registro.equipe || 0}</p>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Indicadores</h3>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <p className="text-sm"><span className="font-medium text-gray-700">Escore Fezes:</span> {registro.escore_fezes || '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Escore Gado:</span> {registro.escore_gado || '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Equipe:</span> {registro.equipe || 0}</p>
+              </div>
             </div>
           </div>
 
+          {/* Problemas Identificados */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Problemas Identificados</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Problemas:</span> {problemas.length > 0 ? problemas.join(', ') : 'Nenhum'}</p>
-            </div>
-          </div>
-
-          <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Metadados</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Usuário:</span> {registro.nome_usuario || '-'}</p>
-              <p><span className="font-medium">Criado em:</span> {new Date(registro.created_at).toLocaleString('pt-BR')}</p>
-              {registro.updated_at && (
-                <p><span className="font-medium">Atualizado em:</span> {new Date(registro.updated_at).toLocaleString('pt-BR')}</p>
-              )}
-              <p><span className="font-medium">Sync Status:</span> {registro.sync_status || '-'}</p>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Problemas Identificados</h3>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <p className="text-sm"><span className="font-medium text-gray-700">Problemas:</span> {problemas.length > 0 ? problemas.join(', ') : 'Nenhum'}</p>
             </div>
           </div>
         </div>

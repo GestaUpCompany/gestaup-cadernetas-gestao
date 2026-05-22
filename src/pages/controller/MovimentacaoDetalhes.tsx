@@ -11,22 +11,17 @@ interface RegistroMovimentacao {
   nome_usuario?: string
   data: string
   lote_origem?: string
-  lote_destino?: string
+  destino?: string
   numero_cabecas?: number
   peso_medio_kg?: number
-  vaca?: boolean
-  touro?: boolean
-  boi_gordo?: boolean
-  boi_magro?: boolean
-  garrote?: boolean
-  bezerro?: boolean
-  novilha?: boolean
-  tropa?: boolean
-  outros?: boolean
   motivo_movimentacao?: string
-  brinco_chip?: string
   causa_observacao?: string
-  causa_morte?: string
+  brinco?: string
+  chip?: string
+  tipo_saida?: string
+  tipo_entrada?: string
+  tipo_destino?: string
+  categoria?: string
   sync_status?: string
   created_at: string
   updated_at?: string
@@ -90,74 +85,62 @@ export function MovimentacaoDetalhes() {
     )
   }
 
-  const categorias = []
-  if (registro.vaca) categorias.push('Vaca')
-  if (registro.touro) categorias.push('Touro')
-  if (registro.boi_gordo) categorias.push('Boi Gordo')
-  if (registro.boi_magro) categorias.push('Boi Magro')
-  if (registro.garrote) categorias.push('Garrote')
-  if (registro.bezerro) categorias.push('Bezerro')
-  if (registro.novilha) categorias.push('Novilha')
-  if (registro.tropa) categorias.push('Tropa')
-  if (registro.outros) categorias.push('Outros')
-
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">Detalhes do Registro de Movimentação</h2>
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Detalhes do Registro de Movimentação</h2>
         <Button variant="secondary" onClick={() => navigate('/controller/movimentacao')}>
           Voltar
         </Button>
       </div>
 
-      <Card className="bg-white p-6" disableHover>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
+        <div className="space-y-6">
+          {/* Informações Gerais */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Informações Gerais</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Data:</span> {(() => {
-                const [year, day, month] = registro.data.split('-')
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Informações Gerais</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Data:</span> {(() => {
+                const [year, month, day] = registro.data.split('-')
                 return `${day}/${month}/${year}`
               })()}</p>
-              <p><span className="font-medium">Lote Origem:</span> {registro.lote_origem || '-'}</p>
-              <p><span className="font-medium">Lote Destino:</span> {registro.lote_destino || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Lote Origem:</span> {registro.lote_origem || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Destino:</span> {registro.destino || '-'}</p>
             </div>
           </div>
 
+          {/* Quantidades */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Quantidades</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Nº Cabeças:</span> {registro.numero_cabecas || 0}</p>
-              <p><span className="font-medium">Peso Médio (kg):</span> {registro.peso_medio_kg || 0}</p>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Quantidades</h3>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <p className="text-sm"><span className="font-medium text-gray-700">Nº Cabeças:</span> {registro.numero_cabecas || 0}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Peso Médio (kg):</span> {registro.peso_medio_kg || 0}</p>
+              </div>
             </div>
           </div>
 
+          {/* Categorias */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Categorias</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Categorias:</span> {categorias.length > 0 ? categorias.join(', ') : '-'}</p>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Categorias</h3>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <p className="text-sm"><span className="font-medium text-gray-700">Categoria:</span> {registro.categoria || '-'}</p>
             </div>
           </div>
 
+          {/* Motivação */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Motivação</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Motivo:</span> {registro.motivo_movimentacao || '-'}</p>
-              <p><span className="font-medium">Brinco/Chip:</span> {registro.brinco_chip || '-'}</p>
-              <p><span className="font-medium">Observação:</span> {registro.causa_observacao || '-'}</p>
-              <p><span className="font-medium">Causa Morte:</span> {registro.causa_morte || '-'}</p>
-            </div>
-          </div>
-
-          <div className="md:col-span-2">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Metadados</h3>
-            <div className="space-y-2">
-              <p><span className="font-medium">Usuário:</span> {registro.nome_usuario || '-'}</p>
-              <p><span className="font-medium">Criado em:</span> {new Date(registro.created_at).toLocaleString('pt-BR')}</p>
-              {registro.updated_at && (
-                <p><span className="font-medium">Atualizado em:</span> {new Date(registro.updated_at).toLocaleString('pt-BR')}</p>
-              )}
-              <p><span className="font-medium">Sync Status:</span> {registro.sync_status || '-'}</p>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Motivação</h3>
+            <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <p className="text-sm"><span className="font-medium text-gray-700">Motivo:</span> {registro.motivo_movimentacao || '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Brinco:</span> {registro.brinco || '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Chip:</span> {registro.chip || '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Tipo Saída:</span> {registro.tipo_saida || '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Tipo Entrada:</span> {registro.tipo_entrada || '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Tipo Destino:</span> {registro.tipo_destino || '-'}</p>
+              </div>
+              {registro.causa_observacao && <p className="text-sm"><span className="font-medium text-gray-700">Observação:</span> {registro.causa_observacao}</p>}
             </div>
           </div>
         </div>

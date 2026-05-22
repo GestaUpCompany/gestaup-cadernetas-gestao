@@ -52,6 +52,7 @@ export function Rodeio() {
   const [searchTerm, setSearchTerm] = useState('')
   const [dataInicio, setDataInicio] = useState('')
   const [dataFim, setDataFim] = useState('')
+  const [dateSortOrder, setDateSortOrder] = useState<'asc' | 'desc'>('desc')
 
   useEffect(() => {
     loadRegistros()
@@ -92,7 +93,10 @@ export function Rodeio() {
   const filteredRegistros = registros.filter((registro) => {
     const matchesSearch =
       (registro.pasto && registro.pasto.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.lote && registro.lote.toLowerCase().includes(searchTerm.toLowerCase()))
+      (registro.lote && registro.lote.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.total_cabecas && registro.total_cabecas.toString().includes(searchTerm.toLowerCase())) ||
+      (registro.equipe && registro.equipe.toString().includes(searchTerm.toLowerCase())) ||
+      (registro.escore_fezes && registro.escore_fezes.toString().includes(searchTerm.toLowerCase()))
 
     // Converter data do input (yyyy-mm-dd) para formato do banco (yyyy-dd-mm)
     const convertDate = (dateStr: string) => {
@@ -105,6 +109,10 @@ export function Rodeio() {
     const matchesDataFim = !dataFim || registro.data <= convertDate(dataFim)
 
     return matchesSearch && matchesDataInicio && matchesDataFim
+  }).sort((a, b) => {
+    const dateA = new Date(a.data)
+    const dateB = new Date(b.data)
+    return dateSortOrder === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime()
   })
 
   if (loading) {
@@ -139,7 +147,7 @@ export function Rodeio() {
             <label className="block text-sm font-medium text-gray-700 mb-1">Buscar</label>
             <Input
               type="text"
-              placeholder="Pasto, lote..."
+              placeholder="Pasto, lote, total cabeças, equipe, escore fezes..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -186,64 +194,49 @@ export function Rodeio() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
+                <th
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                  onClick={() => setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')}
+                >
+                  Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pasto</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lote</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Cabeças</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Equipe</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tratados</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Escore Fezes</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Problemas</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredRegistros.map((registro) => {
-                const problemas = []
-                if (!registro.escore_gado_ideal) problemas.push('Escore')
-                if (!registro.agua_boa_bebedouro) problemas.push('Água')
-                if (!registro.pastagem_adequada) problemas.push('Pastagem')
-                if (registro.animais_doentes) problemas.push('Doentes')
-                if (!registro.cercas_cochos) problemas.push('Cercas')
-                if (registro.carrapatos_moscas) problemas.push('Carrapatos')
-                if (registro.animais_entrevero) problemas.push('Entrevero')
-                if (registro.animal_morto) problemas.push('Morto')
-
-                return (
-                  <tr
-                    key={registro.id}
-                    onClick={() => navigate(`/controller/rodeio/${registro.id}`)}
-                    className=" cursor-pointer"
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {(() => {
-                        const [year, day, month] = registro.data.split('-')
-                        return `${day}/${month}/${year}`
-                      })()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {registro.pasto || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {registro.lote || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {registro.total_cabecas || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {registro.equipe || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {registro.animais_tratados || 0}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {registro.escore_fezes || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {problemas.length > 0 ? problemas.join(', ') : '-'}
-                    </td>
-                  </tr>
-                )
-              })}
+              {filteredRegistros.map((registro) => (
+                <tr
+                  key={registro.id}
+                  onClick={() => navigate(`/controller/rodeio/${registro.id}`)}
+                  className=" cursor-pointer"
+                >
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {(() => {
+                      const [year, month, day] = registro.data.split('-')
+                      return `${day}/${month}/${year}`
+                    })()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {registro.pasto || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {registro.lote || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {registro.total_cabecas || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {registro.equipe || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {registro.escore_fezes || '-'}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </Card>

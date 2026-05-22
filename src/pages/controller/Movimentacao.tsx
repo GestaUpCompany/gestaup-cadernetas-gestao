@@ -40,6 +40,7 @@ export function Movimentacao() {
   const [searchTerm, setSearchTerm] = useState('')
   const [dataInicio, setDataInicio] = useState('')
   const [dataFim, setDataFim] = useState('')
+  const [dateSortOrder, setDateSortOrder] = useState<'asc' | 'desc'>('desc')
 
   useEffect(() => {
     loadRegistros()
@@ -83,7 +84,9 @@ export function Movimentacao() {
       (registro.lote_destino && registro.lote_destino.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.brinco_chip && registro.brinco_chip.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.motivo_movimentacao && registro.motivo_movimentacao.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.causa_morte && registro.causa_morte.toLowerCase().includes(searchTerm.toLowerCase()))
+      (registro.causa_morte && registro.causa_morte.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.numero_cabecas && registro.numero_cabecas.toString().includes(searchTerm.toLowerCase())) ||
+      (registro.peso_medio_kg && registro.peso_medio_kg.toString().includes(searchTerm.toLowerCase()))
 
     // Converter data do input (yyyy-mm-dd) para formato do banco (yyyy-dd-mm)
     const convertDate = (dateStr: string) => {
@@ -96,6 +99,10 @@ export function Movimentacao() {
     const matchesDataFim = !dataFim || registro.data <= convertDate(dataFim)
 
     return matchesSearch && matchesDataInicio && matchesDataFim
+  }).sort((a, b) => {
+    const dateA = new Date(a.data)
+    const dateB = new Date(b.data)
+    return dateSortOrder === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime()
   })
 
   if (loading) {
@@ -130,7 +137,7 @@ export function Movimentacao() {
             <label className="block text-sm font-medium text-gray-700 mb-1">Buscar</label>
             <Input
               type="text"
-              placeholder="Lote origem, lote destino, brinco, motivo..."
+              placeholder="Lote origem, lote destino, nº cabeças, peso médio, motivo, causa morte, categorias..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -177,7 +184,12 @@ export function Movimentacao() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
+                <th
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                  onClick={() => setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')}
+                >
+                  Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lote Origem</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lote Destino</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nº Cabeças</th>
@@ -208,7 +220,7 @@ export function Movimentacao() {
                   >
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {(() => {
-                        const [year, day, month] = registro.data.split('-')
+                        const [year, month, day] = registro.data.split('-')
                         return `${day}/${month}/${year}`
                       })()}
                     </td>

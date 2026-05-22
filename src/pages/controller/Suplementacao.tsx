@@ -39,6 +39,7 @@ export function Suplementacao() {
   const [searchTerm, setSearchTerm] = useState('')
   const [dataInicio, setDataInicio] = useState('')
   const [dataFim, setDataFim] = useState('')
+  const [dateSortOrder, setDateSortOrder] = useState<'asc' | 'desc'>('desc')
 
   useEffect(() => {
     loadRegistros()
@@ -81,7 +82,10 @@ export function Suplementacao() {
       (registro.tratador && registro.tratador.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.lote && registro.lote.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.pasto && registro.pasto.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.produto && registro.produto.toLowerCase().includes(searchTerm.toLowerCase()))
+      (registro.produto && registro.produto.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.sacos && registro.sacos.toString().includes(searchTerm.toLowerCase())) ||
+      (registro.kg_cocho && registro.kg_cocho.toString().includes(searchTerm.toLowerCase())) ||
+      (registro.kg_deposito && registro.kg_deposito.toString().includes(searchTerm.toLowerCase()))
 
     // Converter data do input (yyyy-mm-dd) para formato do banco (yyyy-dd-mm)
     const convertDate = (dateStr: string) => {
@@ -94,6 +98,10 @@ export function Suplementacao() {
     const matchesDataFim = !dataFim || registro.data <= convertDate(dataFim)
 
     return matchesSearch && matchesDataInicio && matchesDataFim
+  }).sort((a, b) => {
+    const dateA = new Date(a.data)
+    const dateB = new Date(b.data)
+    return dateSortOrder === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime()
   })
 
   if (loading) {
@@ -128,7 +136,7 @@ export function Suplementacao() {
             <label className="block text-sm font-medium text-gray-700 mb-1">Buscar</label>
             <Input
               type="text"
-              placeholder="Tratador, lote, pasto, produto..."
+              placeholder="Tratador, produto, lote, pasto, sacos, kg cocho, kg depósito..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -175,7 +183,12 @@ export function Suplementacao() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
+                <th
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                  onClick={() => setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')}
+                >
+                  Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tratador</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produto</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lote</th>
@@ -203,7 +216,7 @@ export function Suplementacao() {
                   >
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {(() => {
-                        const [year, day, month] = registro.data.split('-')
+                        const [year, month, day] = registro.data.split('-')
                         return `${day}/${month}/${year}`
                       })()}
                     </td>

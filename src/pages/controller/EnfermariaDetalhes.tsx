@@ -10,27 +10,19 @@ interface RegistroEnfermaria {
   dispositivo_id?: string
   nome_usuario?: string
   data: string
-  brinco_chip?: string
+  brinco?: string
+  chip?: string
   lote?: string
   pasto?: string
   categoria?: string
   tratamento?: string
+  tratamento_outros?: string
   tratamento_obs?: string
-  problema_casco?: boolean
-  problema_casco_obs?: string
-  sintomas_pneumonia?: boolean
-  picado_cobra?: boolean
-  incoordenacao_tremores?: boolean
-  febre_alta?: boolean
-  presenca_sangue?: boolean
-  fraturas?: boolean
-  fraturas_obs?: string
-  desordens_digestivas?: boolean
-  desordens_digestivas_obs?: string
-  cegueira?: boolean
-  cegueira_obs?: string
-  andar_cambaleante?: boolean
-  andar_cambaleante_obs?: string
+  diagnosticos?: Record<string, any>
+  medicamentos?: Record<string, any>
+  sexo?: string
+  raca?: string
+  idade?: string
   sync_status?: string
   created_at: string
   updated_at?: string
@@ -94,18 +86,6 @@ export function EnfermariaDetalhes() {
     )
   }
 
-  const sintomas = []
-  if (registro.problema_casco) sintomas.push('Cascos')
-  if (registro.sintomas_pneumonia) sintomas.push('Pneumonia')
-  if (registro.picado_cobra) sintomas.push('Cobra')
-  if (registro.incoordenacao_tremores) sintomas.push('Incoordenação')
-  if (registro.febre_alta) sintomas.push('Febre')
-  if (registro.presenca_sangue) sintomas.push('Sangue')
-  if (registro.fraturas) sintomas.push('Fraturas')
-  if (registro.desordens_digestivas) sintomas.push('Digestivo')
-  if (registro.cegueira) sintomas.push('Cegueira')
-  if (registro.andar_cambaleante) sintomas.push('Andar Cambaleante')
-
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Header */}
@@ -116,59 +96,103 @@ export function EnfermariaDetalhes() {
         </Button>
       </div>
 
-      <Card className="bg-white p-4 sm:p-6" disableHover border-0 shadow-sm>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+      <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm" disableHover>
+        <div className="space-y-6">
+          {/* Informações Gerais */}
           <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Identificação</h3>
-            <div className="space-y-1.5 sm:space-y-2">
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Brinco/Chip:</span> {registro.brinco_chip || '-'}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Categoria:</span> {registro.categoria || '-'}</p>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Informações Gerais</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Data:</span> {(() => {
-                const [year, day, month] = registro.data.split('-')
+                const [year, month, day] = registro.data.split('-')
                 return `${day}/${month}/${year}`
               })()}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Brinco:</span> {registro.brinco || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Chip:</span> {registro.chip || '-'}</p>
             </div>
           </div>
 
+          {/* Identificação do Animal */}
+          <div>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Identificação do Animal</h3>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <p className="text-sm"><span className="font-medium text-gray-700">Categoria:</span> {registro.categoria || '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Sexo:</span> {registro.sexo || '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Raça:</span> {registro.raca || '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Idade:</span> {registro.idade || '-'}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Localização */}
           <div>
             <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Localização</h3>
-            <div className="space-y-1.5 sm:space-y-2">
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Lote:</span> {registro.lote || '-'}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Pasto:</span> {registro.pasto || '-'}</p>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <p className="text-sm"><span className="font-medium text-gray-700">Lote:</span> {registro.lote || '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Pasto:</span> {registro.pasto || '-'}</p>
+              </div>
             </div>
           </div>
 
+          {/* Tratamento */}
           <div>
             <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Tratamento</h3>
-            <div className="space-y-1.5 sm:space-y-2">
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Tratamento:</span> {registro.tratamento || '-'}</p>
-              {registro.tratamento_obs && <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Obs Tratamento:</span> {registro.tratamento_obs}</p>}
+            <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+              <p className="text-sm"><span className="font-medium text-gray-700">Tratamento:</span> {registro.tratamento || '-'}</p>
+              {registro.tratamento_outros && <p className="text-sm"><span className="font-medium text-gray-700">Tratamento Outros:</span> {registro.tratamento_outros}</p>}
+              {registro.tratamento_obs && <p className="text-sm"><span className="font-medium text-gray-700">Observação:</span> {registro.tratamento_obs}</p>}
             </div>
           </div>
 
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Sintomas</h3>
-            <div className="space-y-1.5 sm:space-y-2">
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Sintomas:</span> {sintomas.length > 0 ? sintomas.join(', ') : 'Nenhum'}</p>
-              {registro.problema_casco_obs && <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Obs Cascos:</span> {registro.problema_casco_obs}</p>}
-              {registro.fraturas_obs && <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Obs Fraturas:</span> {registro.fraturas_obs}</p>}
-              {registro.desordens_digestivas_obs && <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Obs Digestivo:</span> {registro.desordens_digestivas_obs}</p>}
-              {registro.cegueira_obs && <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Obs Cegueira:</span> {registro.cegueira_obs}</p>}
-              {registro.andar_cambaleante_obs && <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Obs Andar Cambaleante:</span> {registro.andar_cambaleante_obs}</p>}
+          {/* Diagnósticos */}
+          {registro.diagnosticos && Object.keys(registro.diagnosticos).length > 0 && (
+            <div>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Diagnósticos</h3>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm font-medium text-gray-700">
+                  {Object.entries(registro.diagnosticos)
+                    .filter(([_, value]: [string, any]) => value.valor === 'S')
+                    .map(([key]: [string, any]) => {
+                      const mapping: Record<string, string> = {
+                        bicheira: 'Bicheira',
+                        cegueira: 'Cegueira',
+                        fraturas: 'Fraturas',
+                        febreAlta: 'Febre Alta',
+                        picadoCobra: 'Picado por Cobra',
+                        presencaSangue: 'Presença de Sangue',
+                        andarCambaleante: 'Andar Cambaleante',
+                        pododermiteCascos: 'Pododermite/Cascos',
+                        sintomasPneumonia: 'Sintomas de Pneumonia',
+                        desordensDigestivas: 'Desordens Digestivas',
+                        incoordenacaoTremores: 'Incoordenação/Tremores'
+                      }
+                      return mapping[key] || key
+                    })
+                    .join(', ') || 'Nenhum diagnóstico positivo'}
+                </p>
+              </div>
             </div>
-          </div>
+          )}
 
-          <div className="md:col-span-2">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Metadados</h3>
-            <div className="space-y-1.5 sm:space-y-2">
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Usuário:</span> {registro.nome_usuario || '-'}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Criado em:</span> {new Date(registro.created_at).toLocaleString('pt-BR')}</p>
-              {registro.updated_at && (
-                <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Atualizado em:</span> {new Date(registro.updated_at).toLocaleString('pt-BR')}</p>
-              )}
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Sync Status:</span> {registro.sync_status || '-'}</p>
+          {/* Medicamentos */}
+          {registro.medicamentos && Array.isArray(registro.medicamentos) && registro.medicamentos.length > 0 && (
+            <div>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Medicamentos</h3>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="space-y-3">
+                  {registro.medicamentos.map((med: any, index: number) => (
+                    <div key={index} className="border-b border-gray-200 pb-2 last:border-0 last:pb-0">
+                      <p className="text-sm"><span className="font-medium text-gray-700">Nome:</span> {med.nomeComercial || '-'}</p>
+                      <p className="text-sm"><span className="font-medium text-gray-700">Tipo:</span> {med.tipo || '-'}</p>
+                      <p className="text-sm"><span className="font-medium text-gray-700">Dose Aplicada:</span> {med.doseAplicada || '-'}</p>
+                      {med.doseRecomendada && <p className="text-sm"><span className="font-medium text-gray-700">Dose Recomendada:</span> {med.doseRecomendada}</p>}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </Card>
     </div>

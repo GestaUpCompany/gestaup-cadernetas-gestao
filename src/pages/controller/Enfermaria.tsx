@@ -13,7 +13,8 @@ interface RegistroEnfermaria {
   data: string
   pasto?: string
   lote?: string
-  brinco_chip?: string
+  brinco?: string
+  chip?: string
   categoria?: string
   tratamento?: string
   tratamento_outros?: string
@@ -45,6 +46,7 @@ export function Enfermaria() {
   const [searchTerm, setSearchTerm] = useState('')
   const [dataInicio, setDataInicio] = useState('')
   const [dataFim, setDataFim] = useState('')
+  const [dateSortOrder, setDateSortOrder] = useState<'asc' | 'desc'>('desc')
 
   useEffect(() => {
     loadRegistros()
@@ -84,11 +86,13 @@ export function Enfermaria() {
 
   const filteredRegistros = registros.filter((registro) => {
     const matchesSearch =
-      (registro.brinco_chip && registro.brinco_chip.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.brinco && registro.brinco.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.chip && registro.chip.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.lote && registro.lote.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.pasto && registro.pasto.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.categoria && registro.categoria.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.tratamento && registro.tratamento.toLowerCase().includes(searchTerm.toLowerCase()))
+      (registro.tratamento && registro.tratamento.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.tratamento_outros && registro.tratamento_outros.toLowerCase().includes(searchTerm.toLowerCase()))
 
     // Converter data do input (yyyy-mm-dd) para formato do banco (yyyy-dd-mm)
     const convertDate = (dateStr: string) => {
@@ -101,6 +105,10 @@ export function Enfermaria() {
     const matchesDataFim = !dataFim || registro.data <= convertDate(dataFim)
 
     return matchesSearch && matchesDataInicio && matchesDataFim
+  }).sort((a, b) => {
+    const dateA = new Date(a.data)
+    const dateB = new Date(b.data)
+    return dateSortOrder === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime()
   })
 
   if (loading) {
@@ -135,7 +143,7 @@ export function Enfermaria() {
             <label className="block text-sm font-medium text-gray-700 mb-1">Buscar</label>
             <Input
               type="text"
-              placeholder="Brinco/Chip, lote, pasto, tratamento..."
+              placeholder="Brinco, chip, categoria, tratamento, lote, pasto, sintomas..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -182,60 +190,53 @@ export function Enfermaria() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Brinco/Chip</th>
+                <th
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                  onClick={() => setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')}
+                >
+                  Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Brinco</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chip</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoria</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tratamento</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lote</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pasto</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sintomas</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredRegistros.map((registro) => {
-                const sintomas = []
-                if (registro.problema_casco) sintomas.push('Cascos')
-                if (registro.sintomas_pneumonia) sintomas.push('Pneumonia')
-                if (registro.picado_cobra) sintomas.push('Cobra')
-                if (registro.incoordenacao_tremores) sintomas.push('Incoordenação')
-                if (registro.febre_alta) sintomas.push('Febre')
-                if (registro.presenca_sangue) sintomas.push('Sangue')
-                if (registro.fraturas) sintomas.push('Fraturas')
-                if (registro.desordens_digestivas) sintomas.push('Digestivo')
-
-                return (
-                  <tr
-                    key={registro.id}
-                    onClick={() => navigate(`/controller/enfermaria/${registro.id}`)}
-                    className=" cursor-pointer"
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {(() => {
-                        const [year, day, month] = registro.data.split('-')
-                        return `${day}/${month}/${year}`
-                      })()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {registro.brinco_chip || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {registro.lote || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {registro.pasto || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {registro.categoria || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {registro.tratamento || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {sintomas.length > 0 ? sintomas.join(', ') : '-'}
-                    </td>
-                  </tr>
-                )
-              })}
+              {filteredRegistros.map((registro) => (
+                <tr
+                  key={registro.id}
+                  onClick={() => navigate(`/controller/enfermaria/${registro.id}`)}
+                  className=" cursor-pointer"
+                >
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {(() => {
+                      const [year, month, day] = registro.data.split('-')
+                      return `${day}/${month}/${year}`
+                    })()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {registro.brinco || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {registro.chip || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {registro.categoria || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {registro.tratamento || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {registro.lote || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {registro.pasto || '-'}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </Card>
