@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton } from '../../components/ui'
 import { exportToCSV } from '../../utils/exportCSV'
 
 interface RegistroOperacoesMaquinas {
@@ -95,58 +95,69 @@ export function RegistrosOperacoesMaquinas() {
   })
 
   if (loading) {
-    return <p className="text-gray-600">Carregando...</p>
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <CardSkeleton />
+        <CardSkeleton />
+        <CardSkeleton />
+        <CardSkeleton />
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-2xl font-bold text-gray-800">Caderneta de Operações de Máquinas</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Caderneta de Operações de Máquinas</h2>
       </div>
 
-      <Card className="bg-white p-6" disableHover>
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-800">Filtros</h3>
+      <Card className="bg-white p-4 sm:p-6" disableHover>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-800">Filtros</h3>
           <Button
             onClick={() => exportToCSV(filteredRegistros, 'operacoes-maquinas-export')}
             disabled={filteredRegistros.length === 0}
+            className="w-full sm:w-auto text-sm"
           >
             Exportar CSV
           </Button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Buscar</label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+          <div className="sm:col-span-2">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Buscar</label>
             <Input
               type="text"
               placeholder="Veículo, implemento, tipo operação..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              className="text-sm"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Data Início</label>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Data Início</label>
             <Input
               type="date"
               value={dataInicio}
               onChange={(e) => setDataInicio(e.target.value)}
+              className="text-sm"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Data Fim</label>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Data Fim</label>
             <Input
               type="date"
               value={dataFim}
               onChange={(e) => setDataFim(e.target.value)}
+              className="text-sm"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">&nbsp;</label>
+          <div className="sm:col-span-2">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">&nbsp;</label>
             <Button variant="secondary" onClick={() => {
               setSearchTerm('')
               setDataInicio('')
               setDataFim('')
-            }}>
+            }} className="w-full sm:w-auto text-sm">
               Limpar Filtros
             </Button>
           </div>
@@ -154,63 +165,115 @@ export function RegistrosOperacoesMaquinas() {
       </Card>
 
       {registros.length === 0 ? (
-        <Card className="bg-white p-6 text-center" disableHover>
+        <Card className="bg-white p-4 sm:p-6 text-center" disableHover>
           <p className="text-gray-600">Nenhum registro de operações de máquinas encontrado</p>
         </Card>
       ) : filteredRegistros.length === 0 ? (
-        <Card className="bg-white p-6 text-center" disableHover>
+        <Card className="bg-white p-4 sm:p-6 text-center" disableHover>
           <p className="text-gray-600">Nenhum registro encontrado com os filtros aplicados</p>
         </Card>
       ) : (
-        <Card className="bg-white overflow-x-auto" disableHover>
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Veículo/Trator</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Implemento</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo Operação</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produto Aplicado</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Área Trabalhada</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Observação</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredRegistros.map((registro) => (
-                <tr
-                  key={registro.id}
-                  onClick={() => navigate(`/controller/operacoes-maquinas/${registro.id}`)}
-                  className=" cursor-pointer"
-                >
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {(() => {
-                      const [year, day, month] = registro.data.split('-')
-                      return `${day}/${month}/${year}`
-                    })()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {registro.veiculo_trator}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {registro.implemento_utilizado}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {registro.tipo_operacao}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {registro.produto_aplicado || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {registro.area_trabalhada || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {registro.observacao ? registro.observacao.substring(0, 50) + (registro.observacao.length > 50 ? '...' : '') : '-'}
-                  </td>
+        <>
+          {/* Mobile Card View */}
+          <div className="sm:hidden space-y-3">
+            {filteredRegistros.map((registro) => (
+              <Card
+                key={registro.id}
+                className="p-4"
+                onClick={() => navigate(`/controller/operacoes-maquinas/${registro.id}`)}
+              >
+                <div className="flex justify-between items-start mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs sm:text-sm font-medium text-gray-500">Data:</span>
+                    <span className="text-xs sm:text-sm font-semibold text-gray-800">
+                      {(() => {
+                        const [year, day, month] = registro.data.split('-')
+                        return `${day}/${month}/${year}`
+                      })()}
+                    </span>
+                  </div>
+                </div>
+                <div className="space-y-2 text-xs sm:text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Veículo/Trator:</span>
+                    <span className="text-gray-800 font-medium">{registro.veiculo_trator || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Implemento:</span>
+                    <span className="text-gray-800 font-medium">{registro.implemento_utilizado || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Tipo Operação:</span>
+                    <span className="text-gray-800 font-medium">{registro.tipo_operacao || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Produto Aplicado:</span>
+                    <span className="text-gray-800 font-medium">{registro.produto_aplicado || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Área Trabalhada:</span>
+                    <span className="text-gray-800 font-medium">{registro.area_trabalhada || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Observação:</span>
+                    <span className="text-gray-800 font-medium truncate max-w-[150px]">{registro.observacao ? registro.observacao.substring(0, 50) + (registro.observacao.length > 50 ? '...' : '') : '-'}</span>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+
+          {/* Desktop Table View */}
+          <Card className="bg-white overflow-x-auto hidden sm:block" disableHover>
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Veículo/Trator</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Implemento</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo Operação</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produto Aplicado</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Área Trabalhada</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Observação</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredRegistros.map((registro) => (
+                  <tr
+                    key={registro.id}
+                    onClick={() => navigate(`/controller/operacoes-maquinas/${registro.id}`)}
+                    className="cursor-pointer hover:bg-gray-50 transition-colors"
+                  >
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      {(() => {
+                        const [year, day, month] = registro.data.split('-')
+                        return `${day}/${month}/${year}`
+                      })()}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      {registro.veiculo_trator}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      {registro.implemento_utilizado}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      {registro.tipo_operacao}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      {registro.produto_aplicado || '-'}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      {registro.area_trabalhada || '-'}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      {registro.observacao ? registro.observacao.substring(0, 50) + (registro.observacao.length > 50 ? '...' : '') : '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+        </>
       )}
     </div>
   )

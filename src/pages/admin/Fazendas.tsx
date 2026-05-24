@@ -27,10 +27,10 @@ export function FazendasList() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">Fazendas</h2>
-        <Button onClick={() => navigate('/admin/fazendas/nova')}>
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Fazendas</h2>
+        <Button onClick={() => navigate('/admin/fazendas/nova')} className="w-full sm:w-auto text-sm">
           Nova Fazenda
         </Button>
       </div>
@@ -38,46 +38,46 @@ export function FazendasList() {
       {loading ? (
         <p className="text-gray-600">Carregando...</p>
       ) : fazendas.length === 0 ? (
-        <Card className="bg-white p-6 text-center">
+        <Card className="bg-white p-4 sm:p-6 text-center">
           <p className="text-gray-600 mb-4">Nenhuma fazenda cadastrada</p>
-          <Button onClick={() => navigate('/admin/fazendas/nova')}>
+          <Button onClick={() => navigate('/admin/fazendas/nova')} className="text-sm">
             Criar Primeira Fazenda
           </Button>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {fazendas.map((fazenda) => (
             <Card
               key={fazenda.id}
-              className="bg-white p-6 hover:shadow-lg transition-shadow cursor-pointer"
+              className="bg-white p-4 sm:p-6 hover:shadow-lg transition-shadow cursor-pointer"
               onClick={() => navigate(`/admin/fazendas/${fazenda.id}/detalhes`)}
             >
-              <div className="flex items-start gap-4">
+              <div className="flex items-start gap-3 sm:gap-4">
                 {fazenda.logo_url ? (
                   <img
                     src={fazenda.logo_url}
                     alt={fazenda.nome}
-                    className="w-16 h-16 rounded-lg object-cover"
+                    className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg object-cover flex-shrink-0"
                   />
                 ) : (
-                  <div className="w-16 h-16 rounded-lg bg-gray-200 flex items-center justify-center">
-                    <span className="text-2xl text-gray-400">F</span>
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg bg-gray-200 flex items-center justify-center flex-shrink-0">
+                    <span className="text-xl sm:text-2xl text-gray-400">F</span>
                   </div>
                 )}
-                <div className="flex-1">
-                  <h3 className="font-bold text-gray-800 mb-1">{fazenda.nome}</h3>
-                  <p className="text-sm text-gray-600 mb-2">ID: {fazenda.acesso_id}</p>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-gray-800 mb-1 text-sm sm:text-base truncate">{fazenda.nome}</h3>
+                  <p className="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-2">ID: {fazenda.acesso_id}</p>
                   {fazenda.email && (
-                    <p className="text-sm text-gray-600">{fazenda.email}</p>
+                    <p className="text-xs sm:text-sm text-gray-600 truncate">{fazenda.email}</p>
                   )}
                   {fazenda.telefone && (
-                    <p className="text-sm text-gray-600">{fazenda.telefone}</p>
+                    <p className="text-xs sm:text-sm text-gray-600 truncate">{fazenda.telefone}</p>
                   )}
                 </div>
               </div>
-              <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between items-center">
+              <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 <span
-                  className={`px-3 py-1 rounded-full text-sm ${
+                  className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm ${
                     fazenda.ativo
                       ? 'bg-green-100 text-green-800'
                       : 'bg-red-100 text-red-800'
@@ -85,13 +85,14 @@ export function FazendasList() {
                 >
                   {fazenda.ativo ? 'Ativa' : 'Inativa'}
                 </span>
-                <div className="flex gap-2">
+                <div className="flex gap-2 w-full sm:w-auto">
                   <Button
                     variant="secondary"
                     onClick={(e) => {
                       e.stopPropagation()
                       toggleAtivo(fazenda)
                     }}
+                    className="flex-1 sm:flex-none text-xs sm:text-sm"
                   >
                     {fazenda.ativo ? 'Desativar' : 'Ativar'}
                   </Button>
@@ -101,6 +102,7 @@ export function FazendasList() {
                       e.stopPropagation()
                       navigate(`/admin/fazendas/${fazenda.id}`)
                     }}
+                    className="flex-1 sm:flex-none text-xs sm:text-sm"
                   >
                     Editar
                   </Button>

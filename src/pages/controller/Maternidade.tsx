@@ -102,7 +102,7 @@ export function Maternidade() {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         <CardSkeleton />
         <CardSkeleton />
         <CardSkeleton />
@@ -112,54 +112,58 @@ export function Maternidade() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-2xl font-bold text-gray-800">Caderneta de Maternidade</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Caderneta de Maternidade</h2>
       </div>
 
-      <Card className="bg-white p-6" disableHover>
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-800">Filtros</h3>
+      <Card className="bg-white p-4 sm:p-6" disableHover>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-800">Filtros</h3>
           <Button
             onClick={() => exportToCSV(filteredRegistros, 'maternidade-export')}
             disabled={filteredRegistros.length === 0}
+            className="w-full sm:w-auto text-sm"
           >
             Exportar CSV
           </Button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Buscar</label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+          <div className="sm:col-span-2">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Buscar</label>
             <Input
               type="text"
               placeholder="ID brinco, ID chip, lote, pasto, ID provisório..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              className="text-sm"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Data Início</label>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Data Início</label>
             <Input
               type="date"
               value={dataInicio}
               onChange={(e) => setDataInicio(e.target.value)}
+              className="text-sm"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Data Fim</label>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Data Fim</label>
             <Input
               type="date"
               value={dataFim}
               onChange={(e) => setDataFim(e.target.value)}
+              className="text-sm"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">&nbsp;</label>
+          <div className="sm:col-span-2">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">&nbsp;</label>
             <Button variant="secondary" onClick={() => {
               setSearchTerm('')
               setDataInicio('')
               setDataFim('')
-            }}>
+            }} className="w-full sm:w-auto text-sm">
               Limpar Filtros
             </Button>
           </div>
@@ -167,76 +171,149 @@ export function Maternidade() {
       </Card>
 
       {registros.length === 0 ? (
-        <Card className="bg-white p-6 text-center" disableHover>
+        <Card className="bg-white p-4 sm:p-6 text-center" disableHover>
           <p className="text-gray-600">Nenhum registro de maternidade encontrado</p>
         </Card>
       ) : (
-        <Card className="bg-white overflow-x-auto" disableHover>
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-                  onClick={() => setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')}
-                >
-                  Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Brinco</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Chip</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoria Mãe</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Provisório</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sexo</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Peso (kg)</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo Parto</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lote</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pasto</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredRegistros.map((registro) => (
-                <tr
-                  key={registro.id}
-                  onClick={() => navigate(`/controller/maternidade/${registro.id}`)}
-                  className="cursor-pointer hover:bg-gray-50 transition-colors"
-                >
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {(() => {
-                      const [year, day, month] = registro.data.split('-')
-                      return `${day}/${month}/${year}`
-                    })()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {registro.id_brinco_mae || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {registro.id_chip_mae || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {registro.categoria_mae || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {registro.id_provisorio_cria || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {registro.sexo || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {registro.peso_cria_kg || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {registro.tipo_parto || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {registro.lote || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {registro.pasto || '-'}
-                  </td>
+        <>
+          {/* Mobile Card View */}
+          <div className="sm:hidden space-y-3">
+            {filteredRegistros.map((registro) => (
+              <Card
+                key={registro.id}
+                className="bg-white p-4 cursor-pointer hover:shadow-lg transition-shadow"
+                onClick={() => navigate(`/controller/maternidade/${registro.id}`)}
+              >
+                <div className="flex justify-between items-start mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs sm:text-sm font-medium text-gray-500">Data:</span>
+                    <span className="text-xs sm:text-sm font-semibold text-gray-800">
+                      {(() => {
+                        const [year, day, month] = registro.data.split('-')
+                        return `${day}/${month}/${year}`
+                      })()}
+                    </span>
+                  </div>
+                  <span
+                    className="text-xs sm:text-sm px-2 py-1 rounded-full bg-primary/10 text-primary"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')
+                    }}
+                  >
+                    {dateSortOrder === 'asc' ? '↑' : '↓'}
+                  </span>
+                </div>
+                <div className="space-y-2 text-xs sm:text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">ID Brinco:</span>
+                    <span className="text-gray-800 font-medium">{registro.id_brinco_mae || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">ID Chip:</span>
+                    <span className="text-gray-800 font-medium">{registro.id_chip_mae || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Categoria Mãe:</span>
+                    <span className="text-gray-800 font-medium">{registro.categoria_mae || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">ID Provisório:</span>
+                    <span className="text-gray-800 font-medium">{registro.id_provisorio_cria || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Sexo:</span>
+                    <span className="text-gray-800 font-medium">{registro.sexo || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Peso (kg):</span>
+                    <span className="text-gray-800 font-medium">{registro.peso_cria_kg || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Tipo Parto:</span>
+                    <span className="text-gray-800 font-medium">{registro.tipo_parto || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Lote:</span>
+                    <span className="text-gray-800 font-medium">{registro.lote || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Pasto:</span>
+                    <span className="text-gray-800 font-medium">{registro.pasto || '-'}</span>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+
+          {/* Desktop Table View */}
+          <Card className="bg-white overflow-x-auto hidden sm:block" disableHover>
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th
+                    className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => setDateSortOrder(dateSortOrder === 'asc' ? 'desc' : 'asc')}
+                  >
+                    Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
+                  </th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Brinco</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Chip</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoria Mãe</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Provisório</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sexo</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Peso (kg)</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo Parto</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lote</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pasto</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredRegistros.map((registro) => (
+                  <tr
+                    key={registro.id}
+                    onClick={() => navigate(`/controller/maternidade/${registro.id}`)}
+                    className="cursor-pointer hover:bg-gray-50 transition-colors"
+                  >
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      {(() => {
+                        const [year, day, month] = registro.data.split('-')
+                        return `${day}/${month}/${year}`
+                      })()}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      {registro.id_brinco_mae || '-'}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      {registro.id_chip_mae || '-'}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      {registro.categoria_mae || '-'}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      {registro.id_provisorio_cria || '-'}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      {registro.sexo || '-'}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      {registro.peso_cria_kg || '-'}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      {registro.tipo_parto || '-'}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      {registro.lote || '-'}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      {registro.pasto || '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+        </>
       )}
     </div>
   )
