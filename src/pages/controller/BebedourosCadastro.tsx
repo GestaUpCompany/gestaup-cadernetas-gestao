@@ -397,35 +397,37 @@ export function BebedourosCadastro() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-2xl font-bold text-gray-800">Bebedouros</h2>
-        <div className="flex gap-2 items-start">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Bebedouros</h2>
+        <div className="flex flex-col sm:flex-row gap-2 items-start w-full md:w-auto">
           <Input
             type="text"
             placeholder="Buscar bebedouro..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-xs border-gray-200 focus:border-accent h-10"
+            className="w-full sm:max-w-xs border-gray-200 focus:border-accent h-10 text-sm"
           />
-          <Button onClick={() => setShowForm(true)} className="h-10">Novo Bebedouro</Button>
-          <Button onClick={downloadTemplate} variant="secondary" className="h-10">Baixar Modelo</Button>
-          <input
-            type="file"
-            accept=".xlsx,.xls"
-            onChange={handleImportExcel}
-            disabled={importing}
-            className="hidden"
-            id="import-excel"
-          />
-          <Button
-            onClick={() => document.getElementById('import-excel')?.click()}
-            variant="secondary"
-            className="h-10"
-            disabled={importing}
-          >
-            {importing ? 'Importando...' : 'Importar Excel'}
-          </Button>
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+            <Button onClick={() => setShowForm(true)} className="h-10 text-sm flex-1 sm:flex-none">Novo Bebedouro</Button>
+            <Button onClick={downloadTemplate} variant="secondary" className="h-10 text-sm flex-1 sm:flex-none">Baixar Modelo</Button>
+            <input
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={handleImportExcel}
+              disabled={importing}
+              className="hidden"
+              id="import-excel"
+            />
+            <Button
+              onClick={() => document.getElementById('import-excel')?.click()}
+              variant="secondary"
+              className="h-10 text-sm flex-1 sm:flex-none"
+              disabled={importing}
+            >
+              {importing ? 'Importando...' : 'Importar Excel'}
+            </Button>
+          </div>
         </div>
       </div>
 

@@ -664,184 +664,95 @@ export function Pastos() {
           <Button onClick={() => setShowForm(true)} className="text-sm">Criar Primeiro Pasto</Button>
         </Card>
       ) : !showForm ? (
-        <>
-          {/* Mobile Card View */}
-          <div className="sm:hidden space-y-3">
-            {pastos
-              .filter((pasto) =>
-                pasto.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (pasto.especie && pasto.especie.toLowerCase().includes(searchTerm.toLowerCase()))
-              )
-              .map((pasto) => (
-                <Card
-                  key={pasto.id}
-                  className="p-4"
-                  onClick={() => handleEdit(pasto)}
-                >
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-800 text-sm sm:text-base truncate">{pasto.nome}</h3>
-                      {pasto.area_util_ha && (
-                        <p className="text-xs sm:text-sm text-gray-500">Área: {pasto.area_util_ha} ha</p>
-                      )}
-                    </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {pastos
+            .filter((pasto) =>
+              pasto.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              (pasto.especie && pasto.especie.toLowerCase().includes(searchTerm.toLowerCase()))
+            )
+            .map((pasto) => (
+              <Card
+                key={pasto.id}
+                className="p-4 sm:p-6 border-0 shadow-sm cursor-pointer transition-all hover:shadow-xl"
+                onClick={() => handleEdit(pasto)}
+              >
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                  <div>
+                    <h3 className="font-semibold text-gray-800 text-base sm:text-lg">{pasto.nome}</h3>
+                    {pasto.area_util_ha && (
+                      <p className="text-xs sm:text-sm text-gray-500">Área: {pasto.area_util_ha} ha</p>
+                    )}
+                  </div>
+                  <div className="flex gap-2 items-center">
                     <span
-                      className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium flex-shrink-0 ${
+                      className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium self-start md:self-auto ${
                         pasto.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                       }`}
                     >
                       {pasto.ativo ? 'Ativo' : 'Inativo'}
                     </span>
                   </div>
-                  <div className="space-y-2 text-xs sm:text-sm">
-                    {pasto.setor && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Setor:</span>
-                        <span className="text-gray-800 font-medium">{pasto.setor}</span>
-                      </div>
-                    )}
-                    {pasto.tipo && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Tipo:</span>
-                        <span className="text-gray-800 font-medium">{pasto.tipo}</span>
-                      </div>
-                    )}
-                    {pasto.especie && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Espécie:</span>
-                        <span className="text-gray-800 font-medium">{pasto.especie}</span>
-                      </div>
-                    )}
-                    {pasto.metragem_cocho_m && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Metragem Cocho:</span>
-                        <span className="text-gray-800 font-medium">{pasto.metragem_cocho_m} m</span>
-                      </div>
-                    )}
-                    {pasto.nivel_degradacao && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Nível Degradação:</span>
-                        <span className="text-gray-800 font-medium">{pasto.nivel_degradacao}</span>
-                      </div>
-                    )}
-                    {(pasto.altura_entrada_cm || pasto.altura_saida_cm) && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Alturas:</span>
-                        <span className="text-gray-800 font-medium">
-                          {pasto.altura_entrada_cm && `Entrada: ${pasto.altura_entrada_cm} cm`}
-                          {pasto.altura_entrada_cm && pasto.altura_saida_cm && ' | '}
-                          {pasto.altura_saida_cm && `Saída: ${pasto.altura_saida_cm} cm`}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex gap-2 mt-3">
-                    <Button
-                      variant="secondary"
-                      className="flex-1 text-xs sm:text-sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleToggleActive(pasto)
-                      }}
-                    >
-                      {pasto.ativo ? 'Desativar' : 'Ativar'}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      className="flex-1 text-xs sm:text-sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleEdit(pasto)
-                      }}
-                    >
-                      Editar
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      className="flex-1 text-xs sm:text-sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDeleteClick(pasto.id)
-                      }}
-                    >
-                      Excluir
-                    </Button>
-                  </div>
-                </Card>
-              ))}
-          </div>
-
-          {/* Desktop Table View */}
-          <Card className="bg-white overflow-x-auto hidden sm:block" disableHover>
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Setor</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Área (ha)</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Espécie</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Metragem Cocho (m)</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nível Degradação</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {pastos
-                  .filter((pasto) =>
-                    pasto.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    (pasto.especie && pasto.especie.toLowerCase().includes(searchTerm.toLowerCase()))
-                  )
-                  .map((pasto) => (
-                    <tr key={pasto.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900 font-medium">{pasto.nome}</td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">{pasto.setor || '-'}</td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">{pasto.tipo || '-'}</td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">{pasto.area_util_ha || '-'}</td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">{pasto.especie || '-'}</td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">{pasto.metragem_cocho_m || '-'}</td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">{pasto.nivel_degradacao || '-'}</td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
-                        <span
-                          className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium ${
-                            pasto.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                          }`}
-                        >
-                          {pasto.ativo ? 'Ativo' : 'Inativo'}
-                        </span>
-                      </td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
-                        <div className="flex gap-2">
-                          <Button
-                            variant="secondary"
-                            className="text-xs sm:text-sm"
-                            onClick={() => handleToggleActive(pasto)}
-                          >
-                            {pasto.ativo ? 'Desativar' : 'Ativar'}
-                          </Button>
-                          <Button
-                            variant="secondary"
-                            className="text-xs sm:text-sm"
-                            onClick={() => handleEdit(pasto)}
-                          >
-                            Editar
-                          </Button>
-                          <Button
-                            variant="secondary"
-                            className="text-xs sm:text-sm"
-                            onClick={() => handleDeleteClick(pasto.id)}
-                          >
-                            Excluir
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </Card>
-        </>
+                </div>
+                <div className="space-y-2 mb-4">
+                  {pasto.setor && (
+                    <p className="text-sm text-gray-500"><span className="font-medium">Setor:</span> {pasto.setor}</p>
+                  )}
+                  {pasto.tipo && (
+                    <p className="text-sm text-gray-500"><span className="font-medium">Tipo:</span> {pasto.tipo}</p>
+                  )}
+                  {pasto.especie && (
+                    <p className="text-sm text-gray-500"><span className="font-medium">Espécie:</span> {pasto.especie}</p>
+                  )}
+                  {pasto.metragem_cocho_m && (
+                    <p className="text-sm text-gray-500"><span className="font-medium">Metragem Cocho:</span> {pasto.metragem_cocho_m} m</p>
+                  )}
+                  {pasto.nivel_degradacao && (
+                    <p className="text-sm text-gray-500"><span className="font-medium">Nível Degradação:</span> {pasto.nivel_degradacao}</p>
+                  )}
+                  {(pasto.altura_entrada_cm || pasto.altura_saida_cm) && (
+                    <p className="text-sm text-gray-500">
+                      <span className="font-medium">Alturas:</span>{' '}
+                      {pasto.altura_entrada_cm && `Entrada: ${pasto.altura_entrada_cm} cm`}
+                      {pasto.altura_entrada_cm && pasto.altura_saida_cm && ' | '}
+                      {pasto.altura_saida_cm && `Saída: ${pasto.altura_saida_cm} cm`}
+                    </p>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-1 sm:gap-2">
+                  <Button
+                    variant="secondary"
+                    className="flex-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleToggleActive(pasto)
+                    }}
+                  >
+                    {pasto.ativo ? 'Desativar' : 'Ativar'}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="flex-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleEdit(pasto)
+                    }}
+                  >
+                    Editar
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="flex-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleDeleteClick(pasto.id)
+                    }}
+                  >
+                    Excluir
+                  </Button>
+                </div>
+              </Card>
+            ))}
+        </div>
       ) : null}
 
       <ConfirmModal
