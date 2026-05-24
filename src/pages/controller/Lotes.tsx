@@ -708,7 +708,7 @@ setFormData({
                 </div>
               </div>
 
-              <div className="w-1/4">
+              <div className="w-1/4 mt-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Outra Categoria
                 </label>
