@@ -226,6 +226,38 @@ export function Lotes() {
     }
   }, [formData.quant_inicial, formData.morte, formData.consumo, formData.abate, formData.transf_saida, formData.transf_entrada])
 
+  // Calcular dias_restantes_meta automaticamente: (data_meta - data_pesagem) - periodo
+  useEffect(() => {
+    if (formData.data_meta && formData.data && formData.periodo) {
+      const dataMeta = new Date(formData.data_meta)
+      const dataPesagem = new Date(formData.data)
+      const periodo = parseFloat(formData.periodo)
+
+      // Calculate difference in days
+      const diffTime = dataMeta.getTime() - dataPesagem.getTime()
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+      // Calculate dias restantes
+      const diasRestantes = diffDays - periodo
+
+      setFormData({ ...formData, dias_restantes_meta: diasRestantes.toString() })
+    }
+  }, [formData.data_meta, formData.data, formData.periodo])
+
+  // Calcular periodo_liberacao_sisbov automaticamente: data_liberacao_sisbov - CURRENT_DATE
+  useEffect(() => {
+    if (formData.data_liberacao_sisbov) {
+      const dataLiberacao = new Date(formData.data_liberacao_sisbov)
+      const currentDate = new Date()
+
+      // Calculate difference in days
+      const diffTime = dataLiberacao.getTime() - currentDate.getTime()
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+      setFormData({ ...formData, periodo_liberacao_sisbov: diffDays.toString() })
+    }
+  }, [formData.data_liberacao_sisbov])
+
   const loadLotes = async () => {
     if (!user) return
 
