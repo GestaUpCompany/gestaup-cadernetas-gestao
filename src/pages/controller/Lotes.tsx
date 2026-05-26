@@ -399,6 +399,18 @@ export function Lotes() {
     setFormData({ ...formData, categorias: updatedCategorias })
   }, [formData.categorias.map(cat => cat.data_meta).join(',')])
 
+  // Calcular preco_animal_kg automaticamente para cada categoria: preco_animal_cab / peso_vivo_kg
+  useEffect(() => {
+    const updatedCategorias = formData.categorias.map(cat => {
+      if (cat.preco_animal_cab && cat.peso_vivo_kg && cat.peso_vivo_kg > 0) {
+        const precoKg = cat.preco_animal_cab / cat.peso_vivo_kg
+        return { ...cat, preco_animal_kg: precoKg }
+      }
+      return cat
+    })
+    setFormData({ ...formData, categorias: updatedCategorias })
+  }, [formData.categorias.map(cat => `${cat.preco_animal_cab}-${cat.peso_vivo_kg}`).join(',')])
+
   const loadLotes = async () => {
     if (!user) return
 
@@ -485,27 +497,10 @@ export function Lotes() {
       fazenda_id: fazendaId,
       nome: formData.nome,
       n_cabecas: formData.numero_cabecas ? parseInt(formData.numero_cabecas) : null,
-      peso_vivo_kg: formData.peso_vivo_kg ? parseFloat(formData.peso_vivo_kg) : null,
-      peso_vivo_meta_kg: formData.peso_vivo_meta_kg ? parseFloat(formData.peso_vivo_meta_kg) : null,
-      data_meta: formData.data_meta || null,
       qtd_bezerros: formData.quantidade_bezerros ? parseInt(formData.quantidade_bezerros) : null,
-      quant_inicial: formData.quant_inicial ? parseInt(formData.quant_inicial) : null,
-      data_pesagem: formData.data || null,
-      peso_entrada: formData.peso_entrada ? parseFloat(formData.peso_entrada) : null,
-      gmd: formData.gmd ? parseFloat(formData.gmd) : null,
-      periodo: formData.periodo ? parseInt(formData.periodo) : null,
       ativo: formData.ativo,
       pasto_id: formData.pasto_id || null,
       sistema_producao: formData.sistema_producao || null,
-      rc_inicial: formData.rc_inicial ? parseFloat(formData.rc_inicial) : null,
-      preco_kg: formData.preco_animal_kg ? parseFloat(formData.preco_animal_kg) : null,
-      preco_cab: formData.preco_animal_cab ? parseFloat(formData.preco_animal_cab) : null,
-      raca: formData.raca || null,
-      sexo: formData.sexo || null,
-      idade_meses: formData.idade ? parseInt(formData.idade) : null,
-      custo_operacional: formData.custo_operacional ? parseFloat(formData.custo_operacional) : null,
-      estrategia_nutricional: formData.estrategia_nutricional || null,
-      dias_restantes_meta: formData.dias_restantes_meta ? parseInt(formData.dias_restantes_meta) : null,
       produtor_rural: formData.produtor_rural || null,
       propriedade_origem: formData.propriedade_origem || null,
       numero_contrato: formData.numero_contrato || null,
@@ -1223,14 +1218,10 @@ setFormData({
                             <Input
                               type="number"
                               step="0.01"
-                              value={cat.preco_animal_kg?.toString() || ''}
-                              onChange={(e) => {
-                                const updatedCategorias = [...formData.categorias]
-                                updatedCategorias[catIndex] = { ...cat, preco_animal_kg: e.target.value ? parseFloat(e.target.value) : undefined }
-                                setFormData({ ...formData, categorias: updatedCategorias })
-                              }}
-                              placeholder="Ex: 12.50"
-                              className="border-gray-200 focus:border-accent"
+                              value={cat.preco_animal_kg?.toFixed(2) || ''}
+                              disabled
+                              placeholder="0.00"
+                              className="border-gray-200 focus:border-accent opacity-60"
                             />
                           </div>
                           <div>
@@ -1330,26 +1321,24 @@ setFormData({
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    N° Contrato <span className="text-red-500">*</span>
+                    N° Contrato
                   </label>
                   <Input
                     type="text"
                     value={formData.numero_contrato}
                     onChange={(e) => setFormData({ ...formData, numero_contrato: e.target.value })}
-                    required
                     placeholder="Ex: 12345"
                     className="border-gray-200 focus:border-accent"
                   />
                 </div>
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Mês de Competência <span className="text-red-500">*</span>
+                    Mês de Competência
                   </label>
                   <Input
                     type="month"
                     value={formData.mes_competencia}
                     onChange={(e) => setFormData({ ...formData, mes_competencia: e.target.value })}
-                    required
                     className="border-gray-200 focus:border-accent"
                   />
                 </div>
