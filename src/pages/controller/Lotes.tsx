@@ -5,12 +5,43 @@ import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton, ConfirmModal, CardItem } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 
+interface LoteCategoria {
+  id?: string
+  categoria: string
+  quant_inicial?: number
+  data_pesagem?: string
+  peso_entrada?: number
+  peso_entrada_arrobas?: number
+  gmd?: number
+  periodo?: number
+  rc_inicial?: number
+  quant_atual?: number
+  peso_vivo_kg?: number
+  peso_vivo_meta_kg?: number
+  dias_restantes_meta?: number
+  data_meta?: string
+  estrategia_nutricional?: string
+  raca?: string
+  sexo?: string
+  idade?: number
+  preco_animal_kg?: number
+  preco_animal_cab?: number
+  custo_operacional?: number
+  morte?: number
+  consumo?: number
+  abate?: number
+  transf_entrada?: number
+  transf_saida?: number
+  qtd_bezerros?: number
+  ativo?: boolean
+}
+
 interface Lote {
   id: string
   fazenda_id: string
   nome: string
   n_cabecas?: number
-  categorias?: string[]
+  categorias?: LoteCategoria[]
   peso_vivo_kg?: number
   peso_vivo_meta_kg?: number
   data_meta?: string
@@ -39,6 +70,7 @@ interface Lote {
   data_liberacao_sisbov?: string
   periodo_liberacao_sisbov?: number
   data_embarque_prevista?: string
+  pasto_nome?: string
 }
 
 export function Lotes() {
@@ -53,7 +85,7 @@ export function Lotes() {
   const [formData, setFormData] = useState({
     nome: '',
     numero_cabecas: '',
-    categorias: [] as string[],
+    categorias: [] as LoteCategoria[],
     categoria_outros: '',
     peso_vivo_kg: '',
     peso_vivo_meta_kg: '',
@@ -134,15 +166,45 @@ export function Lotes() {
   }, [user])
 
   const handleCategoriaToggle = (categoria: string) => {
-    if (formData.categorias.includes(categoria)) {
+    const categoriaExists = formData.categorias.some(c => c.categoria === categoria)
+    if (categoriaExists) {
       setFormData({
         ...formData,
-        categorias: formData.categorias.filter((c) => c !== categoria),
+        categorias: formData.categorias.filter((c) => c.categoria !== categoria),
       })
     } else {
+      const novaCategoria: LoteCategoria = {
+        categoria,
+        quant_inicial: undefined,
+        data_pesagem: undefined,
+        peso_entrada: undefined,
+        peso_entrada_arrobas: undefined,
+        gmd: undefined,
+        periodo: undefined,
+        rc_inicial: undefined,
+        quant_atual: undefined,
+        peso_vivo_kg: undefined,
+        peso_vivo_meta_kg: undefined,
+        dias_restantes_meta: undefined,
+        data_meta: undefined,
+        estrategia_nutricional: undefined,
+        raca: undefined,
+        sexo: undefined,
+        idade: undefined,
+        preco_animal_kg: undefined,
+        preco_animal_cab: undefined,
+        custo_operacional: undefined,
+        morte: undefined,
+        consumo: undefined,
+        abate: undefined,
+        transf_entrada: undefined,
+        transf_saida: undefined,
+        qtd_bezerros: undefined,
+        ativo: true,
+      }
       setFormData({
         ...formData,
-        categorias: [...formData.categorias, categoria],
+        categorias: [...formData.categorias, novaCategoria],
       })
     }
   }
@@ -258,6 +320,85 @@ export function Lotes() {
     }
   }, [formData.data_liberacao_sisbov])
 
+  // Calcular peso_entrada_arrobas automaticamente para cada categoria: (peso_entrada * (rc_inicial/100)) / 15
+  useEffect(() => {
+    const updatedCategorias = formData.categorias.map(cat => {
+      if (cat.peso_entrada && cat.rc_inicial) {
+        const pesoEntradaArrobas = (cat.peso_entrada * (cat.rc_inicial / 100)) / 15
+        return { ...cat, peso_entrada_arrobas: pesoEntradaArrobas }
+      }
+      return cat
+    })
+    setFormData({ ...formData, categorias: updatedCategorias })
+  }, [formData.categorias.map(cat => `${cat.peso_entrada}-${cat.rc_inicial}`).join(',')])
+
+  // Calcular período (dias) automaticamente para cada categoria: dias desde data_pesagem até data atual
+  useEffect(() => {
+    const updatedCategorias = formData.categorias.map(cat => {
+      if (cat.data_pesagem) {
+        const dataPesagem = new Date(cat.data_pesagem)
+        const currentDate = new Date()
+        const diffTime = currentDate.getTime() - dataPesagem.getTime()
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+        return { ...cat, periodo: diffDays > 0 ? diffDays : 0 }
+      }
+      return cat
+    })
+    setFormData({ ...formData, categorias: updatedCategorias })
+  }, [formData.categorias.map(cat => cat.data_pesagem).join(',')])
+
+  // Calcular peso_vivo_kg automaticamente para cada categoria: peso_entrada + (periodo * gmd)
+  useEffect(() => {
+    const updatedCategorias = formData.categorias.map(cat => {
+      if (cat.peso_entrada && cat.gmd && cat.periodo) {
+        const pesoVivoKg = cat.peso_entrada + (cat.periodo * cat.gmd)
+        return { ...cat, peso_vivo_kg: pesoVivoKg }
+      }
+      return cat
+    })
+    setFormData({ ...formData, categorias: updatedCategorias })
+  }, [formData.categorias.map(cat => `${cat.peso_entrada}-${cat.gmd}-${cat.periodo}`).join(',')])
+
+  // Calcular data_meta automaticamente para cada categoria quando peso_vivo_meta_kg, peso_vivo_kg ou gmd mudarem
+  useEffect(() => {
+    const updatedCategorias = formData.categorias.map(cat => {
+      const pesoMeta = cat.peso_vivo_meta_kg
+      const pesoAtual = cat.peso_vivo_kg
+      const gmd = cat.gmd
+
+      if (pesoMeta && pesoAtual && gmd && gmd > 0) {
+        const diasParaMeta = (pesoMeta - pesoAtual) / gmd
+        const dataHoje = new Date()
+        const dataMeta = new Date(dataHoje.getTime() + (diasParaMeta * 24 * 60 * 60 * 1000))
+
+        // Formatar data como yyyy-mm-dd
+        const year = dataMeta.getFullYear()
+        const month = String(dataMeta.getMonth() + 1).padStart(2, '0')
+        const day = String(dataMeta.getDate()).padStart(2, '0')
+        const dataMetaFormatada = `${year}-${month}-${day}`
+
+        return { ...cat, data_meta: dataMetaFormatada }
+      }
+      return cat
+    })
+    setFormData({ ...formData, categorias: updatedCategorias })
+  }, [formData.categorias.map(cat => `${cat.peso_vivo_meta_kg}-${cat.peso_vivo_kg}-${cat.gmd}`).join(',')])
+
+  // Calcular dias_restantes_meta automaticamente para cada categoria: dias desde data atual até data_meta
+  useEffect(() => {
+    const updatedCategorias = formData.categorias.map(cat => {
+      if (cat.data_meta) {
+        const dataMeta = new Date(cat.data_meta)
+        const currentDate = new Date()
+        const diffTime = dataMeta.getTime() - currentDate.getTime()
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+        return { ...cat, dias_restantes_meta: diffDays > 0 ? diffDays : 0 }
+      }
+      return cat
+    })
+    setFormData({ ...formData, categorias: updatedCategorias })
+  }, [formData.categorias.map(cat => cat.data_meta).join(',')])
+
   const loadLotes = async () => {
     if (!user) return
 
@@ -272,18 +413,41 @@ export function Lotes() {
 
     const fazendaId = vinculos[0].fazenda_id
 
-    const { data, error } = await supabase
+    // Buscar lotes com suas categorias
+    const { data: lotesData, error: lotesError } = await supabase
       .from('lotes')
-      .select('*')
+      .select(`
+        *,
+        pastos (nome)
+      `)
       .eq('fazenda_id', fazendaId)
       .order('nome', { ascending: true })
 
-    if (error) {
-      console.error('Erro ao buscar lotes:', error)
-    } else {
-      setLotes(data as Lote[])
+    if (lotesError) {
+      console.error('Erro ao buscar lotes:', lotesError)
+      setLoading(false)
+      return
     }
 
+    // Buscar categorias para cada lote
+    const loteIds = lotesData?.map(l => l.id) || []
+    const { data: categoriasData, error: categoriasError } = await supabase
+      .from('lote_categorias')
+      .select('*')
+      .in('lote_id', loteIds)
+
+    if (categoriasError) {
+      console.error('Erro ao buscar categorias:', categoriasError)
+    }
+
+    // Combinar lotes com suas categorias
+    const lotesComCategorias = (lotesData || []).map(lote => ({
+      ...lote,
+      pasto_nome: lote.pastos?.nome,
+      categorias: (categoriasData || []).filter(cat => cat.lote_id === lote.id)
+    }))
+
+    setLotes(lotesComCategorias as Lote[])
     setLoading(false)
   }
 
@@ -310,24 +474,17 @@ export function Lotes() {
 
     const fazendaId = vinculos[0].fazenda_id
 
-    // Montar array de categorias
-    const categoriasFinal = [...formData.categorias]
-    if (formData.categoria_outros && formData.categoria_outros.trim()) {
-      categoriasFinal.push(formData.categoria_outros.trim())
-    }
-
     // Validar categorias
-    if (categoriasFinal.length === 0) {
+    if (formData.categorias.length === 0) {
       alert('Selecione pelo menos uma categoria')
       setSubmitting(false)
       return
     }
 
-const data = {
+    const loteData = {
       fazenda_id: fazendaId,
       nome: formData.nome,
       n_cabecas: formData.numero_cabecas ? parseInt(formData.numero_cabecas) : null,
-      categorias: categoriasFinal.length > 0 ? categoriasFinal : null,
       peso_vivo_kg: formData.peso_vivo_kg ? parseFloat(formData.peso_vivo_kg) : null,
       peso_vivo_meta_kg: formData.peso_vivo_meta_kg ? parseFloat(formData.peso_vivo_meta_kg) : null,
       data_meta: formData.data_meta || null,
@@ -355,31 +512,88 @@ const data = {
       mes_competencia: formData.mes_competencia || null,
       data_liberacao_sisbov: formData.data_liberacao_sisbov || null,
       periodo_liberacao_sisbov: formData.periodo_liberacao_sisbov || null,
-      data_embarque_previsto: formData.data_embarque_prevista || null,
+      data_embarque_prevista: formData.data_embarque_prevista || null,
     }
 
+    let loteId: string
     let error
 
     if (editingLote) {
       // Atualizar lote existente
       const { error: updateError } = await supabase
         .from('lotes')
-        .update(data)
+        .update(loteData)
         .eq('id', editingLote.id)
+        .select()
+        .single()
       error = updateError
+      loteId = editingLote.id
+
+      // Remover categorias antigas
+      await supabase
+        .from('lote_categorias')
+        .delete()
+        .eq('lote_id', loteId)
     } else {
       // Criar novo lote
-      const { error: insertError } = await supabase.from('lotes').insert(data)
+      const { data: newLote, error: insertError } = await supabase
+        .from('lotes')
+        .insert(loteData)
+        .select()
+        .single()
       error = insertError
+      loteId = newLote?.id || ''
     }
 
     if (error) {
       console.error('Erro ao salvar lote:', error)
+      setSubmitting(false)
+      return
+    }
+
+    // Salvar categorias em lote_categorias
+    const categoriasToInsert = formData.categorias.map(cat => ({
+      lote_id: loteId,
+      categoria: cat.categoria,
+      quant_inicial: cat.quant_inicial ? parseInt(cat.quant_inicial.toString()) : null,
+      data_pesagem: cat.data_pesagem || null,
+      peso_entrada: cat.peso_entrada ? parseFloat(cat.peso_entrada.toString()) : null,
+      peso_entrada_arrobas: cat.peso_entrada_arrobas ? parseFloat(cat.peso_entrada_arrobas.toString()) : null,
+      gmd: cat.gmd ? parseFloat(cat.gmd.toString()) : null,
+      periodo: cat.periodo ? parseInt(cat.periodo.toString()) : null,
+      rc_inicial: cat.rc_inicial ? parseFloat(cat.rc_inicial.toString()) : null,
+      quant_atual: cat.quant_atual ? parseInt(cat.quant_atual.toString()) : null,
+      peso_vivo_kg: cat.peso_vivo_kg ? parseFloat(cat.peso_vivo_kg.toString()) : null,
+      peso_vivo_meta_kg: cat.peso_vivo_meta_kg ? parseFloat(cat.peso_vivo_meta_kg.toString()) : null,
+      dias_restantes_meta: cat.dias_restantes_meta ? parseInt(cat.dias_restantes_meta.toString()) : null,
+      data_meta: cat.data_meta || null,
+      estrategia_nutricional: cat.estrategia_nutricional || null,
+      raca: cat.raca || null,
+      sexo: cat.sexo || null,
+      idade: cat.idade ? parseInt(cat.idade.toString()) : null,
+      preco_animal_kg: cat.preco_animal_kg ? parseFloat(cat.preco_animal_kg.toString()) : null,
+      preco_animal_cab: cat.preco_animal_cab ? parseFloat(cat.preco_animal_cab.toString()) : null,
+      custo_operacional: cat.custo_operacional ? parseFloat(cat.custo_operacional.toString()) : null,
+      morte: cat.morte ? parseInt(cat.morte.toString()) : 0,
+      consumo: cat.consumo ? parseInt(cat.consumo.toString()) : 0,
+      abate: cat.abate ? parseInt(cat.abate.toString()) : 0,
+      transf_entrada: cat.transf_entrada ? parseInt(cat.transf_entrada.toString()) : 0,
+      transf_saida: cat.transf_saida ? parseInt(cat.transf_saida.toString()) : 0,
+      qtd_bezerros: cat.qtd_bezerros ? parseInt(cat.qtd_bezerros.toString()) : null,
+      ativo: cat.ativo ?? true,
+    }))
+
+    const { error: categoriasError } = await supabase
+      .from('lote_categorias')
+      .insert(categoriasToInsert)
+
+    if (categoriasError) {
+      console.error('Erro ao salvar categorias:', categoriasError)
     } else {
       setFormData({
         nome: '',
         numero_cabecas: '',
-        categorias: [],
+        categorias: [] as LoteCategoria[],
         categoria_outros: '',
         peso_vivo_kg: '',
         peso_vivo_meta_kg: '',
@@ -434,24 +648,11 @@ const data = {
 
   const handleEdit = (lote: Lote) => {
     setEditingLote(lote)
-    
-// Tratar categorias - podem vir como string JSON ou array
-    let cats: string[] = []
-    if (Array.isArray(lote.categorias)) {
-      cats = lote.categorias
-    } else if (typeof lote.categorias === 'string') {
-      try {
-        const parsed = JSON.parse(lote.categorias)
-        cats = Array.isArray(parsed) ? parsed : []
-      } catch (e) {
-        cats = []
-      }
-    }
 
 setFormData({
       nome: lote.nome,
       numero_cabecas: lote.n_cabecas?.toString() || '',
-      categorias: cats,
+      categorias: lote.categorias || [],
       categoria_outros: '',
       peso_vivo_kg: lote.peso_vivo_kg?.toString() || '',
       peso_vivo_meta_kg: lote.peso_vivo_meta_kg?.toString() || '',
@@ -598,6 +799,19 @@ setFormData({
 
   return (
     <div className="space-y-6">
+      {/* Notice Banner */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-start gap-3">
+          <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div>
+            <p className="text-sm font-medium text-blue-800">Nova versão do sistema</p>
+            <p className="text-sm text-blue-700 mt-1">Você precisará adicionar todas as categorias existentes para cada lote e preencher os dados específicos de cada categoria. Para os lotes que já possuem categorias, será necessário editar os dados de cada uma corretamente. Clique em "Editar" no lote para iniciar.</p>
+          </div>
+        </div>
+      </div>
+
       {/* Header */}
       {!showForm && (
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -654,59 +868,25 @@ setFormData({
                     ))}
                   </select>
                 </div>
-                <div>
+                <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Sistema de Produção <span className="text-red-500">*</span>
                   </label>
-                  <Input
-                    type="text"
+                  <select
                     value={formData.sistema_producao}
                     onChange={(e) => setFormData({ ...formData, sistema_producao: e.target.value })}
-                    required
-                    placeholder="Ex: Cria"
-                    className="border-gray-200 focus:border-accent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Raça <span className="text-red-500">*</span>
-                  </label>
-                  <Input
-                    type="text"
-                    value={formData.raca}
-                    onChange={(e) => setFormData({ ...formData, raca: e.target.value })}
-                    required
-                    placeholder="Ex: Nelore"
-                    className="border-gray-200 focus:border-accent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Sexo <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={formData.sexo}
-                    onChange={(e) => setFormData({ ...formData, sexo: e.target.value })}
                     required
                     className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-gray-200 rounded-lg focus:outline-none focus:border-accent"
                   >
                     <option value="">Selecione</option>
-                    <option value="macho">Macho</option>
-                    <option value="fêmea">Fêmea</option>
+                    <option value="Cria">Cria</option>
+                    <option value="Confinamento">Confinamento</option>
+                    <option value="Engorda">Engorda</option>
+                    <option value="Recria">Recria</option>
+                    <option value="RIP">RIP</option>
+                    <option value="Sequestro">Sequestro</option>
+                    <option value="TIP">TIP</option>
                   </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Idade (meses) <span className="text-red-500">*</span>
-                  </label>
-                  <Input
-                    type="number"
-                    value={formData.idade}
-                    onChange={(e) => setFormData({ ...formData, idade: e.target.value })}
-                    required
-                    placeholder="Ex: 24"
-                    className="border-gray-200 focus:border-accent"
-                  />
                 </div>
               </div>
 
@@ -716,7 +896,7 @@ setFormData({
                 </label>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
                   {categoriasOpcoes.map((categoria) => {
-                    const isSelected = formData.categorias.includes(categoria)
+                    const isSelected = formData.categorias.some(c => c.categoria === categoria)
                     return (
                       <button
                         key={categoria}
@@ -752,305 +932,370 @@ setFormData({
                   className="border-gray-200 focus:border-accent"
                 />
               </div>
-            </div>
 
-            {/* Peso e Crescimento */}
-            <div className="border-t pt-4">
-              <h4 className="text-lg font-semibold text-gray-800 mb-4">Peso e Crescimento</h4>
-              <div className="grid grid-cols-6 gap-2">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Quant. Inicial
-                  </label>
-                  <Input
-                    type="number"
-                    value={formData.quant_inicial}
-                    onChange={(e) => setFormData({ ...formData, quant_inicial: e.target.value })}
-                    placeholder="0"
-                    className="border-gray-200 focus:border-accent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Data Pesagem
-                  </label>
-                  <Input
-                    type="date"
-                    value={formData.data}
-                    onChange={(e) => setFormData({ ...formData, data: e.target.value })}
-                    className="border-gray-200 focus:border-accent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Peso Entrada (kg)
-                  </label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    value={formData.peso_entrada}
-                    onChange={(e) => setFormData({ ...formData, peso_entrada: e.target.value })}
-                    placeholder="0"
-                    className="border-gray-200 focus:border-accent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    GMD (kg/cab/dia)
-                  </label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={formData.gmd}
-                    onChange={(e) => setFormData({ ...formData, gmd: e.target.value })}
-                    placeholder="0"
-                    className="border-gray-200 focus:border-accent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Período (dias) <span className="text-gray-400 text-xs">(calculado)</span>
-                  </label>
-                  <Input
-                    type="number"
-                    value={formData.periodo}
-                    onChange={(e) => setFormData({ ...formData, periodo: e.target.value })}
-                    placeholder="0"
-                    disabled
-                    className="border-gray-200 focus:border-accent opacity-60"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    RC Inicial (%) <span className="text-red-500">*</span>
-                  </label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    value={formData.rc_inicial}
-                    onChange={(e) => setFormData({ ...formData, rc_inicial: e.target.value })}
-                    required
-                    placeholder="Ex: 50"
-                    className="border-gray-200 focus:border-accent"
-                  />
-                </div>
-              </div>
+              {/* Dados Específicos por Categoria */}
+              {formData.categorias.length > 0 && (
+                <div className="border-t pt-4 mt-4">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4">Dados por Categoria</h4>
+                  {formData.categorias.map((cat, catIndex) => (
+                    <div key={catIndex} className="mb-6 p-4 bg-gray-50 rounded-lg">
+                      <h5 className="text-md font-medium text-gray-700 mb-3 capitalize">
+                        Categoria: {cat.categoria}
+                      </h5>
+                      
+                      {/* Identificação */}
+                      <div className="mb-4">
+                        <h6 className="text-sm font-semibold text-gray-600 mb-2">Identificação</h6>
+                        <div className="grid grid-cols-6 gap-2">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Raça <span className="text-red-500">*</span>
+                            </label>
+                            <select
+                              value={cat.raca || ''}
+                              onChange={(e) => {
+                                const updatedCategorias = [...formData.categorias]
+                                updatedCategorias[catIndex] = { ...cat, raca: e.target.value }
+                                setFormData({ ...formData, categorias: updatedCategorias })
+                              }}
+                              required
+                              className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-gray-200 rounded-lg focus:outline-none focus:border-accent"
+                            >
+                              <option value="">Selecione</option>
+                              <option value="Aberdeen Angus">Aberdeen Angus</option>
+                              <option value="Brahman">Brahman</option>
+                              <option value="Brangus">Brangus</option>
+                              <option value="Caracu">Caracu</option>
+                              <option value="Canchin">Canchin</option>
+                              <option value="Charolês">Charolês</option>
+                              <option value="Cruzamento">Cruzamento</option>
+                              <option value="Cruz/Nelore">Cruz/Nelore</option>
+                              <option value="GOL">GOL</option>
+                              <option value="Guzerá">Guzerá</option>
+                              <option value="Hereford">Hereford</option>
+                              <option value="Limousin">Limousin</option>
+                              <option value="Mestiço">Mestiço</option>
+                              <option value="Nelore">Nelore</option>
+                              <option value="Red Angus">Red Angus</option>
+                              <option value="SRD">SRD</option>
+                              <option value="Senepol">Senepol</option>
+                              <option value="Simental">Simental</option>
+                              <option value="Tabapuah">Tabapuah</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Sexo <span className="text-red-500">*</span>
+                            </label>
+                            <select
+                              value={cat.sexo || ''}
+                              onChange={(e) => {
+                                const updatedCategorias = [...formData.categorias]
+                                updatedCategorias[catIndex] = { ...cat, sexo: e.target.value }
+                                setFormData({ ...formData, categorias: updatedCategorias })
+                              }}
+                              required
+                              className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-gray-200 rounded-lg focus:outline-none focus:border-accent"
+                            >
+                              <option value="">Selecione</option>
+                              <option value="macho">Macho</option>
+                              <option value="fêmea">Fêmea</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Idade (meses) <span className="text-red-500">*</span>
+                            </label>
+                            <Input
+                              type="number"
+                              value={cat.idade?.toString() || ''}
+                              onChange={(e) => {
+                                const updatedCategorias = [...formData.categorias]
+                                updatedCategorias[catIndex] = { ...cat, idade: e.target.value ? parseInt(e.target.value) : undefined }
+                                setFormData({ ...formData, categorias: updatedCategorias })
+                              }}
+                              required
+                              placeholder="Ex: 24"
+                              className="border-gray-200 focus:border-accent"
+                            />
+                          </div>
+                        </div>
+                      </div>
 
-              <div className="grid grid-cols-4 gap-4 mt-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Quant. Atual (cab) <span className="text-gray-400 text-xs">(calculado)</span>
-                  </label>
-                  <Input
-                    type="number"
-                    value={formData.numero_cabecas}
-                    onChange={(e) => setFormData({ ...formData, numero_cabecas: e.target.value })}
-                    disabled
-                    placeholder="0"
-                    className="border-gray-200 focus:border-accent opacity-60"
-                  />
-                </div>
+                      {/* Quantidade e Datas */}
+                      <div className="mb-4 border-t border-gray-200 pt-4">
+                        <h6 className="text-sm font-semibold text-gray-600 mb-2">Quantidade e Datas</h6>
+                        <div className="grid grid-cols-6 gap-2">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Quant. Inicial
+                            </label>
+                            <Input
+                              type="number"
+                              value={cat.quant_inicial?.toString() || ''}
+                              onChange={(e) => {
+                                const updatedCategorias = [...formData.categorias]
+                                updatedCategorias[catIndex] = { ...cat, quant_inicial: e.target.value ? parseFloat(e.target.value) : undefined }
+                                setFormData({ ...formData, categorias: updatedCategorias })
+                              }}
+                              placeholder="0"
+                              className="border-gray-200 focus:border-accent"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Quant. Atual (cab)
+                            </label>
+                            <Input
+                              type="number"
+                              value={cat.quant_atual?.toString() || ''}
+                              onChange={(e) => {
+                                const updatedCategorias = [...formData.categorias]
+                                updatedCategorias[catIndex] = { ...cat, quant_atual: e.target.value ? parseFloat(e.target.value) : undefined }
+                                setFormData({ ...formData, categorias: updatedCategorias })
+                              }}
+                              placeholder="0"
+                              className="border-gray-200 focus:border-accent"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Data Entrada
+                            </label>
+                            <Input
+                              type="date"
+                              value={cat.data_pesagem || ''}
+                              onChange={(e) => {
+                                const updatedCategorias = [...formData.categorias]
+                                updatedCategorias[catIndex] = { ...cat, data_pesagem: e.target.value }
+                                setFormData({ ...formData, categorias: updatedCategorias })
+                              }}
+                              className="border-gray-200 focus:border-accent"
+                            />
+                          </div>
+                        </div>
+                      </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Peso Vivo Atual (kg) {formData.peso_entrada && formData.gmd && formData.periodo ? <span className="text-gray-400 text-xs">(calculado)</span> : ''}
-                  </label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    value={formData.peso_vivo_kg}
-                    onChange={(e) => setFormData({ ...formData, peso_vivo_kg: e.target.value })}
-                    placeholder="Ex: 450.5"
-                    disabled={!!(formData.peso_entrada && formData.gmd && formData.periodo)}
-                    className={`border-gray-200 focus:border-accent ${formData.peso_entrada && formData.gmd && formData.periodo ? 'opacity-60' : ''}`}
-                  />
-                </div>
+                      {/* Peso e Performance */}
+                      <div className="mb-4 border-t border-gray-200 pt-4">
+                        <h6 className="text-sm font-semibold text-gray-600 mb-2">Peso e Performance</h6>
+                        <div className="grid grid-cols-6 gap-2">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Peso Entrada (kg)
+                            </label>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              value={cat.peso_entrada?.toString() || ''}
+                              onChange={(e) => {
+                                const updatedCategorias = [...formData.categorias]
+                                updatedCategorias[catIndex] = { ...cat, peso_entrada: e.target.value ? parseFloat(e.target.value) : undefined }
+                                setFormData({ ...formData, categorias: updatedCategorias })
+                              }}
+                              placeholder="0"
+                              className="border-gray-200 focus:border-accent"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Peso Entrada (@)
+                            </label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={cat.peso_entrada_arrobas?.toFixed(2) || ''}
+                              disabled
+                              placeholder="0"
+                              className="border-gray-200 focus:border-accent opacity-60"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Peso Vivo Atual (kg)
+                            </label>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              value={cat.peso_vivo_kg?.toFixed(1) || ''}
+                              disabled
+                              placeholder="0"
+                              className="border-gray-200 focus:border-accent opacity-60"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Peso Vivo Meta (kg)
+                            </label>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              value={cat.peso_vivo_meta_kg?.toString() || ''}
+                              onChange={(e) => {
+                                const updatedCategorias = [...formData.categorias]
+                                updatedCategorias[catIndex] = { ...cat, peso_vivo_meta_kg: e.target.value ? parseFloat(e.target.value) : undefined }
+                                setFormData({ ...formData, categorias: updatedCategorias })
+                              }}
+                              placeholder="0"
+                              className="border-gray-200 focus:border-accent"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              GMD (kg/cab/dia)
+                            </label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={cat.gmd?.toString() || ''}
+                              onChange={(e) => {
+                                const updatedCategorias = [...formData.categorias]
+                                updatedCategorias[catIndex] = { ...cat, gmd: e.target.value ? parseFloat(e.target.value) : undefined }
+                                setFormData({ ...formData, categorias: updatedCategorias })
+                              }}
+                              placeholder="0"
+                              className="border-gray-200 focus:border-accent"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              RC Inicial (%)
+                            </label>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              value={cat.rc_inicial?.toString() || ''}
+                              onChange={(e) => {
+                                const updatedCategorias = [...formData.categorias]
+                                updatedCategorias[catIndex] = { ...cat, rc_inicial: e.target.value ? parseFloat(e.target.value) : undefined }
+                                setFormData({ ...formData, categorias: updatedCategorias })
+                              }}
+                              placeholder="Ex: 50"
+                              className="border-gray-200 focus:border-accent"
+                            />
+                          </div>
+                          <div className="col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Data Meta
+                            </label>
+                            <Input
+                              type="date"
+                              value={cat.data_meta || ''}
+                              disabled
+                              className="border-gray-200 focus:border-accent opacity-60"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Dias Restantes Meta
+                            </label>
+                            <Input
+                              type="number"
+                              value={cat.dias_restantes_meta?.toString() || ''}
+                              disabled
+                              placeholder="0"
+                              className="border-gray-200 focus:border-accent opacity-60"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Período (dias)
+                            </label>
+                            <Input
+                              type="number"
+                              value={cat.periodo?.toString() || ''}
+                              disabled
+                              placeholder="0"
+                              className="border-gray-200 focus:border-accent opacity-60"
+                            />
+                          </div>
+                        </div>
+                      </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Peso Vivo Meta (kg)
-                  </label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    value={formData.peso_vivo_meta_kg}
-                    onChange={(e) => setFormData({ ...formData, peso_vivo_meta_kg: e.target.value })}
-                    placeholder="Ex: 500"
-                    className="border-gray-200 focus:border-accent"
-                  />
-                </div>
+                      {/* Financeiro */}
+                      <div className="mb-4 border-t border-gray-200 pt-4">
+                        <h6 className="text-sm font-semibold text-gray-600 mb-2">Financeiro</h6>
+                        <div className="grid grid-cols-6 gap-2">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Preço (R$/kg)
+                            </label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={cat.preco_animal_kg?.toString() || ''}
+                              onChange={(e) => {
+                                const updatedCategorias = [...formData.categorias]
+                                updatedCategorias[catIndex] = { ...cat, preco_animal_kg: e.target.value ? parseFloat(e.target.value) : undefined }
+                                setFormData({ ...formData, categorias: updatedCategorias })
+                              }}
+                              placeholder="Ex: 12.50"
+                              className="border-gray-200 focus:border-accent"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Preço (R$/cab)
+                            </label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={cat.preco_animal_cab?.toString() || ''}
+                              onChange={(e) => {
+                                const updatedCategorias = [...formData.categorias]
+                                updatedCategorias[catIndex] = { ...cat, preco_animal_cab: e.target.value ? parseFloat(e.target.value) : undefined }
+                                setFormData({ ...formData, categorias: updatedCategorias })
+                              }}
+                              placeholder="Ex: 5300.00"
+                              className="border-gray-200 focus:border-accent"
+                            />
+                          </div>
+                          <div className="col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 whitespace-nowrap">
+                              Custo Operacional (R$/cab/Per.)
+                            </label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={cat.custo_operacional?.toString() || ''}
+                              onChange={(e) => {
+                                const updatedCategorias = [...formData.categorias]
+                                updatedCategorias[catIndex] = { ...cat, custo_operacional: e.target.value ? parseFloat(e.target.value) : undefined }
+                                setFormData({ ...formData, categorias: updatedCategorias })
+                              }}
+                              placeholder="Ex: 1.80"
+                              className="border-gray-200 focus:border-accent"
+                            />
+                          </div>
+                        </div>
+                      </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Dias Restantes para Meta <span className="text-gray-400 text-xs">(calculado)</span>
-                  </label>
-                  <Input
-                    type="number"
-                    value={formData.dias_restantes_meta}
-                    onChange={(e) => setFormData({ ...formData, dias_restantes_meta: e.target.value })}
-                    disabled
-                    placeholder="0"
-                    className="border-gray-200 focus:border-accent opacity-60"
-                  />
+                      {/* Nutrição */}
+                      <div className="border-t border-gray-200 pt-4">
+                        <h6 className="text-sm font-semibold text-gray-600 mb-2">Nutrição</h6>
+                        <div className="grid grid-cols-6 gap-2">
+                          <div className="col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Estratégia Nutricional
+                            </label>
+                            <Input
+                              type="text"
+                              value={cat.estrategia_nutricional || ''}
+                              onChange={(e) => {
+                                const updatedCategorias = [...formData.categorias]
+                                updatedCategorias[catIndex] = { ...cat, estrategia_nutricional: e.target.value }
+                                setFormData({ ...formData, categorias: updatedCategorias })
+                              }}
+                              placeholder="Ex: RIP"
+                              className="border-gray-200 focus:border-accent"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 mt-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Data Meta
-                  </label>
-                  <Input
-                    type="date"
-                    value={formData.data_meta}
-                    onChange={(e) => setFormData({ ...formData, data_meta: e.target.value })}
-                    className="border-gray-200 focus:border-accent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Estratégia Nutricional <span className="text-red-500">*</span>
-                  </label>
-                  <Input
-                    type="text"
-                    value={formData.estrategia_nutricional}
-                    onChange={(e) => setFormData({ ...formData, estrategia_nutricional: e.target.value })}
-                    required
-                    placeholder="Ex: RIP"
-                    className="border-gray-200 focus:border-accent"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Movimentação */}
-            <div className="border-t pt-4">
-              <h4 className="text-lg font-semibold text-gray-800 mb-4">Movimentação</h4>
-              <div className="grid grid-cols-6 gap-2">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Morte (cab)
-                  </label>
-                  <Input
-                    type="number"
-                    value={formData.morte}
-                    onChange={(e) => setFormData({ ...formData, morte: e.target.value })}
-                    placeholder="0"
-                    disabled
-                    className="border-gray-200 focus:border-accent opacity-60"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Consumo (cab)
-                  </label>
-                  <Input
-                    type="number"
-                    value={formData.consumo}
-                    onChange={(e) => setFormData({ ...formData, consumo: e.target.value })}
-                    placeholder="0"
-                    disabled
-                    className="border-gray-200 focus:border-accent opacity-60"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Abate (cab)
-                  </label>
-                  <Input
-                    type="number"
-                    value={formData.abate}
-                    onChange={(e) => setFormData({ ...formData, abate: e.target.value })}
-                    placeholder="0"
-                    disabled
-                    className="border-gray-200 focus:border-accent opacity-60"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Transf. Entrada (cab)
-                  </label>
-                  <Input
-                    type="number"
-                    value={formData.transf_entrada}
-                    onChange={(e) => setFormData({ ...formData, transf_entrada: e.target.value })}
-                    placeholder="0"
-                    disabled
-                    className="border-gray-200 focus:border-accent opacity-60"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Transf. Saída (cab)
-                  </label>
-                  <Input
-                    type="number"
-                    value={formData.transf_saida}
-                    onChange={(e) => setFormData({ ...formData, transf_saida: e.target.value })}
-                    placeholder="0"
-                    disabled
-                    className="border-gray-200 focus:border-accent opacity-60"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Quantidade de Bezerros
-                  </label>
-                  <Input
-                    type="number"
-                    value={formData.quantidade_bezerros}
-                    onChange={(e) => setFormData({ ...formData, quantidade_bezerros: e.target.value })}
-                    placeholder="Ex: 25"
-                    className="border-gray-200 focus:border-accent"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Informações Financeiras */}
-            <div className="border-t pt-4">
-              <h4 className="text-lg font-semibold text-gray-800 mb-4">Informações Financeiras</h4>
-              <div className="grid grid-cols-6 gap-2">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Preço Animal (R$/kg)
-                  </label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={formData.preco_animal_kg}
-                    onChange={(e) => setFormData({ ...formData, preco_animal_kg: e.target.value })}
-                    placeholder="Ex: 12.50"
-                    className="border-gray-200 focus:border-accent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Preço Animal (R$/cab)
-                  </label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={formData.preco_animal_cab}
-                    onChange={(e) => setFormData({ ...formData, preco_animal_cab: e.target.value })}
-                    placeholder="Ex: 5300.00"
-                    className="border-gray-200 focus:border-accent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1 whitespace-nowrap">
-                    Custo Operacional (R$/cab/Per.)
-                  </label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={formData.custo_operacional}
-                    onChange={(e) => setFormData({ ...formData, custo_operacional: e.target.value })}
-                    placeholder="Ex: 1.80"
-                    className="border-gray-200 focus:border-accent"
-                  />
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Informações Administrativas */}
@@ -1070,7 +1315,7 @@ setFormData({
                     className="border-gray-200 focus:border-accent"
                   />
                 </div>
-                <div>
+                <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Propriedade de Origem <span className="text-red-500">*</span>
                   </label>
@@ -1096,7 +1341,7 @@ setFormData({
                     className="border-gray-200 focus:border-accent"
                   />
                 </div>
-                <div>
+                <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Mês de Competência <span className="text-red-500">*</span>
                   </label>
@@ -1115,7 +1360,7 @@ setFormData({
             <div className="border-t pt-4">
               <h4 className="text-lg font-semibold text-gray-800 mb-4">SISBOV e Logística</h4>
               <div className="grid grid-cols-6 gap-2">
-                <div>
+                <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Data Liberação SISBOV
                   </label>
@@ -1126,7 +1371,7 @@ setFormData({
                     className="border-gray-200 focus:border-accent"
                   />
                 </div>
-                <div>
+                <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Período Liberação SISBOV
                   </label>
@@ -1139,7 +1384,7 @@ setFormData({
                     className="border-gray-200 focus:border-accent opacity-60"
                   />
                 </div>
-                <div>
+                <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Data Embarque Prevista
                   </label>
@@ -1209,31 +1454,18 @@ setFormData({
                     </p>
                   )}
 
-                  {lote.categorias && (
+                  {lote.categorias && lote.categorias.length > 0 && (
                     <div>
-                      <p className="text-sm font-medium text-gray-700">Categorias:</p>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {(() => {
-                          let cats: string[] = []
-                          if (Array.isArray(lote.categorias)) {
-                            cats = lote.categorias
-                          } else if (typeof lote.categorias === 'string') {
-                            try {
-                              const parsed = JSON.parse(lote.categorias)
-                              cats = Array.isArray(parsed) ? parsed : []
-                            } catch (e) {
-                              cats = []
-                            }
-                          }
-                          return cats.map((cat: string, index: number) => (
-                            <span
-                              key={index}
-                              className="px-2 py-1 bg-gray-100 rounded text-xs capitalize"
-                            >
-                              {cat}
-                            </span>
-                          ))
-                        })()}
+                      <p className="text-sm font-medium text-gray-700 mb-2">Categorias:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {lote.categorias.map((cat: LoteCategoria, index: number) => (
+                          <span
+                            key={index}
+                            className="px-2 py-1 bg-gray-100 rounded text-xs capitalize"
+                          >
+                            {cat.categoria}
+                          </span>
+                        ))}
                       </div>
                     </div>
                   )}
