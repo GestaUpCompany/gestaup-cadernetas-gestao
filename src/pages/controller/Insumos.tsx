@@ -12,6 +12,7 @@ interface Insumo {
   fabricante?: string
   tipo?: string
   fornecedor?: string
+  espacamento_ideal_cocho?: number
   ativo: boolean
   created_at: string
   updated_at: string
@@ -30,6 +31,7 @@ export function Insumos() {
     fabricante: '',
     tipo: '',
     fornecedor: '',
+    espacamento_ideal_cocho: '',
     ativo: true,
   })
   const [submitting, setSubmitting] = useState(false)
@@ -99,6 +101,7 @@ export function Insumos() {
       fabricante: formData.fabricante || null,
       tipo: formData.tipo || null,
       fornecedor: formData.fornecedor || null,
+      espacamento_ideal_cocho: formData.espacamento_ideal_cocho ? parseFloat(formData.espacamento_ideal_cocho) : null,
       ativo: formData.ativo,
     }
 
@@ -126,6 +129,7 @@ export function Insumos() {
         fabricante: '',
         tipo: '',
         fornecedor: '',
+        espacamento_ideal_cocho: '',
         ativo: true,
       })
       setShowForm(false)
@@ -144,6 +148,7 @@ export function Insumos() {
       fabricante: insumo.fabricante || '',
       tipo: insumo.tipo || '',
       fornecedor: insumo.fornecedor || '',
+      espacamento_ideal_cocho: insumo.espacamento_ideal_cocho?.toString() || '',
       ativo: insumo.ativo,
     })
     setShowForm(true)
@@ -157,6 +162,7 @@ export function Insumos() {
       fabricante: '',
       tipo: '',
       fornecedor: '',
+      espacamento_ideal_cocho: '',
       ativo: true,
     })
     setShowForm(false)
@@ -243,83 +249,86 @@ export function Insumos() {
             {editingInsumo ? 'Editar Insumo' : 'Novo Insumo'}
           </h3>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nome *
-              </label>
-              <Input
-                type="text"
-                value={formData.nome}
-                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                required
-                placeholder="Nome do insumo"
-                className="border-gray-200 focus:border-accent"
-              />
-            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nome *
+                </label>
+                <Input
+                  type="text"
+                  value={formData.nome}
+                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                  required
+                  placeholder="Nome do insumo"
+                  className="border-gray-200 focus:border-accent"
+                />
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Marca
-              </label>
-              <Input
-                type="text"
-                value={formData.marca}
-                onChange={(e) => setFormData({ ...formData, marca: e.target.value })}
-                placeholder="Marca do insumo"
-                className="border-gray-200 focus:border-accent"
-              />
-            </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Marca
+                </label>
+                <Input
+                  type="text"
+                  value={formData.marca}
+                  onChange={(e) => setFormData({ ...formData, marca: e.target.value })}
+                  placeholder="Marca do insumo"
+                  className="border-gray-200 focus:border-accent"
+                />
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Fabricante
-              </label>
-              <Input
-                type="text"
-                value={formData.fabricante}
-                onChange={(e) => setFormData({ ...formData, fabricante: e.target.value })}
-                placeholder="Fabricante do insumo"
-                className="border-gray-200 focus:border-accent"
-              />
-            </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Fabricante
+                </label>
+                <Input
+                  type="text"
+                  value={formData.fabricante}
+                  onChange={(e) => setFormData({ ...formData, fabricante: e.target.value })}
+                  placeholder="Fabricante do insumo"
+                  className="border-gray-200 focus:border-accent"
+                />
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tipo
-              </label>
-              <Input
-                type="text"
-                value={formData.tipo}
-                onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
-                placeholder="Ex: Ração, Sal, Vacina, Medicamento"
-                className="border-gray-200 focus:border-accent"
-              />
-            </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Tipo
+                </label>
+                <Input
+                  type="text"
+                  value={formData.tipo}
+                  onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
+                  placeholder="Ex: Ração, Sal, Vacina, Medicamento"
+                  className="border-gray-200 focus:border-accent"
+                />
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Fornecedor
-              </label>
-              <Input
-                type="text"
-                value={formData.fornecedor}
-                onChange={(e) => setFormData({ ...formData, fornecedor: e.target.value })}
-                placeholder="Nome do fornecedor"
-                className="border-gray-200 focus:border-accent"
-              />
-            </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Fornecedor
+                </label>
+                <Input
+                  type="text"
+                  value={formData.fornecedor}
+                  onChange={(e) => setFormData({ ...formData, fornecedor: e.target.value })}
+                  placeholder="Nome do fornecedor"
+                  className="border-gray-200 focus:border-accent"
+                />
+              </div>
 
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="ativo"
-                checked={formData.ativo}
-                onChange={(e) => setFormData({ ...formData, ativo: e.target.checked })}
-                className="rounded border-gray-300 text-accent focus:ring-accent"
-              />
-              <label htmlFor="ativo" className="text-sm font-medium text-gray-700">
-                Ativo
-              </label>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Espaçamento ideal no cocho (m)
+                </label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={formData.espacamento_ideal_cocho}
+                  onChange={(e) => setFormData({ ...formData, espacamento_ideal_cocho: e.target.value })}
+                  placeholder="Ex: 0.50"
+                  className="border-gray-200 focus:border-accent"
+                />
+              </div>
             </div>
 
             <div className="flex gap-2">
@@ -329,6 +338,17 @@ export function Insumos() {
               <Button variant="secondary" onClick={handleCancel}>
                 Cancelar
               </Button>
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, ativo: !formData.ativo })}
+                className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 border-2 ${
+                  formData.ativo
+                    ? 'bg-green-100 text-green-800 border-green-300 hover:bg-green-200'
+                    : 'bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200'
+                }`}
+              >
+                {formData.ativo ? '✓ Ativo' : '✗ Inativo'}
+              </button>
             </div>
           </form>
         </Card>
