@@ -17,6 +17,7 @@ interface Pasto {
   especie?: string
   altura_entrada_cm?: number
   altura_saida_cm?: number
+  possui_deposito?: boolean
   ativo: boolean
 }
 
@@ -37,6 +38,7 @@ export function Pastos() {
     especie: '',
     altura_entrada_cm: '',
     altura_saida_cm: '',
+    possui_deposito: false,
   })
   const [submitting, setSubmitting] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -112,6 +114,7 @@ export function Pastos() {
       especie: formData.especie || null,
       altura_entrada_cm: formData.altura_entrada_cm ? parseFloat(formData.altura_entrada_cm) : null,
       altura_saida_cm: formData.altura_saida_cm ? parseFloat(formData.altura_saida_cm) : null,
+      possui_deposito: formData.possui_deposito,
     }
 
     let error
@@ -142,6 +145,7 @@ export function Pastos() {
         especie: '',
         altura_entrada_cm: '',
         altura_saida_cm: '',
+        possui_deposito: false,
       })
       setShowForm(false)
       setEditingPasto(null)
@@ -163,6 +167,7 @@ export function Pastos() {
       especie: pasto.especie || '',
       altura_entrada_cm: pasto.altura_entrada_cm?.toString() || '',
       altura_saida_cm: pasto.altura_saida_cm?.toString() || '',
+      possui_deposito: pasto.possui_deposito || false,
     })
     setShowForm(true)
   }
@@ -179,6 +184,7 @@ export function Pastos() {
       especie: '',
       altura_entrada_cm: '',
       altura_saida_cm: '',
+      possui_deposito: false,
     })
     setShowForm(false)
   }
@@ -644,6 +650,23 @@ export function Pastos() {
                   className="border-gray-200 focus:border-accent text-sm"
                 />
               </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-medium text-gray-700">Possui depósito?</label>
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, possui_deposito: !formData.possui_deposito })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  formData.possui_deposito ? 'bg-primary' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    formData.possui_deposito ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
             </div>
 
             <div className="flex gap-2 items-center">
