@@ -1,6 +1,7 @@
 export { Button } from './Button'
 export { Card } from './Card'
 export { Input } from './Input'
+export { NumericInput } from './NumericInput'
 export { Dropdown } from './Dropdown'
 export { GlobalSearch } from './GlobalSearch'
 export { Notifications } from './Notifications'

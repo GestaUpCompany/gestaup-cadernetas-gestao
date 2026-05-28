@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, ConfirmModal, CardItem } from '../../components/ui'
+import { Button, Card, Input, NumericInput, CardSkeleton, ConfirmModal, CardItem } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 
 interface LoteCategoria {
@@ -12,7 +12,7 @@ interface LoteCategoria {
   data_pesagem?: string
   peso_entrada?: number
   peso_entrada_arrobas?: number
-  gmd?: number
+  gmd?: string
   periodo?: number
   rc_inicial?: number
   quant_atual?: number
@@ -49,7 +49,7 @@ interface Lote {
   quant_inicial?: number
   data_pesagem?: string
   peso_entrada?: number
-  gmd?: number
+  gmd?: string
   periodo?: number
   ativo: boolean
   pasto_id?: string
@@ -134,6 +134,7 @@ export function Lotes() {
     'boi magro',
     'garrote',
     'bezerro',
+    'bezerra',
     'novilha',
     'tropa',
   ]
@@ -242,7 +243,7 @@ export function Lotes() {
   useEffect(() => {
     const pesoMeta = parseFloat(formData.peso_vivo_meta_kg)
     const pesoAtual = parseFloat(formData.peso_vivo_kg)
-    const gmd = parseFloat(formData.gmd)
+    const gmd = formData.gmd ? parseFloat(formData.gmd.replace(',', '.')) : null
 
     if (pesoMeta && pesoAtual && gmd && gmd > 0) {
       const diasParaMeta = (pesoMeta - pesoAtual) / gmd
@@ -264,7 +265,7 @@ export function Lotes() {
   // Calcular peso_vivo_kg automaticamente quando peso_entrada, gmd e periodo estiverem presentes
   useEffect(() => {
     const pesoEntrada = parseFloat(formData.peso_entrada)
-    const gmd = parseFloat(formData.gmd)
+    const gmd = formData.gmd ? parseFloat(formData.gmd.replace(',', '.')) : null
     const periodo = parseFloat(formData.periodo)
 
     if (pesoEntrada && gmd && periodo) {
@@ -320,54 +321,41 @@ export function Lotes() {
     }
   }, [formData.data_liberacao_sisbov])
 
-  // Calcular peso_entrada_arrobas automaticamente para cada categoria: (peso_entrada * (rc_inicial/100)) / 15
-  useEffect(() => {
-    const updatedCategorias = formData.categorias.map(cat => {
-      if (cat.peso_entrada && cat.rc_inicial) {
-        const pesoEntradaArrobas = (cat.peso_entrada * (cat.rc_inicial / 100)) / 15
-        return { ...cat, peso_entrada_arrobas: pesoEntradaArrobas }
-      }
-      return cat
-    })
-    setFormData({ ...formData, categorias: updatedCategorias })
-  }, [formData.categorias.map(cat => `${cat.peso_entrada}-${cat.rc_inicial}`).join(',')])
+  // Função unificada para recalcular todos os campos dependentes de uma categoria
+  const recalcularCategoria = (cat: LoteCategoria): LoteCategoria => {
+    let updatedCat = { ...cat }
 
-  // Calcular período (dias) automaticamente para cada categoria: dias desde data_pesagem até data atual
-  useEffect(() => {
-    const updatedCategorias = formData.categorias.map(cat => {
-      if (cat.data_pesagem) {
-        const dataPesagem = new Date(cat.data_pesagem)
-        const currentDate = new Date()
-        const diffTime = currentDate.getTime() - dataPesagem.getTime()
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-        return { ...cat, periodo: diffDays > 0 ? diffDays : 0 }
-      }
-      return cat
-    })
-    setFormData({ ...formData, categorias: updatedCategorias })
-  }, [formData.categorias.map(cat => cat.data_pesagem).join(',')])
+    // 1. Calcular peso_entrada_arrobas: (peso_entrada * (rc_inicial/100)) / 15
+    if (updatedCat.peso_entrada && updatedCat.rc_inicial) {
+      const pesoEntradaArrobas = (updatedCat.peso_entrada * (updatedCat.rc_inicial / 100)) / 15
+      updatedCat = { ...updatedCat, peso_entrada_arrobas: pesoEntradaArrobas }
+    }
 
-  // Calcular peso_vivo_kg automaticamente para cada categoria: peso_entrada + (periodo * gmd)
-  useEffect(() => {
-    const updatedCategorias = formData.categorias.map(cat => {
-      if (cat.peso_entrada && cat.gmd && cat.periodo) {
-        const pesoVivoKg = cat.peso_entrada + (cat.periodo * cat.gmd)
-        return { ...cat, peso_vivo_kg: pesoVivoKg }
-      }
-      return cat
-    })
-    setFormData({ ...formData, categorias: updatedCategorias })
-  }, [formData.categorias.map(cat => `${cat.peso_entrada}-${cat.gmd}-${cat.periodo}`).join(',')])
+    // 2. Calcular período: dias desde data_pesagem até data atual
+    if (updatedCat.data_pesagem) {
+      const dataPesagem = new Date(updatedCat.data_pesagem)
+      const currentDate = new Date()
+      const diffTime = currentDate.getTime() - dataPesagem.getTime()
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+      updatedCat = { ...updatedCat, periodo: diffDays > 0 ? diffDays : 0 }
+    }
 
-  // Calcular data_meta automaticamente para cada categoria quando peso_vivo_meta_kg, peso_vivo_kg ou gmd mudarem
-  useEffect(() => {
-    const updatedCategorias = formData.categorias.map(cat => {
-      const pesoMeta = cat.peso_vivo_meta_kg
-      const pesoAtual = cat.peso_vivo_kg
-      const gmd = cat.gmd
+    // 3. Calcular peso_vivo_kg: peso_entrada + (periodo * gmd)
+    if (updatedCat.peso_entrada && updatedCat.gmd && updatedCat.periodo) {
+      const gmdNumber = parseFloat(updatedCat.gmd.replace(',', '.'))
+      const pesoVivoKg = updatedCat.peso_entrada + (updatedCat.periodo * gmdNumber)
+      updatedCat = { ...updatedCat, peso_vivo_kg: pesoVivoKg }
+    }
 
-      if (pesoMeta && pesoAtual && gmd && gmd > 0) {
-        const diasParaMeta = (pesoMeta - pesoAtual) / gmd
+    // 4. Calcular data_meta quando peso_vivo_meta_kg, peso_vivo_kg ou gmd mudarem
+    const pesoMeta = updatedCat.peso_vivo_meta_kg
+    const pesoAtual = updatedCat.peso_vivo_kg
+    const gmd = updatedCat.gmd
+
+    if (pesoMeta && pesoAtual && gmd) {
+      const gmdNumber = parseFloat(gmd.replace(',', '.'))
+      if (gmdNumber > 0) {
+        const diasParaMeta = (pesoMeta - pesoAtual) / gmdNumber
         const dataHoje = new Date()
         const dataMeta = new Date(dataHoje.getTime() + (diasParaMeta * 24 * 60 * 60 * 1000))
 
@@ -377,39 +365,40 @@ export function Lotes() {
         const day = String(dataMeta.getDate()).padStart(2, '0')
         const dataMetaFormatada = `${year}-${month}-${day}`
 
-        return { ...cat, data_meta: dataMetaFormatada }
+        updatedCat = { ...updatedCat, data_meta: dataMetaFormatada }
       }
-      return cat
-    })
-    setFormData({ ...formData, categorias: updatedCategorias })
-  }, [formData.categorias.map(cat => `${cat.peso_vivo_meta_kg}-${cat.peso_vivo_kg}-${cat.gmd}`).join(',')])
+    }
 
-  // Calcular dias_restantes_meta automaticamente para cada categoria: dias desde data atual até data_meta
-  useEffect(() => {
-    const updatedCategorias = formData.categorias.map(cat => {
-      if (cat.data_meta) {
-        const dataMeta = new Date(cat.data_meta)
-        const currentDate = new Date()
-        const diffTime = dataMeta.getTime() - currentDate.getTime()
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-        return { ...cat, dias_restantes_meta: diffDays > 0 ? diffDays : 0 }
-      }
-      return cat
-    })
-    setFormData({ ...formData, categorias: updatedCategorias })
-  }, [formData.categorias.map(cat => cat.data_meta).join(',')])
+    // 5. Calcular dias_restantes_meta: dias desde data atual até data_meta
+    if (updatedCat.data_meta) {
+      const dataMeta = new Date(updatedCat.data_meta)
+      const currentDate = new Date()
+      const diffTime = dataMeta.getTime() - currentDate.getTime()
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+      updatedCat = { ...updatedCat, dias_restantes_meta: diffDays > 0 ? diffDays : 0 }
+    }
 
-  // Calcular preco_animal_kg automaticamente para cada categoria: preco_animal_cab / peso_vivo_kg
+    // 6. Calcular preco_animal_kg: preco_animal_cab / peso_vivo_kg
+    if (updatedCat.preco_animal_cab && updatedCat.peso_vivo_kg && updatedCat.peso_vivo_kg > 0) {
+      const precoKg = updatedCat.preco_animal_cab / updatedCat.peso_vivo_kg
+      updatedCat = { ...updatedCat, preco_animal_kg: precoKg }
+    }
+
+    return updatedCat
+  }
+
+  // Recalcular todas as categorias quando qualquer campo dependente mudar
   useEffect(() => {
-    const updatedCategorias = formData.categorias.map(cat => {
-      if (cat.preco_animal_cab && cat.peso_vivo_kg && cat.peso_vivo_kg > 0) {
-        const precoKg = cat.preco_animal_cab / cat.peso_vivo_kg
-        return { ...cat, preco_animal_kg: precoKg }
-      }
-      return cat
-    })
+    const updatedCategorias = formData.categorias.map(recalcularCategoria)
     setFormData({ ...formData, categorias: updatedCategorias })
-  }, [formData.categorias.map(cat => `${cat.preco_animal_cab}-${cat.peso_vivo_kg}`).join(',')])
+  }, [
+    formData.categorias.map(cat => cat.peso_entrada).join(','),
+    formData.categorias.map(cat => cat.rc_inicial).join(','),
+    formData.categorias.map(cat => cat.data_pesagem).join(','),
+    formData.categorias.map(cat => cat.gmd).join(','),
+    formData.categorias.map(cat => cat.peso_vivo_meta_kg).join(','),
+    formData.categorias.map(cat => cat.preco_animal_cab).join(','),
+  ])
 
   const loadLotes = async () => {
     if (!user) return
@@ -554,7 +543,7 @@ export function Lotes() {
       data_pesagem: cat.data_pesagem || null,
       peso_entrada: cat.peso_entrada ? parseFloat(cat.peso_entrada.toString()) : null,
       peso_entrada_arrobas: cat.peso_entrada_arrobas ? parseFloat(cat.peso_entrada_arrobas.toString()) : null,
-      gmd: cat.gmd ? parseFloat(cat.gmd.toString()) : null,
+      gmd: cat.gmd?.toString() || null,
       periodo: cat.periodo ? parseInt(cat.periodo.toString()) : null,
       rc_inicial: cat.rc_inicial ? parseFloat(cat.rc_inicial.toString()) : null,
       quant_atual: cat.quant_atual ? parseInt(cat.quant_atual.toString()) : null,
@@ -1040,7 +1029,7 @@ setFormData({
                               className="border-gray-200 focus:border-accent"
                             />
                           </div>
-                          <div>
+                          <div className="col-span-2">
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Data Entrada
                             </label>
@@ -1066,16 +1055,32 @@ setFormData({
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Peso Entrada (kg)
                             </label>
+                            <NumericInput
+                              value={cat.peso_entrada?.toString() || ''}
+                              onChange={(value) => {
+                                const updatedCategorias = [...formData.categorias]
+                                updatedCategorias[catIndex] = { ...cat, peso_entrada: value ? parseFloat(value.replace(',', '.')) : undefined }
+                                setFormData({ ...formData, categorias: updatedCategorias })
+                              }}
+                              placeholder="0,00"
+                              decimalPlaces={2}
+                              className="border-gray-200 focus:border-accent"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              RC Inicial (%)
+                            </label>
                             <Input
                               type="number"
                               step="0.1"
-                              value={cat.peso_entrada?.toString() || ''}
+                              value={cat.rc_inicial?.toString() || ''}
                               onChange={(e) => {
                                 const updatedCategorias = [...formData.categorias]
-                                updatedCategorias[catIndex] = { ...cat, peso_entrada: e.target.value ? parseFloat(e.target.value) : undefined }
+                                updatedCategorias[catIndex] = { ...cat, rc_inicial: e.target.value ? parseFloat(e.target.value) : undefined }
                                 setFormData({ ...formData, categorias: updatedCategorias })
                               }}
-                              placeholder="0"
+                              placeholder="Ex: 50"
                               className="border-gray-200 focus:border-accent"
                             />
                           </div>
@@ -1098,8 +1103,8 @@ setFormData({
                             </label>
                             <Input
                               type="number"
-                              step="0.1"
-                              value={cat.peso_vivo_kg?.toFixed(1) || ''}
+                              step="0.01"
+                              value={cat.peso_vivo_kg?.toFixed(2) || ''}
                               disabled
                               placeholder="0"
                               className="border-gray-200 focus:border-accent opacity-60"
@@ -1109,16 +1114,15 @@ setFormData({
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Peso Vivo Meta (kg)
                             </label>
-                            <Input
-                              type="number"
-                              step="0.1"
+                            <NumericInput
                               value={cat.peso_vivo_meta_kg?.toString() || ''}
-                              onChange={(e) => {
+                              onChange={(value) => {
                                 const updatedCategorias = [...formData.categorias]
-                                updatedCategorias[catIndex] = { ...cat, peso_vivo_meta_kg: e.target.value ? parseFloat(e.target.value) : undefined }
+                                updatedCategorias[catIndex] = { ...cat, peso_vivo_meta_kg: value ? parseFloat(value.replace(',', '.')) : undefined }
                                 setFormData({ ...formData, categorias: updatedCategorias })
                               }}
-                              placeholder="0"
+                              placeholder="0,00"
+                              decimalPlaces={2}
                               className="border-gray-200 focus:border-accent"
                             />
                           </div>
@@ -1126,33 +1130,15 @@ setFormData({
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               GMD (kg/cab/dia)
                             </label>
-                            <Input
-                              type="number"
-                              step="0.01"
+                            <NumericInput
                               value={cat.gmd?.toString() || ''}
-                              onChange={(e) => {
+                              onChange={(value) => {
                                 const updatedCategorias = [...formData.categorias]
-                                updatedCategorias[catIndex] = { ...cat, gmd: e.target.value ? parseFloat(e.target.value) : undefined }
+                                updatedCategorias[catIndex] = { ...cat, gmd: value || undefined }
                                 setFormData({ ...formData, categorias: updatedCategorias })
                               }}
-                              placeholder="0"
-                              className="border-gray-200 focus:border-accent"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              RC Inicial (%)
-                            </label>
-                            <Input
-                              type="number"
-                              step="0.1"
-                              value={cat.rc_inicial?.toString() || ''}
-                              onChange={(e) => {
-                                const updatedCategorias = [...formData.categorias]
-                                updatedCategorias[catIndex] = { ...cat, rc_inicial: e.target.value ? parseFloat(e.target.value) : undefined }
-                                setFormData({ ...formData, categorias: updatedCategorias })
-                              }}
-                              placeholder="Ex: 50"
+                              placeholder="0,000"
+                              decimalPlaces={3}
                               className="border-gray-200 focus:border-accent"
                             />
                           </div>
@@ -1215,16 +1201,15 @@ setFormData({
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Preço (R$/cab)
                             </label>
-                            <Input
-                              type="number"
-                              step="0.01"
+                            <NumericInput
                               value={cat.preco_animal_cab?.toString() || ''}
-                              onChange={(e) => {
+                              onChange={(value) => {
                                 const updatedCategorias = [...formData.categorias]
-                                updatedCategorias[catIndex] = { ...cat, preco_animal_cab: e.target.value ? parseFloat(e.target.value) : undefined }
+                                updatedCategorias[catIndex] = { ...cat, preco_animal_cab: value ? parseFloat(value.replace(',', '.')) : undefined }
                                 setFormData({ ...formData, categorias: updatedCategorias })
                               }}
-                              placeholder="Ex: 5300.00"
+                              decimalPlaces={2}
+                              prefix="R$"
                               className="border-gray-200 focus:border-accent"
                             />
                           </div>
@@ -1232,16 +1217,15 @@ setFormData({
                             <label className="block text-sm font-medium text-gray-700 mb-1 whitespace-nowrap">
                               Custo Operacional (R$/cab/Per.)
                             </label>
-                            <Input
-                              type="number"
-                              step="0.01"
+                            <NumericInput
                               value={cat.custo_operacional?.toString() || ''}
-                              onChange={(e) => {
+                              onChange={(value) => {
                                 const updatedCategorias = [...formData.categorias]
-                                updatedCategorias[catIndex] = { ...cat, custo_operacional: e.target.value ? parseFloat(e.target.value) : undefined }
+                                updatedCategorias[catIndex] = { ...cat, custo_operacional: value ? parseFloat(value.replace(',', '.')) : undefined }
                                 setFormData({ ...formData, categorias: updatedCategorias })
                               }}
-                              placeholder="Ex: 1.80"
+                              decimalPlaces={2}
+                              prefix="R$"
                               className="border-gray-200 focus:border-accent"
                             />
                           </div>
@@ -1282,26 +1266,24 @@ setFormData({
               <div className="grid grid-cols-6 gap-2">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Produtor Rural <span className="text-red-500">*</span>
+                    Produtor Rural
                   </label>
                   <Input
                     type="text"
                     value={formData.produtor_rural}
                     onChange={(e) => setFormData({ ...formData, produtor_rural: e.target.value })}
-                    required
                     placeholder="Nome do produtor"
                     className="border-gray-200 focus:border-accent"
                   />
                 </div>
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Propriedade de Origem <span className="text-red-500">*</span>
+                    Propriedade de Origem
                   </label>
                   <Input
                     type="text"
                     value={formData.propriedade_origem}
                     onChange={(e) => setFormData({ ...formData, propriedade_origem: e.target.value })}
-                    required
                     placeholder="Nome da propriedade"
                     className="border-gray-200 focus:border-accent"
                   />
