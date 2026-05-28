@@ -83,6 +83,9 @@ export function Lotes() {
   const [searchTerm, setSearchTerm] = useState('')
   const [pastos, setPastos] = useState<{id: string, nome: string}[]>([])
   const [nutritionalOptions, setNutritionalOptions] = useState<{id: string, name: string, category: string}[]>([])
+  const [movimentacaoData, setMovimentacaoData] = useState<any[]>([])
+  const [maternidadeData, setMaternidadeData] = useState<any[]>([])
+  const [morteData, setMorteData] = useState<any[]>([])
   const [formData, setFormData] = useState({
     nome: '',
     numero_cabecas: '',
@@ -241,11 +244,17 @@ export function Lotes() {
   }, [user])
 
   const handleCategoriaToggle = (categoria: string) => {
-    const categoriaExists = formData.categorias.some(c => c.categoria === categoria)
+    const categoriaExists = formData.categorias.some(c => c.categoria.toLowerCase() === categoria.toLowerCase())
     if (categoriaExists) {
+      // Check if category has quant_atual > 0 before allowing removal
+      const catToRemove = formData.categorias.find(c => c.categoria.toLowerCase() === categoria.toLowerCase())
+      if (catToRemove && catToRemove.quant_atual && catToRemove.quant_atual > 0) {
+        alert('Não é possível remover uma categoria que possui cabeças. Transfira ou remova os animais primeiro.')
+        return
+      }
       setFormData({
         ...formData,
-        categorias: formData.categorias.filter((c) => c.categoria !== categoria),
+        categorias: formData.categorias.filter((c) => c.categoria.toLowerCase() !== categoria.toLowerCase()),
       })
     } else {
       const novaCategoria: LoteCategoria = {
@@ -257,7 +266,7 @@ export function Lotes() {
         gmd: undefined,
         periodo: undefined,
         rc_inicial: undefined,
-        quant_atual: undefined,
+        quant_atual: undefined, // Will be set to match quant_inicial after user inputs it
         peso_vivo_kg: undefined,
         peso_vivo_meta_kg: undefined,
         dias_restantes_meta: undefined,
@@ -395,6 +404,18 @@ export function Lotes() {
     }
   }, [formData.data_liberacao_sisbov])
 
+  // Sync quant_atual with quant_inicial for new categories (not yet saved)
+  useEffect(() => {
+    if (!editingLote) {
+      // For new lots, sync quant_atual with quant_inicial
+      const updatedCategorias = formData.categorias.map(cat => ({
+        ...cat,
+        quant_atual: cat.quant_inicial || cat.quant_atual
+      }))
+      setFormData({ ...formData, categorias: updatedCategorias })
+    }
+  }, [formData.categorias.map(cat => cat.quant_inicial).join(','), editingLote])
+
   // Função unificada para recalcular todos os campos dependentes de uma categoria
   const recalcularCategoria = (cat: LoteCategoria): LoteCategoria => {
     let updatedCat = { ...cat }
@@ -516,11 +537,16 @@ export function Lotes() {
     }
 
     // Combinar lotes com suas categorias
-    const lotesComCategorias = (lotesData || []).map(lote => ({
-      ...lote,
-      pasto_nome: lote.pastos?.nome,
-      categorias: (categoriasData || []).filter(cat => cat.lote_id === lote.id)
-    }))
+    const lotesComCategorias = await Promise.all(
+      (lotesData || []).map(async (lote) => {
+        const categorias = (categoriasData || []).filter(cat => cat.lote_id === lote.id)
+        return {
+          ...lote,
+          pasto_nome: lote.pastos?.nome,
+          categorias: categorias
+        }
+      })
+    )
 
     setLotes(lotesComCategorias as Lote[])
     setLoading(false)
@@ -704,13 +730,66 @@ export function Lotes() {
     setSubmitting(false)
   }
 
-  const handleEdit = (lote: Lote) => {
+  const handleEdit = async (lote: Lote) => {
     setEditingLote(lote)
 
-setFormData({
+    // Fetch categories with quant_atual from lote_categorias
+    const { data: categoriasData } = await supabase
+      .from('lote_categorias')
+      .select('*')
+      .eq('lote_id', lote.id)
+
+    const updatedCategorias = categoriasData || lote.categorias || []
+
+    // Fetch movimentation data for this lot
+    if (!user) return
+    const { data: vinculos } = await supabase
+      .from('usuario_fazenda')
+      .select('fazenda_id')
+      .eq('usuario_id', user.id)
+      .eq('ativo', true)
+
+    if (vinculos && vinculos.length > 0) {
+      const fazendaId = vinculos[0].fazenda_id
+
+      // Fetch movimentacao data
+      const { data: movData } = await supabase
+        .from('registros_movimentacao')
+        .select('*')
+        .or(`lote_origem_id.eq.${lote.id},lote_destino_id.eq.${lote.id}`)
+        .eq('fazenda_id', fazendaId)
+        .is('deleted_at', null)
+        .order('data', { ascending: false })
+
+      setMovimentacaoData(movData || [])
+
+      // Fetch maternidade data
+      const { data: matData } = await supabase
+        .from('registros_maternidade')
+        .select('*')
+        .eq('lote_id', lote.id)
+        .eq('fazenda_id', fazendaId)
+        .is('deleted_at', null)
+        .order('data', { ascending: false })
+
+      setMaternidadeData(matData || [])
+
+      // Fetch morte data
+      const { data: morData } = await supabase
+        .from('registros_morte')
+        .select('*')
+        .eq('lote_id', lote.id)
+        .eq('fazenda_id', fazendaId)
+        .is('deleted_at', null)
+        .order('data', { ascending: false })
+
+      setMorteData(morData || [])
+    }
+
+    setFormData({
       nome: lote.nome,
       numero_cabecas: lote.n_cabecas?.toString() || '',
-      categorias: lote.categorias || [],
+      categorias: updatedCategorias,
       categoria_outros: '',
       peso_vivo_kg: lote.peso_vivo_kg?.toString() || '',
       peso_vivo_meta_kg: lote.peso_vivo_meta_kg?.toString() || '',
@@ -869,7 +948,13 @@ setFormData({
               onChange={(e) => setSearchTerm(e.target.value)}
               className="max-w-xs border-gray-200 focus:border-accent h-10"
             />
-            <Button onClick={() => setShowForm(true)} className="h-10">Novo Lote</Button>
+            <Button onClick={() => {
+              setShowForm(true)
+              setEditingLote(null)
+              setMovimentacaoData([])
+              setMaternidadeData([])
+              setMorteData([])
+            }} className="h-10">Novo Lote</Button>
           </div>
         </div>
       )}
@@ -941,7 +1026,7 @@ setFormData({
                 </label>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
                   {categoriasOpcoes.map((categoria) => {
-                    const isSelected = formData.categorias.some(c => c.categoria === categoria)
+                    const isSelected = formData.categorias.some(c => c.categoria.toLowerCase() === categoria.toLowerCase())
                     return (
                       <button
                         key={categoria}
@@ -1101,6 +1186,7 @@ setFormData({
                               }}
                               placeholder="0"
                               className="border-gray-200 focus:border-accent"
+                              disabled
                             />
                           </div>
                           <div className="col-span-2">
@@ -1332,6 +1418,102 @@ setFormData({
                   ))}
                 </div>
               )}
+
+              {/* Histórico de Movimentação */}
+              {showForm && (movimentacaoData.length > 0 || maternidadeData.length > 0 || morteData.length > 0) && (
+                <div className="border-t border-gray-200 pt-4 mt-4">
+                  <h6 className="text-sm font-semibold text-gray-600 mb-3">Histórico de Movimentação</h6>
+                  
+                  {/* Movimentação */}
+                  {movimentacaoData.length > 0 && (
+                    <div className="mb-4">
+                      <span className="text-xs font-medium text-gray-500 mb-2 block">Movimentação</span>
+                      <div className="bg-gray-50 rounded-lg p-3 space-y-2 max-h-60 overflow-y-auto">
+                        {movimentacaoData.map((mov) => {
+                          // Determine movement type based on current lot's perspective
+                          let movementType = mov.motivo_movimentacao || mov.tipo_saida || mov.tipo_entrada;
+                          let isSource = mov.lote_origem_id === editingLote?.id;
+                          let isDestination = mov.lote_destino_id === editingLote?.id;
+                          let movementReason = '';
+
+                          // If it's a transfer between lots, override the display based on perspective
+                          if (mov.lote_origem_id && mov.lote_destino_id) {
+                            if (isSource) {
+                              movementType = 'Saída';
+                            } else if (isDestination) {
+                              movementType = 'Entrada';
+                            }
+                          }
+
+                          // Determine if it's Movimentação or Entrevero
+                          if (mov.motivo_movimentacao === 'Entrevero') {
+                            movementReason = ' (Entrevero)';
+                          } else if (mov.tipo_saida === 'Transferência' || mov.tipo_saida === 'Apartação' || mov.tipo_entrada === 'Transferência' || mov.tipo_entrada === 'Apartação') {
+                            movementReason = ' (Movimentação)';
+                          }
+
+                          return (
+                            <div key={mov.id} className="text-xs bg-white p-2 rounded border border-gray-200">
+                              <div className="flex justify-between items-center">
+                                <span className="font-medium">{movementType}{movementReason}</span>
+                                <span className="text-gray-500">{new Date(mov.data).toLocaleDateString('pt-BR')}</span>
+                              </div>
+                              <div className="text-gray-600 mt-1">
+                                {mov.numero_cabecas && `${mov.numero_cabecas} cabeças`}
+                                {mov.categoria && ` • ${mov.categoria}`}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Maternidade */}
+                  {maternidadeData.length > 0 && (
+                    <div className="mb-4">
+                      <span className="text-xs font-medium text-gray-500 mb-2 block">Maternidade</span>
+                      <div className="bg-gray-50 rounded-lg p-3 space-y-2 max-h-60 overflow-y-auto">
+                        {maternidadeData.map((mat) => (
+                          <div key={mat.id} className="text-xs bg-white p-2 rounded border border-gray-200">
+                            <div className="flex justify-between items-center">
+                              <span className="font-medium">Nascimento</span>
+                              <span className="text-gray-500">{new Date(mat.data).toLocaleDateString('pt-BR')}</span>
+                            </div>
+                            <div className="text-gray-600 mt-1">
+                              {mat.sexo && `Sexo: ${mat.sexo}`}
+                              {mat.peso_cria_kg && ` • Peso: ${mat.peso_cria_kg} kg`}
+                              {mat.tipo_parto && ` • Tipo: ${Array.isArray(mat.tipo_parto) ? mat.tipo_parto.join(', ') : mat.tipo_parto}`}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Morte */}
+                  {morteData.length > 0 && (
+                    <div className="mb-4">
+                      <span className="text-xs font-medium text-gray-500 mb-2 block">Morte</span>
+                      <div className="bg-gray-50 rounded-lg p-3 space-y-2 max-h-60 overflow-y-auto">
+                        {morteData.map((mor) => (
+                          <div key={mor.id} className="text-xs bg-white p-2 rounded border border-gray-200">
+                            <div className="flex justify-between items-center">
+                              <span className="font-medium text-red-600">Óbito</span>
+                              <span className="text-gray-500">{new Date(mor.data).toLocaleDateString('pt-BR')}</span>
+                            </div>
+                            <div className="text-gray-600 mt-1">
+                              {mor.categoria && `Categoria: ${mor.categoria}`}
+                              {mor.causa_morte && ` • Causa: ${mor.causa_morte}`}
+                              {mor.peso_vivo && ` • Peso: ${mor.peso_vivo} kg`}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Informações Administrativas */}
@@ -1463,7 +1645,13 @@ setFormData({
       {!showForm && lotes.length === 0 ? (
         <Card className="bg-white p-12 border-0 shadow-sm text-center">
           <p className="text-gray-600 mb-4">Nenhum lote cadastrado</p>
-          <Button onClick={() => setShowForm(true)}>Criar Primeiro Lote</Button>
+          <Button onClick={() => {
+            setShowForm(true)
+            setEditingLote(null)
+            setMovimentacaoData([])
+            setMaternidadeData([])
+            setMorteData([])
+          }}>Criar Primeiro Lote</Button>
         </Card>
       ) : !showForm ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
