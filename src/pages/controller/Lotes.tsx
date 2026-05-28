@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, NumericInput, CardSkeleton, ConfirmModal, CardItem } from '../../components/ui'
+import { Button, Card, Input, NumericInput, CardSkeleton, ConfirmModal, CardItem, GroupedSelect } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 
 interface LoteCategoria {
@@ -82,6 +82,7 @@ export function Lotes() {
   const [editingLote, setEditingLote] = useState<Lote | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [pastos, setPastos] = useState<{id: string, nome: string}[]>([])
+  const [nutritionalOptions, setNutritionalOptions] = useState<{id: string, name: string, category: string}[]>([])
   const [formData, setFormData] = useState({
     nome: '',
     numero_cabecas: '',
@@ -164,6 +165,79 @@ export function Lotes() {
     }
 
     loadPastos()
+  }, [user])
+
+  useEffect(() => {
+    const loadNutritionalOptions = async () => {
+      if (!user) return
+      const { data: vinculos } = await supabase
+        .from('usuario_fazenda')
+        .select('fazenda_id')
+        .eq('usuario_id', user.id)
+        .eq('ativo', true)
+
+      if (!vinculos || vinculos.length === 0) return
+
+      const fazendaId = vinculos[0].fazenda_id
+
+      // Fetch from all 4 tables
+      const [insumos, minerais, racao, proteinado] = await Promise.all([
+        supabase.from('insumos').select('id, nome, tipo').eq('fazenda_id', fazendaId).eq('ativo', true),
+        supabase.from('mineral').select('id, nome, tipo').eq('fazenda_id', fazendaId).eq('ativo', true),
+        supabase.from('racao').select('id, nome, tipo').eq('fazenda_id', fazendaId).eq('ativo', true),
+        supabase.from('proteinado').select('id, nome, tipo').eq('fazenda_id', fazendaId).eq('ativo', true),
+      ])
+
+      const options: {id: string, name: string, category: string}[] = []
+
+      // Add insumos
+      if (insumos.data) {
+        insumos.data.forEach(item => {
+          options.push({
+            id: item.id,
+            name: item.nome,
+            category: item.tipo || 'Insumos'
+          })
+        })
+      }
+
+      // Add minerais
+      if (minerais.data) {
+        minerais.data.forEach(item => {
+          options.push({
+            id: item.id,
+            name: item.nome,
+            category: item.tipo || 'Minerais'
+          })
+        })
+      }
+
+      // Add ração
+      if (racao.data) {
+        racao.data.forEach(item => {
+          options.push({
+            id: item.id,
+            name: item.nome,
+            category: item.tipo || 'Ração'
+          })
+        })
+      }
+
+      // Add proteinado
+      if (proteinado.data) {
+        proteinado.data.forEach(item => {
+          options.push({
+            id: item.id,
+            name: item.nome,
+            category: item.tipo || 'Proteinado'
+          })
+        })
+      }
+
+      setNutritionalOptions(options)
+    }
+
+    loadNutritionalOptions()
   }, [user])
 
   const handleCategoriaToggle = (categoria: string) => {
@@ -1240,15 +1314,15 @@ setFormData({
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Estratégia Nutricional
                             </label>
-                            <Input
-                              type="text"
+                            <GroupedSelect
+                              options={nutritionalOptions}
                               value={cat.estrategia_nutricional || ''}
-                              onChange={(e) => {
+                              onChange={(value) => {
                                 const updatedCategorias = [...formData.categorias]
-                                updatedCategorias[catIndex] = { ...cat, estrategia_nutricional: e.target.value }
+                                updatedCategorias[catIndex] = { ...cat, estrategia_nutricional: value }
                                 setFormData({ ...formData, categorias: updatedCategorias })
                               }}
-                              placeholder="Ex: RIP"
+                              placeholder="Selecione..."
                               className="border-gray-200 focus:border-accent"
                             />
                           </div>
