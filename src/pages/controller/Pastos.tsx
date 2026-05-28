@@ -18,6 +18,7 @@ interface Pasto {
   altura_entrada_cm?: number
   altura_saida_cm?: number
   possui_deposito?: boolean
+  kg_deposito?: number
   ativo: boolean
 }
 
@@ -39,6 +40,7 @@ export function Pastos() {
     altura_entrada_cm: '',
     altura_saida_cm: '',
     possui_deposito: false,
+    kg_deposito: '',
   })
   const [submitting, setSubmitting] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -115,6 +117,7 @@ export function Pastos() {
       altura_entrada_cm: formData.altura_entrada_cm ? parseFloat(formData.altura_entrada_cm) : null,
       altura_saida_cm: formData.altura_saida_cm ? parseFloat(formData.altura_saida_cm) : null,
       possui_deposito: formData.possui_deposito,
+      kg_deposito: formData.kg_deposito ? parseFloat(formData.kg_deposito) : null,
     }
 
     let error
@@ -146,6 +149,7 @@ export function Pastos() {
         altura_entrada_cm: '',
         altura_saida_cm: '',
         possui_deposito: false,
+        kg_deposito: '',
       })
       setShowForm(false)
       setEditingPasto(null)
@@ -168,6 +172,7 @@ export function Pastos() {
       altura_entrada_cm: pasto.altura_entrada_cm?.toString() || '',
       altura_saida_cm: pasto.altura_saida_cm?.toString() || '',
       possui_deposito: pasto.possui_deposito || false,
+      kg_deposito: pasto.kg_deposito?.toString() || '',
     })
     setShowForm(true)
   }
@@ -185,6 +190,7 @@ export function Pastos() {
       altura_entrada_cm: '',
       altura_saida_cm: '',
       possui_deposito: false,
+      kg_deposito: '',
     })
     setShowForm(false)
   }
@@ -667,6 +673,23 @@ export function Pastos() {
                   }`}
                 />
               </button>
+
+              {formData.possui_deposito && (
+                <div className="w-1/4 pl-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Kg no depósito <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={formData.kg_deposito}
+                    onChange={(e) => setFormData({ ...formData, kg_deposito: e.target.value })}
+                    required
+                    placeholder="Ex: 1000"
+                    className="border-gray-200 focus:border-accent"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="flex gap-2 items-center">

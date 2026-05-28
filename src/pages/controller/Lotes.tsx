@@ -794,19 +794,6 @@ setFormData({
 
   return (
     <div className="space-y-6">
-      {/* Notice Banner */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div className="flex items-start gap-3">
-          <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <div>
-            <p className="text-sm font-medium text-blue-800">Nova versão do sistema</p>
-            <p className="text-sm text-blue-700 mt-1">Você precisará adicionar todas as categorias existentes para cada lote e preencher os dados específicos de cada categoria. Para os lotes que já possuem categorias, será necessário editar os dados de cada uma corretamente. Clique em "Editar" no lote para iniciar.</p>
-          </div>
-        </div>
-      </div>
-
       {/* Header */}
       {!showForm && (
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
