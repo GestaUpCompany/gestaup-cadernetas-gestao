@@ -13,7 +13,7 @@ interface RegistroMovimentacao {
   lote_origem?: string
   destino?: string
   numero_cabecas?: number
-  peso_medio_kg?: number
+  peso_vivo_atual_kg?: number
   motivo_movimentacao?: string
   causa_observacao?: string
   brinco?: string
@@ -115,7 +115,7 @@ export function MovimentacaoDetalhes() {
             <div className="bg-gray-50 p-4 rounded-lg">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <p className="text-sm"><span className="font-medium text-gray-700">Nº Cabeças:</span> {registro.numero_cabecas || 0}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Peso Médio (kg):</span> {registro.peso_medio_kg || 0}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Peso Vivo Atual (kg):</span> {registro.peso_vivo_atual_kg || 0}</p>
               </div>
             </div>
           </div>

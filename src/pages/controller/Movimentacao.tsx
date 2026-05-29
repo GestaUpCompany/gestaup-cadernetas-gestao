@@ -14,7 +14,7 @@ interface RegistroMovimentacao {
   lote_origem?: string
   lote_destino?: string
   numero_cabecas?: number
-  peso_medio_kg?: number
+  peso_vivo_atual_kg?: number
   vaca?: boolean
   touro?: boolean
   boi_gordo?: boolean
@@ -86,7 +86,7 @@ export function Movimentacao() {
       (registro.motivo_movimentacao && registro.motivo_movimentacao.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.causa_morte && registro.causa_morte.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.numero_cabecas && registro.numero_cabecas.toString().includes(searchTerm.toLowerCase())) ||
-      (registro.peso_medio_kg && registro.peso_medio_kg.toString().includes(searchTerm.toLowerCase()))
+      (registro.peso_vivo_atual_kg && registro.peso_vivo_atual_kg.toString().includes(searchTerm.toLowerCase()))
 
     // Converter data do input (yyyy-mm-dd) para formato do banco (yyyy-dd-mm)
     const convertDate = (dateStr: string) => {
@@ -239,8 +239,8 @@ export function Movimentacao() {
                       <span className="text-gray-800 font-medium">{registro.numero_cabecas || '-'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Peso Médio (kg):</span>
-                      <span className="text-gray-800 font-medium">{registro.peso_medio_kg || '-'}</span>
+                      <span className="text-gray-500">Peso Vivo Atual (kg):</span>
+                      <span className="text-gray-800 font-medium">{registro.peso_vivo_atual_kg || '-'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-500">Motivo:</span>
@@ -317,7 +317,7 @@ export function Movimentacao() {
                         {registro.numero_cabecas || '-'}
                       </td>
                       <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
-                        {registro.peso_medio_kg || '-'}
+                        {registro.peso_vivo_atual_kg || '-'}
                       </td>
                       <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                         {registro.motivo_movimentacao || '-'}
