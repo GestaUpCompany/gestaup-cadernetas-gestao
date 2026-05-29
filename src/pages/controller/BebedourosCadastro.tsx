@@ -73,11 +73,10 @@ export function BebedourosCadastro() {
             .eq('bebedouro_id', bebedouro.id)
             .order('data_limpeza', { ascending: false })
             .limit(1)
-            .single()
 
           return {
             ...bebedouro,
-            data_ultima_limpeza_historico: ultimaLimpeza?.data_limpeza || null
+            data_ultima_limpeza_historico: ultimaLimpeza && ultimaLimpeza.length > 0 ? ultimaLimpeza[0].data_limpeza : null
           }
         })
       )
