@@ -37,6 +37,7 @@ const menuStructure = [
       { label: 'Pluviômetros', path: '/controller/pluviometros' },
       { label: 'Causas de Morte', path: '/controller/causas-morte' },
       { label: 'Máquinas e Veículos', path: '/controller/maquinas-veiculos' },
+      { label: 'Setores', path: '/controller/setores' },
     ],
   },
   {
