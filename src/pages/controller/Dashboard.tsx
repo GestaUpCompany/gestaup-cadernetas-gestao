@@ -20,7 +20,7 @@ export function ControllerDashboard() {
   const cadernetaStats = stats?.cadernetaStats ?? {
     maternidade: 0, enfermaria: 0, pastagens: 0, rodeio: 0, suplementacao: 0,
     bebedouros: 0, movimentacao: 0, morte: 0, clima: 0, abastecimento: 0,
-    cantina: 0, limpeza: 0, 'operacoes-maquinas': 0,
+    cantina: 0, limpeza: 0, 'operacoes-maquinas': 0, almoxarifado: 0, 'manutencao-maquinas': 0, problemas: 0,
   }
   const registrosHoje = stats?.registrosHoje ?? 0
   const gadoData = gadoStats ?? {
@@ -87,7 +87,7 @@ export function ControllerDashboard() {
           <Card className="bg-white p-4 sm:p-6 shadow-md rounded-xl border border-gray-100 border-l-4 border-l-purple-500 hover:shadow-lg transition-shadow">
             <p className="text-xs sm:text-sm text-gray-500 mb-1 sm:mb-2">Total Registros</p>
             <p className="text-3xl sm:text-4xl font-bold text-purple-600">
-              {cadernetaStats.maternidade + cadernetaStats.enfermaria + cadernetaStats.pastagens + cadernetaStats.rodeio + cadernetaStats.suplementacao + cadernetaStats.bebedouros + cadernetaStats.movimentacao + cadernetaStats.morte + cadernetaStats.clima + cadernetaStats.abastecimento + cadernetaStats.cantina + cadernetaStats.limpeza + cadernetaStats['operacoes-maquinas']}
+              {cadernetaStats.maternidade + cadernetaStats.enfermaria + cadernetaStats.pastagens + cadernetaStats.rodeio + cadernetaStats.suplementacao + cadernetaStats.bebedouros + cadernetaStats.movimentacao + cadernetaStats.morte + cadernetaStats.clima + cadernetaStats.abastecimento + cadernetaStats.cantina + cadernetaStats.limpeza + cadernetaStats['operacoes-maquinas'] + cadernetaStats.almoxarifado + cadernetaStats['manutencao-maquinas'] + cadernetaStats.problemas}
             </p>
           </Card>
         </div>
@@ -226,7 +226,7 @@ export function ControllerDashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
           <Card 
             className="bg-white p-3 sm:p-6 shadow-md rounded-xl border border-gray-100 cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => navigate('/controller/maternidade')}
+            onClick={() => navigate('/controller/cadernetas/maternidade')}
           >
             <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
               <img src={CADERNETA_IMAGES.maternidade} alt={CADERNETA_TITLES.maternidade} className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
@@ -238,7 +238,7 @@ export function ControllerDashboard() {
           </Card>
           <Card 
             className="bg-white p-3 sm:p-6 shadow-md rounded-xl border border-gray-100 cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => navigate('/controller/pastagens-caderneta')}
+            onClick={() => navigate('/controller/cadernetas/pastagens')}
           >
             <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
               <img src={CADERNETA_IMAGES.pastagens} alt={CADERNETA_TITLES.pastagens} className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
@@ -250,7 +250,7 @@ export function ControllerDashboard() {
           </Card>
           <Card 
             className="bg-white p-3 sm:p-6 shadow-md rounded-xl border border-gray-100 cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => navigate('/controller/rodeio')}
+            onClick={() => navigate('/controller/cadernetas/rodeio')}
           >
             <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
               <img src={CADERNETA_IMAGES.rodeio} alt={CADERNETA_TITLES.rodeio} className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
@@ -262,7 +262,7 @@ export function ControllerDashboard() {
           </Card>
           <Card 
             className="bg-white p-3 sm:p-6 shadow-md rounded-xl border border-gray-100 cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => navigate('/controller/suplementacao')}
+            onClick={() => navigate('/controller/cadernetas/suplementacao')}
           >
             <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
               <img src={CADERNETA_IMAGES.suplementacao} alt={CADERNETA_TITLES.suplementacao} className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
@@ -274,7 +274,7 @@ export function ControllerDashboard() {
           </Card>
           <Card 
             className="bg-white p-3 sm:p-6 shadow-md rounded-xl border border-gray-100 cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => navigate('/controller/bebedouros')}
+            onClick={() => navigate('/controller/cadernetas/bebedouros')}
           >
             <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
               <img src={CADERNETA_IMAGES.bebedouros} alt={CADERNETA_TITLES.bebedouros} className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
@@ -286,7 +286,7 @@ export function ControllerDashboard() {
           </Card>
           <Card 
             className="bg-white p-3 sm:p-6 shadow-md rounded-xl border border-gray-100 cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => navigate('/controller/movimentacao')}
+            onClick={() => navigate('/controller/cadernetas/movimentacao')}
           >
             <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
               <img src={CADERNETA_IMAGES.movimentacao} alt={CADERNETA_TITLES.movimentacao} className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
@@ -298,7 +298,7 @@ export function ControllerDashboard() {
           </Card>
           <Card 
             className="bg-white p-3 sm:p-6 shadow-md rounded-xl border border-gray-100 cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => navigate('/controller/morte')}
+            onClick={() => navigate('/controller/cadernetas/morte')}
           >
             <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
               <img src={CADERNETA_IMAGES.morte} alt={CADERNETA_TITLES.morte} className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
@@ -310,7 +310,7 @@ export function ControllerDashboard() {
           </Card>
           <Card 
             className="bg-white p-3 sm:p-6 shadow-md rounded-xl border border-gray-100 cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => navigate('/controller/clima')}
+            onClick={() => navigate('/controller/cadernetas/clima')}
           >
             <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
               <img src={CADERNETA_IMAGES.clima} alt={CADERNETA_TITLES.clima} className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
@@ -322,7 +322,7 @@ export function ControllerDashboard() {
           </Card>
           <Card 
             className="bg-white p-3 sm:p-6 shadow-md rounded-xl border border-gray-100 cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => navigate('/controller/abastecimento')}
+            onClick={() => navigate('/controller/cadernetas/abastecimento')}
           >
             <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
               <img src={CADERNETA_IMAGES.abastecimento} alt={CADERNETA_TITLES.abastecimento} className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
@@ -334,7 +334,7 @@ export function ControllerDashboard() {
           </Card>
           <Card 
             className="bg-white p-3 sm:p-6 shadow-md rounded-xl border border-gray-100 cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => navigate('/controller/cantina')}
+            onClick={() => navigate('/controller/cadernetas/cantina')}
           >
             <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
               <img src={CADERNETA_IMAGES.cantina} alt={CADERNETA_TITLES.cantina} className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
@@ -346,7 +346,7 @@ export function ControllerDashboard() {
           </Card>
           <Card 
             className="bg-white p-3 sm:p-6 shadow-md rounded-xl border border-gray-100 cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => navigate('/controller/limpeza')}
+            onClick={() => navigate('/controller/cadernetas/limpeza')}
           >
             <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
               <img src={CADERNETA_IMAGES.limpeza} alt={CADERNETA_TITLES.limpeza} className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
@@ -356,15 +356,51 @@ export function ControllerDashboard() {
               </div>
             </div>
           </Card>
-          <Card 
+          <Card
             className="bg-white p-3 sm:p-6 shadow-md rounded-xl border border-gray-100 cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => navigate('/controller/operacoes-maquinas')}
+            onClick={() => navigate('/controller/cadernetas/operacoes-maquinas')}
           >
             <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
               <img src={CADERNETA_IMAGES['operacoes-maquinas']} alt={CADERNETA_TITLES['operacoes-maquinas']} className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
               <div>
                 <p className="text-xs sm:text-sm text-gray-500 mb-0.5 sm:mb-1">{CADERNETA_TITLES['operacoes-maquinas']}</p>
                 <p className="text-2xl sm:text-4xl font-bold text-gray-800">{cadernetaStats['operacoes-maquinas']}</p>
+              </div>
+            </div>
+          </Card>
+          <Card
+            className="bg-white p-3 sm:p-6 shadow-md rounded-xl border border-gray-100 cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => navigate('/controller/cadernetas/almoxarifado')}
+          >
+            <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
+              <img src={CADERNETA_IMAGES.almoxarifado} alt={CADERNETA_TITLES.almoxarifado} className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
+              <div>
+                <p className="text-xs sm:text-sm text-gray-500 mb-0.5 sm:mb-1">{CADERNETA_TITLES.almoxarifado}</p>
+                <p className="text-2xl sm:text-4xl font-bold text-gray-800">{cadernetaStats.almoxarifado}</p>
+              </div>
+            </div>
+          </Card>
+          <Card
+            className="bg-white p-3 sm:p-6 shadow-md rounded-xl border border-gray-100 cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => navigate('/controller/cadernetas/manutencao-maquinas')}
+          >
+            <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
+              <img src={CADERNETA_IMAGES['manutencao-maquinas']} alt={CADERNETA_TITLES['manutencao-maquinas']} className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
+              <div>
+                <p className="text-xs sm:text-sm text-gray-500 mb-0.5 sm:mb-1">{CADERNETA_TITLES['manutencao-maquinas']}</p>
+                <p className="text-2xl sm:text-4xl font-bold text-gray-800">{cadernetaStats['manutencao-maquinas']}</p>
+              </div>
+            </div>
+          </Card>
+          <Card
+            className="bg-white p-3 sm:p-6 shadow-md rounded-xl border border-gray-100 cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => navigate('/controller/cadernetas/problemas')}
+          >
+            <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
+              <img src={CADERNETA_IMAGES.problemas} alt={CADERNETA_TITLES.problemas} className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
+              <div>
+                <p className="text-xs sm:text-sm text-gray-500 mb-0.5 sm:mb-1">{CADERNETA_TITLES.problemas}</p>
+                <p className="text-2xl sm:text-4xl font-bold text-gray-800">{cadernetaStats.problemas}</p>
               </div>
             </div>
           </Card>

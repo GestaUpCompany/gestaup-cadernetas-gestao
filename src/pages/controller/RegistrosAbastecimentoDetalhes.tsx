@@ -76,7 +76,7 @@ export function RegistrosAbastecimentoDetalhes() {
   if (!registro) {
     return (
       <div className="space-y-6">
-        <Button variant="secondary" onClick={() => navigate('/controller/abastecimento')}>
+        <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/abastecimento')}>
           Voltar
         </Button>
         <Card className="bg-white p-6 text-center" disableHover>
@@ -91,7 +91,7 @@ export function RegistrosAbastecimentoDetalhes() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
         <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Detalhes do Registro de Abastecimento</h2>
-        <Button variant="secondary" onClick={() => navigate('/controller/abastecimento')}>
+        <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/abastecimento')}>
           Voltar
         </Button>
       </div>

@@ -25,11 +25,22 @@ export function Breadcrumbs({ maxItems = 3 }: BreadcrumbsProps) {
     // Adicionar Home
     breadcrumbs.push({ label: 'Home', path: '/controller/dashboard' })
 
+    // Se estiver em uma rota de caderneta, adicionar Cadernetas como breadcrumb
+    if (pathnames.includes('cadernetas') && pathnames.length > 2) {
+      breadcrumbs.push({ label: 'Cadernetas', path: '/controller/cadernetas' })
+    }
+
     pathnames.forEach((path, index) => {
       const routePath = `/${pathnames.slice(0, index + 1).join('/')}`
       
       // Pular breadcrumbs intermediários que não são rotas válidas
+      // Mas incluir o último item (página atual)
       if (index < pathnames.length - 1) {
+        // Se for 'cadernetas' e já adicionamos acima, pular
+        if (path === 'cadernetas' && pathnames.length > 2) {
+          return
+        }
+        // Para outros casos, pular intermediários
         return
       }
       

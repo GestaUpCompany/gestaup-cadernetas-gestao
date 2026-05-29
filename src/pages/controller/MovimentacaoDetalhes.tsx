@@ -75,7 +75,7 @@ export function MovimentacaoDetalhes() {
   if (!registro) {
     return (
       <div className="space-y-6">
-        <Button variant="secondary" onClick={() => navigate('/controller/movimentacao')}>
+        <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/movimentacao')}>
           Voltar
         </Button>
         <Card className="bg-white p-6 text-center" disableHover>
@@ -89,7 +89,7 @@ export function MovimentacaoDetalhes() {
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
         <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Detalhes do Registro de Movimentação</h2>
-        <Button variant="secondary" onClick={() => navigate('/controller/movimentacao')}>
+        <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/movimentacao')}>
           Voltar
         </Button>
       </div>

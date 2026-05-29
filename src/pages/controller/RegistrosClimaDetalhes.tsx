@@ -69,7 +69,7 @@ export function RegistrosClimaDetalhes() {
   if (!registro) {
     return (
       <div className="space-y-6">
-        <Button variant="secondary" onClick={() => navigate('/controller/clima')}>
+        <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/clima')}>
           Voltar
         </Button>
         <Card className="bg-white p-6 text-center" disableHover>
@@ -84,7 +84,7 @@ export function RegistrosClimaDetalhes() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
         <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Detalhes do Registro de Clima</h2>
-        <Button variant="secondary" onClick={() => navigate('/controller/clima')}>
+        <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/clima')}>
           Voltar
         </Button>
       </div>

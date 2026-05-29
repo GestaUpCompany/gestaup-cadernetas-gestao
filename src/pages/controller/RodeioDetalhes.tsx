@@ -76,7 +76,7 @@ export function RodeioDetalhes() {
   if (!registro) {
     return (
       <div className="space-y-6">
-        <Button variant="secondary" onClick={() => navigate('/controller/rodeio')}>
+        <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/rodeio')}>
           Voltar
         </Button>
         <Card className="bg-white p-6 text-center" disableHover>
@@ -99,7 +99,7 @@ export function RodeioDetalhes() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-800">Detalhes do Registro de Rodeio</h2>
-        <Button variant="secondary" onClick={() => navigate('/controller/rodeio')}>
+        <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/rodeio')}>
           Voltar
         </Button>
       </div>

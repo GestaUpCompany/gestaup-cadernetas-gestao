@@ -57,6 +57,9 @@ export function useDashboardStats(userId: string | undefined) {
         { count: cantinaCount },
         { count: limpezaCount },
         { count: operacoesMaquinasCount },
+        { count: almoxarifadoCount },
+        { count: manutencaoMaquinasCount },
+        { count: problemasCount },
       ] = await Promise.all([
         supabase.from('pastos').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
         supabase.from('lotes').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
@@ -77,6 +80,9 @@ export function useDashboardStats(userId: string | undefined) {
         supabase.from('registros_cantina').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
         supabase.from('registros_limpeza').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
         supabase.from('registros_operacoes_maquinas').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
+        supabase.from('registros_almoxarifado').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
+        supabase.from('registros_manutencao_maquinas').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
+        supabase.from('registros_problemas').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
       ])
 
       const today = new Date()
@@ -128,6 +134,9 @@ export function useDashboardStats(userId: string | undefined) {
           cantina: cantinaCount || 0,
           limpeza: limpezaCount || 0,
           'operacoes-maquinas': operacoesMaquinasCount || 0,
+          almoxarifado: almoxarifadoCount || 0,
+          'manutencao-maquinas': manutencaoMaquinasCount || 0,
+          problemas: problemasCount || 0,
         },
         registrosHoje: (maternidadeHoje || 0) + (enfermariaHoje || 0) + (pastagensHoje || 0) + (rodeioHoje || 0) + (suplementacaoHoje || 0) + (bebedourosHoje || 0) + (movimentacaoHoje || 0) + (morteHoje || 0),
       }

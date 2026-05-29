@@ -190,7 +190,7 @@ export function Suplementacao() {
               <Card
                 key={registro.id}
                 className="p-4"
-                onClick={() => navigate(`/controller/suplementacao/${registro.id}`)}
+                onClick={() => navigate(`/controller/cadernetas/suplementacao/${registro.id}`)}
               >
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex items-center gap-2">
@@ -279,7 +279,7 @@ export function Suplementacao() {
                   return (
                     <tr
                       key={registro.id}
-                      onClick={() => navigate(`/controller/suplementacao/${registro.id}`)}
+                      onClick={() => navigate(`/controller/cadernetas/suplementacao/${registro.id}`)}
                       className="cursor-pointer hover:bg-gray-50 transition-colors"
                     >
                       <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">

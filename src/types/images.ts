@@ -12,6 +12,9 @@ export type CadernetaImage =
   | 'cantina'
   | 'limpeza'
   | 'operacoes-maquinas'
+  | 'almoxarifado'
+  | 'manutencao-maquinas'
+  | 'problemas'
 
 export const CADERNETA_IMAGES: Record<CadernetaImage, string> = {
   maternidade: '/images/cadernetas/maternidade.png',
@@ -27,6 +30,9 @@ export const CADERNETA_IMAGES: Record<CadernetaImage, string> = {
   cantina: '/images/cadernetas/cantina.png',
   limpeza: '/images/cadernetas/limpeza.png',
   'operacoes-maquinas': '/images/cadernetas/operacoes-maquinas.png',
+  almoxarifado: '/images/almoxarifado.png',
+  'manutencao-maquinas': '/images/manutencao-maquinas.png',
+  problemas: '/images/problemas.png',
 }
 
 export const CADERNETA_TITLES: Record<CadernetaImage, string> = {
@@ -43,6 +49,9 @@ export const CADERNETA_TITLES: Record<CadernetaImage, string> = {
   cantina: 'Cantina',
   limpeza: 'Limpeza',
   'operacoes-maquinas': 'Operações de Máquinas',
+  almoxarifado: 'Almoxarifado',
+  'manutencao-maquinas': 'Manutenção de Máquinas',
+  problemas: 'Problemas',
 }
 
 export const CADERNETA_DESCRIPTIONS: Record<CadernetaImage, string> = {
@@ -59,6 +68,9 @@ export const CADERNETA_DESCRIPTIONS: Record<CadernetaImage, string> = {
   cantina: 'Registros de cantina e alimentação',
   limpeza: 'Registros de limpeza e manutenção',
   'operacoes-maquinas': 'Registros de operações de máquinas',
+  almoxarifado: 'Registros de almoxarifado',
+  'manutencao-maquinas': 'Registros de manutenção de máquinas',
+  problemas: 'Registros de problemas',
 }
 
 export const LOGO_GESTAUP = '/images/logo/logo-gestaup.png'

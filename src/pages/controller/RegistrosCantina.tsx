@@ -180,7 +180,7 @@ export function RegistrosCantina() {
               <Card
                 key={registro.id}
                 className="p-4"
-                onClick={() => navigate(`/controller/cantina/${registro.id}`)}
+                onClick={() => navigate(`/controller/cadernetas/cantina/${registro.id}`)}
               >
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex items-center gap-2">
@@ -260,7 +260,7 @@ export function RegistrosCantina() {
                 {filteredRegistros.map((registro) => (
                   <tr
                     key={registro.id}
-                    onClick={() => navigate(`/controller/cantina/${registro.id}`)}
+                    onClick={() => navigate(`/controller/cadernetas/cantina/${registro.id}`)}
                     className="cursor-pointer hover:bg-gray-50 transition-colors"
                   >
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">

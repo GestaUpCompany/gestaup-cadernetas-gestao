@@ -4,31 +4,29 @@ import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card } from '../../components/ui'
 
-interface RegistroLimpeza {
+interface RegistroManutencaoMaquinas {
   id: string
   fazenda_id: string
   dispositivo_id?: string
-  data: string
-  numero_equipe?: number
-  setor?: string
-  local?: string
-  hora_inicio?: string
-  hora_final?: string
-  limpeza_realizada?: any[]
-  observacao?: string
   nome_usuario?: string
+  data: string
+  maquina?: string
+  tipo_manutencao?: string
+  descricao?: string
+  responsavel?: string
+  custo?: number
+  status?: string
+  observacao?: string
   sync_status?: string
-  version?: number
   created_at: string
-  updated_at: string
-  deleted_at?: string
+  updated_at?: string
 }
 
-export function RegistrosLimpezaDetalhes() {
+export function ManutencaoMaquinasDetalhes() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [registro, setRegistro] = useState<RegistroLimpeza | null>(null)
+  const [registro, setRegistro] = useState<RegistroManutencaoMaquinas | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -49,7 +47,7 @@ export function RegistrosLimpezaDetalhes() {
     const fazendaId = vinculos[0].fazenda_id
 
     const { data, error } = await supabase
-      .from('registros_limpeza')
+      .from('registros_manutencao_maquinas')
       .select('*')
       .eq('id', id)
       .eq('fazenda_id', fazendaId)
@@ -59,7 +57,7 @@ export function RegistrosLimpezaDetalhes() {
     if (error) {
       console.error('Erro ao buscar registro:', error)
     } else {
-      setRegistro(data as RegistroLimpeza)
+      setRegistro(data as RegistroManutencaoMaquinas)
     }
 
     setLoading(false)
@@ -72,7 +70,7 @@ export function RegistrosLimpezaDetalhes() {
   if (!registro) {
     return (
       <div className="space-y-6">
-        <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/limpeza')}>
+        <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/manutencao-maquinas')}>
           Voltar
         </Button>
         <Card className="bg-white p-6 text-center" disableHover>
@@ -84,10 +82,9 @@ export function RegistrosLimpezaDetalhes() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Detalhes do Registro de Limpeza</h2>
-        <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/limpeza')}>
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Detalhes do Registro de Manutenção de Máquinas</h2>
+        <Button variant="secondary" onClick={() => navigate('/controller/cadernetas/manutencao-maquinas')}>
           Voltar
         </Button>
       </div>
@@ -97,51 +94,45 @@ export function RegistrosLimpezaDetalhes() {
           {/* Informações Gerais */}
           <div>
             <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Informações Gerais</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Data:</span> {(() => {
                 const [year, month, day] = registro.data.split('-')
                 return `${day}/${month}/${year}`
               })()}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Nº Equipe:</span> {registro.numero_equipe || '-'}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Setor:</span> {registro.setor || '-'}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Local:</span> {registro.local || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Máquina:</span> {registro.maquina || '-'}</p>
             </div>
           </div>
 
-          {/* Horários */}
+          {/* Manutenção */}
           <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Horários</h3>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Manutenção</h3>
             <div className="bg-gray-50 p-4 rounded-lg">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <p className="text-sm"><span className="font-medium text-gray-700">Hora Início:</span> {registro.hora_inicio || '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Hora Final:</span> {registro.hora_final || '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Tipo Manutenção:</span> {registro.tipo_manutencao || '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Responsável:</span> {registro.responsavel || '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Custo:</span> {registro.custo ? `R$ ${registro.custo.toFixed(2)}` : '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Status:</span> {registro.status || '-'}</p>
               </div>
             </div>
           </div>
 
-          {/* Limpeza Realizada */}
-          {registro.limpeza_realizada && registro.limpeza_realizada.length > 0 && (
+          {/* Descrição */}
+          {registro.descricao && (
             <div>
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Limpeza Realizada</h3>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Descrição</h3>
               <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm font-medium text-gray-700">
-                  {registro.limpeza_realizada.map((item: string) => 
-                    item.charAt(0).toUpperCase() + item.slice(1)
-                  ).join(', ')}
-                </p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Descrição:</span> {registro.descricao}</p>
               </div>
             </div>
           )}
 
-          {/* Observação */}
-          {registro.observacao && (
-            <div>
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Observação</h3>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm">{registro.observacao}</p>
-              </div>
+          {/* Observações */}
+          <div>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Observações</h3>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <p className="text-sm"><span className="font-medium text-gray-700">Observação:</span> {registro.observacao || '-'}</p>
             </div>
-          )}
+          </div>
         </div>
       </Card>
     </div>

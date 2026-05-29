@@ -5,28 +5,27 @@ import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton } from '../../components/ui'
 import { exportToCSV } from '../../utils/exportCSV'
 
-interface RegistroBebedouros {
+interface RegistroManutencaoMaquinas {
   id: string
   fazenda_id: string
   dispositivo_id?: string
   nome_usuario?: string
   data: string
+  maquina?: string
+  tipo_manutencao?: string
+  descricao?: string
   responsavel?: string
-  pasto?: string
-  lote?: string
-  gado?: string
-  categoria?: string
-  leitura_bebedouro?: number
-  numero_bebedouro?: string
+  custo?: number
+  status?: string
   observacao?: string
   sync_status?: string
   created_at: string
 }
 
-export function Bebedouros() {
+export function ManutencaoMaquinas() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [registros, setRegistros] = useState<RegistroBebedouros[]>([])
+  const [registros, setRegistros] = useState<RegistroManutencaoMaquinas[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [dataInicio, setDataInicio] = useState('')
@@ -51,7 +50,7 @@ export function Bebedouros() {
     const fazendaId = vinculos[0].fazenda_id
 
     let query = supabase
-      .from('registros_bebedouros')
+      .from('registros_manutencao_maquinas')
       .select('*')
       .eq('fazenda_id', fazendaId)
       .is('deleted_at', null)
@@ -61,9 +60,9 @@ export function Bebedouros() {
     const { data, error } = await query
 
     if (error) {
-      console.error('Erro ao buscar registros de bebedouros:', error)
+      console.error('Erro ao buscar registros de manutenção de máquinas:', error)
     } else {
-      setRegistros(data as RegistroBebedouros[])
+      setRegistros(data as RegistroManutencaoMaquinas[])
     }
 
     setLoading(false)
@@ -71,22 +70,14 @@ export function Bebedouros() {
 
   const filteredRegistros = registros.filter((registro) => {
     const matchesSearch =
+      (registro.maquina && registro.maquina.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.tipo_manutencao && registro.tipo_manutencao.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.responsavel && registro.responsavel.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.lote && registro.lote.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.pasto && registro.pasto.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.numero_bebedouro && registro.numero_bebedouro.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.leitura_bebedouro && registro.leitura_bebedouro.toString().includes(searchTerm.toLowerCase())) ||
-      (registro.observacao && registro.observacao.toLowerCase().includes(searchTerm.toLowerCase()))
+      (registro.descricao && registro.descricao.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.status && registro.status.toLowerCase().includes(searchTerm.toLowerCase()))
 
-    // Converter data do input (yyyy-mm-dd) para formato do banco (yyyy-dd-mm)
-    const convertDate = (dateStr: string) => {
-      if (!dateStr) return ''
-      const [year, month, day] = dateStr.split('-')
-      return `${year}-${day}-${month}`
-    }
-
-    const matchesDataInicio = !dataInicio || registro.data >= convertDate(dataInicio)
-    const matchesDataFim = !dataFim || registro.data <= convertDate(dataFim)
+    const matchesDataInicio = !dataInicio || registro.data >= dataInicio
+    const matchesDataFim = !dataFim || registro.data <= dataFim
 
     return matchesSearch && matchesDataInicio && matchesDataFim
   }).sort((a, b) => {
@@ -109,14 +100,14 @@ export function Bebedouros() {
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Caderneta de Bebedouros</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Caderneta de Manutenção de Máquinas</h2>
       </div>
 
       <Card className="bg-white p-4 sm:p-6" disableHover>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
           <h3 className="text-base sm:text-lg font-semibold text-gray-800">Filtros</h3>
           <Button
-            onClick={() => exportToCSV(filteredRegistros, 'bebedouros-export')}
+            onClick={() => exportToCSV(filteredRegistros, 'manutencao-maquinas-export')}
             disabled={filteredRegistros.length === 0}
             className="w-full sm:w-auto text-sm"
           >
@@ -128,7 +119,7 @@ export function Bebedouros() {
             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Buscar</label>
             <Input
               type="text"
-              placeholder="Responsável, lote, pasto, nº bebedouro, leitura, observação..."
+              placeholder="Máquina, tipo de manutenção, responsável, descrição, status..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="text-sm"
@@ -167,7 +158,7 @@ export function Bebedouros() {
 
       {registros.length === 0 ? (
         <Card className="bg-white p-4 sm:p-6 text-center" disableHover>
-          <p className="text-gray-600">Nenhum registro de bebedouros encontrado</p>
+          <p className="text-gray-600">Nenhum registro de manutenção de máquinas encontrado</p>
         </Card>
       ) : (
         <>
@@ -177,7 +168,7 @@ export function Bebedouros() {
               <Card
                 key={registro.id}
                 className="bg-white p-4 cursor-pointer hover:shadow-lg transition-shadow"
-                onClick={() => navigate(`/controller/cadernetas/bebedouros/${registro.id}`)}
+                onClick={() => navigate(`/controller/cadernetas/manutencao-maquinas/${registro.id}`)}
               >
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex items-center gap-2">
@@ -201,24 +192,20 @@ export function Bebedouros() {
                 </div>
                 <div className="space-y-2 text-xs sm:text-sm">
                   <div className="flex justify-between">
+                    <span className="text-gray-500">Máquina:</span>
+                    <span className="text-gray-800 font-medium">{registro.maquina || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Tipo Manutenção:</span>
+                    <span className="text-gray-800 font-medium">{registro.tipo_manutencao || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
                     <span className="text-gray-500">Responsável:</span>
                     <span className="text-gray-800 font-medium">{registro.responsavel || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Lote:</span>
-                    <span className="text-gray-800 font-medium">{registro.lote || '-'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Pasto:</span>
-                    <span className="text-gray-800 font-medium">{registro.pasto || '-'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Nº Bebedouro:</span>
-                    <span className="text-gray-800 font-medium">{registro.numero_bebedouro || '-'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Leitura:</span>
-                    <span className="text-gray-800 font-medium">{registro.leitura_bebedouro || '-'}</span>
+                    <span className="text-gray-500">Status:</span>
+                    <span className="text-gray-800 font-medium">{registro.status || '-'}</span>
                   </div>
                   {registro.observacao && (
                     <div className="flex justify-between">
@@ -242,11 +229,11 @@ export function Bebedouros() {
                   >
                     Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
                   </th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Máquina</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo Manutenção</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Responsável</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lote</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pasto</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nº Bebedouro</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leitura</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Custo</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Observação</th>
                 </tr>
               </thead>
@@ -254,7 +241,7 @@ export function Bebedouros() {
                 {filteredRegistros.map((registro) => (
                   <tr
                     key={registro.id}
-                    onClick={() => navigate(`/controller/cadernetas/bebedouros/${registro.id}`)}
+                    onClick={() => navigate(`/controller/cadernetas/manutencao-maquinas/${registro.id}`)}
                     className="cursor-pointer hover:bg-gray-50 transition-colors"
                   >
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
@@ -264,19 +251,19 @@ export function Bebedouros() {
                       })()}
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      {registro.maquina || '-'}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      {registro.tipo_manutencao || '-'}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                       {registro.responsavel || '-'}
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
-                      {registro.lote || '-'}
+                      {registro.custo ? `R$ ${registro.custo.toFixed(2)}` : '-'}
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
-                      {registro.pasto || '-'}
-                    </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
-                      {registro.numero_bebedouro || '-'}
-                    </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
-                      {registro.leitura_bebedouro || '-'}
+                      {registro.status || '-'}
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                       {registro.observacao || '-'}

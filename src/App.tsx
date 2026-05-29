@@ -59,6 +59,12 @@ import { RelatorioGado } from './pages/controller/RelatorioGado'
 import { RelatorioSaude } from './pages/controller/RelatorioSaude'
 import { MaquinasVeiculos } from './pages/controller/MaquinasVeiculos'
 import { Setores } from './pages/controller/Setores'
+import { Almoxarifado } from './pages/controller/Almoxarifado'
+import { AlmoxarifadoDetalhes } from './pages/controller/AlmoxarifadoDetalhes'
+import { ManutencaoMaquinas } from './pages/controller/ManutencaoMaquinas'
+import { ManutencaoMaquinasDetalhes } from './pages/controller/ManutencaoMaquinasDetalhes'
+import { Problemas } from './pages/controller/Problemas'
+import { ProblemasDetalhes } from './pages/controller/ProblemasDetalhes'
 
 // Redirecionamento baseado no papel do usuário
 function RoleRedirect() {
@@ -327,7 +333,7 @@ function App() {
           }
         />
         <Route
-          path="/controller/maternidade"
+          path="/controller/cadernetas/maternidade"
           element={
             <ControllerRoute>
               <ControllerLayout>
@@ -337,7 +343,7 @@ function App() {
           }
         />
         <Route
-          path="/controller/maternidade/:id"
+          path="/controller/cadernetas/maternidade/:id"
           element={
             <ControllerRoute>
               <ControllerLayout>
@@ -347,7 +353,7 @@ function App() {
           }
         />
         <Route
-          path="/controller/enfermaria"
+          path="/controller/cadernetas/enfermaria"
           element={
             <ControllerRoute>
               <ControllerLayout>
@@ -357,7 +363,7 @@ function App() {
           }
         />
         <Route
-          path="/controller/enfermaria/:id"
+          path="/controller/cadernetas/enfermaria/:id"
           element={
             <ControllerRoute>
               <ControllerLayout>
@@ -367,7 +373,7 @@ function App() {
           }
         />
         <Route
-          path="/controller/pastagens-caderneta"
+          path="/controller/cadernetas/pastagens"
           element={
             <ControllerRoute>
               <ControllerLayout>
@@ -377,7 +383,7 @@ function App() {
           }
         />
         <Route
-          path="/controller/pastagens-caderneta/:id"
+          path="/controller/cadernetas/pastagens/:id"
           element={
             <ControllerRoute>
               <ControllerLayout>
@@ -387,7 +393,7 @@ function App() {
           }
         />
         <Route
-          path="/controller/rodeio"
+          path="/controller/cadernetas/rodeio"
           element={
             <ControllerRoute>
               <ControllerLayout>
@@ -397,7 +403,7 @@ function App() {
           }
         />
         <Route
-          path="/controller/rodeio/:id"
+          path="/controller/cadernetas/rodeio/:id"
           element={
             <ControllerRoute>
               <ControllerLayout>
@@ -407,7 +413,7 @@ function App() {
           }
         />
         <Route
-          path="/controller/suplementacao"
+          path="/controller/cadernetas/suplementacao"
           element={
             <ControllerRoute>
               <ControllerLayout>
@@ -417,7 +423,7 @@ function App() {
           }
         />
         <Route
-          path="/controller/suplementacao/:id"
+          path="/controller/cadernetas/suplementacao/:id"
           element={
             <ControllerRoute>
               <ControllerLayout>
@@ -427,7 +433,7 @@ function App() {
           }
         />
         <Route
-          path="/controller/bebedouros"
+          path="/controller/cadernetas/bebedouros"
           element={
             <ControllerRoute>
               <ControllerLayout>
@@ -437,7 +443,7 @@ function App() {
           }
         />
         <Route
-          path="/controller/bebedouros/:id"
+          path="/controller/cadernetas/bebedouros/:id"
           element={
             <ControllerRoute>
               <ControllerLayout>
@@ -447,7 +453,7 @@ function App() {
           }
         />
         <Route
-          path="/controller/movimentacao"
+          path="/controller/cadernetas/movimentacao"
           element={
             <ControllerRoute>
               <ControllerLayout>
@@ -457,7 +463,7 @@ function App() {
           }
         />
         <Route
-          path="/controller/movimentacao/:id"
+          path="/controller/cadernetas/movimentacao/:id"
           element={
             <ControllerRoute>
               <ControllerLayout>
@@ -467,7 +473,7 @@ function App() {
           }
         />
         <Route
-          path="/controller/morte"
+          path="/controller/cadernetas/morte"
           element={
             <ControllerRoute>
               <ControllerLayout>
@@ -477,7 +483,7 @@ function App() {
           }
         />
         <Route
-          path="/controller/morte/:id"
+          path="/controller/cadernetas/morte/:id"
           element={
             <ControllerRoute>
               <ControllerLayout>
@@ -497,7 +503,7 @@ function App() {
           }
         />
         <Route
-          path="/controller/clima"
+          path="/controller/cadernetas/clima"
           element={
             <ControllerRoute>
               <ControllerLayout>
@@ -507,7 +513,7 @@ function App() {
           }
         />
         <Route
-          path="/controller/clima/:id"
+          path="/controller/cadernetas/clima/:id"
           element={
             <ControllerRoute>
               <ControllerLayout>
@@ -517,7 +523,7 @@ function App() {
           }
         />
         <Route
-          path="/controller/abastecimento"
+          path="/controller/cadernetas/abastecimento"
           element={
             <ControllerRoute>
               <ControllerLayout>
@@ -527,7 +533,7 @@ function App() {
           }
         />
         <Route
-          path="/controller/abastecimento/:id"
+          path="/controller/cadernetas/abastecimento/:id"
           element={
             <ControllerRoute>
               <ControllerLayout>
@@ -537,7 +543,7 @@ function App() {
           }
         />
         <Route
-          path="/controller/cantina"
+          path="/controller/cadernetas/cantina"
           element={
             <ControllerRoute>
               <ControllerLayout>
@@ -547,7 +553,7 @@ function App() {
           }
         />
         <Route
-          path="/controller/cantina/:id"
+          path="/controller/cadernetas/cantina/:id"
           element={
             <ControllerRoute>
               <ControllerLayout>
@@ -557,7 +563,7 @@ function App() {
           }
         />
         <Route
-          path="/controller/limpeza"
+          path="/controller/cadernetas/limpeza"
           element={
             <ControllerRoute>
               <ControllerLayout>
@@ -567,7 +573,7 @@ function App() {
           }
         />
         <Route
-          path="/controller/limpeza/:id"
+          path="/controller/cadernetas/limpeza/:id"
           element={
             <ControllerRoute>
               <ControllerLayout>
@@ -577,7 +583,7 @@ function App() {
           }
         />
         <Route
-          path="/controller/operacoes-maquinas"
+          path="/controller/cadernetas/operacoes-maquinas"
           element={
             <ControllerRoute>
               <ControllerLayout>
@@ -587,7 +593,7 @@ function App() {
           }
         />
         <Route
-          path="/controller/operacoes-maquinas/:id"
+          path="/controller/cadernetas/operacoes-maquinas/:id"
           element={
             <ControllerRoute>
               <ControllerLayout>
@@ -636,7 +642,67 @@ function App() {
             </ControllerRoute>
           }
         />
-        
+        <Route
+          path="/controller/cadernetas/almoxarifado"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <Almoxarifado />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/cadernetas/almoxarifado/:id"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <AlmoxarifadoDetalhes />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/cadernetas/manutencao-maquinas"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <ManutencaoMaquinas />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/cadernetas/manutencao-maquinas/:id"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <ManutencaoMaquinasDetalhes />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/cadernetas/problemas"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <Problemas />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/cadernetas/problemas/:id"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <ProblemasDetalhes />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+
         {/* Redirecionamento padrão */}
         <Route path="/" element={<RoleRedirect />} />
       </Routes>

@@ -182,7 +182,7 @@ export function Maternidade() {
               <Card
                 key={registro.id}
                 className="bg-white p-4 cursor-pointer hover:shadow-lg transition-shadow"
-                onClick={() => navigate(`/controller/maternidade/${registro.id}`)}
+                onClick={() => navigate(`/controller/cadernetas/maternidade/${registro.id}`)}
               >
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex items-center gap-2">
@@ -272,7 +272,7 @@ export function Maternidade() {
                 {filteredRegistros.map((registro) => (
                   <tr
                     key={registro.id}
-                    onClick={() => navigate(`/controller/maternidade/${registro.id}`)}
+                    onClick={() => navigate(`/controller/cadernetas/maternidade/${registro.id}`)}
                     className="cursor-pointer hover:bg-gray-50 transition-colors"
                   >
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
