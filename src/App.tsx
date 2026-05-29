@@ -57,6 +57,7 @@ import { RegistrosOperacoesMaquinas } from './pages/controller/RegistrosOperacoe
 import { RegistrosOperacoesMaquinasDetalhes } from './pages/controller/RegistrosOperacoesMaquinasDetalhes'
 import { RelatorioGado } from './pages/controller/RelatorioGado'
 import { RelatorioSaude } from './pages/controller/RelatorioSaude'
+import { MaquinasVeiculos } from './pages/controller/MaquinasVeiculos'
 
 // Redirecionamento baseado no papel do usuário
 function RoleRedirect() {
@@ -610,6 +611,16 @@ function App() {
             <ControllerRoute>
               <ControllerLayout>
                 <RelatorioSaude />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/maquinas-veiculos"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <MaquinasVeiculos />
               </ControllerLayout>
             </ControllerRoute>
           }

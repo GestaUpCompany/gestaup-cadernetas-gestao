@@ -36,6 +36,7 @@ const menuStructure = [
       { label: 'Bebedouros', path: '/controller/bebedouros-cadastro' },
       { label: 'Pluviômetros', path: '/controller/pluviometros' },
       { label: 'Causas de Morte', path: '/controller/causas-morte' },
+      { label: 'Máquinas e Veículos', path: '/controller/maquinas-veiculos' },
     ],
   },
   {

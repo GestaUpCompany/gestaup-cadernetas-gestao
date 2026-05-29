@@ -4,6 +4,7 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 
 export interface User {
   id: string
+  auth_id?: string
   email: string
   nome: string
   telefone?: string
