@@ -16,6 +16,12 @@ export function useKeyboardShortcuts(shortcuts: Shortcut[]) {
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
       const modifierKey = isMac ? e.metaKey : e.ctrlKey
 
+      // Don't trigger shortcuts if user is typing in an input field
+      const activeElement = document.activeElement
+      if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.tagName === 'SELECT')) {
+        return
+      }
+
       for (const shortcut of shortcuts) {
         const keyMatch = e.key.toLowerCase() === shortcut.key.toLowerCase()
         const ctrlMatch = shortcut.ctrl ? modifierKey : !modifierKey
