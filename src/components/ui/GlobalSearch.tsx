@@ -40,11 +40,12 @@ export function GlobalSearch() {
         setIsOpen(true)
         inputRef.current?.focus()
       }
-      if (event.key === '/' && !isOpen) {
-        event.preventDefault()
-        setIsOpen(true)
-        inputRef.current?.focus()
-      }
+      // Disabled '/' key shortcut
+      // if (event.key === '/' && !isOpen) {
+      //   event.preventDefault()
+      //   setIsOpen(true)
+      //   inputRef.current?.focus()
+      // }
     }
 
     document.addEventListener('mousedown', handleClickOutside)
