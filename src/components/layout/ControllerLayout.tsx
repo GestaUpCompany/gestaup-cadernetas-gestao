@@ -38,6 +38,7 @@ const menuStructure = [
       { label: 'Causas de Morte', path: '/controller/causas-morte' },
       { label: 'Máquinas e Veículos', path: '/controller/maquinas-veiculos' },
       { label: 'Setores', path: '/controller/setores' },
+      { label: 'Locais', path: '/controller/locais' },
       { label: 'Itens de Supermercado', path: '/controller/itens-supermercado' },
     ],
   },

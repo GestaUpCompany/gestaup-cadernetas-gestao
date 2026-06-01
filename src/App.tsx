@@ -60,6 +60,7 @@ import { RelatorioGado } from './pages/controller/RelatorioGado'
 import { RelatorioSaude } from './pages/controller/RelatorioSaude'
 import { MaquinasVeiculos } from './pages/controller/MaquinasVeiculos'
 import { Setores } from './pages/controller/Setores'
+import { Locais } from './pages/controller/Locais'
 import { Almoxarifado } from './pages/controller/Almoxarifado'
 import { AlmoxarifadoDetalhes } from './pages/controller/AlmoxarifadoDetalhes'
 import { ManutencaoMaquinas } from './pages/controller/ManutencaoMaquinas'
@@ -649,6 +650,16 @@ function App() {
             <ControllerRoute>
               <ControllerLayout>
                 <Setores />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/locais"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <Locais />
               </ControllerLayout>
             </ControllerRoute>
           }
