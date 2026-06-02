@@ -40,6 +40,7 @@ const menuStructure = [
       { label: 'Setores', path: '/controller/setores' },
       { label: 'Locais', path: '/controller/locais' },
       { label: 'Itens de Supermercado', path: '/controller/itens-supermercado' },
+      { label: 'Itens do Almoxarifado', path: '/controller/itens-almoxarifado' },
     ],
   },
   {

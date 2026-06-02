@@ -61,6 +61,7 @@ import { RelatorioSaude } from './pages/controller/RelatorioSaude'
 import { MaquinasVeiculos } from './pages/controller/MaquinasVeiculos'
 import { Setores } from './pages/controller/Setores'
 import { Locais } from './pages/controller/Locais'
+import { ItensAlmoxarifado } from './pages/controller/ItensAlmoxarifado'
 import { Almoxarifado } from './pages/controller/Almoxarifado'
 import { AlmoxarifadoDetalhes } from './pages/controller/AlmoxarifadoDetalhes'
 import { ManutencaoMaquinas } from './pages/controller/ManutencaoMaquinas'
@@ -660,6 +661,16 @@ function App() {
             <ControllerRoute>
               <ControllerLayout>
                 <Locais />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/itens-almoxarifado"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <ItensAlmoxarifado />
               </ControllerLayout>
             </ControllerRoute>
           }
