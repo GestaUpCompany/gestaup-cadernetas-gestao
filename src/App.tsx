@@ -62,6 +62,7 @@ import { MaquinasVeiculos } from './pages/controller/MaquinasVeiculos'
 import { Setores } from './pages/controller/Setores'
 import { Locais } from './pages/controller/Locais'
 import { ItensAlmoxarifado } from './pages/controller/ItensAlmoxarifado'
+import { Implementos } from './pages/controller/Implementos'
 import { Almoxarifado } from './pages/controller/Almoxarifado'
 import { AlmoxarifadoDetalhes } from './pages/controller/AlmoxarifadoDetalhes'
 import { ManutencaoMaquinas } from './pages/controller/ManutencaoMaquinas'
@@ -671,6 +672,16 @@ function App() {
             <ControllerRoute>
               <ControllerLayout>
                 <ItensAlmoxarifado />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/implementos"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <Implementos />
               </ControllerLayout>
             </ControllerRoute>
           }

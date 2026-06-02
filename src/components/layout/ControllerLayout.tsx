@@ -41,6 +41,7 @@ const menuStructure = [
       { label: 'Locais', path: '/controller/locais' },
       { label: 'Itens de Supermercado', path: '/controller/itens-supermercado' },
       { label: 'Itens do Almoxarifado', path: '/controller/itens-almoxarifado' },
+      { label: 'Implementos', path: '/controller/implementos' },
     ],
   },
   {
