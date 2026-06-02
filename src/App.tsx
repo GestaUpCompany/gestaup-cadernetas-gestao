@@ -63,6 +63,7 @@ import { Setores } from './pages/controller/Setores'
 import { Locais } from './pages/controller/Locais'
 import { ItensAlmoxarifado } from './pages/controller/ItensAlmoxarifado'
 import { Implementos } from './pages/controller/Implementos'
+import { TratamentosMaternidade } from './pages/controller/TratamentosMaternidade'
 import { Almoxarifado } from './pages/controller/Almoxarifado'
 import { AlmoxarifadoDetalhes } from './pages/controller/AlmoxarifadoDetalhes'
 import { ManutencaoMaquinas } from './pages/controller/ManutencaoMaquinas'
@@ -682,6 +683,16 @@ function App() {
             <ControllerRoute>
               <ControllerLayout>
                 <Implementos />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/tratamentos-maternidade"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <TratamentosMaternidade />
               </ControllerLayout>
             </ControllerRoute>
           }

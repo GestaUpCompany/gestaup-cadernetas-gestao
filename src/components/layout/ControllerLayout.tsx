@@ -42,6 +42,7 @@ const menuStructure = [
       { label: 'Itens de Supermercado', path: '/controller/itens-supermercado' },
       { label: 'Itens do Almoxarifado', path: '/controller/itens-almoxarifado' },
       { label: 'Implementos', path: '/controller/implementos' },
+      { label: 'Tratamentos de Maternidade', path: '/controller/tratamentos-maternidade' },
     ],
   },
   {
