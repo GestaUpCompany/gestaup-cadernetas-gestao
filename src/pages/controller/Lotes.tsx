@@ -99,7 +99,7 @@ export function Lotes() {
   const [editingLote, setEditingLote] = useState<Lote | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [pastos, setPastos] = useState<{id: string, nome: string}[]>([])
-  const [nutritionalOptions, setNutritionalOptions] = useState<{id: string, name: string, category: string}[]>([])
+  const [nutritionalOptions, setNutritionalOptions] = useState<{id: string, name: string, category: string, consumo_meta?: number}[]>([])
   const [movimentacaoData, setMovimentacaoData] = useState<any[]>([])
   const [maternidadeData, setMaternidadeData] = useState<any[]>([])
   const [morteData, setMorteData] = useState<any[]>([])
@@ -238,13 +238,13 @@ export function Lotes() {
 
       // Fetch from all 4 tables
       const [insumos, minerais, racao, proteinado] = await Promise.all([
-        supabase.from('insumos').select('id, nome, tipo').eq('fazenda_id', fazendaId).eq('ativo', true),
-        supabase.from('mineral').select('id, nome, tipo').eq('fazenda_id', fazendaId).eq('ativo', true),
-        supabase.from('racao').select('id, nome, tipo').eq('fazenda_id', fazendaId).eq('ativo', true),
-        supabase.from('proteinado').select('id, nome, tipo').eq('fazenda_id', fazendaId).eq('ativo', true),
+        supabase.from('insumos').select('id, nome, tipo, consumo_meta_porcentagem_pesovivo').eq('fazenda_id', fazendaId).eq('ativo', true),
+        supabase.from('mineral').select('id, nome, tipo, consumo_meta_porcentagem_pesovivo').eq('fazenda_id', fazendaId).eq('ativo', true),
+        supabase.from('racao').select('id, nome, tipo, consumo_meta_porcentagem_pesovivo').eq('fazenda_id', fazendaId).eq('ativo', true),
+        supabase.from('proteinado').select('id, nome, tipo, consumo_meta_porcentagem_pesovivo').eq('fazenda_id', fazendaId).eq('ativo', true),
       ])
 
-      const options: {id: string, name: string, category: string}[] = []
+      const options: {id: string, name: string, category: string, consumo_meta?: number}[] = []
 
       // Add insumos
       if (insumos.data) {
@@ -252,7 +252,8 @@ export function Lotes() {
           options.push({
             id: item.id,
             name: item.nome,
-            category: item.tipo || 'Insumos'
+            category: item.tipo || 'Insumos',
+            consumo_meta: item.consumo_meta_porcentagem_pesovivo !== undefined && item.consumo_meta_porcentagem_pesovivo !== null ? Number(item.consumo_meta_porcentagem_pesovivo) : undefined
           })
         })
       }
@@ -263,7 +264,8 @@ export function Lotes() {
           options.push({
             id: item.id,
             name: item.nome,
-            category: item.tipo || 'Minerais'
+            category: item.tipo || 'Minerais',
+            consumo_meta: item.consumo_meta_porcentagem_pesovivo !== undefined && item.consumo_meta_porcentagem_pesovivo !== null ? Number(item.consumo_meta_porcentagem_pesovivo) : undefined
           })
         })
       }
@@ -274,7 +276,8 @@ export function Lotes() {
           options.push({
             id: item.id,
             name: item.nome,
-            category: item.tipo || 'Ração'
+            category: item.tipo || 'Ração',
+            consumo_meta: item.consumo_meta_porcentagem_pesovivo !== undefined && item.consumo_meta_porcentagem_pesovivo !== null ? Number(item.consumo_meta_porcentagem_pesovivo) : undefined
           })
         })
       }
@@ -285,7 +288,8 @@ export function Lotes() {
           options.push({
             id: item.id,
             name: item.nome,
-            category: item.tipo || 'Proteinado'
+            category: item.tipo || 'Proteinado',
+            consumo_meta: item.consumo_meta_porcentagem_pesovivo !== undefined && item.consumo_meta_porcentagem_pesovivo !== null ? Number(item.consumo_meta_porcentagem_pesovivo) : undefined
           })
         })
       }
@@ -1454,7 +1458,12 @@ export function Lotes() {
                               value={cat.estrategia_nutricional || ''}
                               onChange={(value) => {
                                 const updatedCategorias = [...formData.categorias]
-                                updatedCategorias[catIndex] = { ...cat, estrategia_nutricional: value }
+                                const selectedOption = nutritionalOptions.find(opt => opt.id === value)
+                                updatedCategorias[catIndex] = { 
+                                  ...cat, 
+                                  estrategia_nutricional: value,
+                                  consumo_meta_porcentagem_pesovivo: selectedOption?.consumo_meta !== undefined && selectedOption?.consumo_meta !== null ? Number(selectedOption.consumo_meta) : undefined
+                                }
                                 setFormData({ ...formData, categorias: updatedCategorias })
                               }}
                               placeholder="Selecione..."
@@ -1465,16 +1474,12 @@ export function Lotes() {
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Consumo Meta (%/PV)
                             </label>
-                            <NumericInput
-                              value={cat.consumo_meta_porcentagem_pesovivo?.toString() || ''}
-                              onChange={(value) => {
-                                const updatedCategorias = [...formData.categorias]
-                                updatedCategorias[catIndex] = { ...cat, consumo_meta_porcentagem_pesovivo: value ? parseFloat(value.replace(',', '.')) : undefined }
-                                setFormData({ ...formData, categorias: updatedCategorias })
-                              }}
+                            <Input
+                              type="text"
+                              value={cat.consumo_meta_porcentagem_pesovivo !== undefined && cat.consumo_meta_porcentagem_pesovivo !== null ? Number(cat.consumo_meta_porcentagem_pesovivo).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}
+                              disabled
                               placeholder="0,00"
-                              decimalPlaces={2}
-                              className="border-gray-200 focus:border-accent"
+                              className="bg-gray-50 border-gray-200 focus:border-accent opacity-60"
                             />
                           </div>
                         </div>

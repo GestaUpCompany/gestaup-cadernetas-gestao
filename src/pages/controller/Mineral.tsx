@@ -13,6 +13,7 @@ interface Mineral {
   tipo?: string
   fornecedor?: string
   espacamento_ideal_cocho?: number
+  consumo_meta_porcentagem_pesovivo?: number
   ativo: boolean
   created_at: string
   updated_at: string
@@ -32,6 +33,7 @@ export function Mineral() {
     tipo: '',
     fornecedor: '',
     espacamento_ideal_cocho: '',
+    consumo_meta_porcentagem_pesovivo: '',
     ativo: true,
   })
   const [submitting, setSubmitting] = useState(false)
@@ -102,6 +104,7 @@ export function Mineral() {
       tipo: formData.tipo || null,
       fornecedor: formData.fornecedor || null,
       espacamento_ideal_cocho: formData.espacamento_ideal_cocho ? parseFloat(formData.espacamento_ideal_cocho) : null,
+      consumo_meta_porcentagem_pesovivo: formData.consumo_meta_porcentagem_pesovivo ? parseFloat(formData.consumo_meta_porcentagem_pesovivo) : null,
       ativo: formData.ativo,
     }
 
@@ -130,6 +133,7 @@ export function Mineral() {
         tipo: '',
         fornecedor: '',
         espacamento_ideal_cocho: '',
+        consumo_meta_porcentagem_pesovivo: '',
         ativo: true,
       })
       setShowForm(false)
@@ -149,6 +153,7 @@ export function Mineral() {
       tipo: mineral.tipo || '',
       fornecedor: mineral.fornecedor || '',
       espacamento_ideal_cocho: mineral.espacamento_ideal_cocho?.toString() || '',
+      consumo_meta_porcentagem_pesovivo: mineral.consumo_meta_porcentagem_pesovivo?.toString() || '',
       ativo: mineral.ativo,
     })
     setShowForm(true)
@@ -163,6 +168,7 @@ export function Mineral() {
       tipo: '',
       fornecedor: '',
       espacamento_ideal_cocho: '',
+      consumo_meta_porcentagem_pesovivo: '',
       ativo: true,
     })
     setShowForm(false)
@@ -326,6 +332,20 @@ export function Mineral() {
                   value={formData.espacamento_ideal_cocho}
                   onChange={(e) => setFormData({ ...formData, espacamento_ideal_cocho: e.target.value })}
                   placeholder="Ex: 0.50"
+                  className="border-gray-200 focus:border-accent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Consumo Meta (%/PV)
+                </label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={formData.consumo_meta_porcentagem_pesovivo}
+                  onChange={(e) => setFormData({ ...formData, consumo_meta_porcentagem_pesovivo: e.target.value })}
+                  placeholder="Ex: 2.50"
                   className="border-gray-200 focus:border-accent"
                 />
               </div>
