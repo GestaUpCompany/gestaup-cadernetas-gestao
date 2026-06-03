@@ -19,12 +19,12 @@ interface LoteCategoria {
   rc_atual?: number
   quant_atual?: number
   peso_vivo_atual_kg_cab?: number
-  peso_vivo_atual_arroba?: number
-  producao_atual_arroba?: number
+  peso_vivo_atual_arroba_cab?: number
+  producao_atual_arroba_cab?: number
   peso_vivo_meta_kg_cab?: number
   peso_venda_meta_arroba?: number
-  producao_projetada_arroba?: number
-  venda_total_arroba?: number
+  producao_projetada_arroba_cab?: number
+  venda_total_arroba_lote_categoria?: number
   dias_restantes_meta?: number
   data_meta_projetada?: string
   estrategia_nutricional?: string
@@ -34,13 +34,14 @@ interface LoteCategoria {
   preco_entrada_reais_kg?: number
   preco_entrada_reais_arroba?: number
   preco_entrada_reais_cab?: number
+  agio_percent?: number
   custo_operacional_reais_cab_dia?: number
   margem_lucro_percent?: number
   preco_custo_reais_arroba?: number
   preco_custo_cab?: number
   preco_venda_projetado_reais_arroba?: number
   preco_venda_sugerido_cab?: number
-  faturamento_projetado?: number
+  faturamento_projetado_reais_lote_categoria?: number
   morte?: number
   consumo?: number
   abate?: number
@@ -322,12 +323,12 @@ export function Lotes() {
         rc_atual: undefined,
         quant_atual: undefined, // Will be set to match quant_inicial after user inputs it
         peso_vivo_atual_kg_cab: undefined,
-        peso_vivo_atual_arroba: undefined,
-        producao_atual_arroba: undefined,
+        peso_vivo_atual_arroba_cab: undefined,
+        producao_atual_arroba_cab: undefined,
         peso_vivo_meta_kg_cab: undefined,
         peso_venda_meta_arroba: undefined,
-        producao_projetada_arroba: undefined,
-        venda_total_arroba: undefined,
+        producao_projetada_arroba_cab: undefined,
+        venda_total_arroba_lote_categoria: undefined,
         dias_restantes_meta: undefined,
         data_meta_projetada: undefined,
         estrategia_nutricional: undefined,
@@ -337,10 +338,11 @@ export function Lotes() {
         preco_entrada_reais_kg: undefined,
         preco_entrada_reais_arroba: undefined,
         preco_entrada_reais_cab: undefined,
+        agio_percent: undefined,
         custo_operacional_reais_cab_dia: undefined,
         margem_lucro_percent: undefined,
         morte: undefined,
-        faturamento_projetado: undefined,
+        faturamento_projetado_reais_lote_categoria: undefined,
         consumo: undefined,
         abate: undefined,
         transf_entrada: undefined,
@@ -505,20 +507,20 @@ export function Lotes() {
       updatedCat = { ...updatedCat, peso_vivo_atual_kg_cab: pesoVivoKg }
     }
 
-    // 3.5. Calcular peso_vivo_atual_arroba: peso_vivo_atual_kg_cab * ((rc_atual / 100) / 15)
+    // 3.5. Calcular peso_vivo_atual_arroba_cab: peso_vivo_atual_kg_cab * ((rc_atual / 100) / 15)
     if (updatedCat.peso_vivo_atual_kg_cab && updatedCat.rc_atual) {
       const pesoVivoAtualArroba = updatedCat.peso_vivo_atual_kg_cab * ((updatedCat.rc_atual / 100) / 15)
-      updatedCat = { ...updatedCat, peso_vivo_atual_arroba: pesoVivoAtualArroba }
+      updatedCat = { ...updatedCat, peso_vivo_atual_arroba_cab: pesoVivoAtualArroba }
     } else {
-      updatedCat = { ...updatedCat, peso_vivo_atual_arroba: undefined }
+      updatedCat = { ...updatedCat, peso_vivo_atual_arroba_cab: undefined }
     }
 
-    // 3.6. Calcular producao_atual_arroba: peso_vivo_atual_arroba - peso_entrada_arrobas
-    if (updatedCat.peso_entrada_arrobas && updatedCat.peso_vivo_atual_arroba) {
-      const producaoAtualArroba = updatedCat.peso_vivo_atual_arroba - updatedCat.peso_entrada_arrobas
-      updatedCat = { ...updatedCat, producao_atual_arroba: producaoAtualArroba }
+    // 3.6. Calcular producao_atual_arroba_cab: peso_vivo_atual_arroba_cab - peso_entrada_arrobas
+    if (updatedCat.peso_entrada_arrobas && updatedCat.peso_vivo_atual_arroba_cab) {
+      const producaoAtualArroba = updatedCat.peso_vivo_atual_arroba_cab - updatedCat.peso_entrada_arrobas
+      updatedCat = { ...updatedCat, producao_atual_arroba_cab: producaoAtualArroba }
     } else {
-      updatedCat = { ...updatedCat, producao_atual_arroba: undefined }
+      updatedCat = { ...updatedCat, producao_atual_arroba_cab: undefined }
     }
 
     // 4. Calcular data_meta_projetada quando peso_vivo_meta_kg_cab, peso_vivo_atual_kg_cab ou gmd mudarem
@@ -566,26 +568,34 @@ export function Lotes() {
       updatedCat = { ...updatedCat, preco_entrada_reais_arroba: undefined }
     }
 
+    // 6.6. Calcular agio_percent: (preco_entrada_reais_arroba - preco_venda_projetado_reais_arroba) / preco_venda_projetado_reais_arroba * 100
+    if (updatedCat.preco_entrada_reais_arroba && updatedCat.preco_venda_projetado_reais_arroba && updatedCat.preco_venda_projetado_reais_arroba > 0) {
+      const agio = ((updatedCat.preco_entrada_reais_arroba - updatedCat.preco_venda_projetado_reais_arroba) / updatedCat.preco_venda_projetado_reais_arroba) * 100
+      updatedCat = { ...updatedCat, agio_percent: agio }
+    } else {
+      updatedCat = { ...updatedCat, agio_percent: undefined }
+    }
+
     // 7. Calcular peso_venda_meta_arroba: peso_vivo_meta_kg_cab * ((rc_final / 100) / 15)
     if (updatedCat.peso_vivo_meta_kg_cab && updatedCat.rc_final) {
       const pesoVendaMetaArroba = updatedCat.peso_vivo_meta_kg_cab * ((updatedCat.rc_final / 100) / 15)
       updatedCat = { ...updatedCat, peso_venda_meta_arroba: Math.round(pesoVendaMetaArroba * 100) / 100 }
     }
 
-    // 7.5. Calcular producao_projetada_arroba: peso_venda_meta_arroba - peso_entrada_arrobas
+    // 7.5. Calcular producao_projetada_arroba_cab: peso_venda_meta_arroba - peso_entrada_arrobas
     if (updatedCat.peso_venda_meta_arroba && updatedCat.peso_entrada_arrobas) {
       const producaoProjetadaArroba = updatedCat.peso_venda_meta_arroba - updatedCat.peso_entrada_arrobas
-      updatedCat = { ...updatedCat, producao_projetada_arroba: producaoProjetadaArroba }
+      updatedCat = { ...updatedCat, producao_projetada_arroba_cab: producaoProjetadaArroba }
     } else {
-      updatedCat = { ...updatedCat, producao_projetada_arroba: undefined }
+      updatedCat = { ...updatedCat, producao_projetada_arroba_cab: undefined }
     }
 
-    // 7.6. Calcular venda_total_arroba: peso_venda_meta_arroba * quant_atual
+    // 7.6. Calcular venda_total_arroba_lote_categoria: peso_venda_meta_arroba * quant_atual
     if (updatedCat.peso_venda_meta_arroba && updatedCat.quant_atual) {
       const vendaTotalArroba = updatedCat.peso_venda_meta_arroba * updatedCat.quant_atual
-      updatedCat = { ...updatedCat, venda_total_arroba: vendaTotalArroba }
+      updatedCat = { ...updatedCat, venda_total_arroba_lote_categoria: vendaTotalArroba }
     } else {
-      updatedCat = { ...updatedCat, venda_total_arroba: undefined }
+      updatedCat = { ...updatedCat, venda_total_arroba_lote_categoria: undefined }
     }
 
     // 8. Calcular preços de custo e venda
@@ -614,12 +624,12 @@ export function Lotes() {
       updatedCat = { ...updatedCat, preco_venda_sugerido_cab: undefined }
     }
 
-    // 10. Calcular faturamento_projetado: preco_venda_sugerido_cab * quant_atual
+    // 10. Calcular faturamento_projetado_reais_lote_categoria: preco_venda_sugerido_cab * quant_atual
     if (updatedCat.preco_venda_sugerido_cab && updatedCat.quant_atual) {
       const faturamentoProjetado = updatedCat.preco_venda_sugerido_cab * updatedCat.quant_atual
-      updatedCat = { ...updatedCat, faturamento_projetado: faturamentoProjetado }
+      updatedCat = { ...updatedCat, faturamento_projetado_reais_lote_categoria: faturamentoProjetado }
     } else {
-      updatedCat = { ...updatedCat, faturamento_projetado: undefined }
+      updatedCat = { ...updatedCat, faturamento_projetado_reais_lote_categoria: undefined }
     }
 
     return updatedCat
@@ -786,8 +796,11 @@ export function Lotes() {
       return
     }
 
+    // Recalculate all categories to ensure calculated fields are up-to-date before saving
+    const recalculatedCategorias = formData.categorias.map(recalcularCategoria)
+
     // Salvar categorias em lote_categorias
-    const categoriasToInsert = formData.categorias.map(cat => ({
+    const categoriasToInsert = recalculatedCategorias.map(cat => ({
       lote_id: loteId,
       categoria: cat.categoria,
       quant_inicial: cat.quant_inicial ? parseInt(cat.quant_inicial.toString()) : null,
@@ -801,12 +814,12 @@ export function Lotes() {
       rc_atual: cat.rc_atual ? parseFloat(cat.rc_atual.toString()) : null,
       quant_atual: cat.quant_atual ? parseInt(cat.quant_atual.toString()) : null,
       peso_vivo_atual_kg_cab: cat.peso_vivo_atual_kg_cab ? parseFloat(cat.peso_vivo_atual_kg_cab.toString()) : null,
-      peso_vivo_atual_arroba: cat.peso_vivo_atual_arroba ? parseFloat(cat.peso_vivo_atual_arroba.toString()) : null,
-      producao_atual_arroba: cat.producao_atual_arroba ? parseFloat(cat.producao_atual_arroba.toString()) : null,
+      peso_vivo_atual_arroba_cab: cat.peso_vivo_atual_arroba_cab ? parseFloat(cat.peso_vivo_atual_arroba_cab.toString()) : null,
+      producao_atual_arroba_cab: cat.producao_atual_arroba_cab ? parseFloat(cat.producao_atual_arroba_cab.toString()) : null,
       peso_vivo_meta_kg_cab: cat.peso_vivo_meta_kg_cab ? parseFloat(cat.peso_vivo_meta_kg_cab.toString()) : null,
       peso_venda_meta_arroba: cat.peso_venda_meta_arroba ? parseFloat(cat.peso_venda_meta_arroba.toString()) : null,
-      producao_projetada_arroba: cat.producao_projetada_arroba ? parseFloat(cat.producao_projetada_arroba.toString()) : null,
-      venda_total_arroba: cat.venda_total_arroba ? parseFloat(cat.venda_total_arroba.toString()) : null,
+      producao_projetada_arroba_cab: cat.producao_projetada_arroba_cab ? parseFloat(cat.producao_projetada_arroba_cab.toString()) : null,
+      venda_total_arroba_lote_categoria: cat.venda_total_arroba_lote_categoria ? parseFloat(cat.venda_total_arroba_lote_categoria.toString()) : null,
       dias_restantes_meta: cat.dias_restantes_meta ? parseInt(cat.dias_restantes_meta.toString()) : null,
       data_meta_projetada: cat.data_meta_projetada || null,
       estrategia_nutricional: cat.estrategia_nutricional || null,
@@ -816,13 +829,14 @@ export function Lotes() {
       preco_entrada_reais_kg: cat.preco_entrada_reais_kg ? parseFloat(cat.preco_entrada_reais_kg.toString()) : null,
       preco_entrada_reais_arroba: cat.preco_entrada_reais_arroba ? parseFloat(cat.preco_entrada_reais_arroba.toString()) : null,
       preco_entrada_reais_cab: cat.preco_entrada_reais_cab ? parseFloat(cat.preco_entrada_reais_cab.toString()) : null,
+      agio_percent: cat.agio_percent ? parseFloat(cat.agio_percent.toString()) : null,
       custo_operacional_reais_cab_dia: cat.custo_operacional_reais_cab_dia ? parseFloat(cat.custo_operacional_reais_cab_dia.toString()) : null,
       margem_lucro_percent: cat.margem_lucro_percent ? parseFloat(cat.margem_lucro_percent.toString()) : null,
       preco_custo_reais_arroba: cat.preco_custo_reais_arroba ? parseFloat(cat.preco_custo_reais_arroba.toString()) : null,
       preco_custo_cab: cat.preco_custo_cab ? parseFloat(cat.preco_custo_cab.toString()) : null,
       preco_venda_projetado_reais_arroba: cat.preco_venda_projetado_reais_arroba ? parseFloat(cat.preco_venda_projetado_reais_arroba.toString()) : null,
       preco_venda_sugerido_cab: cat.preco_venda_sugerido_cab ? parseFloat(cat.preco_venda_sugerido_cab.toString()) : null,
-      faturamento_projetado: cat.faturamento_projetado ? parseFloat(cat.faturamento_projetado.toString()) : null,
+      faturamento_projetado_reais_lote_categoria: cat.faturamento_projetado_reais_lote_categoria ? parseFloat(cat.faturamento_projetado_reais_lote_categoria.toString()) : null,
       morte: cat.morte ? parseInt(cat.morte.toString()) : 0,
       consumo: cat.consumo ? parseInt(cat.consumo.toString()) : 0,
       abate: cat.abate ? parseInt(cat.abate.toString()) : 0,
@@ -919,17 +933,18 @@ export function Lotes() {
       rc_final: cat.rc_final ?? undefined,
       rc_atual: cat.rc_atual ?? undefined,
       peso_venda_meta_arroba: cat.peso_venda_meta_arroba ?? undefined,
-      peso_vivo_atual_arroba: cat.peso_vivo_atual_arroba ?? undefined,
-      producao_atual_arroba: cat.producao_atual_arroba ?? undefined,
-      producao_projetada_arroba: cat.producao_projetada_arroba ?? undefined,
-      venda_total_arroba: cat.venda_total_arroba ?? undefined,
+      peso_vivo_atual_arroba_cab: cat.peso_vivo_atual_arroba_cab ?? undefined,
+      producao_atual_arroba_cab: cat.producao_atual_arroba_cab ?? undefined,
+      producao_projetada_arroba_cab: cat.producao_projetada_arroba_cab ?? undefined,
+      venda_total_arroba_lote_categoria: cat.venda_total_arroba_lote_categoria ?? undefined,
       preco_entrada_reais_arroba: cat.preco_entrada_reais_arroba ?? undefined,
+      agio_percent: cat.agio_percent ?? undefined,
       margem_lucro_percent: cat.margem_lucro_percent ?? undefined,
       preco_custo_reais_arroba: cat.preco_custo_reais_arroba ?? undefined,
       preco_custo_cab: cat.preco_custo_cab ?? undefined,
       preco_venda_projetado_reais_arroba: cat.preco_venda_projetado_reais_arroba ?? undefined,
       preco_venda_sugerido_cab: cat.preco_venda_sugerido_cab ?? undefined,
-      faturamento_projetado: cat.faturamento_projetado ?? undefined
+      faturamento_projetado_reais_lote_categoria: cat.faturamento_projetado_reais_lote_categoria ?? undefined
     }))
 
     // Fetch movimentation data for this lot
@@ -1497,8 +1512,8 @@ export function Lotes() {
                               </label>
                               <Input
                                 type="number"
-                                step="0.1"
-                                value={cat.rc_inicial?.toString() || ''}
+                                step="0.01"
+                                value={cat.rc_inicial?.toFixed(2) || ''}
                                 onChange={(e) => {
                                   const updatedCategorias = [...formData.categorias]
                                   updatedCategorias[catIndex] = { ...cat, rc_inicial: e.target.value ? parseFloat(e.target.value) : undefined }
@@ -1562,7 +1577,7 @@ export function Lotes() {
                               </label>
                               <Input
                                 type="text"
-                                value={cat.peso_vivo_atual_arroba ? cat.peso_vivo_atual_arroba.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}
+                                value={cat.peso_vivo_atual_arroba_cab ? cat.peso_vivo_atual_arroba_cab.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}
                                 disabled
                                 placeholder="0"
                                 className="border-gray-200 focus:border-accent opacity-60"
@@ -1574,7 +1589,7 @@ export function Lotes() {
                               </label>
                               <Input
                                 type="text"
-                                value={cat.producao_atual_arroba ? cat.producao_atual_arroba.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}
+                                value={cat.producao_atual_arroba_cab ? cat.producao_atual_arroba_cab.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}
                                 disabled
                                 placeholder="0"
                                 className="bg-gray-50 border-gray-200 focus:border-accent opacity-60"
@@ -1638,7 +1653,7 @@ export function Lotes() {
                               </label>
                               <Input
                                 type="text"
-                                value={cat.producao_projetada_arroba ? cat.producao_projetada_arroba.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}
+                                value={cat.producao_projetada_arroba_cab ? cat.producao_projetada_arroba_cab.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}
                                 disabled
                                 placeholder="0"
                                 className="bg-gray-50 border-gray-200 focus:border-accent opacity-60"
@@ -1650,7 +1665,7 @@ export function Lotes() {
                               </label>
                               <Input
                                 type="text"
-                                value={cat.venda_total_arroba ? cat.venda_total_arroba.toLocaleString('pt-BR', { maximumFractionDigits: 0 }) : ''}
+                                value={cat.venda_total_arroba_lote_categoria ? cat.venda_total_arroba_lote_categoria.toLocaleString('pt-BR', { maximumFractionDigits: 0 }) : ''}
                                 disabled
                                 placeholder="0"
                                 className="bg-gray-50 border-gray-200 focus:border-accent opacity-60"
@@ -1716,6 +1731,18 @@ export function Lotes() {
                               value={cat.preco_entrada_reais_arroba ? `R$ ${cat.preco_entrada_reais_arroba.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
                               disabled
                               placeholder="R$ 0,00"
+                              className="bg-gray-50 border-gray-200 focus:border-accent opacity-60"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Ágio (%)
+                            </label>
+                            <Input
+                              type="text"
+                              value={cat.agio_percent !== undefined ? `${cat.agio_percent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%` : ''}
+                              disabled
+                              placeholder="0,00%"
                               className="bg-gray-50 border-gray-200 focus:border-accent opacity-60"
                             />
                           </div>
@@ -1828,7 +1855,7 @@ export function Lotes() {
                               </label>
                               <Input
                                 type="text"
-                                value={cat.faturamento_projetado ? `R$ ${cat.faturamento_projetado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
+                                value={cat.faturamento_projetado_reais_lote_categoria ? `R$ ${cat.faturamento_projetado_reais_lote_categoria.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
                                 disabled
                                 placeholder="R$ 0,00"
                                 className="bg-gray-100 border-green-300 focus:border-green-500 opacity-90 text-xs font-semibold text-green-700"
