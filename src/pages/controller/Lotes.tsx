@@ -140,7 +140,6 @@ export function Lotes() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [loteToDelete, setLoteToDelete] = useState<string | null>(null)
   const [showCategoryRemoveModal, setShowCategoryRemoveModal] = useState(false)
-  const [categoryToRemove, setCategoryToRemove] = useState<string | null>(null)
   const [originalAtivo, setOriginalAtivo] = useState(true)
 
   const categoriasOpcoes = [
@@ -295,7 +294,6 @@ export function Lotes() {
       // Check if category has quant_atual > 0 before allowing removal
       const catToRemove = formData.categorias.find(c => c.categoria.toLowerCase() === categoria.toLowerCase())
       if (catToRemove && catToRemove.quant_atual && catToRemove.quant_atual > 0) {
-        setCategoryToRemove(categoria)
         setShowCategoryRemoveModal(true)
         return
       }
