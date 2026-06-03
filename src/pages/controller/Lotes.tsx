@@ -1453,7 +1453,7 @@ export function Lotes() {
                           <div className="grid grid-cols-6 gap-2">
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Peso Entrada (kg)
+                                Peso Entrada (kg/cab)
                               </label>
                               <NumericInput
                                 value={cat.peso_entrada?.toString() || ''}
@@ -1506,7 +1506,7 @@ export function Lotes() {
                           <div className="grid grid-cols-6 gap-2">
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Peso Vivo Atual (kg)
+                                Peso Vivo Atual (kg/cab)
                               </label>
                               <Input
                                 type="number"
@@ -1565,7 +1565,7 @@ export function Lotes() {
                           <div className="grid grid-cols-6 gap-2">
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Peso Vivo Meta (kg)
+                                Peso Vivo Meta (kg/cab)
                               </label>
                               <NumericInput
                                 value={cat.peso_vivo_meta_kg?.toString() || ''}
@@ -1624,7 +1624,7 @@ export function Lotes() {
                           <div className="grid grid-cols-6 gap-2 mt-2">
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Data Meta
+                                Data Meta Projetada
                               </label>
                               <Input
                                 type="date"
@@ -1698,7 +1698,7 @@ export function Lotes() {
                           </div>
                           <div className="col-span-2">
                             <label className="block text-sm font-medium text-gray-700 mb-1 whitespace-nowrap">
-                              Custo Operacional (R$/cab/Per.)
+                              Custo Operacional (R$/cab/dia)
                             </label>
                             <NumericInput
                               value={cat.custo_operacional?.toString() || ''}
@@ -1735,7 +1735,7 @@ export function Lotes() {
                           <div className="grid grid-cols-6 gap-2">
                             <div>
                               <label className="block text-xs font-medium text-blue-700 mb-1">
-                                Preço Custo (@)
+                                Preço Custo (R$/@)
                               </label>
                               <Input
                                 type="text"
@@ -1759,7 +1759,7 @@ export function Lotes() {
                             </div>
                             <div>
                               <label className="block text-xs font-medium text-green-700 mb-1">
-                                Preço Venda Sugerido (@)
+                                Preço Venda Projetado (R$/@)
                               </label>
                               <NumericInput
                                 value={cat.preco_venda_sugerido_arroba?.toString() || ''}
