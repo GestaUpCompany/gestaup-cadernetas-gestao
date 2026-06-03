@@ -139,6 +139,8 @@ export function Lotes() {
   const [submitting, setSubmitting] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [loteToDelete, setLoteToDelete] = useState<string | null>(null)
+  const [showCategoryRemoveModal, setShowCategoryRemoveModal] = useState(false)
+  const [categoryToRemove, setCategoryToRemove] = useState<string | null>(null)
   const [originalAtivo, setOriginalAtivo] = useState(true)
 
   const categoriasOpcoes = [
@@ -165,9 +167,26 @@ export function Lotes() {
     'tropa': 'border-indigo-500',
   }
 
+  const categoriaBgColors: Record<string, string> = {
+    'vaca': 'bg-blue-50',
+    'touro': 'bg-red-50',
+    'boi gordo': 'bg-green-50',
+    'boi magro': 'bg-yellow-50',
+    'garrote': 'bg-purple-50',
+    'bezerro': 'bg-orange-50',
+    'bezerra': 'bg-pink-50',
+    'novilha': 'bg-teal-50',
+    'tropa': 'bg-indigo-50',
+  }
+
   const getCategoriaColor = (categoria: string): string => {
     const normalized = categoria.toLowerCase()
     return categoriaColors[normalized] || 'border-accent'
+  }
+
+  const getCategoriaBgColor = (categoria: string): string => {
+    const normalized = categoria.toLowerCase()
+    return categoriaBgColors[normalized] || 'bg-gray-50'
   }
 
   useEffect(() => {
@@ -276,7 +295,8 @@ export function Lotes() {
       // Check if category has quant_atual > 0 before allowing removal
       const catToRemove = formData.categorias.find(c => c.categoria.toLowerCase() === categoria.toLowerCase())
       if (catToRemove && catToRemove.quant_atual && catToRemove.quant_atual > 0) {
-        alert('Não é possível remover uma categoria que possui cabeças. Transfira ou remova os animais primeiro.')
+        setCategoryToRemove(categoria)
+        setShowCategoryRemoveModal(true)
         return
       }
       setFormData({
@@ -1171,8 +1191,10 @@ export function Lotes() {
                       </h5>
                       
                       {/* Identificação */}
-                      <div className="mb-4">
-                        <h6 className="text-sm font-semibold text-gray-600 mb-2">Identificação</h6>
+                      <div className="mb-5">
+                        <h6 className={`text-sm font-bold text-gray-800 mb-3 border-l-3 pl-3 py-1 rounded-r ${getCategoriaColor(cat.categoria)} ${getCategoriaBgColor(cat.categoria)}`}>
+                          Identificação
+                        </h6>
                         <div className="grid grid-cols-6 gap-2">
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1250,8 +1272,10 @@ export function Lotes() {
                       </div>
 
                       {/* Quantidade e Datas */}
-                      <div className="mb-4 border-t border-gray-200 pt-4">
-                        <h6 className="text-sm font-semibold text-gray-600 mb-2">Quantidade e Datas</h6>
+                      <div className="mb-5 border-t border-gray-200 pt-4">
+                        <h6 className={`text-sm font-bold text-gray-800 mb-3 border-l-3 pl-3 py-1 rounded-r ${getCategoriaColor(cat.categoria)} ${getCategoriaBgColor(cat.categoria)}`}>
+                          Quantidade e Datas
+                        </h6>
                         <div className="grid grid-cols-6 gap-2">
                           <div className="col-span-1">
                             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1367,8 +1391,10 @@ export function Lotes() {
                       </div>
 
                       {/* Peso e Performance */}
-                      <div className="mb-4 border-t border-gray-200 pt-4">
-                        <h6 className="text-sm font-semibold text-gray-600 mb-2">Peso e Performance</h6>
+                      <div className="mb-5 border-t border-gray-200 pt-4">
+                        <h6 className={`text-sm font-bold text-gray-800 mb-3 border-l-3 pl-3 py-1 rounded-r ${getCategoriaColor(cat.categoria)} ${getCategoriaBgColor(cat.categoria)}`}>
+                          Peso e Performance
+                        </h6>
                         <div className="grid grid-cols-6 gap-2">
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1501,8 +1527,10 @@ export function Lotes() {
                       </div>
 
                       {/* Financeiro */}
-                      <div className="mb-4 border-t border-gray-200 pt-4">
-                        <h6 className="text-sm font-semibold text-gray-600 mb-2">Financeiro</h6>
+                      <div className="mb-5 border-t border-gray-200 pt-4">
+                        <h6 className={`text-sm font-bold text-gray-800 mb-3 border-l-3 pl-3 py-1 rounded-r ${getCategoriaColor(cat.categoria)} ${getCategoriaBgColor(cat.categoria)}`}>
+                          Financeiro
+                        </h6>
                         <div className="grid grid-cols-6 gap-2">
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1629,7 +1657,9 @@ export function Lotes() {
               {/* Histórico de Movimentação - Timeline View */}
               {showForm && (movimentacaoData.length > 0 || maternidadeData.length > 0 || morteData.length > 0) && (
                 <div className="border-t border-gray-200 pt-4 mt-4">
-                  <h6 className="text-sm font-semibold text-gray-600 mb-4">Histórico de Movimentação</h6>
+                  <h6 className="text-sm font-bold text-gray-800 mb-4 border-l-3 border-red-500 pl-3 py-1 bg-red-50 rounded-r">
+                    Histórico de Movimentação
+                  </h6>
                   
                   <div className="relative">
                     {/* Timeline line */}
@@ -1956,6 +1986,17 @@ export function Lotes() {
         confirmText="Excluir"
         cancelText="Cancelar"
         variant="danger"
+      />
+
+      <ConfirmModal
+        isOpen={showCategoryRemoveModal}
+        onClose={() => setShowCategoryRemoveModal(false)}
+        onConfirm={() => setShowCategoryRemoveModal(false)}
+        title="Não é possível remover categoria"
+        message="Não é possível remover uma categoria que possui cabeças. Transfira ou remova os animais primeiro."
+        confirmText="Entendi"
+        cancelText="Cancelar"
+        variant="warning"
       />
     </div>
   )
