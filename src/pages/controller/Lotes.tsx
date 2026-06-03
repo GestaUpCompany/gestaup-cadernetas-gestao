@@ -53,7 +53,8 @@ interface LoteCategoria {
   custo_comissao_reais_cab?: number
   custo_sanidade_reais_cab?: number
   custo_identificacao_rastreabilidade_reais_cab?: number
-  custo_total_reais_cab?: number
+  custo_total_entrada_reais_cab?: number
+  custo_total_entrada_reais_lote?: number
   ativo?: boolean
 }
 
@@ -585,13 +586,21 @@ export function Lotes() {
       updatedCat = { ...updatedCat, agio_percent: undefined }
     }
 
-    // 6.7. Calcular custo_total_reais_cab: preco_entrada_reais_cab + custo_frete_reais_cab + custo_comissao_reais_cab + custo_sanidade_reais_cab + custo_identificacao_rastreabilidade_reais_cab
+    // 6.7. Calcular custo_total_entrada_reais_cab: preco_entrada_reais_cab + custo_frete_reais_cab + custo_comissao_reais_cab + custo_sanidade_reais_cab + custo_identificacao_rastreabilidade_reais_cab
     const custoTotal = (updatedCat.preco_entrada_reais_cab || 0) + 
                        (updatedCat.custo_frete_reais_cab || 0) + 
                        (updatedCat.custo_comissao_reais_cab || 0) + 
                        (updatedCat.custo_sanidade_reais_cab || 0) + 
                        (updatedCat.custo_identificacao_rastreabilidade_reais_cab || 0)
-    updatedCat = { ...updatedCat, custo_total_reais_cab: custoTotal > 0 ? custoTotal : undefined }
+    updatedCat = { ...updatedCat, custo_total_entrada_reais_cab: custoTotal > 0 ? custoTotal : undefined }
+
+    // 6.8. Calcular custo_total_entrada_reais_lote: custo_total_entrada_reais_cab * quant_inicial
+    if (updatedCat.custo_total_entrada_reais_cab && updatedCat.quant_inicial) {
+      const custoTotalLote = updatedCat.custo_total_entrada_reais_cab * updatedCat.quant_inicial
+      updatedCat = { ...updatedCat, custo_total_entrada_reais_lote: custoTotalLote }
+    } else {
+      updatedCat = { ...updatedCat, custo_total_entrada_reais_lote: undefined }
+    }
 
     // 7. Calcular peso_venda_meta_arroba: peso_vivo_meta_kg_cab * ((rc_final / 100) / 15)
     if (updatedCat.peso_vivo_meta_kg_cab && updatedCat.rc_final) {
@@ -675,6 +684,7 @@ export function Lotes() {
     formData.categorias.map(cat => cat.custo_comissao_reais_cab).join(','),
     formData.categorias.map(cat => cat.custo_sanidade_reais_cab).join(','),
     formData.categorias.map(cat => cat.custo_identificacao_rastreabilidade_reais_cab).join(','),
+    formData.categorias.map(cat => cat.quant_inicial).join(','),
   ])
 
   const loadLotes = async () => {
@@ -869,7 +879,8 @@ export function Lotes() {
       custo_comissao_reais_cab: cat.custo_comissao_reais_cab ? parseFloat(cat.custo_comissao_reais_cab.toString()) : null,
       custo_sanidade_reais_cab: cat.custo_sanidade_reais_cab ? parseFloat(cat.custo_sanidade_reais_cab.toString()) : null,
       custo_identificacao_rastreabilidade_reais_cab: cat.custo_identificacao_rastreabilidade_reais_cab ? parseFloat(cat.custo_identificacao_rastreabilidade_reais_cab.toString()) : null,
-      custo_total_reais_cab: cat.custo_total_reais_cab ? parseFloat(cat.custo_total_reais_cab.toString()) : null,
+      custo_total_entrada_reais_cab: cat.custo_total_entrada_reais_cab ? parseFloat(cat.custo_total_entrada_reais_cab.toString()) : null,
+      custo_total_entrada_reais_lote: cat.custo_total_entrada_reais_lote ? parseFloat(cat.custo_total_entrada_reais_lote.toString()) : null,
       ativo: cat.ativo ?? true,
     }))
 
@@ -975,7 +986,8 @@ export function Lotes() {
       custo_comissao_reais_cab: cat.custo_comissao_reais_cab ?? undefined,
       custo_sanidade_reais_cab: cat.custo_sanidade_reais_cab ?? undefined,
       custo_identificacao_rastreabilidade_reais_cab: cat.custo_identificacao_rastreabilidade_reais_cab ?? undefined,
-      custo_total_reais_cab: cat.custo_total_reais_cab ?? undefined
+      custo_total_entrada_reais_cab: cat.custo_total_entrada_reais_cab ?? undefined,
+      custo_total_entrada_reais_lote: cat.custo_total_entrada_reais_lote ?? undefined
     }))
 
     // Fetch movimentation data for this lot
@@ -1880,17 +1892,31 @@ export function Lotes() {
                           </div>
                         </div>
                         
-                        <div className="mt-2 max-w-xs">
-                          <label className="block text-sm font-medium text-gray-700 mb-1 whitespace-nowrap">
-                            Custo Total (R$/cab)
-                          </label>
-                          <Input
-                            type="text"
-                            value={cat.custo_total_reais_cab !== undefined ? `R$ ${cat.custo_total_reais_cab.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
-                            disabled
-                            placeholder="R$ 0,00"
-                            className="bg-gray-50 border-gray-200 focus:border-accent opacity-60"
-                          />
+                        <div className="mt-2 flex gap-2">
+                          <div className="max-w-xs">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 whitespace-nowrap">
+                              Custo Total Entrada (R$/cab)
+                            </label>
+                            <Input
+                              type="text"
+                              value={cat.custo_total_entrada_reais_cab !== undefined ? `R$ ${cat.custo_total_entrada_reais_cab.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
+                              disabled
+                              placeholder="R$ 0,00"
+                              className="bg-gray-50 border-gray-200 focus:border-accent opacity-60"
+                            />
+                          </div>
+                          <div className="max-w-xs">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 whitespace-nowrap">
+                              Custo Total Entrada (R$/lote)
+                            </label>
+                            <Input
+                              type="text"
+                              value={cat.custo_total_entrada_reais_lote !== undefined ? `R$ ${cat.custo_total_entrada_reais_lote.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
+                              disabled
+                              placeholder="R$ 0,00"
+                              className="bg-gray-50 border-gray-200 focus:border-accent opacity-60"
+                            />
+                          </div>
                         </div>
                         
                         {/* Calculated Prices */}
