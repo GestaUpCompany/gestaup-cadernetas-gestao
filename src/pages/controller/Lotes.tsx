@@ -49,6 +49,11 @@ interface LoteCategoria {
   transf_saida?: number
   qtd_bezerros?: number
   consumo_meta_porcentagem_pesovivo?: number
+  custo_frete_reais_cab?: number
+  custo_comissao_reais_cab?: number
+  custo_sanidade_reais_cab?: number
+  custo_identificacao_rastreabilidade_reais_cab?: number
+  custo_total_reais_cab?: number
   ativo?: boolean
 }
 
@@ -580,6 +585,14 @@ export function Lotes() {
       updatedCat = { ...updatedCat, agio_percent: undefined }
     }
 
+    // 6.7. Calcular custo_total_reais_cab: preco_entrada_reais_cab + custo_frete_reais_cab + custo_comissao_reais_cab + custo_sanidade_reais_cab + custo_identificacao_rastreabilidade_reais_cab
+    const custoTotal = (updatedCat.preco_entrada_reais_cab || 0) + 
+                       (updatedCat.custo_frete_reais_cab || 0) + 
+                       (updatedCat.custo_comissao_reais_cab || 0) + 
+                       (updatedCat.custo_sanidade_reais_cab || 0) + 
+                       (updatedCat.custo_identificacao_rastreabilidade_reais_cab || 0)
+    updatedCat = { ...updatedCat, custo_total_reais_cab: custoTotal > 0 ? custoTotal : undefined }
+
     // 7. Calcular peso_venda_meta_arroba: peso_vivo_meta_kg_cab * ((rc_final / 100) / 15)
     if (updatedCat.peso_vivo_meta_kg_cab && updatedCat.rc_final) {
       const pesoVendaMetaArroba = updatedCat.peso_vivo_meta_kg_cab * ((updatedCat.rc_final / 100) / 15)
@@ -658,6 +671,10 @@ export function Lotes() {
     formData.categorias.map(cat => cat.periodo).join(','),
     formData.categorias.map(cat => cat.dias_restantes_meta).join(','),
     formData.categorias.map(cat => cat.quant_atual).join(','),
+    formData.categorias.map(cat => cat.custo_frete_reais_cab).join(','),
+    formData.categorias.map(cat => cat.custo_comissao_reais_cab).join(','),
+    formData.categorias.map(cat => cat.custo_sanidade_reais_cab).join(','),
+    formData.categorias.map(cat => cat.custo_identificacao_rastreabilidade_reais_cab).join(','),
   ])
 
   const loadLotes = async () => {
@@ -848,6 +865,11 @@ export function Lotes() {
       transf_saida: cat.transf_saida ? parseInt(cat.transf_saida.toString()) : 0,
       qtd_bezerros: cat.qtd_bezerros ? parseInt(cat.qtd_bezerros.toString()) : null,
       consumo_meta_porcentagem_pesovivo: cat.consumo_meta_porcentagem_pesovivo ? parseFloat(cat.consumo_meta_porcentagem_pesovivo.toString()) : null,
+      custo_frete_reais_cab: cat.custo_frete_reais_cab ? parseFloat(cat.custo_frete_reais_cab.toString()) : null,
+      custo_comissao_reais_cab: cat.custo_comissao_reais_cab ? parseFloat(cat.custo_comissao_reais_cab.toString()) : null,
+      custo_sanidade_reais_cab: cat.custo_sanidade_reais_cab ? parseFloat(cat.custo_sanidade_reais_cab.toString()) : null,
+      custo_identificacao_rastreabilidade_reais_cab: cat.custo_identificacao_rastreabilidade_reais_cab ? parseFloat(cat.custo_identificacao_rastreabilidade_reais_cab.toString()) : null,
+      custo_total_reais_cab: cat.custo_total_reais_cab ? parseFloat(cat.custo_total_reais_cab.toString()) : null,
       ativo: cat.ativo ?? true,
     }))
 
@@ -948,7 +970,12 @@ export function Lotes() {
       preco_custo_cab: cat.preco_custo_cab ?? undefined,
       preco_venda_projetado_reais_arroba: cat.preco_venda_projetado_reais_arroba ?? undefined,
       preco_venda_sugerido_cab: cat.preco_venda_sugerido_cab ?? undefined,
-      faturamento_projetado_reais_lote_categoria: cat.faturamento_projetado_reais_lote_categoria ?? undefined
+      faturamento_projetado_reais_lote_categoria: cat.faturamento_projetado_reais_lote_categoria ?? undefined,
+      custo_frete_reais_cab: cat.custo_frete_reais_cab ?? undefined,
+      custo_comissao_reais_cab: cat.custo_comissao_reais_cab ?? undefined,
+      custo_sanidade_reais_cab: cat.custo_sanidade_reais_cab ?? undefined,
+      custo_identificacao_rastreabilidade_reais_cab: cat.custo_identificacao_rastreabilidade_reais_cab ?? undefined,
+      custo_total_reais_cab: cat.custo_total_reais_cab ?? undefined
     }))
 
     // Fetch movimentation data for this lot
@@ -1666,7 +1693,7 @@ export function Lotes() {
                             </div>
                             <div className="col-span-2">
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Venda Total (@/Lote/Categoria)
+                                Venda Total Projetada (@/Lote/Categoria)
                               </label>
                               <Input
                                 type="text"
@@ -1780,21 +1807,90 @@ export function Lotes() {
                               className="border-gray-200 focus:border-accent"
                             />
                           </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-6 gap-2 mt-2">
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1 whitespace-nowrap">
-                              Margem de Lucro (%)
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Custo Frete (R$/cab)
                             </label>
                             <NumericInput
-                              value={cat.margem_lucro_percent?.toString() || ''}
+                              value={cat.custo_frete_reais_cab?.toString() || ''}
                               onChange={(value) => {
                                 const updatedCategorias = [...formData.categorias]
-                                updatedCategorias[catIndex] = { ...cat, margem_lucro_percent: value ? parseFloat(value.replace(',', '.')) : undefined }
+                                updatedCategorias[catIndex] = { ...cat, custo_frete_reais_cab: value ? parseFloat(value.replace(',', '.')) : undefined }
                                 setFormData({ ...formData, categorias: updatedCategorias })
                               }}
+                              placeholder="0,00"
                               decimalPlaces={2}
+                              prefix="R$"
                               className="border-gray-200 focus:border-accent"
                             />
                           </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Custo Comissão (R$/cab)
+                            </label>
+                            <NumericInput
+                              value={cat.custo_comissao_reais_cab?.toString() || ''}
+                              onChange={(value) => {
+                                const updatedCategorias = [...formData.categorias]
+                                updatedCategorias[catIndex] = { ...cat, custo_comissao_reais_cab: value ? parseFloat(value.replace(',', '.')) : undefined }
+                                setFormData({ ...formData, categorias: updatedCategorias })
+                              }}
+                              placeholder="0,00"
+                              decimalPlaces={2}
+                              prefix="R$"
+                              className="border-gray-200 focus:border-accent"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Custo Sanidade (R$/cab)
+                            </label>
+                            <NumericInput
+                              value={cat.custo_sanidade_reais_cab?.toString() || ''}
+                              onChange={(value) => {
+                                const updatedCategorias = [...formData.categorias]
+                                updatedCategorias[catIndex] = { ...cat, custo_sanidade_reais_cab: value ? parseFloat(value.replace(',', '.')) : undefined }
+                                setFormData({ ...formData, categorias: updatedCategorias })
+                              }}
+                              placeholder="0,00"
+                              decimalPlaces={2}
+                              prefix="R$"
+                              className="border-gray-200 focus:border-accent"
+                            />
+                          </div>
+                          <div className="col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Custo Identificação/Rastreabilidade (R$/cab)
+                            </label>
+                            <NumericInput
+                              value={cat.custo_identificacao_rastreabilidade_reais_cab?.toString() || ''}
+                              onChange={(value) => {
+                                const updatedCategorias = [...formData.categorias]
+                                updatedCategorias[catIndex] = { ...cat, custo_identificacao_rastreabilidade_reais_cab: value ? parseFloat(value.replace(',', '.')) : undefined }
+                                setFormData({ ...formData, categorias: updatedCategorias })
+                              }}
+                              placeholder="0,00"
+                              decimalPlaces={2}
+                              prefix="R$"
+                              className="border-gray-200 focus:border-accent"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="mt-2 max-w-xs">
+                          <label className="block text-sm font-medium text-gray-700 mb-1 whitespace-nowrap">
+                            Custo Total (R$/cab)
+                          </label>
+                          <Input
+                            type="text"
+                            value={cat.custo_total_reais_cab !== undefined ? `R$ ${cat.custo_total_reais_cab.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
+                            disabled
+                            placeholder="R$ 0,00"
+                            className="bg-gray-50 border-gray-200 focus:border-accent opacity-60"
+                          />
                         </div>
                         
                         {/* Calculated Prices */}
@@ -1867,6 +1963,22 @@ export function Lotes() {
                               />
                             </div>
                           </div>
+                        </div>
+                        
+                        <div className="mt-4">
+                          <label className="block text-sm font-medium text-gray-700 mb-1 whitespace-nowrap">
+                            Margem de Lucro (%)
+                          </label>
+                          <NumericInput
+                            value={cat.margem_lucro_percent?.toString() || ''}
+                            onChange={(value) => {
+                              const updatedCategorias = [...formData.categorias]
+                              updatedCategorias[catIndex] = { ...cat, margem_lucro_percent: value ? parseFloat(value.replace(',', '.')) : undefined }
+                              setFormData({ ...formData, categorias: updatedCategorias })
+                            }}
+                            decimalPlaces={2}
+                            className="border-gray-200 focus:border-accent"
+                          />
                         </div>
                       </div>
                     </div>
