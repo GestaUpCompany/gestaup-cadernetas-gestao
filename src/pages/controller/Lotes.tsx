@@ -10,7 +10,7 @@ interface LoteCategoria {
   categoria: string
   quant_inicial?: number
   data_pesagem?: string
-  peso_entrada?: number
+  peso_entrada_kg_cab?: number
   peso_entrada_arrobas?: number
   gmd?: string
   periodo?: number
@@ -18,15 +18,15 @@ interface LoteCategoria {
   rc_final?: number
   rc_atual?: number
   quant_atual?: number
-  peso_vivo_kg?: number
+  peso_vivo_atual_kg_cab?: number
   peso_vivo_atual_arroba?: number
   producao_atual_arroba?: number
-  peso_vivo_meta_kg?: number
+  peso_vivo_meta_kg_cab?: number
   peso_venda_meta_arroba?: number
   producao_projetada_arroba?: number
   venda_total_arroba?: number
   dias_restantes_meta?: number
-  data_meta?: string
+  data_meta_projetada?: string
   estrategia_nutricional?: string
   raca?: string
   sexo?: string
@@ -34,11 +34,11 @@ interface LoteCategoria {
   preco_entrada_reais_kg?: number
   preco_entrada_reais_arroba?: number
   preco_entrada_reais_cab?: number
-  custo_operacional?: number
+  custo_operacional_reais_cab_dia?: number
   margem_lucro_percent?: number
-  preco_custo_arroba?: number
+  preco_custo_reais_arroba?: number
   preco_custo_cab?: number
-  preco_venda_sugerido_arroba?: number
+  preco_venda_projetado_reais_arroba?: number
   preco_venda_sugerido_cab?: number
   faturamento_projetado?: number
   morte?: number
@@ -57,13 +57,13 @@ interface Lote {
   nome: string
   n_cabecas?: number
   categorias?: LoteCategoria[]
-  peso_vivo_kg?: number
-  peso_vivo_meta_kg?: number
-  data_meta?: string
+  peso_vivo_atual_kg_cab?: number
+  peso_vivo_meta_kg_cab?: number
+  data_meta_projetada?: string
   qtd_bezerros?: number
   quant_inicial?: number
   data_pesagem?: string
-  peso_entrada?: number
+  peso_entrada_kg_cab?: number
   gmd?: string
   periodo?: number
   ativo: boolean
@@ -72,7 +72,7 @@ interface Lote {
   rc_inicial?: number
   preco_entrada_reais_kg?: number
   preco_entrada_reais_cab?: number
-  custo_operacional?: number
+  custo_operacional_reais_cab_dia?: number
   margem_lucro_percent?: number
   raca?: string
   sexo?: string
@@ -107,13 +107,13 @@ export function Lotes() {
     numero_cabecas: '',
     categorias: [] as LoteCategoria[],
     categoria_outros: '',
-    peso_vivo_kg: '',
-    peso_vivo_meta_kg: '',
-    data_meta: '',
+    peso_vivo_atual_kg_cab: '',
+    peso_vivo_meta_kg_cab: '',
+    data_meta_projetada: '',
     quantidade_bezerros: '',
     quant_inicial: '',
     data: '',
-    peso_entrada: '',
+    peso_entrada_kg_cab: '',
     gmd: '',
     periodo: '',
     morte: '',
@@ -128,7 +128,7 @@ export function Lotes() {
     rc_inicial: '',
     preco_entrada_reais_kg: '',
     preco_entrada_reais_cab: '',
-    custo_operacional: '',
+    custo_operacional_reais_cab_dia: '',
     margem_lucro_percent: '',
     raca: '',
     sexo: '',
@@ -313,7 +313,7 @@ export function Lotes() {
         categoria,
         quant_inicial: undefined,
         data_pesagem: undefined,
-        peso_entrada: undefined,
+        peso_entrada_kg_cab: undefined,
         peso_entrada_arrobas: undefined,
         gmd: undefined,
         periodo: undefined,
@@ -321,15 +321,15 @@ export function Lotes() {
         rc_final: undefined,
         rc_atual: undefined,
         quant_atual: undefined, // Will be set to match quant_inicial after user inputs it
-        peso_vivo_kg: undefined,
+        peso_vivo_atual_kg_cab: undefined,
         peso_vivo_atual_arroba: undefined,
         producao_atual_arroba: undefined,
-        peso_vivo_meta_kg: undefined,
+        peso_vivo_meta_kg_cab: undefined,
         peso_venda_meta_arroba: undefined,
         producao_projetada_arroba: undefined,
         venda_total_arroba: undefined,
         dias_restantes_meta: undefined,
-        data_meta: undefined,
+        data_meta_projetada: undefined,
         estrategia_nutricional: undefined,
         raca: undefined,
         sexo: undefined,
@@ -337,7 +337,7 @@ export function Lotes() {
         preco_entrada_reais_kg: undefined,
         preco_entrada_reais_arroba: undefined,
         preco_entrada_reais_cab: undefined,
-        custo_operacional: undefined,
+        custo_operacional_reais_cab_dia: undefined,
         margem_lucro_percent: undefined,
         morte: undefined,
         faturamento_projetado: undefined,
@@ -374,8 +374,8 @@ export function Lotes() {
   }, [formData.data])
 
   useEffect(() => {
-    if (formData.data_meta) {
-      const dataMeta = new Date(formData.data_meta)
+    if (formData.data_meta_projetada) {
+      const dataMeta = new Date(formData.data_meta_projetada)
       const dataAtual = new Date()
       const diffTime = Math.abs(dataMeta.getTime() - dataAtual.getTime())
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
@@ -383,12 +383,12 @@ export function Lotes() {
     } else {
       setFormData({ ...formData, dias_restantes_meta: '' })
     }
-  }, [formData.data_meta])
+  }, [formData.data_meta_projetada])
 
-// Calcular data meta automaticamente quando peso_vivo_meta_kg, peso_vivo_kg ou gmd mudarem
+// Calcular data meta automaticamente quando peso_vivo_meta_kg_cab, peso_vivo_atual_kg_cab ou gmd mudarem
   useEffect(() => {
-    const pesoMeta = parseFloat(formData.peso_vivo_meta_kg)
-    const pesoAtual = parseFloat(formData.peso_vivo_kg)
+    const pesoMeta = parseFloat(formData.peso_vivo_meta_kg_cab)
+    const pesoAtual = parseFloat(formData.peso_vivo_atual_kg_cab)
     const gmd = formData.gmd ? parseFloat(formData.gmd.replace(',', '.')) : null
 
     if (pesoMeta && pesoAtual && gmd && gmd > 0) {
@@ -402,23 +402,23 @@ export function Lotes() {
       const day = String(dataMeta.getDate()).padStart(2, '0')
       const dataMetaFormatada = `${year}-${month}-${day}`
       
-      setFormData({ ...formData, data_meta: dataMetaFormatada })
+      setFormData({ ...formData, data_meta_projetada: dataMetaFormatada })
     } else {
-      setFormData({ ...formData, data_meta: '' })
+      setFormData({ ...formData, data_meta_projetada: '' })
     }
-  }, [formData.peso_vivo_meta_kg, formData.peso_vivo_kg, formData.gmd])
+  }, [formData.peso_vivo_meta_kg_cab, formData.peso_vivo_atual_kg_cab, formData.gmd])
 
-  // Calcular peso_vivo_kg automaticamente quando peso_entrada, gmd e periodo estiverem presentes
+  // Calcular peso_vivo_atual_kg_cab automaticamente quando peso_entrada_kg_cab, gmd e periodo estiverem presentes
   useEffect(() => {
-    const pesoEntrada = parseFloat(formData.peso_entrada)
+    const pesoEntrada = parseFloat(formData.peso_entrada_kg_cab)
     const gmd = formData.gmd ? parseFloat(formData.gmd.replace(',', '.')) : null
     const periodo = parseFloat(formData.periodo)
 
     if (pesoEntrada && gmd && periodo) {
       const pesoVivoCalculado = pesoEntrada + (gmd * periodo)
-      setFormData({ ...formData, peso_vivo_kg: pesoVivoCalculado.toFixed(1) })
+      setFormData({ ...formData, peso_vivo_atual_kg_cab: pesoVivoCalculado.toFixed(1) })
     }
-  }, [formData.peso_entrada, formData.gmd, formData.periodo])
+  }, [formData.peso_entrada_kg_cab, formData.gmd, formData.periodo])
 
   // Calcular numero_cabecas automaticamente quando quant_inicial, morte, consumo, abate, transf_saida, transf_entrada estiverem presentes
   useEffect(() => {
@@ -435,10 +435,10 @@ export function Lotes() {
     }
   }, [formData.quant_inicial, formData.morte, formData.consumo, formData.abate, formData.transf_saida, formData.transf_entrada])
 
-  // Calcular dias_restantes_meta automaticamente: (data_meta - data_pesagem) - periodo
+  // Calcular dias_restantes_meta automaticamente: (data_meta_projetada - data_pesagem) - periodo
   useEffect(() => {
-    if (formData.data_meta && formData.data && formData.periodo) {
-      const dataMeta = new Date(formData.data_meta)
+    if (formData.data_meta_projetada && formData.data && formData.periodo) {
+      const dataMeta = new Date(formData.data_meta_projetada)
       const dataPesagem = new Date(formData.data)
       const periodo = parseFloat(formData.periodo)
 
@@ -451,7 +451,7 @@ export function Lotes() {
 
       setFormData({ ...formData, dias_restantes_meta: diasRestantes.toString() })
     }
-  }, [formData.data_meta, formData.data, formData.periodo])
+  }, [formData.data_meta_projetada, formData.data, formData.periodo])
 
   // Calcular periodo_liberacao_sisbov automaticamente: data_liberacao_sisbov - CURRENT_DATE
   useEffect(() => {
@@ -483,9 +483,9 @@ export function Lotes() {
   const recalcularCategoria = (cat: LoteCategoria): LoteCategoria => {
     let updatedCat = { ...cat }
 
-    // 1. Calcular peso_entrada_arrobas: (peso_entrada * (rc_inicial/100)) / 15
-    if (updatedCat.peso_entrada && updatedCat.rc_inicial) {
-      const pesoEntradaArrobas = (updatedCat.peso_entrada * (updatedCat.rc_inicial / 100)) / 15
+    // 1. Calcular peso_entrada_arrobas: (peso_entrada_kg_cab * (rc_inicial/100)) / 15
+    if (updatedCat.peso_entrada_kg_cab && updatedCat.rc_inicial) {
+      const pesoEntradaArrobas = (updatedCat.peso_entrada_kg_cab * (updatedCat.rc_inicial / 100)) / 15
       updatedCat = { ...updatedCat, peso_entrada_arrobas: pesoEntradaArrobas }
     }
 
@@ -498,16 +498,16 @@ export function Lotes() {
       updatedCat = { ...updatedCat, periodo: diffDays > 0 ? diffDays : 0 }
     }
 
-    // 3. Calcular peso_vivo_kg: peso_entrada + (periodo * gmd)
-    if (updatedCat.peso_entrada && updatedCat.gmd && updatedCat.periodo) {
+    // 3. Calcular peso_vivo_atual_kg_cab: peso_entrada_kg_cab + (periodo * gmd)
+    if (updatedCat.peso_entrada_kg_cab && updatedCat.gmd && updatedCat.periodo) {
       const gmdNumber = parseFloat(updatedCat.gmd.replace(',', '.'))
-      const pesoVivoKg = updatedCat.peso_entrada + (updatedCat.periodo * gmdNumber)
-      updatedCat = { ...updatedCat, peso_vivo_kg: pesoVivoKg }
+      const pesoVivoKg = updatedCat.peso_entrada_kg_cab + (updatedCat.periodo * gmdNumber)
+      updatedCat = { ...updatedCat, peso_vivo_atual_kg_cab: pesoVivoKg }
     }
 
-    // 3.5. Calcular peso_vivo_atual_arroba: peso_vivo_kg * ((rc_atual / 100) / 15)
-    if (updatedCat.peso_vivo_kg && updatedCat.rc_atual) {
-      const pesoVivoAtualArroba = updatedCat.peso_vivo_kg * ((updatedCat.rc_atual / 100) / 15)
+    // 3.5. Calcular peso_vivo_atual_arroba: peso_vivo_atual_kg_cab * ((rc_atual / 100) / 15)
+    if (updatedCat.peso_vivo_atual_kg_cab && updatedCat.rc_atual) {
+      const pesoVivoAtualArroba = updatedCat.peso_vivo_atual_kg_cab * ((updatedCat.rc_atual / 100) / 15)
       updatedCat = { ...updatedCat, peso_vivo_atual_arroba: pesoVivoAtualArroba }
     } else {
       updatedCat = { ...updatedCat, peso_vivo_atual_arroba: undefined }
@@ -521,9 +521,9 @@ export function Lotes() {
       updatedCat = { ...updatedCat, producao_atual_arroba: undefined }
     }
 
-    // 4. Calcular data_meta quando peso_vivo_meta_kg, peso_vivo_kg ou gmd mudarem
-    const pesoMeta = updatedCat.peso_vivo_meta_kg
-    const pesoAtual = updatedCat.peso_vivo_kg
+    // 4. Calcular data_meta_projetada quando peso_vivo_meta_kg_cab, peso_vivo_atual_kg_cab ou gmd mudarem
+    const pesoMeta = updatedCat.peso_vivo_meta_kg_cab
+    const pesoAtual = updatedCat.peso_vivo_atual_kg_cab
     const gmd = updatedCat.gmd
 
     if (pesoMeta && pesoAtual && gmd) {
@@ -539,22 +539,22 @@ export function Lotes() {
         const day = String(dataMeta.getDate()).padStart(2, '0')
         const dataMetaFormatada = `${year}-${month}-${day}`
 
-        updatedCat = { ...updatedCat, data_meta: dataMetaFormatada }
+        updatedCat = { ...updatedCat, data_meta_projetada: dataMetaFormatada }
       }
     }
 
-    // 5. Calcular dias_restantes_meta: dias desde data atual até data_meta
-    if (updatedCat.data_meta) {
-      const dataMeta = new Date(updatedCat.data_meta)
+    // 5. Calcular dias_restantes_meta: dias desde data atual até data_meta_projetada
+    if (updatedCat.data_meta_projetada) {
+      const dataMeta = new Date(updatedCat.data_meta_projetada)
       const currentDate = new Date()
       const diffTime = dataMeta.getTime() - currentDate.getTime()
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
       updatedCat = { ...updatedCat, dias_restantes_meta: diffDays > 0 ? diffDays : 0 }
     }
 
-    // 6. Calcular preco_entrada_reais_cab: preco_entrada_reais_kg * peso_entrada
-    if (updatedCat.preco_entrada_reais_kg && updatedCat.peso_entrada && updatedCat.peso_entrada > 0) {
-      const precoCab = updatedCat.preco_entrada_reais_kg * updatedCat.peso_entrada
+    // 6. Calcular preco_entrada_reais_cab: preco_entrada_reais_kg * peso_entrada_kg_cab
+    if (updatedCat.preco_entrada_reais_kg && updatedCat.peso_entrada_kg_cab && updatedCat.peso_entrada_kg_cab > 0) {
+      const precoCab = updatedCat.preco_entrada_reais_kg * updatedCat.peso_entrada_kg_cab
       updatedCat = { ...updatedCat, preco_entrada_reais_cab: precoCab }
     }
 
@@ -566,9 +566,9 @@ export function Lotes() {
       updatedCat = { ...updatedCat, preco_entrada_reais_arroba: undefined }
     }
 
-    // 7. Calcular peso_venda_meta_arroba: peso_vivo_meta_kg * ((rc_final / 100) / 15)
-    if (updatedCat.peso_vivo_meta_kg && updatedCat.rc_final) {
-      const pesoVendaMetaArroba = updatedCat.peso_vivo_meta_kg * ((updatedCat.rc_final / 100) / 15)
+    // 7. Calcular peso_venda_meta_arroba: peso_vivo_meta_kg_cab * ((rc_final / 100) / 15)
+    if (updatedCat.peso_vivo_meta_kg_cab && updatedCat.rc_final) {
+      const pesoVendaMetaArroba = updatedCat.peso_vivo_meta_kg_cab * ((updatedCat.rc_final / 100) / 15)
       updatedCat = { ...updatedCat, peso_venda_meta_arroba: Math.round(pesoVendaMetaArroba * 100) / 100 }
     }
 
@@ -592,23 +592,23 @@ export function Lotes() {
     // Total dias = periodo + dias_restantes_meta
     const totalDias = (updatedCat.periodo || 0) + (updatedCat.dias_restantes_meta || 0)
     
-    if (updatedCat.preco_entrada_reais_cab && updatedCat.custo_operacional && totalDias > 0 && updatedCat.quant_atual && updatedCat.peso_venda_meta_arroba) {
+    if (updatedCat.preco_entrada_reais_cab && updatedCat.custo_operacional_reais_cab_dia && totalDias > 0 && updatedCat.quant_atual && updatedCat.peso_venda_meta_arroba) {
       // Custo total por cabeça = custo aquisição + (custo operacional diário * total dias)
-      const custoTotalPorCab = updatedCat.preco_entrada_reais_cab + (updatedCat.custo_operacional * totalDias)
+      const custoTotalPorCab = updatedCat.preco_entrada_reais_cab + (updatedCat.custo_operacional_reais_cab_dia * totalDias)
       
       // Custo por @ = custo total por cabeça / peso venda meta em arrobas
       const custoPorArroba = custoTotalPorCab / updatedCat.peso_venda_meta_arroba
       
-      updatedCat = { ...updatedCat, preco_custo_cab: custoTotalPorCab, preco_custo_arroba: custoPorArroba }
+      updatedCat = { ...updatedCat, preco_custo_cab: custoTotalPorCab, preco_custo_reais_arroba: custoPorArroba }
       
       // Preço de venda sugerido é inserido manualmente pelo usuário, não calculado
     } else {
-      updatedCat = { ...updatedCat, preco_custo_cab: undefined, preco_custo_arroba: undefined }
+      updatedCat = { ...updatedCat, preco_custo_cab: undefined, preco_custo_reais_arroba: undefined }
     }
 
-    // 9. Calcular preco_venda_sugerido_cab: preco_venda_sugerido_arroba * peso_venda_meta_arroba
-    if (updatedCat.preco_venda_sugerido_arroba && updatedCat.peso_venda_meta_arroba) {
-      const precoVendaSugeridoCab = updatedCat.preco_venda_sugerido_arroba * updatedCat.peso_venda_meta_arroba
+    // 9. Calcular preco_venda_sugerido_cab: preco_venda_projetado_reais_arroba * peso_venda_meta_arroba
+    if (updatedCat.preco_venda_projetado_reais_arroba && updatedCat.peso_venda_meta_arroba) {
+      const precoVendaSugeridoCab = updatedCat.preco_venda_projetado_reais_arroba * updatedCat.peso_venda_meta_arroba
       updatedCat = { ...updatedCat, preco_venda_sugerido_cab: precoVendaSugeridoCab }
     } else {
       updatedCat = { ...updatedCat, preco_venda_sugerido_cab: undefined }
@@ -630,16 +630,16 @@ export function Lotes() {
     const updatedCategorias = formData.categorias.map(recalcularCategoria)
     setFormData({ ...formData, categorias: updatedCategorias })
   }, [
-    formData.categorias.map(cat => cat.peso_entrada).join(','),
+    formData.categorias.map(cat => cat.peso_entrada_kg_cab).join(','),
     formData.categorias.map(cat => cat.rc_inicial).join(','),
     formData.categorias.map(cat => cat.data_pesagem).join(','),
     formData.categorias.map(cat => cat.gmd).join(','),
-    formData.categorias.map(cat => cat.peso_vivo_meta_kg).join(','),
+    formData.categorias.map(cat => cat.peso_vivo_meta_kg_cab).join(','),
     formData.categorias.map(cat => cat.rc_final).join(','),
     formData.categorias.map(cat => cat.rc_atual).join(','),
     formData.categorias.map(cat => cat.preco_entrada_reais_kg).join(','),
-    formData.categorias.map(cat => cat.custo_operacional).join(','),
-    formData.categorias.map(cat => cat.preco_venda_sugerido_arroba).join(','),
+    formData.categorias.map(cat => cat.custo_operacional_reais_cab_dia).join(','),
+    formData.categorias.map(cat => cat.preco_venda_projetado_reais_arroba).join(','),
     formData.categorias.map(cat => cat.peso_venda_meta_arroba).join(','),
     formData.categorias.map(cat => cat.periodo).join(','),
     formData.categorias.map(cat => cat.dias_restantes_meta).join(','),
@@ -792,7 +792,7 @@ export function Lotes() {
       categoria: cat.categoria,
       quant_inicial: cat.quant_inicial ? parseInt(cat.quant_inicial.toString()) : null,
       data_pesagem: cat.data_pesagem || null,
-      peso_entrada: cat.peso_entrada ? parseFloat(cat.peso_entrada.toString()) : null,
+      peso_entrada_kg_cab: cat.peso_entrada_kg_cab ? parseFloat(cat.peso_entrada_kg_cab.toString()) : null,
       peso_entrada_arrobas: cat.peso_entrada_arrobas ? parseFloat(cat.peso_entrada_arrobas.toString()) : null,
       gmd: cat.gmd?.toString() || null,
       periodo: cat.periodo ? parseInt(cat.periodo.toString()) : null,
@@ -800,15 +800,15 @@ export function Lotes() {
       rc_final: cat.rc_final ? parseFloat(cat.rc_final.toString()) : null,
       rc_atual: cat.rc_atual ? parseFloat(cat.rc_atual.toString()) : null,
       quant_atual: cat.quant_atual ? parseInt(cat.quant_atual.toString()) : null,
-      peso_vivo_kg: cat.peso_vivo_kg ? parseFloat(cat.peso_vivo_kg.toString()) : null,
+      peso_vivo_atual_kg_cab: cat.peso_vivo_atual_kg_cab ? parseFloat(cat.peso_vivo_atual_kg_cab.toString()) : null,
       peso_vivo_atual_arroba: cat.peso_vivo_atual_arroba ? parseFloat(cat.peso_vivo_atual_arroba.toString()) : null,
       producao_atual_arroba: cat.producao_atual_arroba ? parseFloat(cat.producao_atual_arroba.toString()) : null,
-      peso_vivo_meta_kg: cat.peso_vivo_meta_kg ? parseFloat(cat.peso_vivo_meta_kg.toString()) : null,
+      peso_vivo_meta_kg_cab: cat.peso_vivo_meta_kg_cab ? parseFloat(cat.peso_vivo_meta_kg_cab.toString()) : null,
       peso_venda_meta_arroba: cat.peso_venda_meta_arroba ? parseFloat(cat.peso_venda_meta_arroba.toString()) : null,
       producao_projetada_arroba: cat.producao_projetada_arroba ? parseFloat(cat.producao_projetada_arroba.toString()) : null,
       venda_total_arroba: cat.venda_total_arroba ? parseFloat(cat.venda_total_arroba.toString()) : null,
       dias_restantes_meta: cat.dias_restantes_meta ? parseInt(cat.dias_restantes_meta.toString()) : null,
-      data_meta: cat.data_meta || null,
+      data_meta_projetada: cat.data_meta_projetada || null,
       estrategia_nutricional: cat.estrategia_nutricional || null,
       raca: cat.raca || null,
       sexo: cat.sexo || null,
@@ -816,11 +816,11 @@ export function Lotes() {
       preco_entrada_reais_kg: cat.preco_entrada_reais_kg ? parseFloat(cat.preco_entrada_reais_kg.toString()) : null,
       preco_entrada_reais_arroba: cat.preco_entrada_reais_arroba ? parseFloat(cat.preco_entrada_reais_arroba.toString()) : null,
       preco_entrada_reais_cab: cat.preco_entrada_reais_cab ? parseFloat(cat.preco_entrada_reais_cab.toString()) : null,
-      custo_operacional: cat.custo_operacional ? parseFloat(cat.custo_operacional.toString()) : null,
+      custo_operacional_reais_cab_dia: cat.custo_operacional_reais_cab_dia ? parseFloat(cat.custo_operacional_reais_cab_dia.toString()) : null,
       margem_lucro_percent: cat.margem_lucro_percent ? parseFloat(cat.margem_lucro_percent.toString()) : null,
-      preco_custo_arroba: cat.preco_custo_arroba ? parseFloat(cat.preco_custo_arroba.toString()) : null,
+      preco_custo_reais_arroba: cat.preco_custo_reais_arroba ? parseFloat(cat.preco_custo_reais_arroba.toString()) : null,
       preco_custo_cab: cat.preco_custo_cab ? parseFloat(cat.preco_custo_cab.toString()) : null,
-      preco_venda_sugerido_arroba: cat.preco_venda_sugerido_arroba ? parseFloat(cat.preco_venda_sugerido_arroba.toString()) : null,
+      preco_venda_projetado_reais_arroba: cat.preco_venda_projetado_reais_arroba ? parseFloat(cat.preco_venda_projetado_reais_arroba.toString()) : null,
       preco_venda_sugerido_cab: cat.preco_venda_sugerido_cab ? parseFloat(cat.preco_venda_sugerido_cab.toString()) : null,
       faturamento_projetado: cat.faturamento_projetado ? parseFloat(cat.faturamento_projetado.toString()) : null,
       morte: cat.morte ? parseInt(cat.morte.toString()) : 0,
@@ -849,13 +849,13 @@ export function Lotes() {
         numero_cabecas: '',
         categorias: [] as LoteCategoria[],
         categoria_outros: '',
-        peso_vivo_kg: '',
-        peso_vivo_meta_kg: '',
-        data_meta: '',
+        peso_vivo_atual_kg_cab: '',
+        peso_vivo_meta_kg_cab: '',
+        data_meta_projetada: '',
         quantidade_bezerros: '',
         quant_inicial: '',
         data: '',
-        peso_entrada: '',
+        peso_entrada_kg_cab: '',
         gmd: '',
         periodo: '',
         morte: '',
@@ -870,7 +870,7 @@ export function Lotes() {
         rc_inicial: '',
         preco_entrada_reais_kg: '',
         preco_entrada_reais_cab: '',
-        custo_operacional: '',
+        custo_operacional_reais_cab_dia: '',
         margem_lucro_percent: '',
         raca: '',
         sexo: '',
@@ -925,9 +925,9 @@ export function Lotes() {
       venda_total_arroba: cat.venda_total_arroba ?? undefined,
       preco_entrada_reais_arroba: cat.preco_entrada_reais_arroba ?? undefined,
       margem_lucro_percent: cat.margem_lucro_percent ?? undefined,
-      preco_custo_arroba: cat.preco_custo_arroba ?? undefined,
+      preco_custo_reais_arroba: cat.preco_custo_reais_arroba ?? undefined,
       preco_custo_cab: cat.preco_custo_cab ?? undefined,
-      preco_venda_sugerido_arroba: cat.preco_venda_sugerido_arroba ?? undefined,
+      preco_venda_projetado_reais_arroba: cat.preco_venda_projetado_reais_arroba ?? undefined,
       preco_venda_sugerido_cab: cat.preco_venda_sugerido_cab ?? undefined,
       faturamento_projetado: cat.faturamento_projetado ?? undefined
     }))
@@ -982,13 +982,13 @@ export function Lotes() {
       numero_cabecas: lote.n_cabecas?.toString() || '',
       categorias: categoriasWithMeta,
       categoria_outros: '',
-      peso_vivo_kg: lote.peso_vivo_kg?.toString() || '',
-      peso_vivo_meta_kg: lote.peso_vivo_meta_kg?.toString() || '',
-      data_meta: lote.data_meta || '',
+      peso_vivo_atual_kg_cab: lote.peso_vivo_atual_kg_cab?.toString() || '',
+      peso_vivo_meta_kg_cab: lote.peso_vivo_meta_kg_cab?.toString() || '',
+      data_meta_projetada: lote.data_meta_projetada || '',
       quantidade_bezerros: lote.qtd_bezerros?.toString() || '',
       quant_inicial: lote.quant_inicial?.toString() || '',
       data: lote.data_pesagem || '',
-      peso_entrada: lote.peso_entrada?.toString() || '',
+      peso_entrada_kg_cab: lote.peso_entrada_kg_cab?.toString() || '',
       gmd: lote.gmd?.toString() || '',
       periodo: lote.periodo?.toString() || '',
       morte: '',
@@ -1003,7 +1003,7 @@ export function Lotes() {
       rc_inicial: lote.rc_inicial?.toString() || '',
       preco_entrada_reais_kg: lote.preco_entrada_reais_kg?.toString() || '',
       preco_entrada_reais_cab: lote.preco_entrada_reais_cab?.toString() || '',
-      custo_operacional: lote.custo_operacional?.toString() || '',
+      custo_operacional_reais_cab_dia: lote.custo_operacional_reais_cab_dia?.toString() || '',
       margem_lucro_percent: lote.margem_lucro_percent?.toString() || '',
       raca: lote.raca || '',
       sexo: lote.sexo || '',
@@ -1029,13 +1029,13 @@ export function Lotes() {
       numero_cabecas: '',
       categorias: [],
       categoria_outros: '',
-      peso_vivo_kg: '',
-      peso_vivo_meta_kg: '',
-      data_meta: '',
+      peso_vivo_atual_kg_cab: '',
+      peso_vivo_meta_kg_cab: '',
+      data_meta_projetada: '',
       quantidade_bezerros: '',
       quant_inicial: '',
       data: '',
-      peso_entrada: '',
+      peso_entrada_kg_cab: '',
       gmd: '',
       periodo: '',
       morte: '',
@@ -1050,7 +1050,7 @@ export function Lotes() {
       rc_inicial: '',
       preco_entrada_reais_kg: '',
       preco_entrada_reais_cab: '',
-      custo_operacional: '',
+      custo_operacional_reais_cab_dia: '',
       margem_lucro_percent: '',
       raca: '',
       sexo: '',
@@ -1480,10 +1480,10 @@ export function Lotes() {
                                 Peso Entrada (kg/cab)
                               </label>
                               <NumericInput
-                                value={cat.peso_entrada?.toString() || ''}
+                                value={cat.peso_entrada_kg_cab?.toString() || ''}
                                 onChange={(value) => {
                                   const updatedCategorias = [...formData.categorias]
-                                  updatedCategorias[catIndex] = { ...cat, peso_entrada: value ? parseFloat(value.replace(',', '.')) : undefined }
+                                  updatedCategorias[catIndex] = { ...cat, peso_entrada_kg_cab: value ? parseFloat(value.replace(',', '.')) : undefined }
                                   setFormData({ ...formData, categorias: updatedCategorias })
                                 }}
                                 placeholder="0,00"
@@ -1535,7 +1535,7 @@ export function Lotes() {
                               <Input
                                 type="number"
                                 step="0.01"
-                                value={cat.peso_vivo_kg?.toFixed(2) || ''}
+                                value={cat.peso_vivo_atual_kg_cab?.toFixed(2) || ''}
                                 disabled
                                 placeholder="0"
                                 className="border-gray-200 focus:border-accent opacity-60"
@@ -1592,10 +1592,10 @@ export function Lotes() {
                                 Peso Vivo Meta (kg/cab)
                               </label>
                               <NumericInput
-                                value={cat.peso_vivo_meta_kg?.toString() || ''}
+                                value={cat.peso_vivo_meta_kg_cab?.toString() || ''}
                                 onChange={(value) => {
                                   const updatedCategorias = [...formData.categorias]
-                                  updatedCategorias[catIndex] = { ...cat, peso_vivo_meta_kg: value ? parseFloat(value.replace(',', '.')) : undefined }
+                                  updatedCategorias[catIndex] = { ...cat, peso_vivo_meta_kg_cab: value ? parseFloat(value.replace(',', '.')) : undefined }
                                   setFormData({ ...formData, categorias: updatedCategorias })
                                 }}
                                 placeholder="0,00"
@@ -1664,7 +1664,7 @@ export function Lotes() {
                               </label>
                               <Input
                                 type="date"
-                                value={cat.data_meta || ''}
+                                value={cat.data_meta_projetada || ''}
                                 disabled
                                 className="border-gray-200 focus:border-accent opacity-60"
                               />
@@ -1737,10 +1737,10 @@ export function Lotes() {
                               Custo Operacional (R$/cab/dia)
                             </label>
                             <NumericInput
-                              value={cat.custo_operacional?.toString() || ''}
+                              value={cat.custo_operacional_reais_cab_dia?.toString() || ''}
                               onChange={(value) => {
                                 const updatedCategorias = [...formData.categorias]
-                                updatedCategorias[catIndex] = { ...cat, custo_operacional: value ? parseFloat(value.replace(',', '.')) : undefined }
+                                updatedCategorias[catIndex] = { ...cat, custo_operacional_reais_cab_dia: value ? parseFloat(value.replace(',', '.')) : undefined }
                                 setFormData({ ...formData, categorias: updatedCategorias })
                               }}
                               decimalPlaces={2}
@@ -1775,7 +1775,7 @@ export function Lotes() {
                               </label>
                               <Input
                                 type="text"
-                                value={cat.preco_custo_arroba ? `R$ ${cat.preco_custo_arroba.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
+                                value={cat.preco_custo_reais_arroba ? `R$ ${cat.preco_custo_reais_arroba.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
                                 disabled
                                 placeholder="R$ 0,00"
                                 className="bg-gray-100 border-blue-200 focus:border-blue-500 opacity-80 text-xs"
@@ -1798,10 +1798,10 @@ export function Lotes() {
                                 Preço Venda Projetado (R$/@)
                               </label>
                               <NumericInput
-                                value={cat.preco_venda_sugerido_arroba?.toString() || ''}
+                                value={cat.preco_venda_projetado_reais_arroba?.toString() || ''}
                                 onChange={(value) => {
                                   const updatedCategorias = [...formData.categorias]
-                                  updatedCategorias[catIndex] = { ...cat, preco_venda_sugerido_arroba: value ? parseFloat(value.replace(',', '.')) : undefined }
+                                  updatedCategorias[catIndex] = { ...cat, preco_venda_projetado_reais_arroba: value ? parseFloat(value.replace(',', '.')) : undefined }
                                   setFormData({ ...formData, categorias: updatedCategorias })
                                 }}
                                 placeholder="R$ 0,00"
@@ -2099,9 +2099,9 @@ export function Lotes() {
                 onClick={() => handleEdit(lote)}
               >
                 <div className="space-y-2 mb-4">
-                  {lote.peso_vivo_kg && (
+                  {lote.peso_vivo_atual_kg_cab && (
                     <p className="text-sm text-gray-500">
-                      <span className="font-medium">Peso Vivo:</span> {lote.peso_vivo_kg} kg
+                      <span className="font-medium">Peso Vivo:</span> {lote.peso_vivo_atual_kg_cab} kg
                     </p>
                   )}
 
