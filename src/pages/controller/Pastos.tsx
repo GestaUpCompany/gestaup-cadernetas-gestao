@@ -13,6 +13,8 @@ interface Pasto {
   tipo?: string
   metragem_cocho_m?: number
   nivel_degradacao?: number
+  area_total_ha?: number
+  area_util_porcentagem?: number
   area_util_ha?: number
   especie?: string
   altura_entrada_cm?: number
@@ -25,6 +27,7 @@ interface Pasto {
 export function Pastos() {
   const { user } = useAuth()
   const [pastos, setPastos] = useState<Pasto[]>([])
+  const [setores, setSetores] = useState<{ id: string; nome: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingPasto, setEditingPasto] = useState<Pasto | null>(null)
@@ -35,6 +38,8 @@ export function Pastos() {
     tipo: '',
     metragem_cocho_m: '',
     nivel_degradacao: '',
+    area_total_ha: '',
+    area_util_porcentagem: '',
     area_util_ha: '',
     especie: '',
     altura_entrada_cm: '',
@@ -51,7 +56,35 @@ export function Pastos() {
 
   useEffect(() => {
     loadPastos()
+    loadSetores()
   }, [user])
+
+  const loadSetores = async () => {
+    if (!user) return
+
+    const { data: vinculos } = await supabase
+      .from('usuario_fazenda')
+      .select('fazenda_id')
+      .eq('usuario_id', user.id)
+      .eq('ativo', true)
+
+    if (!vinculos || vinculos.length === 0) return
+
+    const fazendaId = vinculos[0].fazenda_id
+
+    const { data, error } = await supabase
+      .from('setores')
+      .select('id, nome')
+      .eq('fazenda_id', fazendaId)
+      .eq('ativo', true)
+      .order('nome')
+
+    if (error) {
+      console.error('Erro ao buscar setores:', error)
+    } else {
+      setSetores(data as { id: string; nome: string }[])
+    }
+  }
 
   const loadPastos = async () => {
     if (!user) return
@@ -112,7 +145,11 @@ export function Pastos() {
       tipo: formData.tipo || null,
       metragem_cocho_m: formData.metragem_cocho_m ? parseFloat(formData.metragem_cocho_m) : null,
       nivel_degradacao: formData.nivel_degradacao ? parseInt(formData.nivel_degradacao) : null,
-      area_util_ha: formData.area_util_ha ? parseFloat(formData.area_util_ha) : null,
+      area_total_ha: formData.area_total_ha ? parseFloat(formData.area_total_ha) : null,
+      area_util_porcentagem: formData.area_util_porcentagem ? parseFloat(formData.area_util_porcentagem) : null,
+      area_util_ha: formData.area_total_ha && formData.area_util_porcentagem 
+        ? parseFloat(formData.area_total_ha) * (parseFloat(formData.area_util_porcentagem) / 100)
+        : formData.area_util_ha ? parseFloat(formData.area_util_ha) : null,
       especie: formData.especie || null,
       altura_entrada_cm: formData.altura_entrada_cm ? parseFloat(formData.altura_entrada_cm) : null,
       altura_saida_cm: formData.altura_saida_cm ? parseFloat(formData.altura_saida_cm) : null,
@@ -144,6 +181,8 @@ export function Pastos() {
         tipo: '',
         metragem_cocho_m: '',
         nivel_degradacao: '',
+        area_total_ha: '',
+        area_util_porcentagem: '',
         area_util_ha: '',
         especie: '',
         altura_entrada_cm: '',
@@ -167,6 +206,8 @@ export function Pastos() {
       tipo: pasto.tipo || '',
       metragem_cocho_m: pasto.metragem_cocho_m?.toString() || '',
       nivel_degradacao: pasto.nivel_degradacao?.toString() || '',
+      area_total_ha: pasto.area_total_ha?.toString() || '',
+      area_util_porcentagem: pasto.area_util_porcentagem?.toString() || '',
       area_util_ha: pasto.area_util_ha?.toString() || '',
       especie: pasto.especie || '',
       altura_entrada_cm: pasto.altura_entrada_cm?.toString() || '',
@@ -185,6 +226,8 @@ export function Pastos() {
       tipo: '',
       metragem_cocho_m: '',
       nivel_degradacao: '',
+      area_total_ha: '',
+      area_util_porcentagem: '',
       area_util_ha: '',
       especie: '',
       altura_entrada_cm: '',
@@ -334,6 +377,8 @@ export function Pastos() {
           const setor = colIndices['setor'] !== undefined ? row[colIndices['setor']]?.toString().trim() || null : null
           const metragemCocho = colIndices['metragem cocho (m)'] !== undefined ? row[colIndices['metragem cocho (m)']] ? parseFloat(row[colIndices['metragem cocho (m)']]) : null : null
           const nivelDegradacao = colIndices['nivel degradacao'] !== undefined ? row[colIndices['nivel degradacao']] ? parseInt(row[colIndices['nivel degradacao']]) : null : null
+          const areaTotalHa = colIndices['area total (ha)'] !== undefined ? row[colIndices['area total (ha)']] ? parseFloat(row[colIndices['area total (ha)']]) : null : null
+          const areaUtilPorcentagem = colIndices['area util (%)'] !== undefined ? row[colIndices['area util (%)']] ? parseFloat(row[colIndices['area util (%)']]) : null : null
 
           // Verificar duplicata de nome
           if (nome && existingNames.has(nome.toLowerCase())) {
@@ -361,6 +406,14 @@ export function Pastos() {
             missingFields.push('Nivel Degradacao - deve ser entre 1 e 5')
           }
 
+          if (areaTotalHa !== null && (isNaN(areaTotalHa) || areaTotalHa <= 0)) {
+            missingFields.push('Area Total (ha) - deve ser número positivo')
+          }
+
+          if (areaUtilPorcentagem !== null && (isNaN(areaUtilPorcentagem) || areaUtilPorcentagem < 0 || areaUtilPorcentagem > 100)) {
+            missingFields.push('Area Util (%) - deve ser entre 0 e 100')
+          }
+
           // Se houver erros de validação, adicionar a invalidRows e continuar
           if (missingFields.length > 0) {
             invalidRows.push({ row: rowNum, name: nome || '(sem nome)', missingFields })
@@ -376,7 +429,11 @@ export function Pastos() {
             tipo,
             metragem_cocho_m: metragemCocho,
             nivel_degradacao: nivelDegradacao,
-            area_util_ha: areaUtil,
+            area_total_ha: areaTotalHa,
+            area_util_porcentagem: areaUtilPorcentagem,
+            area_util_ha: areaTotalHa && areaUtilPorcentagem 
+              ? areaTotalHa * (areaUtilPorcentagem / 100)
+              : areaUtil,
             especie,
             altura_entrada_cm: alturaEntrada,
             altura_saida_cm: alturaSaida,
@@ -537,17 +594,22 @@ export function Pastos() {
                 <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                   Setor
                 </label>
-                <Input
-                  type="text"
+                <select
                   value={formData.setor}
                   onChange={(e) => setFormData({ ...formData, setor: e.target.value })}
-                  placeholder="Setor"
-                  className="border-gray-200 focus:border-accent text-sm"
-                />
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] rounded-lg border-2 border-gray-200 focus:border-accent bg-white text-gray-700 transition-all text-sm"
+                >
+                  <option value="">Selecione...</option>
+                  {setores.map((setor) => (
+                    <option key={setor.id} value={setor.nome}>
+                      {setor.nome}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                  Tipo
+                  Sistema de Produção
                 </label>
                 <select
                   value={formData.tipo}
@@ -597,19 +659,60 @@ export function Pastos() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                Área Útil (ha) <span className="text-red-500">*</span>
-              </label>
-              <Input
-                type="number"
-                step="0.01"
-                value={formData.area_util_ha}
-                onChange={(e) => setFormData({ ...formData, area_util_ha: e.target.value })}
-                required
-                placeholder="Ex: 50.5"
-                className="border-gray-200 focus:border-accent text-sm"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                  Área Total (ha)
+                </label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={formData.area_total_ha}
+                  onChange={(e) => {
+                    setFormData({ ...formData, area_total_ha: e.target.value })
+                    // Auto-calculate area_util_ha if both fields are filled
+                    if (e.target.value && formData.area_util_porcentagem) {
+                      const calculated = parseFloat(e.target.value) * (parseFloat(formData.area_util_porcentagem) / 100)
+                      setFormData(prev => ({ ...prev, area_util_ha: calculated.toFixed(2) }))
+                    }
+                  }}
+                  placeholder="Ex: 100"
+                  className="border-gray-200 focus:border-accent text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                  Área Útil (%)
+                </label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={formData.area_util_porcentagem}
+                  onChange={(e) => {
+                    setFormData({ ...formData, area_util_porcentagem: e.target.value })
+                    // Auto-calculate area_util_ha if both fields are filled
+                    if (e.target.value && formData.area_total_ha) {
+                      const calculated = parseFloat(formData.area_total_ha) * (parseFloat(e.target.value) / 100)
+                      setFormData(prev => ({ ...prev, area_util_ha: calculated.toFixed(2) }))
+                    }
+                  }}
+                  placeholder="Ex: 80"
+                  className="border-gray-200 focus:border-accent text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                  Área Útil (ha)
+                </label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={formData.area_util_ha}
+                  readOnly
+                  placeholder="Calculado automaticamente"
+                  className="border-gray-200 focus:border-accent text-sm bg-gray-50"
+                />
+              </div>
             </div>
 
             <div>
@@ -719,14 +822,14 @@ export function Pastos() {
             .map((pasto) => (
               <Card
                 key={pasto.id}
-                className="p-4 sm:p-6 border-0 shadow-sm cursor-pointer transition-all hover:shadow-xl"
+                className="p-4 sm:p-6 border-0 shadow-sm cursor-pointer transition-all hover:shadow-xl flex flex-col"
                 onClick={() => handleEdit(pasto)}
               >
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
                   <div>
                     <h3 className="font-semibold text-gray-800 text-base sm:text-lg">{pasto.nome}</h3>
                     {pasto.area_util_ha && (
-                      <p className="text-xs sm:text-sm text-gray-500">Área: {pasto.area_util_ha} ha</p>
+                      <p className="text-xs sm:text-sm text-gray-500">Área Útil: {pasto.area_util_ha} ha</p>
                     )}
                   </div>
                   <div className="flex gap-2 items-center">
@@ -739,12 +842,21 @@ export function Pastos() {
                     </span>
                   </div>
                 </div>
-                <div className="space-y-2 mb-4">
+                <div className="space-y-2 mb-4 flex-grow">
                   {pasto.setor && (
                     <p className="text-sm text-gray-500"><span className="font-medium">Setor:</span> {pasto.setor}</p>
                   )}
                   {pasto.tipo && (
-                    <p className="text-sm text-gray-500"><span className="font-medium">Tipo:</span> {pasto.tipo}</p>
+                    <p className="text-sm text-gray-500"><span className="font-medium">Sistema de Produção:</span> {pasto.tipo}</p>
+                  )}
+                  {pasto.area_total_ha && (
+                    <p className="text-sm text-gray-500"><span className="font-medium">Área Total:</span> {pasto.area_total_ha} ha</p>
+                  )}
+                  {pasto.area_util_porcentagem && (
+                    <p className="text-sm text-gray-500"><span className="font-medium">Área Útil:</span> {pasto.area_util_porcentagem}%</p>
+                  )}
+                  {pasto.area_util_ha && (
+                    <p className="text-sm text-gray-500"><span className="font-medium">Área Útil (ha):</span> {pasto.area_util_ha} ha</p>
                   )}
                   {pasto.especie && (
                     <p className="text-sm text-gray-500"><span className="font-medium">Espécie:</span> {pasto.especie}</p>
@@ -764,7 +876,7 @@ export function Pastos() {
                     </p>
                   )}
                 </div>
-                <div className="flex flex-wrap gap-1 sm:gap-2">
+                <div className="flex flex-wrap gap-1 sm:gap-2 mt-auto">
                   <Button
                     variant="secondary"
                     className="flex-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2"

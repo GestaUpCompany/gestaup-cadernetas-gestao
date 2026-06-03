@@ -300,9 +300,9 @@ export function ItensSupermercado() {
             {activeItens.map((item) => (
               <Card
                 key={item.id}
-                className="bg-white p-4 sm:p-6 border-0 shadow-sm cursor-pointer transition-all hover:shadow-xl"
+                className="bg-white p-4 sm:p-6 border-0 shadow-sm cursor-pointer transition-all hover:shadow-xl flex flex-col"
               >
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 sm:gap-3 mb-3 sm:mb-4 flex-grow">
                   <div>
                     <h3 className="font-semibold text-gray-800 text-base sm:text-lg">{item.nome}</h3>
                     <p className="text-xs sm:text-sm text-gray-500">Unidade: {item.unidade_medida}</p>
@@ -313,7 +313,7 @@ export function ItensSupermercado() {
                     </span>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-1 sm:gap-2">
+                <div className="flex flex-wrap gap-1 sm:gap-2 mt-auto">
                   <Button
                     variant="secondary"
                     size="sm"
@@ -345,9 +345,9 @@ export function ItensSupermercado() {
             {inactiveItens.map((item) => (
               <Card
                 key={item.id}
-                className="bg-white p-4 sm:p-6 border-0 shadow-sm cursor-pointer transition-all hover:shadow-xl"
+                className="bg-white p-4 sm:p-6 border-0 shadow-sm cursor-pointer transition-all hover:shadow-xl flex flex-col"
               >
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 sm:gap-3 mb-3 sm:mb-4 flex-grow">
                   <div>
                     <h3 className="font-semibold text-gray-800 text-base sm:text-lg">{item.nome}</h3>
                     <p className="text-xs sm:text-sm text-gray-500">Unidade: {item.unidade_medida}</p>
@@ -358,7 +358,7 @@ export function ItensSupermercado() {
                     </span>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-1 sm:gap-2">
+                <div className="flex flex-wrap gap-1 sm:gap-2 mt-auto">
                   <Button
                     variant="secondary"
                     size="sm"
