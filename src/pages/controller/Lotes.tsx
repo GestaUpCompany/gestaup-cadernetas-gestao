@@ -1165,8 +1165,8 @@ export function Lotes() {
                 <div className="border-t pt-4 mt-4">
                   <h4 className="text-lg font-semibold text-gray-800 mb-4">Dados por Categoria</h4>
                   {formData.categorias.map((cat, catIndex) => (
-                    <div key={catIndex} className="mb-8 p-5 bg-white rounded-lg border border-gray-200 shadow-sm">
-                      <h5 className={`text-lg font-semibold text-gray-800 mb-4 capitalize border-l-4 pl-3 ${getCategoriaColor(cat.categoria)}`}>
+                    <div key={catIndex} className="mb-10 p-6 bg-white rounded-xl border-2 border-gray-300 shadow-md">
+                      <h5 className={`text-xl font-bold text-gray-800 mb-5 capitalize border-l-4 pl-4 py-2 bg-gray-50 rounded-r ${getCategoriaColor(cat.categoria)}`}>
                         Categoria: {cat.categoria}
                       </h5>
                       

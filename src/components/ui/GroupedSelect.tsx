@@ -59,7 +59,7 @@ export function GroupedSelect({
   )
 
   // Get selected option
-  const selectedOption = options.find((opt) => opt.id === value)
+  const selectedOption = options.find((opt) => opt.name === value)
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -74,7 +74,7 @@ export function GroupedSelect({
   }, [])
 
   const handleSelect = (option: GroupedOption) => {
-    onChange?.(option.id)
+    onChange?.(option.name)
     setIsOpen(false)
     setSearchTerm('')
   }
@@ -139,7 +139,7 @@ export function GroupedSelect({
                       type="button"
                       onClick={() => handleSelect(item)}
                       className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 transition-colors ${
-                        value === item.id ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700'
+                        value === item.name ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700'
                       }`}
                     >
                       {item.name}
