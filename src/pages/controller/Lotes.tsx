@@ -16,10 +16,14 @@ interface LoteCategoria {
   periodo?: number
   rc_inicial?: number
   rc_final?: number
+  rc_atual?: number
   quant_atual?: number
   peso_vivo_kg?: number
+  peso_vivo_atual_arroba?: number
+  producao_atual_arroba?: number
   peso_vivo_meta_kg?: number
   peso_venda_meta_arroba?: number
+  producao_projetada_arroba?: number
   dias_restantes_meta?: number
   data_meta?: string
   estrategia_nutricional?: string
@@ -27,6 +31,7 @@ interface LoteCategoria {
   sexo?: string
   idade?: number
   preco_entrada_reais_kg?: number
+  preco_entrada_reais_arroba?: number
   preco_entrada_reais_cab?: number
   custo_operacional?: number
   margem_lucro_percent?: number
@@ -312,10 +317,14 @@ export function Lotes() {
         periodo: undefined,
         rc_inicial: undefined,
         rc_final: undefined,
+        rc_atual: undefined,
         quant_atual: undefined, // Will be set to match quant_inicial after user inputs it
         peso_vivo_kg: undefined,
+        peso_vivo_atual_arroba: undefined,
+        producao_atual_arroba: undefined,
         peso_vivo_meta_kg: undefined,
         peso_venda_meta_arroba: undefined,
+        producao_projetada_arroba: undefined,
         dias_restantes_meta: undefined,
         data_meta: undefined,
         estrategia_nutricional: undefined,
@@ -323,6 +332,7 @@ export function Lotes() {
         sexo: undefined,
         idade: undefined,
         preco_entrada_reais_kg: undefined,
+        preco_entrada_reais_arroba: undefined,
         preco_entrada_reais_cab: undefined,
         custo_operacional: undefined,
         margem_lucro_percent: undefined,
@@ -456,10 +466,10 @@ export function Lotes() {
   // Sync quant_atual with quant_inicial for new categories (not yet saved)
   useEffect(() => {
     if (!editingLote) {
-      // For new lots, sync quant_atual with quant_inicial
+      // For new lots, sync quant_atual with quant_inicial only if quant_atual is not set
       const updatedCategorias = formData.categorias.map(cat => ({
         ...cat,
-        quant_atual: cat.quant_inicial || cat.quant_atual
+        quant_atual: cat.quant_atual === undefined ? (cat.quant_inicial || undefined) : cat.quant_atual
       }))
       setFormData({ ...formData, categorias: updatedCategorias })
     }
@@ -489,6 +499,22 @@ export function Lotes() {
       const gmdNumber = parseFloat(updatedCat.gmd.replace(',', '.'))
       const pesoVivoKg = updatedCat.peso_entrada + (updatedCat.periodo * gmdNumber)
       updatedCat = { ...updatedCat, peso_vivo_kg: pesoVivoKg }
+    }
+
+    // 3.5. Calcular peso_vivo_atual_arroba: peso_vivo_kg * ((rc_atual / 100) / 15)
+    if (updatedCat.peso_vivo_kg && updatedCat.rc_atual) {
+      const pesoVivoAtualArroba = updatedCat.peso_vivo_kg * ((updatedCat.rc_atual / 100) / 15)
+      updatedCat = { ...updatedCat, peso_vivo_atual_arroba: pesoVivoAtualArroba }
+    } else {
+      updatedCat = { ...updatedCat, peso_vivo_atual_arroba: undefined }
+    }
+
+    // 3.6. Calcular producao_atual_arroba: peso_vivo_atual_arroba - peso_entrada_arrobas
+    if (updatedCat.peso_entrada_arrobas && updatedCat.peso_vivo_atual_arroba) {
+      const producaoAtualArroba = updatedCat.peso_vivo_atual_arroba - updatedCat.peso_entrada_arrobas
+      updatedCat = { ...updatedCat, producao_atual_arroba: producaoAtualArroba }
+    } else {
+      updatedCat = { ...updatedCat, producao_atual_arroba: undefined }
     }
 
     // 4. Calcular data_meta quando peso_vivo_meta_kg, peso_vivo_kg ou gmd mudarem
@@ -522,16 +548,32 @@ export function Lotes() {
       updatedCat = { ...updatedCat, dias_restantes_meta: diffDays > 0 ? diffDays : 0 }
     }
 
-    // 6. Calcular preco_entrada_reais_cab: preco_entrada_reais_kg * peso_vivo_kg
-    if (updatedCat.preco_entrada_reais_kg && updatedCat.peso_vivo_kg && updatedCat.peso_vivo_kg > 0) {
-      const precoCab = updatedCat.preco_entrada_reais_kg * updatedCat.peso_vivo_kg
+    // 6. Calcular preco_entrada_reais_cab: preco_entrada_reais_kg * peso_entrada
+    if (updatedCat.preco_entrada_reais_kg && updatedCat.peso_entrada && updatedCat.peso_entrada > 0) {
+      const precoCab = updatedCat.preco_entrada_reais_kg * updatedCat.peso_entrada
       updatedCat = { ...updatedCat, preco_entrada_reais_cab: precoCab }
+    }
+
+    // 6.5. Calcular preco_entrada_reais_arroba: preco_entrada_reais_kg * 30
+    if (updatedCat.preco_entrada_reais_kg) {
+      const precoEntradaArroba = updatedCat.preco_entrada_reais_kg * 30
+      updatedCat = { ...updatedCat, preco_entrada_reais_arroba: precoEntradaArroba }
+    } else {
+      updatedCat = { ...updatedCat, preco_entrada_reais_arroba: undefined }
     }
 
     // 7. Calcular peso_venda_meta_arroba: peso_vivo_meta_kg * ((rc_final / 100) / 15)
     if (updatedCat.peso_vivo_meta_kg && updatedCat.rc_final) {
       const pesoVendaMetaArroba = updatedCat.peso_vivo_meta_kg * ((updatedCat.rc_final / 100) / 15)
       updatedCat = { ...updatedCat, peso_venda_meta_arroba: Math.round(pesoVendaMetaArroba * 100) / 100 }
+    }
+
+    // 7.5. Calcular producao_projetada_arroba: peso_venda_meta_arroba - peso_entrada_arrobas
+    if (updatedCat.peso_venda_meta_arroba && updatedCat.peso_entrada_arrobas) {
+      const producaoProjetadaArroba = updatedCat.peso_venda_meta_arroba - updatedCat.peso_entrada_arrobas
+      updatedCat = { ...updatedCat, producao_projetada_arroba: producaoProjetadaArroba }
+    } else {
+      updatedCat = { ...updatedCat, producao_projetada_arroba: undefined }
     }
 
     // 8. Calcular preços de custo e venda
@@ -547,18 +589,17 @@ export function Lotes() {
       
       updatedCat = { ...updatedCat, preco_custo_cab: custoTotalPorCab, preco_custo_arroba: custoPorArroba }
       
-      // Preço de venda com margem
-      if (updatedCat.margem_lucro_percent) {
-        const margemDecimal = updatedCat.margem_lucro_percent / 100
-        const precoVendaPorCab = custoTotalPorCab * (1 + margemDecimal)
-        const precoVendaPorArroba = custoPorArroba * (1 + margemDecimal)
-        
-        updatedCat = { ...updatedCat, preco_venda_sugerido_cab: precoVendaPorCab, preco_venda_sugerido_arroba: precoVendaPorArroba }
-      } else {
-        updatedCat = { ...updatedCat, preco_venda_sugerido_cab: undefined, preco_venda_sugerido_arroba: undefined }
-      }
+      // Preço de venda sugerido é inserido manualmente pelo usuário, não calculado
     } else {
-      updatedCat = { ...updatedCat, preco_custo_cab: undefined, preco_custo_arroba: undefined, preco_venda_sugerido_cab: undefined, preco_venda_sugerido_arroba: undefined }
+      updatedCat = { ...updatedCat, preco_custo_cab: undefined, preco_custo_arroba: undefined }
+    }
+
+    // 9. Calcular preco_venda_sugerido_cab: preco_venda_sugerido_arroba * peso_venda_meta_arroba
+    if (updatedCat.preco_venda_sugerido_arroba && updatedCat.peso_venda_meta_arroba) {
+      const precoVendaSugeridoCab = updatedCat.preco_venda_sugerido_arroba * updatedCat.peso_venda_meta_arroba
+      updatedCat = { ...updatedCat, preco_venda_sugerido_cab: precoVendaSugeridoCab }
+    } else {
+      updatedCat = { ...updatedCat, preco_venda_sugerido_cab: undefined }
     }
 
     return updatedCat
@@ -575,11 +616,14 @@ export function Lotes() {
     formData.categorias.map(cat => cat.gmd).join(','),
     formData.categorias.map(cat => cat.peso_vivo_meta_kg).join(','),
     formData.categorias.map(cat => cat.rc_final).join(','),
+    formData.categorias.map(cat => cat.rc_atual).join(','),
     formData.categorias.map(cat => cat.preco_entrada_reais_kg).join(','),
     formData.categorias.map(cat => cat.custo_operacional).join(','),
-    formData.categorias.map(cat => cat.margem_lucro_percent).join(','),
+    formData.categorias.map(cat => cat.preco_venda_sugerido_arroba).join(','),
+    formData.categorias.map(cat => cat.peso_venda_meta_arroba).join(','),
     formData.categorias.map(cat => cat.periodo).join(','),
     formData.categorias.map(cat => cat.dias_restantes_meta).join(','),
+    formData.categorias.map(cat => cat.quant_atual).join(','),
   ])
 
   const loadLotes = async () => {
@@ -734,10 +778,14 @@ export function Lotes() {
       periodo: cat.periodo ? parseInt(cat.periodo.toString()) : null,
       rc_inicial: cat.rc_inicial ? parseFloat(cat.rc_inicial.toString()) : null,
       rc_final: cat.rc_final ? parseFloat(cat.rc_final.toString()) : null,
+      rc_atual: cat.rc_atual ? parseFloat(cat.rc_atual.toString()) : null,
       quant_atual: cat.quant_atual ? parseInt(cat.quant_atual.toString()) : null,
       peso_vivo_kg: cat.peso_vivo_kg ? parseFloat(cat.peso_vivo_kg.toString()) : null,
+      peso_vivo_atual_arroba: cat.peso_vivo_atual_arroba ? parseFloat(cat.peso_vivo_atual_arroba.toString()) : null,
+      producao_atual_arroba: cat.producao_atual_arroba ? parseFloat(cat.producao_atual_arroba.toString()) : null,
       peso_vivo_meta_kg: cat.peso_vivo_meta_kg ? parseFloat(cat.peso_vivo_meta_kg.toString()) : null,
       peso_venda_meta_arroba: cat.peso_venda_meta_arroba ? parseFloat(cat.peso_venda_meta_arroba.toString()) : null,
+      producao_projetada_arroba: cat.producao_projetada_arroba ? parseFloat(cat.producao_projetada_arroba.toString()) : null,
       dias_restantes_meta: cat.dias_restantes_meta ? parseInt(cat.dias_restantes_meta.toString()) : null,
       data_meta: cat.data_meta || null,
       estrategia_nutricional: cat.estrategia_nutricional || null,
@@ -745,6 +793,7 @@ export function Lotes() {
       sexo: cat.sexo || null,
       idade: cat.idade ? parseInt(cat.idade.toString()) : null,
       preco_entrada_reais_kg: cat.preco_entrada_reais_kg ? parseFloat(cat.preco_entrada_reais_kg.toString()) : null,
+      preco_entrada_reais_arroba: cat.preco_entrada_reais_arroba ? parseFloat(cat.preco_entrada_reais_arroba.toString()) : null,
       preco_entrada_reais_cab: cat.preco_entrada_reais_cab ? parseFloat(cat.preco_entrada_reais_cab.toString()) : null,
       custo_operacional: cat.custo_operacional ? parseFloat(cat.custo_operacional.toString()) : null,
       margem_lucro_percent: cat.margem_lucro_percent ? parseFloat(cat.margem_lucro_percent.toString()) : null,
@@ -846,7 +895,12 @@ export function Lotes() {
       ...cat,
       consumo_meta_porcentagem_pesovivo: cat.consumo_meta_porcentagem_pesovivo ?? undefined,
       rc_final: cat.rc_final ?? undefined,
+      rc_atual: cat.rc_atual ?? undefined,
       peso_venda_meta_arroba: cat.peso_venda_meta_arroba ?? undefined,
+      peso_vivo_atual_arroba: cat.peso_vivo_atual_arroba ?? undefined,
+      producao_atual_arroba: cat.producao_atual_arroba ?? undefined,
+      producao_projetada_arroba: cat.producao_projetada_arroba ?? undefined,
+      preco_entrada_reais_arroba: cat.preco_entrada_reais_arroba ?? undefined,
       margem_lucro_percent: cat.margem_lucro_percent ?? undefined,
       preco_custo_arroba: cat.preco_custo_arroba ?? undefined,
       preco_custo_cab: cat.preco_custo_cab ?? undefined,
@@ -1277,7 +1331,7 @@ export function Lotes() {
                         <div className="grid grid-cols-6 gap-2">
                           <div className="col-span-1">
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Quant. Inicial
+                              Quant. Inicial (cab)
                             </label>
                             <Input
                               type="number"
@@ -1305,7 +1359,6 @@ export function Lotes() {
                               }}
                               placeholder="0"
                               className="border-gray-200 focus:border-accent"
-                              disabled
                             />
                           </div>
                           <div>
@@ -1351,25 +1404,9 @@ export function Lotes() {
                               className="border-gray-200 focus:border-accent"
                             />
                           </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Consumo Meta (%/pv)
-                            </label>
-                            <NumericInput
-                              value={cat.consumo_meta_porcentagem_pesovivo?.toString() || ''}
-                              onChange={(value) => {
-                                const updatedCategorias = [...formData.categorias]
-                                updatedCategorias[catIndex] = { ...cat, consumo_meta_porcentagem_pesovivo: value ? parseFloat(value.replace(',', '.')) : undefined }
-                                setFormData({ ...formData, categorias: updatedCategorias })
-                              }}
-                              placeholder="0,00"
-                              decimalPlaces={2}
-                              className="border-gray-200 focus:border-accent"
-                            />
-                          </div>
                         </div>
                         <div className="grid grid-cols-6 gap-2 mt-2">
-                          <div className="col-span-6">
+                          <div className="col-span-2">
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Estratégia Nutricional
                             </label>
@@ -1385,6 +1422,22 @@ export function Lotes() {
                               className="border-gray-200 focus:border-accent"
                             />
                           </div>
+                          <div className="col-span-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Consumo Meta (%/PV)
+                            </label>
+                            <NumericInput
+                              value={cat.consumo_meta_porcentagem_pesovivo?.toString() || ''}
+                              onChange={(value) => {
+                                const updatedCategorias = [...formData.categorias]
+                                updatedCategorias[catIndex] = { ...cat, consumo_meta_porcentagem_pesovivo: value ? parseFloat(value.replace(',', '.')) : undefined }
+                                setFormData({ ...formData, categorias: updatedCategorias })
+                              }}
+                              placeholder="0,00"
+                              decimalPlaces={2}
+                              className="border-gray-200 focus:border-accent"
+                            />
+                          </div>
                         </div>
                       </div>
 
@@ -1393,133 +1446,205 @@ export function Lotes() {
                         <h6 className={`text-sm font-bold text-gray-800 mb-3 border-l-3 pl-3 py-1 rounded-r ${getCategoriaColor(cat.categoria)} ${getCategoriaBgColor(cat.categoria)}`}>
                           Peso e Performance
                         </h6>
-                        <div className="grid grid-cols-6 gap-2">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Peso Entrada (kg)
-                            </label>
-                            <NumericInput
-                              value={cat.peso_entrada?.toString() || ''}
-                              onChange={(value) => {
-                                const updatedCategorias = [...formData.categorias]
-                                updatedCategorias[catIndex] = { ...cat, peso_entrada: value ? parseFloat(value.replace(',', '.')) : undefined }
-                                setFormData({ ...formData, categorias: updatedCategorias })
-                              }}
-                              placeholder="0,00"
-                              decimalPlaces={2}
-                              className="border-gray-200 focus:border-accent"
-                            />
+                        
+                        {/* Entrada */}
+                        <div className="mb-4">
+                          <span className="text-sm font-bold text-gray-700 mb-2 block border-b border-gray-300 pb-1">Entrada</span>
+                          <div className="grid grid-cols-6 gap-2">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Peso Entrada (kg)
+                              </label>
+                              <NumericInput
+                                value={cat.peso_entrada?.toString() || ''}
+                                onChange={(value) => {
+                                  const updatedCategorias = [...formData.categorias]
+                                  updatedCategorias[catIndex] = { ...cat, peso_entrada: value ? parseFloat(value.replace(',', '.')) : undefined }
+                                  setFormData({ ...formData, categorias: updatedCategorias })
+                                }}
+                                placeholder="0,00"
+                                decimalPlaces={2}
+                                className="border-gray-200 focus:border-accent"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                RC Inicial (%)
+                              </label>
+                              <Input
+                                type="number"
+                                step="0.1"
+                                value={cat.rc_inicial?.toString() || ''}
+                                onChange={(e) => {
+                                  const updatedCategorias = [...formData.categorias]
+                                  updatedCategorias[catIndex] = { ...cat, rc_inicial: e.target.value ? parseFloat(e.target.value) : undefined }
+                                  setFormData({ ...formData, categorias: updatedCategorias })
+                                }}
+                                placeholder="Ex: 50"
+                                className="border-gray-200 focus:border-accent"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Peso Entrada (@/cab)
+                              </label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={cat.peso_entrada_arrobas?.toFixed(2) || ''}
+                                disabled
+                                placeholder="0"
+                                className="border-gray-200 focus:border-accent opacity-60"
+                              />
+                            </div>
                           </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              RC Inicial (%)
-                            </label>
-                            <Input
-                              type="number"
-                              step="0.1"
-                              value={cat.rc_inicial?.toString() || ''}
-                              onChange={(e) => {
-                                const updatedCategorias = [...formData.categorias]
-                                updatedCategorias[catIndex] = { ...cat, rc_inicial: e.target.value ? parseFloat(e.target.value) : undefined }
-                                setFormData({ ...formData, categorias: updatedCategorias })
-                              }}
-                              placeholder="Ex: 50"
-                              className="border-gray-200 focus:border-accent"
-                            />
+                        </div>
+
+                        {/* Atual */}
+                        <div className="mb-4">
+                          <span className="text-sm font-bold text-gray-700 mb-2 block border-b border-gray-300 pb-1">Atual</span>
+                          <div className="grid grid-cols-6 gap-2">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Peso Vivo Atual (kg)
+                              </label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={cat.peso_vivo_kg?.toFixed(2) || ''}
+                                disabled
+                                placeholder="0"
+                                className="border-gray-200 focus:border-accent opacity-60"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                RC Atual (%)
+                              </label>
+                              <NumericInput
+                                value={cat.rc_atual?.toString() || ''}
+                                onChange={(value) => {
+                                  const updatedCategorias = [...formData.categorias]
+                                  updatedCategorias[catIndex] = { ...cat, rc_atual: value ? parseFloat(value.replace(',', '.')) : undefined }
+                                  setFormData({ ...formData, categorias: updatedCategorias })
+                                }}
+                                decimalPlaces={2}
+                                className="border-gray-200 focus:border-accent"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Peso Vivo Atual (@/cab)
+                              </label>
+                              <Input
+                                type="text"
+                                value={cat.peso_vivo_atual_arroba ? cat.peso_vivo_atual_arroba.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}
+                                disabled
+                                placeholder="0"
+                                className="border-gray-200 focus:border-accent opacity-60"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Produção Atual (@/cab)
+                              </label>
+                              <Input
+                                type="text"
+                                value={cat.producao_atual_arroba ? cat.producao_atual_arroba.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}
+                                disabled
+                                placeholder="0"
+                                className="bg-gray-50 border-gray-200 focus:border-accent opacity-60"
+                              />
+                            </div>
                           </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Peso Entrada (@)
-                            </label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={cat.peso_entrada_arrobas?.toFixed(2) || ''}
-                              disabled
-                              placeholder="0"
-                              className="border-gray-200 focus:border-accent opacity-60"
-                            />
+                        </div>
+
+                        {/* Meta */}
+                        <div className="mb-4">
+                          <span className="text-sm font-bold text-gray-700 mb-2 block border-b border-gray-300 pb-1">Meta</span>
+                          <div className="grid grid-cols-6 gap-2">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Peso Vivo Meta (kg)
+                              </label>
+                              <NumericInput
+                                value={cat.peso_vivo_meta_kg?.toString() || ''}
+                                onChange={(value) => {
+                                  const updatedCategorias = [...formData.categorias]
+                                  updatedCategorias[catIndex] = { ...cat, peso_vivo_meta_kg: value ? parseFloat(value.replace(',', '.')) : undefined }
+                                  setFormData({ ...formData, categorias: updatedCategorias })
+                                }}
+                                placeholder="0,00"
+                                decimalPlaces={2}
+                                className="border-gray-200 focus:border-accent"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                RC Final (%)
+                              </label>
+                              <NumericInput
+                                value={cat.rc_final?.toString() || ''}
+                                onChange={(value) => {
+                                  const updatedCategorias = [...formData.categorias]
+                                  updatedCategorias[catIndex] = { ...cat, rc_final: value ? parseFloat(value.replace(',', '.')) : undefined }
+                                  setFormData({ ...formData, categorias: updatedCategorias })
+                                }}
+                                placeholder="0,00"
+                                decimalPlaces={2}
+                                className="border-gray-200 focus:border-accent"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Peso Venda Meta (@/cab)
+                              </label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={cat.peso_venda_meta_arroba?.toFixed(2) || ''}
+                                readOnly
+                                placeholder="Calculado automaticamente"
+                                className="bg-gray-50 border-gray-200 focus:border-accent opacity-60"
+                              />
+                            </div>
+                            <div className="col-span-2">
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Produção Projetada (@/cab)
+                              </label>
+                              <Input
+                                type="text"
+                                value={cat.producao_projetada_arroba ? cat.producao_projetada_arroba.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}
+                                disabled
+                                placeholder="0"
+                                className="bg-gray-50 border-gray-200 focus:border-accent opacity-60"
+                              />
+                            </div>
                           </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Peso Vivo Atual (kg)
-                            </label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={cat.peso_vivo_kg?.toFixed(2) || ''}
-                              disabled
-                              placeholder="0"
-                              className="border-gray-200 focus:border-accent opacity-60"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Peso Vivo Meta (kg)
-                            </label>
-                            <NumericInput
-                              value={cat.peso_vivo_meta_kg?.toString() || ''}
-                              onChange={(value) => {
-                                const updatedCategorias = [...formData.categorias]
-                                updatedCategorias[catIndex] = { ...cat, peso_vivo_meta_kg: value ? parseFloat(value.replace(',', '.')) : undefined }
-                                setFormData({ ...formData, categorias: updatedCategorias })
-                              }}
-                              placeholder="0,00"
-                              decimalPlaces={2}
-                              className="border-gray-200 focus:border-accent"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              RC Final (%)
-                            </label>
-                            <NumericInput
-                              value={cat.rc_final?.toString() || ''}
-                              onChange={(value) => {
-                                const updatedCategorias = [...formData.categorias]
-                                updatedCategorias[catIndex] = { ...cat, rc_final: value ? parseFloat(value.replace(',', '.')) : undefined }
-                                setFormData({ ...formData, categorias: updatedCategorias })
-                              }}
-                              placeholder="0,00"
-                              decimalPlaces={2}
-                              className="border-gray-200 focus:border-accent"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Peso Venda Meta (@)
-                            </label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={cat.peso_venda_meta_arroba?.toFixed(2) || ''}
-                              readOnly
-                              placeholder="Calculado automaticamente"
-                              className="border-gray-200 focus:border-accent opacity-60"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Data Meta
-                            </label>
-                            <Input
-                              type="date"
-                              value={cat.data_meta || ''}
-                              disabled
-                              className="border-gray-200 focus:border-accent opacity-60"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Dias Restantes Meta
-                            </label>
-                            <Input
-                              type="number"
-                              value={cat.dias_restantes_meta?.toString() || ''}
-                              disabled
-                              placeholder="0"
-                              className="border-gray-200 focus:border-accent opacity-60"
-                            />
+                          <div className="grid grid-cols-6 gap-2 mt-2">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Data Meta
+                              </label>
+                              <Input
+                                type="date"
+                                value={cat.data_meta || ''}
+                                disabled
+                                className="border-gray-200 focus:border-accent opacity-60"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Dias Restantes Meta
+                              </label>
+                              <Input
+                                type="number"
+                                value={cat.dias_restantes_meta?.toString() || ''}
+                                disabled
+                                placeholder="0"
+                                className="border-gray-200 focus:border-accent opacity-60"
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1544,6 +1669,18 @@ export function Lotes() {
                               decimalPlaces={2}
                               prefix="R$"
                               className="border-gray-200 focus:border-accent"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Preço Entrada (R$/@)
+                            </label>
+                            <Input
+                              type="text"
+                              value={cat.preco_entrada_reais_arroba ? `R$ ${cat.preco_entrada_reais_arroba.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
+                              disabled
+                              placeholder="R$ 0,00"
+                              className="bg-gray-50 border-gray-200 focus:border-accent opacity-60"
                             />
                           </div>
                           <div>
@@ -1594,7 +1731,7 @@ export function Lotes() {
                         
                         {/* Calculated Prices */}
                         <div className="mt-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
-                          <h6 className="text-sm font-semibold text-blue-800 mb-3">Preços Estimados de Venda</h6>
+                          <h6 className="text-sm font-semibold text-blue-800 mb-3">Preços Sugeridos de Venda</h6>
                           <div className="grid grid-cols-6 gap-2">
                             <div>
                               <label className="block text-xs font-medium text-blue-700 mb-1">
@@ -1605,7 +1742,7 @@ export function Lotes() {
                                 value={cat.preco_custo_arroba ? `R$ ${cat.preco_custo_arroba.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
                                 disabled
                                 placeholder="R$ 0,00"
-                                className="bg-white border-blue-200 focus:border-blue-500 opacity-80 text-xs"
+                                className="bg-gray-100 border-blue-200 focus:border-blue-500 opacity-80 text-xs"
                               />
                             </div>
                             <div>
@@ -1617,18 +1754,23 @@ export function Lotes() {
                                 value={cat.preco_custo_cab ? `R$ ${cat.preco_custo_cab.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
                                 disabled
                                 placeholder="R$ 0,00"
-                                className="bg-white border-blue-200 focus:border-blue-500 opacity-80 text-xs"
+                                className="bg-gray-100 border-blue-200 focus:border-blue-500 opacity-80 text-xs"
                               />
                             </div>
                             <div>
                               <label className="block text-xs font-medium text-green-700 mb-1">
                                 Preço Venda Sugerido (@)
                               </label>
-                              <Input
-                                type="text"
-                                value={cat.preco_venda_sugerido_arroba ? `R$ ${cat.preco_venda_sugerido_arroba.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
-                                disabled
+                              <NumericInput
+                                value={cat.preco_venda_sugerido_arroba?.toString() || ''}
+                                onChange={(value) => {
+                                  const updatedCategorias = [...formData.categorias]
+                                  updatedCategorias[catIndex] = { ...cat, preco_venda_sugerido_arroba: value ? parseFloat(value.replace(',', '.')) : undefined }
+                                  setFormData({ ...formData, categorias: updatedCategorias })
+                                }}
                                 placeholder="R$ 0,00"
+                                decimalPlaces={2}
+                                prefix="R$"
                                 className="bg-white border-green-300 focus:border-green-500 opacity-90 text-xs font-semibold text-green-700"
                               />
                             </div>
@@ -1641,7 +1783,7 @@ export function Lotes() {
                                 value={cat.preco_venda_sugerido_cab ? `R$ ${cat.preco_venda_sugerido_cab.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
                                 disabled
                                 placeholder="R$ 0,00"
-                                className="bg-white border-green-300 focus:border-green-500 opacity-90 text-xs font-semibold text-green-700"
+                                className="bg-gray-100 border-green-300 focus:border-green-500 opacity-90 text-xs font-semibold text-green-700"
                               />
                             </div>
                           </div>
