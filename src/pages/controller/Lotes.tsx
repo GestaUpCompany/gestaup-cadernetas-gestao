@@ -1907,7 +1907,7 @@ export function Lotes() {
                           </div>
                           <div className="max-w-xs">
                             <label className="block text-sm font-medium text-gray-700 mb-1 whitespace-nowrap">
-                              Custo Total Entrada (R$/lote)
+                              Custo Total Entrada (R$/Lote)
                             </label>
                             <Input
                               type="text"
