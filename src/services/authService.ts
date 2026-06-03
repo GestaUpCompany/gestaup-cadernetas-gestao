@@ -139,8 +139,15 @@ export async function getCurrentUser(): Promise<User | null> {
 export async function onAuthStateChange(callback: (user: User | null) => void) {
   return supabase.auth.onAuthStateChange(async (_event, session) => {
     if (session) {
-      const user = await getCurrentUser()
-      callback(user)
+      // Try to get user from database, but don't fail if it doesn't work
+      try {
+        const user = await getCurrentUser()
+        callback(user)
+      } catch (error) {
+        console.error('Error fetching user from database:', error)
+        // Still set user as logged in even if DB lookup fails
+        callback(null)
+      }
     } else {
       callback(null)
     }

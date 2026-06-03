@@ -15,24 +15,32 @@ interface LoteCategoria {
   gmd?: string
   periodo?: number
   rc_inicial?: number
+  rc_final?: number
   quant_atual?: number
   peso_vivo_kg?: number
   peso_vivo_meta_kg?: number
+  peso_venda_meta_arroba?: number
   dias_restantes_meta?: number
   data_meta?: string
   estrategia_nutricional?: string
   raca?: string
   sexo?: string
   idade?: number
-  preco_animal_kg?: number
-  preco_animal_cab?: number
+  preco_entrada_reais_kg?: number
+  preco_entrada_reais_cab?: number
   custo_operacional?: number
+  margem_lucro_percent?: number
+  preco_custo_arroba?: number
+  preco_custo_cab?: number
+  preco_venda_sugerido_arroba?: number
+  preco_venda_sugerido_cab?: number
   morte?: number
   consumo?: number
   abate?: number
   transf_entrada?: number
   transf_saida?: number
   qtd_bezerros?: number
+  consumo_meta_porcentagem_pesovivo?: number
   ativo?: boolean
 }
 
@@ -55,12 +63,13 @@ interface Lote {
   pasto_id?: string
   sistema_producao?: string
   rc_inicial?: number
-  preco_animal_kg?: number
-  preco_animal_cab?: number
+  preco_entrada_reais_kg?: number
+  preco_entrada_reais_cab?: number
+  custo_operacional?: number
+  margem_lucro_percent?: number
   raca?: string
   sexo?: string
   idade?: number
-  custo_operacional?: number
   estrategia_nutricional?: string
   dias_restantes_meta?: number
   produtor_rural?: string
@@ -110,12 +119,13 @@ export function Lotes() {
     pasto_id: '',
     sistema_producao: '',
     rc_inicial: '',
-    preco_animal_kg: '',
-    preco_animal_cab: '',
+    preco_entrada_reais_kg: '',
+    preco_entrada_reais_cab: '',
+    custo_operacional: '',
+    margem_lucro_percent: '',
     raca: '',
     sexo: '',
     idade: '',
-    custo_operacional: '',
     estrategia_nutricional: '',
     dias_restantes_meta: '',
     produtor_rural: '',
@@ -142,6 +152,23 @@ export function Lotes() {
     'novilha',
     'tropa',
   ]
+
+  const categoriaColors: Record<string, string> = {
+    'vaca': 'border-blue-500',
+    'touro': 'border-red-500',
+    'boi gordo': 'border-green-500',
+    'boi magro': 'border-yellow-500',
+    'garrote': 'border-purple-500',
+    'bezerro': 'border-orange-500',
+    'bezerra': 'border-pink-500',
+    'novilha': 'border-teal-500',
+    'tropa': 'border-indigo-500',
+  }
+
+  const getCategoriaColor = (categoria: string): string => {
+    const normalized = categoria.toLowerCase()
+    return categoriaColors[normalized] || 'border-accent'
+  }
 
   useEffect(() => {
     const loadPastos = async () => {
@@ -266,24 +293,28 @@ export function Lotes() {
         gmd: undefined,
         periodo: undefined,
         rc_inicial: undefined,
+        rc_final: undefined,
         quant_atual: undefined, // Will be set to match quant_inicial after user inputs it
         peso_vivo_kg: undefined,
         peso_vivo_meta_kg: undefined,
+        peso_venda_meta_arroba: undefined,
         dias_restantes_meta: undefined,
         data_meta: undefined,
         estrategia_nutricional: undefined,
         raca: undefined,
         sexo: undefined,
         idade: undefined,
-        preco_animal_kg: undefined,
-        preco_animal_cab: undefined,
+        preco_entrada_reais_kg: undefined,
+        preco_entrada_reais_cab: undefined,
         custo_operacional: undefined,
+        margem_lucro_percent: undefined,
         morte: undefined,
         consumo: undefined,
         abate: undefined,
         transf_entrada: undefined,
         transf_saida: undefined,
         qtd_bezerros: undefined,
+        consumo_meta_porcentagem_pesovivo: undefined,
         ativo: true,
       }
       setFormData({
@@ -473,10 +504,43 @@ export function Lotes() {
       updatedCat = { ...updatedCat, dias_restantes_meta: diffDays > 0 ? diffDays : 0 }
     }
 
-    // 6. Calcular preco_animal_kg: preco_animal_cab / peso_vivo_kg
-    if (updatedCat.preco_animal_cab && updatedCat.peso_vivo_kg && updatedCat.peso_vivo_kg > 0) {
-      const precoKg = updatedCat.preco_animal_cab / updatedCat.peso_vivo_kg
-      updatedCat = { ...updatedCat, preco_animal_kg: precoKg }
+    // 6. Calcular preco_entrada_reais_cab: preco_entrada_reais_kg * peso_vivo_kg
+    if (updatedCat.preco_entrada_reais_kg && updatedCat.peso_vivo_kg && updatedCat.peso_vivo_kg > 0) {
+      const precoCab = updatedCat.preco_entrada_reais_kg * updatedCat.peso_vivo_kg
+      updatedCat = { ...updatedCat, preco_entrada_reais_cab: precoCab }
+    }
+
+    // 7. Calcular peso_venda_meta_arroba: peso_vivo_meta_kg * ((rc_final / 100) / 15)
+    if (updatedCat.peso_vivo_meta_kg && updatedCat.rc_final) {
+      const pesoVendaMetaArroba = updatedCat.peso_vivo_meta_kg * ((updatedCat.rc_final / 100) / 15)
+      updatedCat = { ...updatedCat, peso_venda_meta_arroba: Math.round(pesoVendaMetaArroba * 100) / 100 }
+    }
+
+    // 8. Calcular preços de custo e venda
+    // Total dias = periodo + dias_restantes_meta
+    const totalDias = (updatedCat.periodo || 0) + (updatedCat.dias_restantes_meta || 0)
+    
+    if (updatedCat.preco_entrada_reais_cab && updatedCat.custo_operacional && totalDias > 0 && updatedCat.quant_atual && updatedCat.peso_venda_meta_arroba) {
+      // Custo total por cabeça = custo aquisição + (custo operacional diário * total dias)
+      const custoTotalPorCab = updatedCat.preco_entrada_reais_cab + (updatedCat.custo_operacional * totalDias)
+      
+      // Custo por @ = custo total por cabeça / peso venda meta em arrobas
+      const custoPorArroba = custoTotalPorCab / updatedCat.peso_venda_meta_arroba
+      
+      updatedCat = { ...updatedCat, preco_custo_cab: custoTotalPorCab, preco_custo_arroba: custoPorArroba }
+      
+      // Preço de venda com margem
+      if (updatedCat.margem_lucro_percent) {
+        const margemDecimal = updatedCat.margem_lucro_percent / 100
+        const precoVendaPorCab = custoTotalPorCab * (1 + margemDecimal)
+        const precoVendaPorArroba = custoPorArroba * (1 + margemDecimal)
+        
+        updatedCat = { ...updatedCat, preco_venda_sugerido_cab: precoVendaPorCab, preco_venda_sugerido_arroba: precoVendaPorArroba }
+      } else {
+        updatedCat = { ...updatedCat, preco_venda_sugerido_cab: undefined, preco_venda_sugerido_arroba: undefined }
+      }
+    } else {
+      updatedCat = { ...updatedCat, preco_custo_cab: undefined, preco_custo_arroba: undefined, preco_venda_sugerido_cab: undefined, preco_venda_sugerido_arroba: undefined }
     }
 
     return updatedCat
@@ -492,7 +556,12 @@ export function Lotes() {
     formData.categorias.map(cat => cat.data_pesagem).join(','),
     formData.categorias.map(cat => cat.gmd).join(','),
     formData.categorias.map(cat => cat.peso_vivo_meta_kg).join(','),
-    formData.categorias.map(cat => cat.preco_animal_cab).join(','),
+    formData.categorias.map(cat => cat.rc_final).join(','),
+    formData.categorias.map(cat => cat.preco_entrada_reais_kg).join(','),
+    formData.categorias.map(cat => cat.custo_operacional).join(','),
+    formData.categorias.map(cat => cat.margem_lucro_percent).join(','),
+    formData.categorias.map(cat => cat.periodo).join(','),
+    formData.categorias.map(cat => cat.dias_restantes_meta).join(','),
   ])
 
   const loadLotes = async () => {
@@ -646,24 +715,32 @@ export function Lotes() {
       gmd: cat.gmd?.toString() || null,
       periodo: cat.periodo ? parseInt(cat.periodo.toString()) : null,
       rc_inicial: cat.rc_inicial ? parseFloat(cat.rc_inicial.toString()) : null,
+      rc_final: cat.rc_final ? parseFloat(cat.rc_final.toString()) : null,
       quant_atual: cat.quant_atual ? parseInt(cat.quant_atual.toString()) : null,
       peso_vivo_kg: cat.peso_vivo_kg ? parseFloat(cat.peso_vivo_kg.toString()) : null,
       peso_vivo_meta_kg: cat.peso_vivo_meta_kg ? parseFloat(cat.peso_vivo_meta_kg.toString()) : null,
+      peso_venda_meta_arroba: cat.peso_venda_meta_arroba ? parseFloat(cat.peso_venda_meta_arroba.toString()) : null,
       dias_restantes_meta: cat.dias_restantes_meta ? parseInt(cat.dias_restantes_meta.toString()) : null,
       data_meta: cat.data_meta || null,
       estrategia_nutricional: cat.estrategia_nutricional || null,
       raca: cat.raca || null,
       sexo: cat.sexo || null,
       idade: cat.idade ? parseInt(cat.idade.toString()) : null,
-      preco_animal_kg: cat.preco_animal_kg ? parseFloat(cat.preco_animal_kg.toString()) : null,
-      preco_animal_cab: cat.preco_animal_cab ? parseFloat(cat.preco_animal_cab.toString()) : null,
+      preco_entrada_reais_kg: cat.preco_entrada_reais_kg ? parseFloat(cat.preco_entrada_reais_kg.toString()) : null,
+      preco_entrada_reais_cab: cat.preco_entrada_reais_cab ? parseFloat(cat.preco_entrada_reais_cab.toString()) : null,
       custo_operacional: cat.custo_operacional ? parseFloat(cat.custo_operacional.toString()) : null,
+      margem_lucro_percent: cat.margem_lucro_percent ? parseFloat(cat.margem_lucro_percent.toString()) : null,
+      preco_custo_arroba: cat.preco_custo_arroba ? parseFloat(cat.preco_custo_arroba.toString()) : null,
+      preco_custo_cab: cat.preco_custo_cab ? parseFloat(cat.preco_custo_cab.toString()) : null,
+      preco_venda_sugerido_arroba: cat.preco_venda_sugerido_arroba ? parseFloat(cat.preco_venda_sugerido_arroba.toString()) : null,
+      preco_venda_sugerido_cab: cat.preco_venda_sugerido_cab ? parseFloat(cat.preco_venda_sugerido_cab.toString()) : null,
       morte: cat.morte ? parseInt(cat.morte.toString()) : 0,
       consumo: cat.consumo ? parseInt(cat.consumo.toString()) : 0,
       abate: cat.abate ? parseInt(cat.abate.toString()) : 0,
       transf_entrada: cat.transf_entrada ? parseInt(cat.transf_entrada.toString()) : 0,
       transf_saida: cat.transf_saida ? parseInt(cat.transf_saida.toString()) : 0,
       qtd_bezerros: cat.qtd_bezerros ? parseInt(cat.qtd_bezerros.toString()) : null,
+      consumo_meta_porcentagem_pesovivo: cat.consumo_meta_porcentagem_pesovivo ? parseFloat(cat.consumo_meta_porcentagem_pesovivo.toString()) : null,
       ativo: cat.ativo ?? true,
     }))
 
@@ -673,6 +750,10 @@ export function Lotes() {
 
     if (categoriasError) {
       console.error('Erro ao salvar categorias:', categoriasError)
+      console.error('Categorias data:', categoriasToInsert)
+      alert('Erro ao salvar categorias: ' + categoriasError.message)
+      setSubmitting(false)
+      return
     } else {
       setFormData({
         nome: '',
@@ -698,12 +779,13 @@ export function Lotes() {
         pasto_id: '',
         sistema_producao: '',
         rc_inicial: '',
-        preco_animal_kg: '',
-        preco_animal_cab: '',
+        preco_entrada_reais_kg: '',
+        preco_entrada_reais_cab: '',
+        custo_operacional: '',
+        margem_lucro_percent: '',
         raca: '',
         sexo: '',
         idade: '',
-        custo_operacional: '',
         estrategia_nutricional: '',
         dias_restantes_meta: '',
         produtor_rural: '',
@@ -740,6 +822,19 @@ export function Lotes() {
       .eq('lote_id', lote.id)
 
     const updatedCategorias = categoriasData || lote.categorias || []
+
+    // Update categorias to include new fields if not present
+    const categoriasWithMeta = updatedCategorias.map(cat => ({
+      ...cat,
+      consumo_meta_porcentagem_pesovivo: cat.consumo_meta_porcentagem_pesovivo ?? undefined,
+      rc_final: cat.rc_final ?? undefined,
+      peso_venda_meta_arroba: cat.peso_venda_meta_arroba ?? undefined,
+      margem_lucro_percent: cat.margem_lucro_percent ?? undefined,
+      preco_custo_arroba: cat.preco_custo_arroba ?? undefined,
+      preco_custo_cab: cat.preco_custo_cab ?? undefined,
+      preco_venda_sugerido_arroba: cat.preco_venda_sugerido_arroba ?? undefined,
+      preco_venda_sugerido_cab: cat.preco_venda_sugerido_cab ?? undefined
+    }))
 
     // Fetch movimentation data for this lot
     if (!user) return
@@ -789,7 +884,7 @@ export function Lotes() {
     setFormData({
       nome: lote.nome,
       numero_cabecas: lote.n_cabecas?.toString() || '',
-      categorias: updatedCategorias,
+      categorias: categoriasWithMeta,
       categoria_outros: '',
       peso_vivo_kg: lote.peso_vivo_kg?.toString() || '',
       peso_vivo_meta_kg: lote.peso_vivo_meta_kg?.toString() || '',
@@ -810,12 +905,13 @@ export function Lotes() {
       pasto_id: lote.pasto_id || '',
       sistema_producao: lote.sistema_producao || '',
       rc_inicial: lote.rc_inicial?.toString() || '',
-      preco_animal_kg: lote.preco_animal_kg?.toString() || '',
-      preco_animal_cab: lote.preco_animal_cab?.toString() || '',
+      preco_entrada_reais_kg: lote.preco_entrada_reais_kg?.toString() || '',
+      preco_entrada_reais_cab: lote.preco_entrada_reais_cab?.toString() || '',
+      custo_operacional: lote.custo_operacional?.toString() || '',
+      margem_lucro_percent: lote.margem_lucro_percent?.toString() || '',
       raca: lote.raca || '',
       sexo: lote.sexo || '',
       idade: lote.idade?.toString() || '',
-      custo_operacional: lote.custo_operacional?.toString() || '',
       estrategia_nutricional: lote.estrategia_nutricional || '',
       dias_restantes_meta: '',
       produtor_rural: lote.produtor_rural || '',
@@ -856,12 +952,13 @@ export function Lotes() {
       pasto_id: '',
       sistema_producao: '',
       rc_inicial: '',
-      preco_animal_kg: '',
-      preco_animal_cab: '',
+      preco_entrada_reais_kg: '',
+      preco_entrada_reais_cab: '',
+      custo_operacional: '',
+      margem_lucro_percent: '',
       raca: '',
       sexo: '',
       idade: '',
-      custo_operacional: '',
       estrategia_nutricional: '',
       dias_restantes_meta: '',
       produtor_rural: '',
@@ -1068,8 +1165,8 @@ export function Lotes() {
                 <div className="border-t pt-4 mt-4">
                   <h4 className="text-lg font-semibold text-gray-800 mb-4">Dados por Categoria</h4>
                   {formData.categorias.map((cat, catIndex) => (
-                    <div key={catIndex} className="mb-6 p-4 bg-gray-50 rounded-lg">
-                      <h5 className="text-md font-medium text-gray-700 mb-3 capitalize">
+                    <div key={catIndex} className="mb-8 p-5 bg-white rounded-lg border border-gray-200 shadow-sm">
+                      <h5 className={`text-lg font-semibold text-gray-800 mb-4 capitalize border-l-4 pl-3 ${getCategoriaColor(cat.categoria)}`}>
                         Categoria: {cat.categoria}
                       </h5>
                       
@@ -1156,7 +1253,7 @@ export function Lotes() {
                       <div className="mb-4 border-t border-gray-200 pt-4">
                         <h6 className="text-sm font-semibold text-gray-600 mb-2">Quantidade e Datas</h6>
                         <div className="grid grid-cols-6 gap-2">
-                          <div>
+                          <div className="col-span-1">
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Quant. Inicial
                             </label>
@@ -1189,7 +1286,7 @@ export function Lotes() {
                               disabled
                             />
                           </div>
-                          <div className="col-span-2">
+                          <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Data Entrada
                             </label>
@@ -1201,6 +1298,68 @@ export function Lotes() {
                                 updatedCategorias[catIndex] = { ...cat, data_pesagem: e.target.value }
                                 setFormData({ ...formData, categorias: updatedCategorias })
                               }}
+                              className="border-gray-200 focus:border-accent"
+                            />
+                          </div>
+                          <div className="col-span-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Período (dias)
+                            </label>
+                            <Input
+                              type="number"
+                              value={cat.periodo?.toString() || ''}
+                              disabled
+                              placeholder="0"
+                              className="border-gray-200 focus:border-accent opacity-60"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              GMD (kg/cab/dia)
+                            </label>
+                            <NumericInput
+                              value={cat.gmd?.toString() || ''}
+                              onChange={(value) => {
+                                const updatedCategorias = [...formData.categorias]
+                                updatedCategorias[catIndex] = { ...cat, gmd: value || undefined }
+                                setFormData({ ...formData, categorias: updatedCategorias })
+                              }}
+                              placeholder="0,000"
+                              decimalPlaces={3}
+                              className="border-gray-200 focus:border-accent"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Consumo Meta (%/pv)
+                            </label>
+                            <NumericInput
+                              value={cat.consumo_meta_porcentagem_pesovivo?.toString() || ''}
+                              onChange={(value) => {
+                                const updatedCategorias = [...formData.categorias]
+                                updatedCategorias[catIndex] = { ...cat, consumo_meta_porcentagem_pesovivo: value ? parseFloat(value.replace(',', '.')) : undefined }
+                                setFormData({ ...formData, categorias: updatedCategorias })
+                              }}
+                              placeholder="0,00"
+                              decimalPlaces={2}
+                              className="border-gray-200 focus:border-accent"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-6 gap-2 mt-2">
+                          <div className="col-span-6">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Estratégia Nutricional
+                            </label>
+                            <GroupedSelect
+                              options={nutritionalOptions}
+                              value={cat.estrategia_nutricional || ''}
+                              onChange={(value) => {
+                                const updatedCategorias = [...formData.categorias]
+                                updatedCategorias[catIndex] = { ...cat, estrategia_nutricional: value }
+                                setFormData({ ...formData, categorias: updatedCategorias })
+                              }}
+                              placeholder="Selecione..."
                               className="border-gray-200 focus:border-accent"
                             />
                           </div>
@@ -1288,21 +1447,34 @@ export function Lotes() {
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                              GMD (kg/cab/dia)
+                              RC Final (%)
                             </label>
                             <NumericInput
-                              value={cat.gmd?.toString() || ''}
+                              value={cat.rc_final?.toString() || ''}
                               onChange={(value) => {
                                 const updatedCategorias = [...formData.categorias]
-                                updatedCategorias[catIndex] = { ...cat, gmd: value || undefined }
+                                updatedCategorias[catIndex] = { ...cat, rc_final: value ? parseFloat(value.replace(',', '.')) : undefined }
                                 setFormData({ ...formData, categorias: updatedCategorias })
                               }}
-                              placeholder="0,000"
-                              decimalPlaces={3}
+                              placeholder="0,00"
+                              decimalPlaces={2}
                               className="border-gray-200 focus:border-accent"
                             />
                           </div>
-                          <div className="col-span-2">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Peso Venda Meta (@)
+                            </label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={cat.peso_venda_meta_arroba?.toFixed(2) || ''}
+                              readOnly
+                              placeholder="Calculado automaticamente"
+                              className="border-gray-200 focus:border-accent opacity-60"
+                            />
+                          </div>
+                          <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Data Meta
                             </label>
@@ -1325,18 +1497,6 @@ export function Lotes() {
                               className="border-gray-200 focus:border-accent opacity-60"
                             />
                           </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Período (dias)
-                            </label>
-                            <Input
-                              type="number"
-                              value={cat.periodo?.toString() || ''}
-                              disabled
-                              placeholder="0"
-                              className="border-gray-200 focus:border-accent opacity-60"
-                            />
-                          </div>
                         </div>
                       </div>
 
@@ -1346,31 +1506,31 @@ export function Lotes() {
                         <div className="grid grid-cols-6 gap-2">
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Preço (R$/kg)
-                            </label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={cat.preco_animal_kg?.toFixed(2) || ''}
-                              disabled
-                              placeholder="0.00"
-                              className="border-gray-200 focus:border-accent opacity-60"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Preço (R$/cab)
+                              Preço Entrada (R$/kg)
                             </label>
                             <NumericInput
-                              value={cat.preco_animal_cab?.toString() || ''}
+                              value={cat.preco_entrada_reais_kg?.toString() || ''}
                               onChange={(value) => {
                                 const updatedCategorias = [...formData.categorias]
-                                updatedCategorias[catIndex] = { ...cat, preco_animal_cab: value ? parseFloat(value.replace(',', '.')) : undefined }
+                                updatedCategorias[catIndex] = { ...cat, preco_entrada_reais_kg: value ? parseFloat(value.replace(',', '.')) : undefined }
                                 setFormData({ ...formData, categorias: updatedCategorias })
                               }}
                               decimalPlaces={2}
                               prefix="R$"
                               className="border-gray-200 focus:border-accent"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Preço Entrada (R$/cab)
+                            </label>
+                            <Input
+                              type="text"
+                              step="0.01"
+                              value={cat.preco_entrada_reais_cab ? `R$ ${cat.preco_entrada_reais_cab.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
+                              disabled
+                              placeholder="R$ 0,00"
+                              className="border-gray-200 focus:border-accent opacity-60"
                             />
                           </div>
                           <div className="col-span-2">
@@ -1389,28 +1549,75 @@ export function Lotes() {
                               className="border-gray-200 focus:border-accent"
                             />
                           </div>
-                        </div>
-                      </div>
-
-                      {/* Nutrição */}
-                      <div className="border-t border-gray-200 pt-4">
-                        <h6 className="text-sm font-semibold text-gray-600 mb-2">Nutrição</h6>
-                        <div className="grid grid-cols-6 gap-2">
-                          <div className="col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Estratégia Nutricional
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1 whitespace-nowrap">
+                              Margem de Lucro (%)
                             </label>
-                            <GroupedSelect
-                              options={nutritionalOptions}
-                              value={cat.estrategia_nutricional || ''}
+                            <NumericInput
+                              value={cat.margem_lucro_percent?.toString() || ''}
                               onChange={(value) => {
                                 const updatedCategorias = [...formData.categorias]
-                                updatedCategorias[catIndex] = { ...cat, estrategia_nutricional: value }
+                                updatedCategorias[catIndex] = { ...cat, margem_lucro_percent: value ? parseFloat(value.replace(',', '.')) : undefined }
                                 setFormData({ ...formData, categorias: updatedCategorias })
                               }}
-                              placeholder="Selecione..."
+                              decimalPlaces={2}
                               className="border-gray-200 focus:border-accent"
                             />
+                          </div>
+                        </div>
+                        
+                        {/* Calculated Prices */}
+                        <div className="mt-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                          <h6 className="text-sm font-semibold text-blue-800 mb-3">Preços Estimados de Venda</h6>
+                          <div className="grid grid-cols-6 gap-2">
+                            <div>
+                              <label className="block text-xs font-medium text-blue-700 mb-1">
+                                Preço Custo (@)
+                              </label>
+                              <Input
+                                type="text"
+                                value={cat.preco_custo_arroba ? `R$ ${cat.preco_custo_arroba.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
+                                disabled
+                                placeholder="R$ 0,00"
+                                className="bg-white border-blue-200 focus:border-blue-500 opacity-80 text-xs"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-blue-700 mb-1">
+                                Preço Custo (R$/cab)
+                              </label>
+                              <Input
+                                type="text"
+                                value={cat.preco_custo_cab ? `R$ ${cat.preco_custo_cab.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
+                                disabled
+                                placeholder="R$ 0,00"
+                                className="bg-white border-blue-200 focus:border-blue-500 opacity-80 text-xs"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-green-700 mb-1">
+                                Preço Venda Sugerido (@)
+                              </label>
+                              <Input
+                                type="text"
+                                value={cat.preco_venda_sugerido_arroba ? `R$ ${cat.preco_venda_sugerido_arroba.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
+                                disabled
+                                placeholder="R$ 0,00"
+                                className="bg-white border-green-300 focus:border-green-500 opacity-90 text-xs font-semibold text-green-700"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-green-700 mb-1">
+                                Preço Venda Sugerido (R$/cab)
+                              </label>
+                              <Input
+                                type="text"
+                                value={cat.preco_venda_sugerido_cab ? `R$ ${cat.preco_venda_sugerido_cab.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
+                                disabled
+                                placeholder="R$ 0,00"
+                                className="bg-white border-green-300 focus:border-green-500 opacity-90 text-xs font-semibold text-green-700"
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1419,99 +1626,105 @@ export function Lotes() {
                 </div>
               )}
 
-              {/* Histórico de Movimentação */}
+              {/* Histórico de Movimentação - Timeline View */}
               {showForm && (movimentacaoData.length > 0 || maternidadeData.length > 0 || morteData.length > 0) && (
                 <div className="border-t border-gray-200 pt-4 mt-4">
-                  <h6 className="text-sm font-semibold text-gray-600 mb-3">Histórico de Movimentação</h6>
+                  <h6 className="text-sm font-semibold text-gray-600 mb-4">Histórico de Movimentação</h6>
                   
-                  {/* Movimentação */}
-                  {movimentacaoData.length > 0 && (
-                    <div className="mb-4">
-                      <span className="text-xs font-medium text-gray-500 mb-2 block">Movimentação</span>
-                      <div className="bg-gray-50 rounded-lg p-3 space-y-2 max-h-60 overflow-y-auto">
-                        {movimentacaoData.map((mov) => {
-                          // Determine movement type based on current lot's perspective
-                          let movementType = mov.motivo_movimentacao || mov.tipo_saida || mov.tipo_entrada;
-                          let isSource = mov.lote_origem_id === editingLote?.id;
-                          let isDestination = mov.lote_destino_id === editingLote?.id;
-                          let movementReason = '';
-
-                          // If it's a transfer between lots, override the display based on perspective
-                          if (mov.lote_origem_id && mov.lote_destino_id) {
-                            if (isSource) {
-                              movementType = 'Saída';
-                            } else if (isDestination) {
-                              movementType = 'Entrada';
+                  <div className="relative">
+                    {/* Timeline line */}
+                    <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200"></div>
+                    
+                    {/* Combined timeline events */}
+                    <div className="space-y-4">
+                      {[...movimentacaoData.map(m => ({ ...m, type: 'movimentacao' })),
+                        ...maternidadeData.map(m => ({ ...m, type: 'maternidade' })),
+                        ...morteData.map(m => ({ ...m, type: 'morte' }))]
+                        .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
+                        .map((event) => {
+                          const getEventColor = (type: string) => {
+                            switch(type) {
+                              case 'movimentacao': return 'bg-blue-500 border-blue-500';
+                              case 'maternidade': return 'bg-pink-500 border-pink-500';
+                              case 'morte': return 'bg-red-500 border-red-500';
+                              default: return 'bg-gray-500 border-gray-500';
                             }
-                          }
+                          };
 
-                          // Determine if it's Movimentação or Entrevero
-                          if (mov.motivo_movimentacao === 'Entrevero') {
-                            movementReason = ' (Entrevero)';
-                          } else if (mov.tipo_saida === 'Transferência' || mov.tipo_saida === 'Apartação' || mov.tipo_entrada === 'Transferência' || mov.tipo_entrada === 'Apartação') {
-                            movementReason = ' (Movimentação)';
-                          }
+                          const getEventLabel = (event: any) => {
+                            if (event.type === 'movimentacao') {
+                              let movementType = event.motivo_movimentacao || event.tipo_saida || event.tipo_entrada;
+                              let isSource = event.lote_origem_id === editingLote?.id;
+                              let isDestination = event.lote_destino_id === editingLote?.id;
+                              let movementReason = '';
+
+                              if (event.lote_origem_id && event.lote_destino_id) {
+                                if (isSource) {
+                                  movementType = 'Saída';
+                                } else if (isDestination) {
+                                  movementType = 'Entrada';
+                                }
+                              }
+
+                              if (event.motivo_movimentacao === 'Entrevero') {
+                                movementReason = ' (Entrevero)';
+                              } else if (event.tipo_saida === 'Transferência' || event.tipo_saida === 'Apartação' || event.tipo_entrada === 'Transferência' || event.tipo_entrada === 'Apartação') {
+                                movementReason = ' (Movimentação)';
+                              }
+
+                              return { label: movementType + movementReason, category: event.categoria };
+                            } else if (event.type === 'maternidade') {
+                              return { label: 'Nascimento', category: event.categoria };
+                            } else if (event.type === 'morte') {
+                              return { label: 'Óbito', category: event.categoria };
+                            }
+                            return { label: '', category: '' };
+                          };
+
+                          const { label, category } = getEventLabel(event);
+                          const colorClass = getEventColor(event.type);
 
                           return (
-                            <div key={mov.id} className="text-xs bg-white p-2 rounded border border-gray-200">
-                              <div className="flex justify-between items-center">
-                                <span className="font-medium">{movementType}{movementReason}</span>
-                                <span className="text-gray-500">{new Date(mov.data).toLocaleDateString('pt-BR')}</span>
-                              </div>
-                              <div className="text-gray-600 mt-1">
-                                {mov.numero_cabecas && `${mov.numero_cabecas} cabeças`}
-                                {mov.categoria && ` • ${mov.categoria}`}
+                            <div key={`${event.type}-${event.id}`} className="relative pl-10">
+                              {/* Timeline dot */}
+                              <div className={`absolute left-2.5 top-1.5 w-3 h-3 rounded-full ${colorClass.split(' ')[0]} border-2 ${colorClass.split(' ')[1]} bg-white`}></div>
+                              
+                              {/* Event card */}
+                              <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm hover:shadow-md transition-shadow">
+                                <div className="flex justify-between items-start">
+                                  <div className="flex items-center gap-2">
+                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${colorClass.split(' ')[0].replace('bg-', 'bg-opacity-10')} ${colorClass.split(' ')[1].replace('border-', 'text-')}`}>
+                                      {label}
+                                    </span>
+                                    {category && (
+                                      <span className="text-xs text-gray-500 capitalize">{category}</span>
+                                    )}
+                                  </div>
+                                  <span className="text-xs text-gray-400">{new Date(event.data).toLocaleDateString('pt-BR')}</span>
+                                </div>
+                                
+                                <div className="text-xs text-gray-600 mt-2">
+                                  {event.type === 'movimentacao' && event.numero_cabecas && `${event.numero_cabecas} cabeças`}
+                                  {event.type === 'maternidade' && (
+                                    <>
+                                      {event.sexo && `Sexo: ${event.sexo}`}
+                                      {event.peso_cria_kg && ` • Peso: ${event.peso_cria_kg} kg`}
+                                      {event.tipo_parto && ` • Tipo: ${Array.isArray(event.tipo_parto) ? event.tipo_parto.join(', ') : event.tipo_parto}`}
+                                    </>
+                                  )}
+                                  {event.type === 'morte' && (
+                                    <>
+                                      {event.causa_morte && `Causa: ${event.causa_morte}`}
+                                      {event.peso_vivo && ` • Peso: ${event.peso_vivo} kg`}
+                                    </>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           );
                         })}
-                      </div>
                     </div>
-                  )}
-
-                  {/* Maternidade */}
-                  {maternidadeData.length > 0 && (
-                    <div className="mb-4">
-                      <span className="text-xs font-medium text-gray-500 mb-2 block">Maternidade</span>
-                      <div className="bg-gray-50 rounded-lg p-3 space-y-2 max-h-60 overflow-y-auto">
-                        {maternidadeData.map((mat) => (
-                          <div key={mat.id} className="text-xs bg-white p-2 rounded border border-gray-200">
-                            <div className="flex justify-between items-center">
-                              <span className="font-medium">Nascimento</span>
-                              <span className="text-gray-500">{new Date(mat.data).toLocaleDateString('pt-BR')}</span>
-                            </div>
-                            <div className="text-gray-600 mt-1">
-                              {mat.sexo && `Sexo: ${mat.sexo}`}
-                              {mat.peso_cria_kg && ` • Peso: ${mat.peso_cria_kg} kg`}
-                              {mat.tipo_parto && ` • Tipo: ${Array.isArray(mat.tipo_parto) ? mat.tipo_parto.join(', ') : mat.tipo_parto}`}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Morte */}
-                  {morteData.length > 0 && (
-                    <div className="mb-4">
-                      <span className="text-xs font-medium text-gray-500 mb-2 block">Morte</span>
-                      <div className="bg-gray-50 rounded-lg p-3 space-y-2 max-h-60 overflow-y-auto">
-                        {morteData.map((mor) => (
-                          <div key={mor.id} className="text-xs bg-white p-2 rounded border border-gray-200">
-                            <div className="flex justify-between items-center">
-                              <span className="font-medium text-red-600">Óbito</span>
-                              <span className="text-gray-500">{new Date(mor.data).toLocaleDateString('pt-BR')}</span>
-                            </div>
-                            <div className="text-gray-600 mt-1">
-                              {mor.categoria && `Categoria: ${mor.categoria}`}
-                              {mor.causa_morte && ` • Causa: ${mor.causa_morte}`}
-                              {mor.peso_vivo && ` • Peso: ${mor.peso_vivo} kg`}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  </div>
                 </div>
               )}
             </div>

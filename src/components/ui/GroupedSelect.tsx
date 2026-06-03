@@ -95,7 +95,7 @@ export function GroupedSelect({
         >
           {selectedOption ? (
             <span className="flex items-center gap-2">
-              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+              <span className="text-xs font-bold text-white bg-gray-700 px-2.5 py-1 rounded-md shadow-sm">
                 {selectedOption.category}
               </span>
               <span>{selectedOption.name}</span>
@@ -129,7 +129,7 @@ export function GroupedSelect({
               Object.entries(filteredGroups).map(([category, items]) => (
                 <div key={category}>
                   {/* Category header */}
-                  <div className="px-3 py-2 bg-gray-50 text-xs font-semibold text-gray-600 uppercase tracking-wider sticky top-0">
+                  <div className="px-3 py-2.5 bg-gray-100 text-xs font-bold text-gray-700 uppercase tracking-wider sticky top-0 border-b border-gray-200">
                     {category}
                   </div>
                   {/* Category items */}
@@ -139,7 +139,7 @@ export function GroupedSelect({
                       type="button"
                       onClick={() => handleSelect(item)}
                       className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 transition-colors ${
-                        value === item.id ? 'bg-accent/10 text-accent font-medium' : 'text-gray-700'
+                        value === item.id ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700'
                       }`}
                     >
                       {item.name}
