@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton } from '../../components/ui'
-import { exportToCSV } from '../../utils/exportCSV'
+import { exportToXLSX } from '../../utils/exportXLSX'
+import { MATERNIDADE_EXPORT_CONFIG } from '../../utils/exportConfigs'
 import { formatDate } from '../../utils/formatDate'
 
 interface RegistroMaternidade {
@@ -116,11 +117,11 @@ export function Maternidade() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
           <h3 className="text-base sm:text-lg font-semibold text-gray-800">Filtros</h3>
           <Button
-            onClick={() => exportToCSV(filteredRegistros, 'maternidade-export')}
+            onClick={() => exportToXLSX(filteredRegistros, MATERNIDADE_EXPORT_CONFIG)}
             disabled={filteredRegistros.length === 0}
             className="w-full sm:w-auto text-sm"
           >
-            Exportar CSV
+            Exportar XLSX
           </Button>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
