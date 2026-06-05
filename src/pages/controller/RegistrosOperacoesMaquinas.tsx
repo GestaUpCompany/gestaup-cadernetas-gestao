@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton } from '../../components/ui'
 import { exportToCSV } from '../../utils/exportCSV'
+import { formatDate } from '../../utils/formatDate'
 
 interface RegistroOperacoesMaquinas {
   id: string
@@ -186,10 +187,7 @@ export function RegistrosOperacoesMaquinas() {
                   <div className="flex items-center gap-2">
                     <span className="text-xs sm:text-sm font-medium text-gray-500">Data:</span>
                     <span className="text-xs sm:text-sm font-semibold text-gray-800">
-                      {(() => {
-                        const [year, day, month] = registro.data.split('-')
-                        return `${day}/${month}/${year}`
-                      })()}
+                      {formatDate(registro.data)}
                     </span>
                   </div>
                 </div>
@@ -245,10 +243,7 @@ export function RegistrosOperacoesMaquinas() {
                     className="cursor-pointer hover:bg-gray-50 transition-colors"
                   >
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
-                      {(() => {
-                        const [year, day, month] = registro.data.split('-')
-                        return `${day}/${month}/${year}`
-                      })()}
+                      {formatDate(registro.data)}
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                       {registro.veiculo_trator}

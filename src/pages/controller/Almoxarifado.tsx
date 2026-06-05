@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton } from '../../components/ui'
 import { exportToCSV } from '../../utils/exportCSV'
+import { formatDateTime } from '../../utils/formatDate'
 
 interface RegistroAlmoxarifado {
   id: string
@@ -171,17 +172,7 @@ export function Almoxarifado() {
                   <div className="flex items-center gap-2">
                     <span className="text-xs sm:text-sm font-medium text-gray-500">Data:</span>
                     <span className="text-xs sm:text-sm font-semibold text-gray-800">
-                      {(() => {
-                        const dateStr = registro.data
-                        if (dateStr.includes('T')) {
-                          const [datePart, timePart] = dateStr.split('T')
-                          const [year, month, day] = datePart.split('-')
-                          const [hours, minutes] = timePart.split(':')
-                          return `${day}/${month}/${year} ${hours}:${minutes}`
-                        }
-                        const [year, month, day] = dateStr.split('-')
-                        return `${day}/${month}/${year}`
-                      })()}
+                      {formatDateTime(registro.data)}
                     </span>
                   </div>
                   <span
@@ -252,17 +243,7 @@ export function Almoxarifado() {
                     className="cursor-pointer hover:bg-gray-50 transition-colors"
                   >
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
-                      {(() => {
-                        const dateStr = registro.data
-                        if (dateStr.includes('T')) {
-                          const [datePart, timePart] = dateStr.split('T')
-                          const [year, month, day] = datePart.split('-')
-                          const [hours, minutes] = timePart.split(':')
-                          return `${day}/${month}/${year} ${hours}:${minutes}`
-                        }
-                        const [year, month, day] = dateStr.split('-')
-                        return `${day}/${month}/${year}`
-                      })()}
+                      {formatDateTime(registro.data)}
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                       {registro.quem_entregou || '-'}

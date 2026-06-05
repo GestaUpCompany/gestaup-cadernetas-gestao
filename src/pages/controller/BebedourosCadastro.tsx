@@ -4,6 +4,7 @@ import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, ConfirmModal, CardItem } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import * as XLSX from 'xlsx'
+import { formatDate } from '../../utils/formatDate'
 
 interface Bebedouro {
   id: string
@@ -537,10 +538,7 @@ export function BebedourosCadastro() {
               >
                 {bebedouro.data_ultima_limpeza_historico && (
                   <p className="text-sm text-gray-500 mb-4">
-                    Última limpeza: {(() => {
-                      const [year, month, day] = bebedouro.data_ultima_limpeza_historico!.split('-')
-                      return `${day}/${month}/${year}`
-                    })()}
+                    Última limpeza: {formatDate(bebedouro.data_ultima_limpeza_historico)}
                   </p>
                 )}
                 <div className="flex flex-wrap gap-1 sm:gap-2">

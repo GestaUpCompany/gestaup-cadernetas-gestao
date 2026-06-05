@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card } from '../../components/ui'
+import { formatDateTime } from '../../utils/formatDate'
 
 interface RegistroAlmoxarifado {
   id: string
@@ -94,15 +95,7 @@ export function AlmoxarifadoDetalhes() {
             <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Informações Gerais</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Data:</span> {(() => {
-                const dateStr = registro.data
-                if (dateStr.includes('T')) {
-                  const [datePart, timePart] = dateStr.split('T')
-                  const [year, month, day] = datePart.split('-')
-                  const [hours, minutes] = timePart.split(':')
-                  return `${day}/${month}/${year} ${hours}:${minutes}`
-                }
-                const [year, month, day] = dateStr.split('-')
-                return `${day}/${month}/${year}`
+                return formatDateTime(registro.data)
               })()}</p>
               <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Setor:</span> {registro.setor || '-'}</p>
             </div>

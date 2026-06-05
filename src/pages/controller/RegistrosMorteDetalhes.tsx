@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card } from '../../components/ui'
+import { formatDate } from '../../utils/formatDate'
 
 interface RegistroMorte {
   id: string
@@ -107,10 +108,7 @@ export function RegistrosMorteDetalhes() {
           <div>
             <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Informações Gerais</h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Data:</span> {(() => {
-                const [year, month, day] = registro.data.split('-')
-                return `${day}/${month}/${year}`
-              })()}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Data:</span> {formatDate(registro.data)}</p>
               <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Lote:</span> {registro.lote || '-'}</p>
               <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Pasto:</span> {registro.pasto || '-'}</p>
             </div>

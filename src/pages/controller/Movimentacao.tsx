@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton } from '../../components/ui'
 import { exportToCSV } from '../../utils/exportCSV'
+import { formatDate } from '../../utils/formatDate'
 
 interface RegistroMovimentacao {
   id: string
@@ -88,15 +89,8 @@ export function Movimentacao() {
       (registro.numero_cabecas && registro.numero_cabecas.toString().includes(searchTerm.toLowerCase())) ||
       (registro.peso_vivo_atual_kg && registro.peso_vivo_atual_kg.toString().includes(searchTerm.toLowerCase()))
 
-    // Converter data do input (yyyy-mm-dd) para formato do banco (yyyy-dd-mm)
-    const convertDate = (dateStr: string) => {
-      if (!dateStr) return ''
-      const [year, month, day] = dateStr.split('-')
-      return `${year}-${day}-${month}`
-    }
-
-    const matchesDataInicio = !dataInicio || registro.data >= convertDate(dataInicio)
-    const matchesDataFim = !dataFim || registro.data <= convertDate(dataFim)
+    const matchesDataInicio = !dataInicio || new Date(registro.data) >= new Date(dataInicio)
+    const matchesDataFim = !dataFim || new Date(registro.data) <= new Date(dataFim + 'T23:59:59')
 
     return matchesSearch && matchesDataInicio && matchesDataFim
   }).sort((a, b) => {
@@ -209,10 +203,7 @@ export function Movimentacao() {
                     <div className="flex items-center gap-2">
                       <span className="text-xs sm:text-sm font-medium text-gray-500">Data:</span>
                       <span className="text-xs sm:text-sm font-semibold text-gray-800">
-                        {(() => {
-                          const [year, month, day] = registro.data.split('-')
-                          return `${day}/${month}/${year}`
-                        })()}
+                        {formatDate(registro.data)}
                       </span>
                     </div>
                     <span
@@ -302,10 +293,7 @@ export function Movimentacao() {
                       className="cursor-pointer hover:bg-gray-50 transition-colors"
                     >
                       <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
-                        {(() => {
-                          const [year, month, day] = registro.data.split('-')
-                          return `${day}/${month}/${year}`
-                        })()}
+                        {formatDate(registro.data)}
                       </td>
                       <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                         {registro.lote_origem || '-'}

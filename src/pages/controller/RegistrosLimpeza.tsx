@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton } from '../../components/ui'
 import { exportToCSV } from '../../utils/exportCSV'
+import { formatDate } from '../../utils/formatDate'
 
 interface RegistroLimpeza {
   id: string
@@ -182,10 +183,7 @@ export function RegistrosLimpeza() {
                   <div className="flex items-center gap-2">
                     <span className="text-xs sm:text-sm font-medium text-gray-500">Data:</span>
                     <span className="text-xs sm:text-sm font-semibold text-gray-800">
-                      {(() => {
-                        const [year, month, day] = registro.data.split('-')
-                        return `${day}/${month}/${year}`
-                      })()}
+                      {formatDate(registro.data)}
                     </span>
                   </div>
                   <span
@@ -255,10 +253,7 @@ export function RegistrosLimpeza() {
                     className="cursor-pointer hover:bg-gray-50 transition-colors"
                   >
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
-                      {(() => {
-                        const [year, month, day] = registro.data.split('-')
-                        return `${day}/${month}/${year}`
-                      })()}
+                      {formatDate(registro.data)}
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                       {registro.numero_equipe || '-'}
