@@ -106,6 +106,7 @@ export function Lotes() {
   const [editingLote, setEditingLote] = useState<Lote | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [pastos, setPastos] = useState<{id: string, nome: string}[]>([])
+  const [racas, setRacas] = useState<{id: string, nome: string}[]>([])
   const [nutritionalOptions, setNutritionalOptions] = useState<{id: string, name: string, category: string, consumo_meta?: number}[]>([])
   const [movimentacaoData, setMovimentacaoData] = useState<any[]>([])
   const [maternidadeData, setMaternidadeData] = useState<any[]>([])
@@ -228,7 +229,32 @@ export function Lotes() {
       }
     }
 
+    const loadRacas = async () => {
+      if (!user) return
+      const { data: vinculos } = await supabase
+        .from('usuario_fazenda')
+        .select('fazenda_id')
+        .eq('usuario_id', user.id)
+        .eq('ativo', true)
+
+      if (!vinculos || vinculos.length === 0) return
+
+      const fazendaId = vinculos[0].fazenda_id
+
+      const { data: racasData } = await supabase
+        .from('racas')
+        .select('id, nome')
+        .eq('fazenda_id', fazendaId)
+        .eq('ativo', true)
+        .order('nome')
+
+      if (racasData) {
+        setRacas(racasData)
+      }
+    }
+
     loadPastos()
+    loadRacas()
   }, [user])
 
   useEffect(() => {
@@ -1283,6 +1309,7 @@ export function Lotes() {
                     value={formData.meta_intervalo_rodeio_dias}
                     onChange={(value) => setFormData({ ...formData, meta_intervalo_rodeio_dias: value })}
                     placeholder="Dias"
+                    decimalPlaces={0}
                     className="w-full"
                   />
                 </div>
@@ -1362,25 +1389,9 @@ export function Lotes() {
                               className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-gray-200 rounded-lg focus:outline-none focus:border-accent"
                             >
                               <option value="">Selecione</option>
-                              <option value="Aberdeen Angus">Aberdeen Angus</option>
-                              <option value="Brahman">Brahman</option>
-                              <option value="Brangus">Brangus</option>
-                              <option value="Caracu">Caracu</option>
-                              <option value="Canchin">Canchin</option>
-                              <option value="Charolês">Charolês</option>
-                              <option value="Cruzamento">Cruzamento</option>
-                              <option value="Cruz/Nelore">Cruz/Nelore</option>
-                              <option value="GOL">GOL</option>
-                              <option value="Guzerá">Guzerá</option>
-                              <option value="Hereford">Hereford</option>
-                              <option value="Limousin">Limousin</option>
-                              <option value="Mestiço">Mestiço</option>
-                              <option value="Nelore">Nelore</option>
-                              <option value="Red Angus">Red Angus</option>
-                              <option value="SRD">SRD</option>
-                              <option value="Senepol">Senepol</option>
-                              <option value="Simental">Simental</option>
-                              <option value="Tabapuah">Tabapuah</option>
+                              {racas.map((raca) => (
+                                <option key={raca.id} value={raca.nome}>{raca.nome}</option>
+                              ))}
                             </select>
                           </div>
                           <div>

@@ -29,10 +29,10 @@ export function CardItem({
     >
       <div className="flex flex-col h-full">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-          <div>
-            <h3 className="font-semibold text-gray-800 text-base sm:text-lg">{title}</h3>
+          <div className="min-w-0 flex-1">
+            <h3 className="font-semibold text-gray-800 text-base sm:text-lg break-words">{title}</h3>
             {subtitle && (
-              <p className="text-xs sm:text-sm text-gray-500">{subtitle}</p>
+              <p className="text-xs sm:text-sm text-gray-500 break-words">{subtitle}</p>
             )}
           </div>
           <div className="flex gap-2 items-center">

@@ -36,6 +36,11 @@ export function NumericInput({
     const integerPart = parts[0] || '0'
     const decimalPart = parts[1] || ''
     
+    // Handle zero decimal places: return only integer part
+    if (decimalPlaces === 0) {
+      return integerPart
+    }
+    
     // Limit decimal places
     const limitedDecimal = decimalPart.slice(0, decimalPlaces)
     
@@ -59,6 +64,14 @@ export function NumericInput({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value
+    
+    // For zero decimal places, reject commas entirely
+    if (decimalPlaces === 0) {
+      const cleaned = newValue.replace(/[^\d]/g, '')
+      setDisplayValue(cleaned)
+      onChange?.(cleaned)
+      return
+    }
     
     // Allow typing freely, just replace dots with commas
     const withComma = newValue.replace('.', ',')

@@ -42,6 +42,8 @@ import { Dietas } from './pages/controller/Dietas'
 import { Fornecedores } from './pages/controller/Fornecedores'
 import { Frigorificos } from './pages/controller/Frigorificos'
 import { CausasMorte } from './pages/controller/CausasMorte'
+import { Racas } from './pages/controller/Racas'
+import { CadastrosAuxiliares } from './pages/controller/CadastrosAuxiliares'
 import { BebedourosCadastro } from './pages/controller/BebedourosCadastro'
 import { RegistrosMorte } from './pages/controller/RegistrosMorte'
 import { RegistrosMorteDetalhes } from './pages/controller/RegistrosMorteDetalhes'
@@ -323,6 +325,26 @@ function App() {
             <ControllerRoute>
               <ControllerLayout>
                 <CausasMorte />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/racas"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <Racas />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/cadastros-auxiliares"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <CadastrosAuxiliares />
               </ControllerLayout>
             </ControllerRoute>
           }
