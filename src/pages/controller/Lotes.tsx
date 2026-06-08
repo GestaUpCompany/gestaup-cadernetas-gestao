@@ -76,6 +76,7 @@ interface Lote {
   ativo: boolean
   pasto_id?: string
   sistema_producao?: string
+  meta_intervalo_rodeio_dias?: number
   rc_inicial?: number
   preco_entrada_reais_kg?: number
   preco_entrada_reais_cab?: number
@@ -132,6 +133,7 @@ export function Lotes() {
     ativo: true,
     pasto_id: '',
     sistema_producao: '',
+    meta_intervalo_rodeio_dias: '',
     rc_inicial: '',
     preco_entrada_reais_kg: '',
     preco_entrada_reais_cab: '',
@@ -782,6 +784,7 @@ export function Lotes() {
       ativo: formData.ativo,
       pasto_id: formData.pasto_id || null,
       sistema_producao: formData.sistema_producao || null,
+      meta_intervalo_rodeio_dias: formData.meta_intervalo_rodeio_dias ? parseInt(formData.meta_intervalo_rodeio_dias) : null,
       produtor_rural: formData.produtor_rural || null,
       propriedade_origem: formData.propriedade_origem || null,
       numero_contrato: formData.numero_contrato || null,
@@ -918,6 +921,7 @@ export function Lotes() {
         ativo: true,
         pasto_id: '',
         sistema_producao: '',
+        meta_intervalo_rodeio_dias: '',
         rc_inicial: '',
         preco_entrada_reais_kg: '',
         preco_entrada_reais_cab: '',
@@ -1058,6 +1062,7 @@ export function Lotes() {
       ativo: lote.ativo ?? true,
       pasto_id: lote.pasto_id || '',
       sistema_producao: lote.sistema_producao || '',
+      meta_intervalo_rodeio_dias: lote.meta_intervalo_rodeio_dias?.toString() || '',
       rc_inicial: lote.rc_inicial?.toString() || '',
       preco_entrada_reais_kg: lote.preco_entrada_reais_kg?.toString() || '',
       preco_entrada_reais_cab: lote.preco_entrada_reais_cab?.toString() || '',
@@ -1105,6 +1110,7 @@ export function Lotes() {
       ativo: true,
       pasto_id: '',
       sistema_producao: '',
+      meta_intervalo_rodeio_dias: '',
       rc_inicial: '',
       preco_entrada_reais_kg: '',
       preco_entrada_reais_cab: '',
@@ -1268,6 +1274,17 @@ export function Lotes() {
                     <option value="Sequestro">Sequestro</option>
                     <option value="TIP">TIP</option>
                   </select>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Meta de Intervalo de Rodeio (dias)
+                  </label>
+                  <NumericInput
+                    value={formData.meta_intervalo_rodeio_dias}
+                    onChange={(value) => setFormData({ ...formData, meta_intervalo_rodeio_dias: value })}
+                    placeholder="Dias"
+                    className="w-full"
+                  />
                 </div>
               </div>
 
@@ -2255,7 +2272,7 @@ export function Lotes() {
           }}>Criar Primeiro Lote</Button>
         </Card>
       ) : !showForm ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
           {lotes
             .filter((lote) =>
               lote.nome.toLowerCase().includes(searchTerm.toLowerCase())
@@ -2268,7 +2285,7 @@ export function Lotes() {
                 status={lote.ativo}
                 onClick={() => handleEdit(lote)}
               >
-                <div className="space-y-2 mb-4">
+                <div className="space-y-2 mb-4 flex-1">
                   {lote.peso_vivo_atual_kg_cab && (
                     <p className="text-sm text-gray-500">
                       <span className="font-medium">Peso Vivo:</span> {lote.peso_vivo_atual_kg_cab} kg
@@ -2298,7 +2315,7 @@ export function Lotes() {
                   )}
                 </div>
 
-                <div className="flex flex-wrap gap-1 sm:gap-2">
+                <div className="flex flex-wrap gap-1 sm:gap-2 mt-auto">
                   <Button
                     variant="secondary"
                     className="flex-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2"
