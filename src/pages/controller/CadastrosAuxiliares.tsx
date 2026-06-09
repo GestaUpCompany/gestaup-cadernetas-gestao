@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton, ConfirmModal, CardItem } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
+import * as XLSX from 'xlsx'
 
 interface TabConfig {
   key: string
@@ -192,6 +193,9 @@ export function CadastrosAuxiliares() {
   )
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [itemToDelete, setItemToDelete] = useState<{ tab: string; id: string } | null>(null)
+  const [importing, setImporting] = useState(false)
+  const [importError, setImportError] = useState<string | null>(null)
+  const [importSuccess, setImportSuccess] = useState<string | null>(null)
 
   const currentTab = tabs.find((t) => t.key === activeTab)!
   const state = tabStates[activeTab]
@@ -398,6 +402,168 @@ export function CadastrosAuxiliares() {
     }))
   }
 
+  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0]) return
+
+    const file = e.target.files[0]
+    setImporting(true)
+    setImportError(null)
+    setImportSuccess(null)
+
+    try {
+      if (!user) {
+        setImportError('Usuário não autenticado')
+        setImporting(false)
+        return
+      }
+
+      const { data: vinculos } = await supabase
+        .from('usuario_fazenda')
+        .select('fazenda_id')
+        .eq('usuario_id', user.id)
+        .eq('ativo', true)
+
+      if (!vinculos || vinculos.length === 0) {
+        setImportError('Nenhuma fazenda vinculada ao usuário')
+        setImporting(false)
+        return
+      }
+
+      const fazendaId = vinculos[0].fazenda_id
+
+      const { data: existingBebedouros } = await supabase
+        .from('bebedouros')
+        .select('nome')
+        .eq('fazenda_id', fazendaId)
+
+      const existingNames = new Set(existingBebedouros?.map(b => b.nome.toLowerCase()) || [])
+
+      const data = await file.arrayBuffer()
+      const workbook = XLSX.read(data, { type: 'array' })
+      const sheetName = workbook.SheetNames[0]
+      const worksheet = workbook.Sheets[sheetName]
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][]
+
+      if (jsonData.length < 2) {
+        setImportError('Arquivo vazio ou sem dados')
+        setImporting(false)
+        return
+      }
+
+      const headers = jsonData[0].map((h: any) => h?.toString().trim())
+      const rows = jsonData.slice(1)
+
+      const requiredColumns = ['Nome/Numero', 'Capacidade (L)']
+      const headersLower = headers.map(h => h.toLowerCase())
+      const missingColumns = requiredColumns.filter(col => !headersLower.includes(col.toLowerCase()))
+
+      if (missingColumns.length > 0) {
+        setImportError(`Colunas obrigatórias faltando: ${missingColumns.join(', ')}`)
+        setImporting(false)
+        return
+      }
+
+      const colIndices: { [key: string]: number } = {}
+      headers.forEach((header, index) => {
+        colIndices[header.toLowerCase()] = index
+      })
+
+      const bebedourosToInsert: any[] = []
+      const duplicates: { row: number; name: string }[] = []
+      const invalidRows: { row: number; name: string; missingFields: string[] }[] = []
+      let totalRowsProcessed = 0
+
+      rows.forEach((row, rowIndex) => {
+        const rowNum = rowIndex + 2
+        const dataColumns = row.slice(0, 3)
+        if (!row || row.length === 0 || dataColumns.every(cell => cell === undefined || cell === null || cell === '')) {
+          return
+        }
+
+        totalRowsProcessed++
+
+        try {
+          const nome = row[colIndices['nome/numero']]?.toString().trim()
+          const capacidade = parseFloat(row[colIndices['capacidade (l)']])
+          const metaIntervalo = colIndices['meta de intervalo de limpeza (dias)'] !== undefined ? row[colIndices['meta de intervalo de limpeza (dias)']] ? parseInt(row[colIndices['meta de intervalo de limpeza (dias)']]) : null : null
+
+          if (nome && existingNames.has(nome.toLowerCase())) {
+            duplicates.push({ row: rowNum, name: nome })
+            return
+          }
+
+          const missingFields: string[] = []
+          if (!nome) missingFields.push('Nome/Numero')
+          if (isNaN(capacidade) || capacidade <= 0) missingFields.push('Capacidade (L) - deve ser número positivo')
+
+          if (metaIntervalo !== null && (isNaN(metaIntervalo) || metaIntervalo <= 0)) {
+            missingFields.push('Meta de Intervalo de Limpeza (dias) - deve ser número positivo')
+          }
+
+          if (missingFields.length > 0) {
+            invalidRows.push({ row: rowNum, name: nome || '(sem nome)', missingFields })
+            return
+          }
+
+          bebedourosToInsert.push({
+            fazenda_id: fazendaId,
+            nome,
+            capacidade,
+            meta_intervalo_limpeza: metaIntervalo,
+            ativo: true,
+          })
+        } catch {
+          invalidRows.push({ row: rowNum, name: '(erro ao processar)', missingFields: ['Erro ao processar dados'] })
+        }
+      })
+
+      if (bebedourosToInsert.length === 0) {
+        setImportError('Nenhum dado válido para importar')
+        setImporting(false)
+        return
+      }
+
+      const { error: insertError } = await supabase.from('bebedouros').insert(bebedourosToInsert)
+
+      if (insertError) {
+        setImportError(`Erro ao inserir dados: ${insertError.message}`)
+        setImporting(false)
+        return
+      }
+
+      let successMessage = ''
+      const totalSkipped = duplicates.length + invalidRows.length
+
+      if (totalSkipped > 0) {
+        successMessage = `${bebedourosToInsert.length} de ${totalRowsProcessed} bebedouros importados com sucesso!`
+      } else {
+        successMessage = `${bebedourosToInsert.length} bebedouros importados com sucesso!`
+      }
+
+      if (duplicates.length > 0) {
+        successMessage += `\n\n${duplicates.length} linhas puladas porque já existem:\n${duplicates.map(d => `- Linha ${d.row}: "${d.name}"`).join('\n')}`
+      }
+
+      if (invalidRows.length > 0) {
+        successMessage += `\n\n${invalidRows.length} linhas com erros de validação:\n${invalidRows.map(i => `- Linha ${i.row}: "${i.name}" - Campos inválidos: ${i.missingFields.join(', ')}`).join('\n')}`
+        successMessage += '\n\nVolte à planilha, localize os bebedouros com dados irregulares/faltantes, realize as correções indicadas acima e faça upload do arquivo novamente.'
+      }
+
+      setImportSuccess(successMessage)
+      loadItems('bebedouros')
+
+      e.target.value = ''
+    } catch (error) {
+      setImportError(`Erro ao processar arquivo: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  const downloadTemplate = () => {
+    window.location.href = "/Modelo Bebedouros - Gesta'Up.xlsx"
+  }
+
   const shortcuts = [
     {
       key: 'f',
@@ -461,10 +627,49 @@ export function CadastrosAuxiliares() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full sm:max-w-xs border-gray-200 focus:border-accent h-10"
           />
-          <Button onClick={() => setShowForm(true)} className="h-10 min-h-[44px] w-full sm:w-auto">
-            Novo {currentTab.label}
-          </Button>
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+            {activeTab === 'bebedouros' && (
+              <>
+                <Button onClick={downloadTemplate} variant="secondary" className="h-10 min-h-[44px] flex-1 sm:flex-none text-sm">
+                  Baixar Modelo
+                </Button>
+                <input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={handleImportExcel}
+                  disabled={importing}
+                  className="hidden"
+                  id="import-excel"
+                />
+                <Button
+                  onClick={() => document.getElementById('import-excel')?.click()}
+                  variant="secondary"
+                  className="h-10 min-h-[44px] flex-1 sm:flex-none text-sm"
+                  disabled={importing}
+                >
+                  {importing ? 'Importando...' : 'Importar Excel'}
+                </Button>
+              </>
+            )}
+            <Button onClick={() => setShowForm(true)} className="h-10 min-h-[44px] flex-1 sm:flex-none">
+              Novo {currentTab.label}
+            </Button>
+          </div>
         </div>
+
+        {/* Import Messages */}
+        {importError && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            <p className="font-medium">Erro na importação:</p>
+            <pre className="text-sm mt-1 whitespace-pre-wrap">{importError}</pre>
+          </div>
+        )}
+
+        {importSuccess && (
+          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+            <p className="font-medium whitespace-pre-line">{importSuccess}</p>
+          </div>
+        )}
 
         {/* Form */}
         {state.showForm && (
