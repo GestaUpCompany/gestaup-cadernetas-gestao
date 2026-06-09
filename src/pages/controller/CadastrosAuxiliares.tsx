@@ -12,6 +12,7 @@ interface TabConfig {
   fields: { name: string; label: string; required?: boolean; placeholder?: string; options?: { label: string; value: string }[]; showIf?: (formData: Record<string, string>) => boolean }[]
   searchPlaceholder: string
   statusField?: 'ativo' | 'status'
+  orderBy?: string
 }
 
 const tabs: TabConfig[] = [
@@ -139,11 +140,27 @@ const tabs: TabConfig[] = [
     table: 'medicamentos',
     fields: [
       { name: 'nome_comercial', label: 'Nome Comercial', required: true, placeholder: 'Nome do medicamento' },
-      { name: 'principio_ativo', label: 'Princípio Ativo', placeholder: 'Princípio ativo' },
-      { name: 'tipo', label: 'Tipo', placeholder: 'Ex: Antibiótico, Vermífugo' },
+      { name: 'principio_ativo', label: 'Princípio Ativo', required: true, placeholder: 'Princípio ativo' },
+      { name: 'tipo', label: 'Tipo', required: true, options: [
+        { label: 'Antibiótico', value: 'Antibiotico' },
+        { label: 'Vermífugo', value: 'Vermifugo' },
+        { label: 'Carrapaticida', value: 'Carrapaticida' },
+        { label: 'Vacina', value: 'Vacina' },
+        { label: 'Anti-inflamatório', value: 'Anti_inflamatorio' },
+        { label: 'Analgésico', value: 'Analgesico' },
+        { label: 'Hormônio', value: 'Hormonio' },
+        { label: 'Vitamina/Mineral', value: 'Vitamina_Mineral' },
+        { label: 'Probiótico', value: 'Probiotico' },
+        { label: 'Anti-stress', value: 'Anti_stress' },
+        { label: 'Coccidiostático', value: 'Coccidiostatico' },
+        { label: 'Flúido oral/Eletrólitos', value: 'Fluido_oral' },
+        { label: 'Outro', value: 'Outro' },
+      ]},
+      { name: 'outro_tipo', label: 'Especificar Tipo', required: true, placeholder: 'Descreva o tipo', showIf: (d) => d.tipo === 'Outro' },
       { name: 'dose_recomendada', label: 'Dose Recomendada', placeholder: 'Ex: 1ml/50kg' },
     ],
     searchPlaceholder: 'Buscar medicamento...',
+    orderBy: 'nome_comercial',
   },
   {
     key: 'bebedouros',
@@ -243,7 +260,7 @@ export function CadastrosAuxiliares() {
       .from(tab.table)
       .select('*')
       .eq('fazenda_id', fazendaId)
-      .order('nome', { ascending: true })
+      .order(tab.orderBy || 'nome', { ascending: true })
 
     if (error) {
       console.error(`Erro ao buscar ${tab.label}:`, error)
@@ -779,10 +796,13 @@ export function CadastrosAuxiliares() {
                 key={item.id}
                 title={item.nome || item.nome_comercial || 'Sem nome'}
                 subtitle={
-                  currentTab.fields
-                    .filter((f) => !['nome', 'nome_comercial'].includes(f.name) && item[f.name])
-                    .map((f) => `${f.label}: ${item[f.name]}`)
-                    .join(' | ') || undefined
+                  <div className="flex flex-col gap-0.5">
+                    {currentTab.fields
+                      .filter((f) => !['nome', 'nome_comercial'].includes(f.name) && item[f.name])
+                      .map((f) => (
+                        <span key={f.name}>{f.label}: {item[f.name]}</span>
+                      ))}
+                  </div>
                 }
                 status={item.ativo}
                 onClick={() => handleEdit(item)}

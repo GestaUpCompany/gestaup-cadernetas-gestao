@@ -32,7 +32,7 @@ export function CardItem({
           <div className="min-w-0 flex-1">
             <h3 className="font-semibold text-gray-800 text-base sm:text-lg break-words">{title}</h3>
             {subtitle && (
-              <p className="text-xs sm:text-sm text-gray-500 break-words">{subtitle}</p>
+              <div className="text-xs sm:text-sm text-gray-500 break-words">{subtitle}</div>
             )}
           </div>
           <div className="flex gap-2 items-center">
