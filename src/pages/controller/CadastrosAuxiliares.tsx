@@ -9,8 +9,9 @@ interface TabConfig {
   key: string
   label: string
   table: string
-  fields: { name: string; label: string; required?: boolean; placeholder?: string }[]
+  fields: { name: string; label: string; required?: boolean; placeholder?: string; options?: { label: string; value: string }[]; showIf?: (formData: Record<string, string>) => boolean }[]
   searchPlaceholder: string
+  statusField?: 'ativo' | 'status'
 }
 
 const tabs: TabConfig[] = [
@@ -94,14 +95,31 @@ const tabs: TabConfig[] = [
     label: 'Máquinas e Veículos',
     table: 'maquinas_veiculos',
     fields: [
-      { name: 'nome', label: 'Nome', required: true, placeholder: 'Nome da máquina/veículo' },
-      { name: 'tipo', label: 'Tipo', placeholder: 'Ex: Trator, Caminhão' },
-      { name: 'categoria', label: 'Categoria', placeholder: 'Ex: Próprio, Alugado' },
-      { name: 'modelo', label: 'Modelo', placeholder: 'Modelo' },
+      { name: 'marca', label: 'Marca', required: true, placeholder: 'Ex: John Deere, Massey Ferguson' },
+      { name: 'modelo', label: 'Modelo', required: true, placeholder: 'Ex: 6110J, 4292' },
+      { name: 'tipo', label: 'Tipo', required: true, options: [{ label: 'Máquina', value: 'Maquina' }, { label: 'Veículo', value: 'Veiculo' }] },
+      { name: 'categoria', label: 'Categoria', required: true, options: [
+        { label: 'Trator', value: 'Trator' },
+        { label: 'Colheitadeira', value: 'Colheitadeira' },
+        { label: 'Caminhão', value: 'Caminhao' },
+        { label: 'Carro', value: 'Carro' },
+        { label: 'Motocicleta', value: 'Motocicleta' },
+        { label: 'Pulverizador', value: 'Pulverizador' },
+        { label: 'Adubadeira', value: 'Adubadeira' },
+        { label: 'Semeadora', value: 'Semeadora' },
+        { label: 'Grade', value: 'Grade' },
+        { label: 'Subsolador', value: 'Subsolador' },
+        { label: 'Plaina', value: 'Plaina' },
+        { label: 'Roçadeira', value: 'Rocadeira' },
+        { label: 'Guincho', value: 'Guincho' },
+        { label: 'Outro', value: 'Outro' },
+      ]},
+      { name: 'outro_categoria', label: 'Especificar Categoria', required: true, placeholder: 'Descreva a categoria', showIf: (d) => d.categoria === 'Outro' },
       { name: 'placa', label: 'Placa', placeholder: 'Placa' },
-      { name: 'status', label: 'Status', placeholder: 'Ex: Ativo, Manutenção' },
+      { name: 'status', label: 'Status', options: [{ label: 'Ativo', value: 'Ativo' }, { label: 'Inativo', value: 'Inativo' }, { label: 'Manutenção', value: 'Manutencao' }] },
     ],
     searchPlaceholder: 'Buscar máquina/veículo...',
+    statusField: 'status',
   },
   {
     key: 'funcionarios',
@@ -272,6 +290,13 @@ export function CadastrosAuxiliares() {
       data[f.name] = value || null
     })
 
+    // Auto-populate nome for maquinas-veiculos from marca + modelo
+    if (activeTab === 'maquinas-veiculos' && !data.nome) {
+      const marca = state.formData.marca || ''
+      const modelo = state.formData.modelo || ''
+      data.nome = `${marca} ${modelo}`.trim() || null
+    }
+
     let error
     if (state.editingItem) {
       const { error: updateError } = await supabase
@@ -359,11 +384,23 @@ export function CadastrosAuxiliares() {
     setItemToDelete(null)
   }
 
+  const isItemActive = (item: GenericItem, tab: TabConfig) => {
+    if (tab.statusField === 'status') {
+      return item.status === 'Ativo'
+    }
+    return !!item.ativo
+  }
+
   const handleToggleActive = async (item: GenericItem) => {
     const tab = tabs.find((t) => t.key === activeTab)!
+    const active = isItemActive(item, tab)
+    const updateData =
+      tab.statusField === 'status'
+        ? { status: active ? 'Inativo' : 'Ativo' }
+        : { ativo: !active }
     const { error } = await supabase
       .from(tab.table)
-      .update({ ativo: !item.ativo })
+      .update(updateData)
       .eq('id', item.id)
 
     if (error) {
@@ -679,19 +716,33 @@ export function CadastrosAuxiliares() {
             </h3>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-                {currentTab.fields.map((field) => (
+                {currentTab.fields.filter((field) => !field.showIf || field.showIf(state.formData)).map((field) => (
                   <div key={field.name}>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       {field.label} {field.required && <span className="text-red-500">*</span>}
                     </label>
-                    <Input
-                      type="text"
-                      value={state.formData[field.name] || ''}
-                      onChange={(e) => setFormField(field.name, e.target.value)}
-                      required={field.required}
-                      placeholder={field.placeholder}
-                      className="border-gray-200 focus:border-accent min-h-[44px]"
-                    />
+                    {field.options ? (
+                      <select
+                        value={state.formData[field.name] || ''}
+                        onChange={(e) => setFormField(field.name, e.target.value)}
+                        required={field.required}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] bg-white"
+                      >
+                        <option value="">Selecione</option>
+                        {field.options.map((opt) => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <Input
+                        type="text"
+                        value={state.formData[field.name] || ''}
+                        onChange={(e) => setFormField(field.name, e.target.value)}
+                        required={field.required}
+                        placeholder={field.placeholder}
+                        className="border-gray-200 focus:border-accent min-h-[44px]"
+                      />
+                    )}
                   </div>
                 ))}
               </div>
@@ -745,7 +796,7 @@ export function CadastrosAuxiliares() {
                       handleToggleActive(item)
                     }}
                   >
-                    {item.ativo ? 'Desativar' : 'Ativar'}
+                    {isItemActive(item, currentTab) ? 'Desativar' : 'Ativar'}
                   </Button>
                   <Button
                     variant="secondary"
