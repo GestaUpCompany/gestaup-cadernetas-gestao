@@ -1,20 +1,20 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
-import { Card, Button } from '../../components/ui'
+import { Card, Button, Input } from '../../components/ui'
 import { supabase } from '../../services/supabaseClient'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
 interface Lote {
   id: string
   nome: string
-  n_cabecas?: number
-  peso_vivo_kg?: number
-  categorias?: string[]
+  cabecas: number
+  pesoMedio: number
+  categorias: string[]
   ativo: boolean
 }
 
-type PeriodoFiltro = '7d' | '30d' | '90d' | 'all'
+type PeriodoFiltro = '7d' | '30d' | '90d' | 'custom' | 'all'
 
 export function RelatorioGado() {
   const navigate = useNavigate()
@@ -22,10 +22,11 @@ export function RelatorioGado() {
   const [lotes, setLotes] = useState<Lote[]>([])
   const [loading, setLoading] = useState(true)
   const [periodoFiltro, setPeriodoFiltro] = useState<PeriodoFiltro>('all')
+  const [customDays, setCustomDays] = useState('')
 
   useEffect(() => {
     loadLotes()
-  }, [user, periodoFiltro])
+  }, [user, periodoFiltro, customDays])
 
   const loadLotes = async () => {
     if (!user) return
@@ -40,13 +41,74 @@ export function RelatorioGado() {
 
     const fazendaId = vinculos[0].fazenda_id
 
-    const { data: lotes } = await supabase
+    // Build date range filter
+    let fromDate: string | null = null
+    if (periodoFiltro !== 'all') {
+      let days: number
+      if (periodoFiltro === 'custom') {
+        days = parseInt(customDays) || 0
+      } else {
+        days = periodoFiltro === '7d' ? 7 : periodoFiltro === '30d' ? 30 : 90
+      }
+      if (days > 0) {
+        const d = new Date()
+        d.setDate(d.getDate() - days)
+        fromDate = d.toISOString()
+      }
+    }
+
+    let query = supabase
       .from('lotes')
-      .select('*')
+      .select('id, nome, ativo, created_at')
       .eq('fazenda_id', fazendaId)
       .eq('ativo', true)
 
-    setLotes(lotes || [])
+    if (fromDate) {
+      query = query.gte('created_at', fromDate)
+    }
+
+    const { data: lotesData } = await query
+
+    if (!lotesData || lotesData.length === 0) {
+      setLotes([])
+      setLoading(false)
+      return
+    }
+
+    const loteIds = lotesData.map(l => l.id)
+    const { data: categoriasData } = await supabase
+      .from('lote_categorias')
+      .select('lote_id, categoria, quant_atual, quant_inicial, peso_vivo_atual_kg_cab, peso_entrada_kg_cab')
+      .in('lote_id', loteIds)
+
+    const categoriasPorLote: Record<string, NonNullable<typeof categoriasData>[number][]> = {}
+    categoriasData?.forEach(cat => {
+      if (!categoriasPorLote[cat.lote_id]) categoriasPorLote[cat.lote_id] = []
+      categoriasPorLote[cat.lote_id].push(cat)
+    })
+
+    const enrichedLotes: Lote[] = lotesData.map(lote => {
+      const cats = categoriasPorLote[lote.id] || []
+      const cabecas = cats.reduce((sum, c) => sum + (c.quant_atual ?? c.quant_inicial ?? 0), 0)
+      const totalPeso = cats.reduce((sum, c) => {
+        const q = c.quant_atual ?? c.quant_inicial ?? 0
+        const pesoAtual = c.peso_vivo_atual_kg_cab ? parseFloat(c.peso_vivo_atual_kg_cab as unknown as string) : 0
+        const pesoEntrada = c.peso_entrada_kg_cab ? parseFloat(c.peso_entrada_kg_cab as unknown as string) : 0
+        const p = pesoAtual || pesoEntrada || 0
+        return sum + (q * p)
+      }, 0)
+      const pesoMedio = cabecas > 0 ? totalPeso / cabecas : 0
+      return {
+        id: lote.id,
+        nome: lote.nome,
+        cabecas,
+        pesoMedio,
+        categorias: cats.map(c => c.categoria).filter(Boolean),
+        ativo: lote.ativo,
+      }
+    })
+
+    setLotes(enrichedLotes)
     setLoading(false)
   }
 
@@ -96,16 +158,16 @@ export function RelatorioGado() {
     )
   }
 
-  const totalAnimais = lotes.reduce((acc, lote) => acc + (lote.n_cabecas || 0), 0)
-  const pesoMedio = lotes.filter(l => l.peso_vivo_kg).reduce((acc, l) => {
-    const peso = typeof l.peso_vivo_kg === 'string' ? parseFloat(l.peso_vivo_kg) : l.peso_vivo_kg
-    return acc + (peso || 0)
-  }, 0) / lotes.filter(l => l.peso_vivo_kg).length
+  const totalAnimais = lotes.reduce((acc, lote) => acc + lote.cabecas, 0)
+  const lotesComPeso = lotes.filter(l => l.pesoMedio > 0)
+  const totalCabecasComPeso = lotesComPeso.reduce((sum, l) => sum + l.cabecas, 0)
+  const totalPeso = lotesComPeso.reduce((sum, l) => sum + (l.cabecas * l.pesoMedio), 0)
+  const pesoMedio = totalCabecasComPeso > 0 ? totalPeso / totalCabecasComPeso : 0
 
   // Dados para o gráfico
   const dadosGrafico = lotes.map(lote => ({
     nome: lote.nome,
-    cabecas: lote.n_cabecas || 0,
+    cabecas: lote.cabecas,
   }))
 
   return (
@@ -119,7 +181,7 @@ export function RelatorioGado() {
 
       {/* Filtro de Período */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-        <span className="text-sm text-gray-600">Período:</span>
+        <span className="text-sm text-gray-600">Relatório dos últimos:</span>
         <div className="flex flex-wrap gap-2 w-full sm:w-auto">
           <Button
             variant={periodoFiltro === '7d' ? 'primary' : 'secondary'}
@@ -143,6 +205,13 @@ export function RelatorioGado() {
             90 dias
           </Button>
           <Button
+            variant={periodoFiltro === 'custom' ? 'primary' : 'secondary'}
+            onClick={() => setPeriodoFiltro('custom')}
+            className="text-sm flex-1 sm:flex-none"
+          >
+            Personalizado
+          </Button>
+          <Button
             variant={periodoFiltro === 'all' ? 'primary' : 'secondary'}
             onClick={() => setPeriodoFiltro('all')}
             className="text-sm flex-1 sm:flex-none"
@@ -150,6 +219,19 @@ export function RelatorioGado() {
             Todo o período
           </Button>
         </div>
+        {periodoFiltro === 'custom' && (
+          <div className="flex items-center gap-2">
+            <Input
+              type="number"
+              min="1"
+              placeholder="Dias"
+              value={customDays}
+              onChange={(e) => setCustomDays(e.target.value)}
+              className="w-20 h-10 text-sm border-gray-200 focus:border-accent"
+            />
+            <span className="text-sm text-gray-500">dias</span>
+          </div>
+        )}
       </div>
 
       {/* KPIs */}
@@ -173,7 +255,7 @@ export function RelatorioGado() {
 
       {/* Gráfico de Distribuição por Lote */}
       <Card className="bg-white p-6 border-0 shadow-sm">
-        <h3 className="text-xl font-semibold text-gray-800 mb-4">Distribuição por Lote</h3>
+        <h3 className="text-xl font-semibold text-gray-800 mb-4">Distribuição de cabeças por Lote</h3>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={dadosGrafico}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -200,8 +282,10 @@ export function RelatorioGado() {
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-lg font-bold text-gray-800">{lote.n_cabecas || 0} cabeças</p>
-                <p className="text-sm text-gray-500">{lote.peso_vivo_kg} kg</p>
+                <p className="text-lg font-bold text-gray-800">{lote.cabecas} cabeças</p>
+                <p className="text-sm text-gray-500">
+                  {lote.pesoMedio > 0 ? `${lote.pesoMedio.toFixed(0)} kg médio` : 'Peso não informado'}
+                </p>
               </div>
             </div>
           ))}

@@ -217,6 +217,13 @@ export function Insumos() {
         searchInput?.focus()
       },
     },
+    {
+      key: 'Escape',
+      description: 'Fechar formulário',
+      action: () => {
+        if (showForm) handleCancel()
+      },
+    },
   ]
 
   useKeyboardShortcuts(shortcuts)
@@ -251,9 +258,21 @@ export function Insumos() {
 
       {showForm && (
         <Card className="bg-white p-6 border-0 shadow-sm">
-          <h3 className="text-xl font-semibold text-gray-800 mb-4">
-            {editingInsumo ? 'Editar Insumo' : 'Novo Insumo'}
-          </h3>
+          <div className="flex justify-between items-start mb-4">
+            <h3 className="text-xl font-semibold text-gray-800">
+              {editingInsumo ? 'Editar Insumo' : 'Novo Insumo'}
+            </h3>
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+              aria-label="Fechar formulário"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2">

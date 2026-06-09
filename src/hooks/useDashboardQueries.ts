@@ -90,6 +90,12 @@ export function useDashboardStats(userId: string | undefined) {
       const month = String(today.getMonth() + 1).padStart(2, '0')
       const day = String(today.getDate()).padStart(2, '0')
       const todayStr = `${year}-${month}-${day}`
+      const tomorrow = new Date(today)
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      const tomorrowYear = tomorrow.getFullYear()
+      const tomorrowMonth = String(tomorrow.getMonth() + 1).padStart(2, '0')
+      const tomorrowDay = String(tomorrow.getDate()).padStart(2, '0')
+      const tomorrowStr = `${tomorrowYear}-${tomorrowMonth}-${tomorrowDay}`
 
       const [
         { count: maternidadeHoje },
@@ -101,14 +107,14 @@ export function useDashboardStats(userId: string | undefined) {
         { count: movimentacaoHoje },
         { count: morteHoje },
       ] = await Promise.all([
-        supabase.from('registros_maternidade').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('data', todayStr),
-        supabase.from('registros_enfermaria').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('data', todayStr),
-        supabase.from('registros_pastagens').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('data', todayStr),
-        supabase.from('registros_rodeio').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('data', todayStr),
-        supabase.from('registros_suplementacao').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('data', todayStr),
-        supabase.from('registros_bebedouros').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('data', todayStr),
-        supabase.from('registros_movimentacao').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('data', todayStr),
-        supabase.from('registros_morte').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('data', todayStr),
+        supabase.from('registros_maternidade').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).gte('data', `${todayStr}T00:00:00Z`).lt('data', `${tomorrowStr}T00:00:00Z`),
+        supabase.from('registros_enfermaria').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).gte('data', `${todayStr}T00:00:00Z`).lt('data', `${tomorrowStr}T00:00:00Z`),
+        supabase.from('registros_pastagens').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).gte('data', `${todayStr}T00:00:00Z`).lt('data', `${tomorrowStr}T00:00:00Z`),
+        supabase.from('registros_rodeio').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).gte('data', `${todayStr}T00:00:00Z`).lt('data', `${tomorrowStr}T00:00:00Z`),
+        supabase.from('registros_suplementacao').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).gte('data', `${todayStr}T00:00:00Z`).lt('data', `${tomorrowStr}T00:00:00Z`),
+        supabase.from('registros_bebedouros').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).gte('data', `${todayStr}T00:00:00Z`).lt('data', `${tomorrowStr}T00:00:00Z`),
+        supabase.from('registros_movimentacao').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).gte('data', `${todayStr}T00:00:00Z`).lt('data', `${tomorrowStr}T00:00:00Z`),
+        supabase.from('registros_morte').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).gte('data', `${todayStr}T00:00:00Z`).lt('data', `${tomorrowStr}T00:00:00Z`),
       ])
 
       return {
@@ -152,22 +158,50 @@ export function useGadoStats(userId: string | undefined) {
       const fazendaId = await getFazendaId(userId!)
       if (!fazendaId) return null
 
+      // Buscar lotes ativos
       const { data: lotes } = await supabase
         .from('lotes')
-        .select('nome, n_cabecas, categorias, peso_vivo_kg')
+        .select('id, nome')
         .eq('fazenda_id', fazendaId)
         .eq('ativo', true)
 
-      const totalAnimais = lotes?.reduce((acc, lote) => acc + (lote.n_cabecas || 0), 0) || 0
-      const animaisPorLote = lotes?.map(lote => ({ nome: lote.nome, cabecas: lote.n_cabecas || 0 })) || []
+      const loteIds = lotes?.map(l => l.id) || []
 
-      const lotesComPeso = lotes?.filter(lote => lote.peso_vivo_kg) || []
-      const pesoMedioLotes = lotesComPeso.length > 0
-        ? lotesComPeso.reduce((acc, lote) => {
-            const peso = typeof lote.peso_vivo_kg === 'string' ? parseFloat(lote.peso_vivo_kg) : lote.peso_vivo_kg
-            return acc + (peso || 0)
-          }, 0) / lotesComPeso.length
-        : 0
+      // Buscar categorias dos lotes
+      const { data: categorias } = await supabase
+        .from('lote_categorias')
+        .select('lote_id, quant_atual, quant_inicial, peso_vivo_atual_kg_cab, peso_entrada_kg_cab')
+        .in('lote_id', loteIds)
+
+      // Agrupar categorias por lote
+      const categoriasPorLote: Record<string, NonNullable<typeof categorias>[number][]> = {}
+      categorias?.forEach(cat => {
+        if (!categoriasPorLote[cat.lote_id]) categoriasPorLote[cat.lote_id] = []
+        categoriasPorLote[cat.lote_id].push(cat)
+      })
+
+      // Calcular totais por lote
+      const lotesStats = lotes?.map(lote => {
+        const cats = categoriasPorLote[lote.id] || []
+        const cabecas = cats.reduce((sum, c) => sum + (c.quant_atual ?? c.quant_inicial ?? 0), 0)
+        const totalPeso = cats.reduce((sum, c) => {
+          const q = c.quant_atual ?? c.quant_inicial ?? 0
+          const pesoAtual = c.peso_vivo_atual_kg_cab ? parseFloat(c.peso_vivo_atual_kg_cab as unknown as string) : 0
+          const pesoEntrada = c.peso_entrada_kg_cab ? parseFloat(c.peso_entrada_kg_cab as unknown as string) : 0
+          const p = pesoAtual || pesoEntrada || 0
+          return sum + (q * p)
+        }, 0)
+        const pesoMedio = cabecas > 0 ? totalPeso / cabecas : 0
+        return { nome: lote.nome, cabecas, pesoMedio }
+      }) || []
+
+      const totalAnimais = lotesStats.reduce((acc, l) => acc + l.cabecas, 0)
+      const animaisPorLote = lotesStats.map(l => ({ nome: l.nome, cabecas: l.cabecas }))
+
+      const lotesComPeso = lotesStats.filter(l => l.pesoMedio > 0)
+      const totalCabecasComPeso = lotesComPeso.reduce((sum, l) => sum + l.cabecas, 0)
+      const totalPeso = lotesComPeso.reduce((sum, l) => sum + (l.cabecas * l.pesoMedio), 0)
+      const pesoMedioLotes = totalCabecasComPeso > 0 ? totalPeso / totalCabecasComPeso : 0
 
       const [{ data: mortesData }, { data: enfermariaData }, { data: causasMorte }] = await Promise.all([
         supabase.from('registros_morte').select('*').eq('fazenda_id', fazendaId),
@@ -213,19 +247,31 @@ export function useRecentActivities(userId: string | undefined) {
         supabase.from('registros_rodeio').select('id, data').eq('fazenda_id', fazendaId).order('data', { ascending: false }).limit(1),
       ])
 
+      const formatDateTime = (isoString: string): string => {
+        const d = new Date(isoString)
+        if (isNaN(d.getTime())) return isoString
+        const day = String(d.getDate()).padStart(2, '0')
+        const month = String(d.getMonth() + 1).padStart(2, '0')
+        const year = d.getFullYear()
+        const hours = String(d.getHours()).padStart(2, '0')
+        const minutes = String(d.getMinutes()).padStart(2, '0')
+        const hasTime = hours !== '00' || minutes !== '00' || isoString.includes('T')
+        if (hasTime && (hours !== '00' || minutes !== '00')) {
+          return `${day}/${month}/${year} ${hours}:${minutes}`
+        }
+        return `${day}/${month}/${year}`
+      }
+
       const activities = []
 
       if (maternidadeData?.[0]) {
-        const [year, day, month] = maternidadeData[0].data.split('-')
-        activities.push({ id: maternidadeData[0].id, type: 'Maternidade', title: 'Registro de parto', date: `${day}/${month}/${year}`, path: '/controller/maternidade' })
+        activities.push({ id: maternidadeData[0].id, type: 'Maternidade', title: 'Registro de parto', date: formatDateTime(maternidadeData[0].data), path: '/controller/maternidade' })
       }
       if (enfermariaData?.[0]) {
-        const [year, day, month] = enfermariaData[0].data.split('-')
-        activities.push({ id: enfermariaData[0].id, type: 'Enfermaria', title: 'Registro de tratamento', date: `${day}/${month}/${year}`, path: '/controller/enfermaria' })
+        activities.push({ id: enfermariaData[0].id, type: 'Enfermaria', title: 'Registro de tratamento', date: formatDateTime(enfermariaData[0].data), path: '/controller/enfermaria' })
       }
       if (rodeioData?.[0]) {
-        const [year, day, month] = rodeioData[0].data.split('-')
-        activities.push({ id: rodeioData[0].id, type: 'Rodeio', title: 'Registro de rodeio', date: `${day}/${month}/${year}`, path: '/controller/rodeio' })
+        activities.push({ id: rodeioData[0].id, type: 'Rodeio', title: 'Registro de rodeio', date: formatDateTime(rodeioData[0].data), path: '/controller/rodeio' })
       }
 
       return activities.slice(0, 5)
