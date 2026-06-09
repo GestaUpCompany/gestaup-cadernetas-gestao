@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, ReactNode } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton, ConfirmModal, CardItem } from '../../components/ui'
@@ -13,7 +13,29 @@ interface TabConfig {
   searchPlaceholder: string
   statusField?: 'ativo' | 'status'
   orderBy?: string
+  category: string
+  icon: ReactNode
 }
+
+// Simple inline SVG icons
+const iconGenetica = (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg>
+)
+const iconInfra = (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+)
+const iconMaquina = (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+)
+const iconSaude = (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
+)
+const iconOperacional = (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+)
+const iconAgua = (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+)
 
 const tabs: TabConfig[] = [
   {
@@ -22,6 +44,8 @@ const tabs: TabConfig[] = [
     table: 'racas',
     fields: [{ name: 'nome', label: 'Nome', required: true, placeholder: 'Nome da raça' }],
     searchPlaceholder: 'Buscar raça...',
+    category: 'Genética',
+    icon: iconGenetica,
   },
   {
     key: 'setores',
@@ -29,6 +53,8 @@ const tabs: TabConfig[] = [
     table: 'setores',
     fields: [{ name: 'nome', label: 'Nome', required: true, placeholder: 'Nome do setor' }],
     searchPlaceholder: 'Buscar setor...',
+    category: 'Infraestrutura',
+    icon: iconInfra,
   },
   {
     key: 'locais',
@@ -36,6 +62,8 @@ const tabs: TabConfig[] = [
     table: 'locais',
     fields: [{ name: 'nome', label: 'Nome', required: true, placeholder: 'Nome do local' }],
     searchPlaceholder: 'Buscar local...',
+    category: 'Infraestrutura',
+    icon: iconInfra,
   },
   {
     key: 'causas-morte',
@@ -46,6 +74,8 @@ const tabs: TabConfig[] = [
       { name: 'descricao', label: 'Descrição', placeholder: 'Descrição opcional' },
     ],
     searchPlaceholder: 'Buscar causa de morte...',
+    category: 'Saúde & Reprodução',
+    icon: iconSaude,
   },
   {
     key: 'implementos',
@@ -53,6 +83,8 @@ const tabs: TabConfig[] = [
     table: 'implementos',
     fields: [{ name: 'nome', label: 'Nome', required: true, placeholder: 'Nome do implemento' }],
     searchPlaceholder: 'Buscar implemento...',
+    category: 'Máquinas & Equipamentos',
+    icon: iconMaquina,
   },
   {
     key: 'tratamentos',
@@ -60,6 +92,8 @@ const tabs: TabConfig[] = [
     table: 'tratamentos',
     fields: [{ name: 'nome', label: 'Nome', required: true, placeholder: 'Nome do tratamento' }],
     searchPlaceholder: 'Buscar tratamento...',
+    category: 'Saúde & Reprodução',
+    icon: iconSaude,
   },
   {
     key: 'itens-almoxarifado',
@@ -70,6 +104,8 @@ const tabs: TabConfig[] = [
       { name: 'classificacao', label: 'Classificação', placeholder: 'Classificação do item' },
     ],
     searchPlaceholder: 'Buscar item...',
+    category: 'Operacional',
+    icon: iconOperacional,
   },
   {
     key: 'itens-supermercado',
@@ -80,6 +116,8 @@ const tabs: TabConfig[] = [
       { name: 'unidade_medida', label: 'Unidade de Medida', placeholder: 'Ex: kg, un, litro' },
     ],
     searchPlaceholder: 'Buscar item...',
+    category: 'Operacional',
+    icon: iconOperacional,
   },
   {
     key: 'pluviometros',
@@ -90,6 +128,8 @@ const tabs: TabConfig[] = [
       { name: 'localizacao', label: 'Localização', placeholder: 'Localização do pluviômetro' },
     ],
     searchPlaceholder: 'Buscar pluviômetro...',
+    category: 'Infraestrutura',
+    icon: iconAgua,
   },
   {
     key: 'maquinas-veiculos',
@@ -121,6 +161,8 @@ const tabs: TabConfig[] = [
     ],
     searchPlaceholder: 'Buscar máquina/veículo...',
     statusField: 'status',
+    category: 'Máquinas & Equipamentos',
+    icon: iconMaquina,
   },
   {
     key: 'funcionarios',
@@ -133,6 +175,8 @@ const tabs: TabConfig[] = [
       { name: 'cargo', label: 'Cargo', placeholder: 'Ex: Veterinário, Capataz' },
     ],
     searchPlaceholder: 'Buscar funcionário...',
+    category: 'Operacional',
+    icon: iconOperacional,
   },
   {
     key: 'medicamentos',
@@ -161,6 +205,8 @@ const tabs: TabConfig[] = [
     ],
     searchPlaceholder: 'Buscar medicamento...',
     orderBy: 'nome_comercial',
+    category: 'Saúde & Reprodução',
+    icon: iconSaude,
   },
   {
     key: 'bebedouros',
@@ -172,6 +218,8 @@ const tabs: TabConfig[] = [
       { name: 'meta_intervalo_limpeza', label: 'Meta Intervalo Limpeza (dias)', placeholder: 'Ex: 30' },
     ],
     searchPlaceholder: 'Buscar bebedouro...',
+    category: 'Infraestrutura',
+    icon: iconAgua,
   },
 ]
 
@@ -651,24 +699,60 @@ export function CadastrosAuxiliares() {
         <h2 className="text-2xl font-bold text-gray-800">Cadastros Auxiliares</h2>
       </div>
 
-      {/* Tab Bar */}
-      <div className="border-b border-gray-200 pb-1">
-        <div className="flex flex-wrap gap-1">
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`px-3 sm:px-4 py-2.5 sm:py-2 text-sm font-medium rounded-t-lg transition-colors min-h-[44px] ${
-                activeTab === tab.key
-                  ? 'bg-primary text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* Compact Category + Tab Bar */}
+      {(() => {
+        const groups = tabs.reduce<Record<string, TabConfig[]>>((acc, tab) => {
+          acc[tab.category] = acc[tab.category] || []
+          acc[tab.category].push(tab)
+          return acc
+        }, {})
+        const categoryOrder = ['Genética', 'Infraestrutura', 'Máquinas & Equipamentos', 'Saúde & Reprodução', 'Operacional']
+        const activeCategory = tabs.find((t) => t.key === activeTab)?.category || categoryOrder[0]
+        return (
+          <div className="border-b border-gray-200 pb-1 space-y-2">
+            {/* Category pills */}
+            <div className="flex flex-wrap gap-1">
+              {categoryOrder.map((cat) => {
+                if (!groups[cat]) return null
+                const isActive = cat === activeCategory
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => {
+                      const firstTab = groups[cat][0]
+                      if (firstTab) setActiveTab(firstTab.key)
+                    }}
+                    className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded-full transition-colors min-h-[32px] ${
+                      isActive
+                        ? 'bg-primary text-white'
+                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                )
+              })}
+            </div>
+            {/* Tabs in active category */}
+            <div className="flex flex-wrap gap-1">
+              {groups[activeCategory]?.map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2 text-sm font-medium rounded-lg transition-colors min-h-[40px] ${
+                    activeTab === tab.key
+                      ? 'bg-primary text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {tab.icon}
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Active Tab Content */}
       <div className="space-y-4 max-w-full">
