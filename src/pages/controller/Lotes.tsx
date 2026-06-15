@@ -1467,7 +1467,8 @@ export function Lotes() {
                               value={cat.quant_inicial?.toString() || ''}
                               onChange={(e) => {
                                 const updatedCategorias = [...formData.categorias]
-                                updatedCategorias[catIndex] = { ...cat, quant_inicial: e.target.value ? parseFloat(e.target.value) : undefined }
+                                const val = e.target.value ? parseFloat(e.target.value) : undefined
+                                updatedCategorias[catIndex] = { ...cat, quant_inicial: val, quant_atual: val }
                                 setFormData({ ...formData, categorias: updatedCategorias })
                               }}
                               placeholder="0"
