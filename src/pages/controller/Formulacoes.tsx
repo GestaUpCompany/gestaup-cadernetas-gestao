@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton, ConfirmModal, CardItem } from '../../components/ui'
@@ -127,21 +127,21 @@ export function Formulacoes() {
     const pesoVivo = parseFloat(formData.peso_vivo_medio) || 0
     const consumoMSTotal = pesoVivo * (metaPV / 100)
 
-    // Step 1: Calculate formula_mn_bruta for each item
+    // Step 1: Calculate formula_mn_bruta for each item (keep full precision)
     const withBruta = items.map(item => {
       const ms = item.teor_ms / 100
       const mnBruta = ms > 0 ? (item.formula_teor_ms / ms) : 0
-      return { ...item, formula_mn_bruta: parseFloat(mnBruta.toFixed(2)) }
+      return { ...item, formula_mn_bruta: mnBruta }
     })
 
-    // Step 2: Normalize to 100%
+    // Step 2: Normalize to 100% (keep 4 decimal places for percent)
     const totalBruta = withBruta.reduce((sum, i) => sum + (i.formula_mn_bruta || 0), 0)
     const withNormalized = withBruta.map(item => {
       const mnPercent = totalBruta > 0 ? ((item.formula_mn_bruta || 0) / totalBruta) * 100 : 0
-      return { ...item, formula_mn_percent: parseFloat(mnPercent.toFixed(2)) }
+      return { ...item, formula_mn_percent: mnPercent }
     })
 
-    // Step 3: Calculate costs and consumptions
+    // Step 3: Calculate costs and consumptions (keep full precision, round only at display)
     return withNormalized.map(item => {
       const ms = item.teor_ms / 100
       const custoTonelada = (item.formula_mn_percent || 0) * item.preco_ton_mn / 100
@@ -151,23 +151,32 @@ export function Formulacoes() {
       const custoDieta = consumoMN * precoKg
       return {
         ...item,
-        custo_tonelada: parseFloat(custoTonelada.toFixed(2)),
-        consumo_ms_kg_cab_dia: parseFloat(consumoMS.toFixed(3)),
-        consumo_mn_kg_cab_dia: parseFloat(consumoMN.toFixed(3)),
-        custo_dieta_reais_cab_dia: parseFloat(custoDieta.toFixed(2)),
+        custo_tonelada: custoTonelada,
+        consumo_ms_kg_cab_dia: consumoMS,
+        consumo_mn_kg_cab_dia: consumoMN,
+        custo_dieta_reais_cab_dia: custoDieta,
       }
     })
   }
 
-  const recalculated = calcularFormulacao(selectedInsumos)
-  const custoTotal = parseFloat(recalculated.reduce((sum, i) => sum + (i.custo_tonelada || 0), 0).toFixed(2))
-  const consumoMSTotal = parseFloat(recalculated.reduce((sum, i) => sum + (i.consumo_ms_kg_cab_dia || 0), 0).toFixed(3))
-  const consumoMNTotal = parseFloat(recalculated.reduce((sum, i) => sum + (i.consumo_mn_kg_cab_dia || 0), 0).toFixed(3))
-  const custoDiarioTotal = parseFloat(recalculated.reduce((sum, i) => sum + (i.custo_dieta_reais_cab_dia || 0), 0).toFixed(2))
-  // Teor médio ponderado de MS da dieta (média pela formulação MN)
-  const teorMSDieta = parseFloat((recalculated.reduce((sum, i) => sum + ((i.formula_mn_percent || 0) * i.teor_ms), 0) / 100).toFixed(2))
-  // Custo da dieta em MS/ton (custo MN/ton ÷ teor MS como decimal)
-  const custoMSToneladaRaw = teorMSDieta > 0 ? custoTotal / (teorMSDieta / 100) : 0
+  const recalculated = useMemo(
+    () => calcularFormulacao(selectedInsumos),
+    [selectedInsumos, formData.meta_consumo_ms_percent_pv, formData.peso_vivo_medio]
+  )
+
+  // Compute totals from exact (unrounded) values
+  const custoTotalExact = recalculated.reduce((sum, i) => sum + (i.custo_tonelada || 0), 0)
+  const consumoMSTotalExact = recalculated.reduce((sum, i) => sum + (i.consumo_ms_kg_cab_dia || 0), 0)
+  const consumoMNTotalExact = recalculated.reduce((sum, i) => sum + (i.consumo_mn_kg_cab_dia || 0), 0)
+  const custoDiarioTotalExact = recalculated.reduce((sum, i) => sum + (i.custo_dieta_reais_cab_dia || 0), 0)
+  const teorMSDietaExact = recalculated.reduce((sum, i) => sum + ((i.formula_mn_percent || 0) * i.teor_ms), 0) / 100
+
+  const custoTotal = parseFloat(custoTotalExact.toFixed(2))
+  const consumoMSTotal = parseFloat(consumoMSTotalExact.toFixed(3))
+  const consumoMNTotal = parseFloat(consumoMNTotalExact.toFixed(3))
+  const custoDiarioTotal = parseFloat(custoDiarioTotalExact.toFixed(2))
+  const teorMSDieta = parseFloat(teorMSDietaExact.toFixed(2))
+  const custoMSToneladaRaw = teorMSDieta > 0 ? custoTotalExact / (teorMSDietaExact / 100) : 0
   const custoMSTonelada = parseFloat(custoMSToneladaRaw.toFixed(2))
 
   const handleAddInsumo = (insumoId: string) => {
@@ -290,13 +299,13 @@ export function Formulacoes() {
       nome: i.nome,
       teor_ms: (i as any).teor_ms ?? (i as any).ms_percent ?? 0,
       preco_ton_mn: (i as any).preco_ton_mn ?? (i as any).preco_ton ?? 0,
-      formula_teor_ms: parseFloat(((i as any).formula_teor_ms ?? (i as any).formula_ms_percent ?? 0).toFixed(2)),
-      formula_mn_bruta: parseFloat(((i as any).formula_mn_bruta ?? 0).toFixed(2)),
-      formula_mn_percent: i.formula_mn_percent,
-      custo_tonelada: i.custo_tonelada,
-      consumo_ms_kg_cab_dia: i.consumo_ms_kg_cab_dia,
-      consumo_mn_kg_cab_dia: i.consumo_mn_kg_cab_dia,
-      custo_dieta_reais_cab_dia: i.custo_dieta_reais_cab_dia,
+      formula_teor_ms: (i as any).formula_teor_ms ?? (i as any).formula_ms_percent ?? 0,
+      formula_mn_bruta: (i as any).formula_mn_bruta ?? 0,
+      formula_mn_percent: (i as any).formula_mn_percent ?? 0,
+      custo_tonelada: (i as any).custo_tonelada ?? 0,
+      consumo_ms_kg_cab_dia: (i as any).consumo_ms_kg_cab_dia ?? 0,
+      consumo_mn_kg_cab_dia: (i as any).consumo_mn_kg_cab_dia ?? 0,
+      custo_dieta_reais_cab_dia: (i as any).custo_dieta_reais_cab_dia ?? 0,
     })) || [])
     setShowForm(true)
   }

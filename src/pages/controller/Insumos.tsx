@@ -39,9 +39,15 @@ interface Insumo {
   updated_at: string
 }
 
+interface FornecedorOption {
+  id: string
+  nome: string
+}
+
 export function Insumos() {
   const { user } = useAuth()
   const [insumos, setInsumos] = useState<Insumo[]>([])
+  const [fornecedores, setFornecedores] = useState<FornecedorOption[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingInsumo, setEditingInsumo] = useState<Insumo | null>(null)
@@ -60,6 +66,7 @@ export function Insumos() {
 
   useEffect(() => {
     loadInsumos()
+    loadFornecedores()
   }, [user])
 
   const loadInsumos = async () => {
@@ -89,6 +96,26 @@ export function Insumos() {
     }
 
     setLoading(false)
+  }
+
+  const loadFornecedores = async () => {
+    if (!user) return
+    const { data: vinculos } = await supabase
+      .from('usuario_fazenda')
+      .select('fazenda_id')
+      .eq('usuario_id', user.id)
+      .eq('ativo', true)
+    if (!vinculos || vinculos.length === 0) return
+    const fazendaId = vinculos[0].fazenda_id
+
+    const { data } = await supabase
+      .from('fornecedores')
+      .select('id, nome')
+      .eq('fazenda_id', fazendaId)
+      .eq('ativo', true)
+      .order('nome')
+
+    setFornecedores(data as FornecedorOption[] || [])
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -325,13 +352,16 @@ export function Insumos() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Fornecedor
                 </label>
-                <Input
-                  type="text"
+                <select
                   value={formData.fornecedor}
                   onChange={(e) => setFormData({ ...formData, fornecedor: e.target.value })}
-                  placeholder="Nome do fornecedor"
-                  className="border-gray-200 focus:border-accent"
-                />
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base border-gray-300 bg-white"
+                >
+                  <option value="">Selecione um fornecedor...</option>
+                  {fornecedores.map((f) => (
+                    <option key={f.id} value={f.nome}>{f.nome}</option>
+                  ))}
+                </select>
               </div>
 
               <div>
