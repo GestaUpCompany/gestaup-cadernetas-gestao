@@ -4,6 +4,10 @@ import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton, ConfirmModal, CardItem } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 
+function fmt(n: number, digits = 2): string {
+  return n.toFixed(digits).replace('.', ',')
+}
+
 interface Dieta {
   id: string
   fazenda_id: string
@@ -59,7 +63,7 @@ export function Formulacoes() {
     descricao: '',
     tipo: '',
     meta_consumo_ms_percent_pv: '0.30',
-    peso_vivo_medio: '435',
+    peso_vivo_medio: '435.00',
     sistema_producao: '',
     ativo: true,
   })
@@ -127,7 +131,7 @@ export function Formulacoes() {
     const withBruta = items.map(item => {
       const ms = item.teor_ms / 100
       const mnBruta = ms > 0 ? (item.formula_teor_ms / ms) : 0
-      return { ...item, formula_mn_bruta: mnBruta }
+      return { ...item, formula_mn_bruta: parseFloat(mnBruta.toFixed(2)) }
     })
 
     // Step 2: Normalize to 100%
@@ -191,7 +195,7 @@ export function Formulacoes() {
       const otherSum = formulaMsTotal - currentVal
       const maxAllowed = Math.max(0, 100 - otherSum)
       const clamped = Math.min(val, maxAllowed)
-      next[index] = { ...next[index], formula_teor_ms: clamped }
+      next[index] = { ...next[index], formula_teor_ms: parseFloat(clamped.toFixed(2)) }
       return next
     })
   }
@@ -217,8 +221,8 @@ export function Formulacoes() {
     }
 
     const fazendaId = vinculos[0].fazenda_id
-    const metaPV = parseFloat(formData.meta_consumo_ms_percent_pv) || 0
-    const pesoVivo = parseFloat(formData.peso_vivo_medio) || 0
+    const metaPV = parseFloat(parseFloat(formData.meta_consumo_ms_percent_pv || '0').toFixed(2))
+    const pesoVivo = parseFloat(parseFloat(formData.peso_vivo_medio || '0').toFixed(2))
 
     const data = {
       fazenda_id: fazendaId,
@@ -258,7 +262,7 @@ export function Formulacoes() {
         descricao: '',
         tipo: '',
         meta_consumo_ms_percent_pv: '0.30',
-        peso_vivo_medio: '435',
+        peso_vivo_medio: '435.00',
         sistema_producao: '',
         ativo: true,
       })
@@ -276,8 +280,8 @@ export function Formulacoes() {
       nome: dieta.nome,
       descricao: dieta.descricao || '',
       tipo: dieta.tipo || '',
-      meta_consumo_ms_percent_pv: dieta.meta_consumo_ms_percent_pv?.toString() || '0.30',
-      peso_vivo_medio: dieta.peso_vivo_medio?.toString() || '435',
+      meta_consumo_ms_percent_pv: dieta.meta_consumo_ms_percent_pv?.toFixed(2) || '0.30',
+      peso_vivo_medio: dieta.peso_vivo_medio?.toFixed(2) || '435.00',
       sistema_producao: dieta.sistema_producao || '',
       ativo: dieta.ativo,
     })
@@ -286,8 +290,8 @@ export function Formulacoes() {
       nome: i.nome,
       teor_ms: (i as any).teor_ms ?? (i as any).ms_percent ?? 0,
       preco_ton_mn: (i as any).preco_ton_mn ?? (i as any).preco_ton ?? 0,
-      formula_teor_ms: (i as any).formula_teor_ms ?? (i as any).formula_ms_percent ?? 0,
-      formula_mn_bruta: i.formula_mn_bruta,
+      formula_teor_ms: parseFloat(((i as any).formula_teor_ms ?? (i as any).formula_ms_percent ?? 0).toFixed(2)),
+      formula_mn_bruta: parseFloat(((i as any).formula_mn_bruta ?? 0).toFixed(2)),
       formula_mn_percent: i.formula_mn_percent,
       custo_tonelada: i.custo_tonelada,
       consumo_ms_kg_cab_dia: i.consumo_ms_kg_cab_dia,
@@ -304,7 +308,7 @@ export function Formulacoes() {
       descricao: '',
       tipo: '',
       meta_consumo_ms_percent_pv: '0.30',
-      peso_vivo_medio: '435',
+      peso_vivo_medio: '435.00',
       sistema_producao: '',
       ativo: true,
     })
@@ -535,25 +539,28 @@ export function Formulacoes() {
                     {recalculated.map((item, idx) => (
                       <tr key={item.insumo_id + idx} className="border-b border-gray-100 hover:bg-gray-50">
                         <td className="p-2 font-medium text-gray-800">{item.nome}</td>
-                        <td className="p-2 text-right text-gray-600">{item.teor_ms.toFixed(2)}%</td>
+                        <td className="p-2 text-right text-gray-600">{fmt(item.teor_ms)}%</td>
                         <td className="p-2 text-right text-gray-600">
                           R$ {(item.preco_ton_mn || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                         <td className="p-2 text-right bg-green-50 w-28">
                           <Input
-                            type="number"
-                            step="0.01"
-                            value={item.formula_teor_ms.toString()}
-                            onChange={(e) => handleFormulaChange(idx, parseFloat(e.target.value) || 0)}
+                            type="text"
+                            inputMode="decimal"
+                            value={fmt(item.formula_teor_ms)}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(',', '.')
+                              handleFormulaChange(idx, parseFloat(val) || 0)
+                            }}
                             className="w-20 text-right border-gray-200 focus:border-accent py-1"
                           />
                         </td>
-                        <td className="p-2 text-right text-gray-600">{(item.formula_mn_percent || 0).toFixed(2)}%</td>
+                        <td className="p-2 text-right text-gray-600">{fmt(item.formula_mn_percent || 0)}%</td>
                         <td className="p-2 text-right text-gray-600">
                           R$ {(item.custo_tonelada || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
-                        <td className="p-2 text-right text-gray-600">{(item.consumo_ms_kg_cab_dia || 0).toFixed(3)}</td>
-                        <td className="p-2 text-right text-gray-600">{(item.consumo_mn_kg_cab_dia || 0).toFixed(3)}</td>
+                        <td className="p-2 text-right text-gray-600">{fmt(item.consumo_ms_kg_cab_dia || 0, 3)}</td>
+                        <td className="p-2 text-right text-gray-600">{fmt(item.consumo_mn_kg_cab_dia || 0, 3)}</td>
                         <td className="p-2 text-right text-gray-600">
                           R$ {(item.custo_dieta_reais_cab_dia || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
@@ -574,15 +581,15 @@ export function Formulacoes() {
                     <tr className="border-t-2 border-gray-300 bg-gray-50 font-semibold">
                       <td className="p-2 text-gray-800">Total</td>
                       <td className="p-2 text-right text-gray-800 relative" title="Teor de Matéria Seca da Dieta">
-                        {teorMSDieta.toFixed(2)}%
+                        {fmt(teorMSDieta)}%
                         <span className="absolute bottom-0 right-0 w-0 h-0 border-l-[6px] border-l-transparent border-b-[6px] border-b-yellow-400"></span>
                       </td>
                       <td className="p-2"></td>
                       <td className={`p-2 text-right ${Math.abs(formulaMsTotal - 100) < 0.01 ? 'text-green-700' : 'text-amber-600'}`}>
-                        {formulaMsTotal.toFixed(2)}%
+                        {fmt(formulaMsTotal)}%
                       </td>
                       <td className="p-2 text-right text-gray-800">
-                        {recalculated.reduce((s, i) => s + (i.formula_mn_percent || 0), 0).toFixed(2)}%
+                        {fmt(recalculated.reduce((s, i) => s + (i.formula_mn_percent || 0), 0))}%
                       </td>
                       <td className="p-2 text-right text-gray-800">
                         <div>
@@ -593,8 +600,8 @@ export function Formulacoes() {
                           <span className="absolute bottom-0 right-0 w-0 h-0 border-l-[6px] border-l-transparent border-b-[6px] border-b-yellow-400"></span>
                         </div>
                       </td>
-                      <td className="p-2 text-right text-gray-800">{consumoMSTotal.toFixed(3)}</td>
-                      <td className="p-2 text-right text-gray-800">{consumoMNTotal.toFixed(3)}</td>
+                      <td className="p-2 text-right text-gray-800">{fmt(consumoMSTotal, 3)}</td>
+                      <td className="p-2 text-right text-gray-800">{fmt(consumoMNTotal, 3)}</td>
                       <td className="p-2 text-right text-gray-800">
                         R$ {custoDiarioTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
@@ -611,13 +618,13 @@ export function Formulacoes() {
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Meta Consumo MS (%/PV)</label>
                   <div className="text-lg font-bold text-green-800">
-                    {formData.meta_consumo_ms_percent_pv}%
+                    {fmt(parseFloat(formData.meta_consumo_ms_percent_pv || '0'))}%
                   </div>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Peso Vivo Médio (kg)</label>
                   <div className="text-lg font-bold text-green-800">
-                    {formData.peso_vivo_medio}
+                    {fmt(parseFloat(formData.peso_vivo_medio || '0'))}
                   </div>
                 </div>
                 <div>
@@ -629,7 +636,7 @@ export function Formulacoes() {
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Consumo MS (kg/cab/dia)</label>
                   <div className="text-lg font-bold text-green-800">
-                    {consumoMSTotal.toFixed(3)}
+                    {fmt(consumoMSTotal, 3)}
                   </div>
                 </div>
               </div>
@@ -680,19 +687,19 @@ export function Formulacoes() {
               >
                 <div className="space-y-1 mb-4 text-sm text-gray-600">
                   {dieta.meta_consumo_ms_percent_pv != null && (
-                    <p><span className="font-medium">Meta MS (%/PV):</span> {dieta.meta_consumo_ms_percent_pv}%</p>
+                    <p><span className="font-medium">Meta MS (%/PV):</span> {fmt(dieta.meta_consumo_ms_percent_pv)}%</p>
                   )}
                   {dieta.peso_vivo_medio != null && (
-                    <p><span className="font-medium">PV Médio:</span> {dieta.peso_vivo_medio} kg</p>
+                    <p><span className="font-medium">PV Médio:</span> {fmt(dieta.peso_vivo_medio)} kg</p>
                   )}
                   {dieta.sistema_producao && (
                     <p><span className="font-medium">Sistema:</span> {dieta.sistema_producao}</p>
                   )}
                   {dieta.teor_ms_dieta != null && (
-                    <p><span className="font-medium">Teor MS:</span> {dieta.teor_ms_dieta.toFixed(2)}%</p>
+                    <p><span className="font-medium">Teor MS:</span> {fmt(dieta.teor_ms_dieta)}%</p>
                   )}
                   {dieta.consumo_ms_total != null && (
-                    <p><span className="font-medium">Consumo MS:</span> {dieta.consumo_ms_total.toFixed(3)} kg</p>
+                    <p><span className="font-medium">Consumo MS:</span> {fmt(dieta.consumo_ms_total, 3)} kg</p>
                   )}
                   {dieta.custo_diario_animal != null && (
                     <p><span className="font-medium">Custo/dia:</span> R$ {dieta.custo_diario_animal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
