@@ -4,6 +4,28 @@ import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton, ConfirmModal, CardItem } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 
+function fmt(n: number, digits = 2): string {
+  return n.toFixed(digits).replace('.', ',')
+}
+
+function maskCurrency(value: string): string {
+  let clean = value.replace(/^R\$\s*/, '').replace(/\./g, '')
+  clean = clean.replace(/[^\d,]/g, '')
+  const parts = clean.split(',')
+  if (parts.length > 1) {
+    clean = `${parts[0]},${parts[1].slice(0, 2)}`
+  }
+  const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  const decPart = parts[1] !== undefined ? parts[1].slice(0, 2) : ''
+  const formatted = parts.length > 1 ? `${intPart},${decPart}` : intPart
+  return formatted ? `R$ ${formatted}` : ''
+}
+
+function parseCurrency(value: string): number {
+  const clean = value.replace(/^R\$\s*/, '').replace(/\./g, '').replace(',', '.').trim()
+  return parseFloat(clean) || 0
+}
+
 interface Insumo {
   id: string
   fazenda_id: string
@@ -97,8 +119,8 @@ export function Insumos() {
       nome: formData.nome,
       tipo: formData.tipo || null,
       fornecedor: formData.fornecedor || null,
-      teor_ms: formData.teor_ms ? parseFloat(formData.teor_ms) : null,
-      preco_ton_mn: formData.preco_ton_mn ? parseFloat(formData.preco_ton_mn) : null,
+      teor_ms: formData.teor_ms ? parseFloat(formData.teor_ms.replace(',', '.')) : null,
+      preco_ton_mn: formData.preco_ton_mn ? parseCurrency(formData.preco_ton_mn) : null,
       ativo: formData.ativo,
     }
 
@@ -142,8 +164,8 @@ export function Insumos() {
       nome: insumo.nome,
       tipo: insumo.tipo || '',
       fornecedor: insumo.fornecedor || '',
-      teor_ms: insumo.teor_ms?.toString() || '',
-      preco_ton_mn: insumo.preco_ton_mn?.toString() || '',
+      teor_ms: insumo.teor_ms != null ? insumo.teor_ms.toFixed(2).replace('.', ',') : '',
+      preco_ton_mn: insumo.preco_ton_mn != null ? maskCurrency(fmt(insumo.preco_ton_mn)) : '',
       ativo: insumo.ativo,
     })
     setShowForm(true)
@@ -281,13 +303,22 @@ export function Insumos() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Tipo
                 </label>
-                <Input
-                  type="text"
+                <select
                   value={formData.tipo}
                   onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
-                  placeholder="Ex: Ração, Sal, Vacina, Medicamento"
-                  className="border-gray-200 focus:border-accent"
-                />
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base border-gray-300 bg-white"
+                >
+                  <option value="">Selecione...</option>
+                  <option value="Aditivo">Aditivo</option>
+                  <option value="Energético">Energético</option>
+                  <option value="Inerte">Inerte</option>
+                  <option value="Mineral">Mineral</option>
+                  <option value="Núcleo">Núcleo</option>
+                  <option value="Premix">Premix</option>
+                  <option value="Proteico">Proteico</option>
+                  <option value="Volumoso">Volumoso</option>
+                  <option value="Outros">Outros</option>
+                </select>
               </div>
 
               <div>
@@ -308,11 +339,11 @@ export function Insumos() {
                   Teor MS (%)
                 </label>
                 <Input
-                  type="number"
-                  step="0.01"
+                  type="text"
+                  inputMode="decimal"
                   value={formData.teor_ms}
                   onChange={(e) => setFormData({ ...formData, teor_ms: e.target.value })}
-                  placeholder="Ex: 88.00"
+                  placeholder="Ex: 88,00"
                   className="border-gray-200 focus:border-accent"
                 />
               </div>
@@ -322,11 +353,11 @@ export function Insumos() {
                   Preço (R$/Ton/MN)
                 </label>
                 <Input
-                  type="number"
-                  step="0.01"
+                  type="text"
+                  inputMode="decimal"
                   value={formData.preco_ton_mn}
-                  onChange={(e) => setFormData({ ...formData, preco_ton_mn: e.target.value })}
-                  placeholder="Ex: 750,00"
+                  onChange={(e) => setFormData({ ...formData, preco_ton_mn: maskCurrency(e.target.value) })}
+                  placeholder="Ex: R$ 750,00"
                   className="border-gray-200 focus:border-accent"
                 />
               </div>
@@ -384,7 +415,7 @@ export function Insumos() {
                   )}
                   {insumo.teor_ms !== undefined && insumo.teor_ms !== null && (
                     <p className="text-sm text-gray-500">
-                      <span className="font-medium">Teor MS:</span> {insumo.teor_ms}%
+                      <span className="font-medium">Teor MS:</span> {fmt(insumo.teor_ms)}%
                     </p>
                   )}
                   {insumo.preco_ton_mn !== undefined && insumo.preco_ton_mn !== null && (
