@@ -8,14 +8,10 @@ interface Insumo {
   id: string
   fazenda_id: string
   nome: string
-  marca?: string
-  fabricante?: string
   tipo?: string
   fornecedor?: string
-  espacamento_ideal_cocho?: number
-  consumo_meta_porcentagem_pesovivo?: number
   ms_percent?: number
-  preco_ton?: number
+  preco_ton_mn?: number
   ativo: boolean
   created_at: string
   updated_at: string
@@ -30,14 +26,10 @@ export function Insumos() {
   const [searchTerm, setSearchTerm] = useState('')
   const [formData, setFormData] = useState({
     nome: '',
-    marca: '',
-    fabricante: '',
     tipo: '',
     fornecedor: '',
-    espacamento_ideal_cocho: '',
-    consumo_meta_porcentagem_pesovivo: '',
     ms_percent: '',
-    preco_ton: '',
+    preco_ton_mn: '',
     ativo: true,
   })
   const [submitting, setSubmitting] = useState(false)
@@ -103,14 +95,10 @@ export function Insumos() {
     const data = {
       fazenda_id: fazendaId,
       nome: formData.nome,
-      marca: formData.marca || null,
-      fabricante: formData.fabricante || null,
       tipo: formData.tipo || null,
       fornecedor: formData.fornecedor || null,
-      espacamento_ideal_cocho: formData.espacamento_ideal_cocho ? parseFloat(formData.espacamento_ideal_cocho) : null,
-      consumo_meta_porcentagem_pesovivo: formData.consumo_meta_porcentagem_pesovivo ? parseFloat(formData.consumo_meta_porcentagem_pesovivo) : null,
       ms_percent: formData.ms_percent ? parseFloat(formData.ms_percent) : null,
-      preco_ton: formData.preco_ton ? parseFloat(formData.preco_ton) : null,
+      preco_ton_mn: formData.preco_ton_mn ? parseFloat(formData.preco_ton_mn) : null,
       ativo: formData.ativo,
     }
 
@@ -134,14 +122,10 @@ export function Insumos() {
     } else {
       setFormData({
         nome: '',
-        marca: '',
-        fabricante: '',
         tipo: '',
         fornecedor: '',
-        espacamento_ideal_cocho: '',
-        consumo_meta_porcentagem_pesovivo: '',
         ms_percent: '',
-        preco_ton: '',
+        preco_ton_mn: '',
         ativo: true,
       })
       setShowForm(false)
@@ -156,14 +140,10 @@ export function Insumos() {
     setEditingInsumo(insumo)
     setFormData({
       nome: insumo.nome,
-      marca: insumo.marca || '',
-      fabricante: insumo.fabricante || '',
       tipo: insumo.tipo || '',
       fornecedor: insumo.fornecedor || '',
-      espacamento_ideal_cocho: insumo.espacamento_ideal_cocho?.toString() || '',
-      consumo_meta_porcentagem_pesovivo: insumo.consumo_meta_porcentagem_pesovivo?.toString() || '',
       ms_percent: insumo.ms_percent?.toString() || '',
-      preco_ton: insumo.preco_ton?.toString() || '',
+      preco_ton_mn: insumo.preco_ton_mn?.toString() || '',
       ativo: insumo.ativo,
     })
     setShowForm(true)
@@ -173,14 +153,10 @@ export function Insumos() {
     setEditingInsumo(null)
     setFormData({
       nome: '',
-      marca: '',
-      fabricante: '',
       tipo: '',
       fornecedor: '',
-      espacamento_ideal_cocho: '',
-      consumo_meta_porcentagem_pesovivo: '',
       ms_percent: '',
-      preco_ton: '',
+      preco_ton_mn: '',
       ativo: true,
     })
     setShowForm(false)
@@ -303,32 +279,6 @@ export function Insumos() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Marca
-                </label>
-                <Input
-                  type="text"
-                  value={formData.marca}
-                  onChange={(e) => setFormData({ ...formData, marca: e.target.value })}
-                  placeholder="Marca do insumo"
-                  className="border-gray-200 focus:border-accent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Fabricante
-                </label>
-                <Input
-                  type="text"
-                  value={formData.fabricante}
-                  onChange={(e) => setFormData({ ...formData, fabricante: e.target.value })}
-                  placeholder="Fabricante do insumo"
-                  className="border-gray-200 focus:border-accent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Tipo
                 </label>
                 <Input
@@ -369,45 +319,18 @@ export function Insumos() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Preço (R$/ton)
+                  Preço (R$/Ton/MN)
                 </label>
                 <Input
                   type="number"
                   step="0.01"
-                  value={formData.preco_ton}
-                  onChange={(e) => setFormData({ ...formData, preco_ton: e.target.value })}
+                  value={formData.preco_ton_mn}
+                  onChange={(e) => setFormData({ ...formData, preco_ton_mn: e.target.value })}
                   placeholder="Ex: 750,00"
                   className="border-gray-200 focus:border-accent"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Espaçamento ideal no cocho (m)
-                </label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formData.espacamento_ideal_cocho}
-                  onChange={(e) => setFormData({ ...formData, espacamento_ideal_cocho: e.target.value })}
-                  placeholder="Ex: 0.50"
-                  className="border-gray-200 focus:border-accent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Consumo Meta (%/PV)
-                </label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formData.consumo_meta_porcentagem_pesovivo}
-                  onChange={(e) => setFormData({ ...formData, consumo_meta_porcentagem_pesovivo: e.target.value })}
-                  placeholder="Ex: 2.50"
-                  className="border-gray-200 focus:border-accent"
-                />
-              </div>
             </div>
 
             <div className="flex gap-2">
@@ -454,18 +377,6 @@ export function Insumos() {
                 onClick={() => handleEdit(insumo)}
               >
                 <div className="space-y-2 mb-4">
-                  {insumo.marca && (
-                    <p className="text-sm text-gray-500">
-                      <span className="font-medium">Marca:</span> {insumo.marca}
-                    </p>
-                  )}
-
-                  {insumo.fabricante && (
-                    <p className="text-sm text-gray-500">
-                      <span className="font-medium">Fabricante:</span> {insumo.fabricante}
-                    </p>
-                  )}
-
                   {insumo.fornecedor && (
                     <p className="text-sm text-gray-500">
                       <span className="font-medium">Fornecedor:</span> {insumo.fornecedor}
@@ -476,9 +387,9 @@ export function Insumos() {
                       <span className="font-medium">MS:</span> {insumo.ms_percent}%
                     </p>
                   )}
-                  {insumo.preco_ton !== undefined && insumo.preco_ton !== null && (
+                  {insumo.preco_ton_mn !== undefined && insumo.preco_ton_mn !== null && (
                     <p className="text-sm text-gray-500">
-                      <span className="font-medium">Preço:</span> R$ {insumo.preco_ton.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/ton
+                      <span className="font-medium">Preço:</span> R$ {insumo.preco_ton_mn.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/Ton/MN
                     </p>
                   )}
                 </div>

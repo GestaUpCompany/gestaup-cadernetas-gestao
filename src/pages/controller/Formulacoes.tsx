@@ -12,7 +12,8 @@ interface Dieta {
   tipo?: string
   insumos?: DietaInsumoCalc[]
   meta_consumo_ms_percent_pv?: number
-  peso_vivo_atual?: number
+  peso_vivo_medio?: number
+  sistema_producao?: string
   custo_total?: number
   custo_diario_animal?: number
   consumo_diario_kg?: number
@@ -28,14 +29,14 @@ interface InsumoOption {
   id: string
   nome: string
   ms_percent?: number
-  preco_ton?: number
+  preco_ton_mn?: number
 }
 
 interface DietaInsumoCalc {
   insumo_id: string
   nome: string
   ms_percent: number
-  preco_ton: number
+  preco_ton_mn: number
   formula_ms_percent: number
   formula_mn_bruta?: number
   formula_mn_percent?: number
@@ -45,33 +46,34 @@ interface DietaInsumoCalc {
   custo_dieta_reais_cab_dia?: number
 }
 
-export function Dietas() {
+export function Formulacoes() {
   const { user } = useAuth()
-  const [dietas, setDietas] = useState<Dieta[]>([])
+  const [formulacoes, setFormulacoes] = useState<Dieta[]>([])
   const [insumos, setInsumos] = useState<InsumoOption[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [editingDieta, setEditingDieta] = useState<Dieta | null>(null)
+  const [editingFormulacao, setEditingFormulacao] = useState<Dieta | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [formData, setFormData] = useState({
     nome: '',
     descricao: '',
     tipo: '',
     meta_consumo_ms_percent_pv: '0.30',
-    peso_vivo_atual: '435',
+    peso_vivo_medio: '435',
+    sistema_producao: '',
     ativo: true,
   })
   const [selectedInsumos, setSelectedInsumos] = useState<DietaInsumoCalc[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [dietaToDelete, setDietaToDelete] = useState<string | null>(null)
+  const [formulacaoToDelete, setFormulacaoToDelete] = useState<string | null>(null)
 
   useEffect(() => {
-    loadDietas()
+    loadFormulacoes()
     loadInsumos()
   }, [user])
 
-  const loadDietas = async () => {
+  const loadFormulacoes = async () => {
     if (!user) return
     const { data: vinculos } = await supabase
       .from('usuario_fazenda')
@@ -82,15 +84,15 @@ export function Dietas() {
     const fazendaId = vinculos[0].fazenda_id
 
     const { data, error } = await supabase
-      .from('dietas')
+      .from('formulacoes')
       .select('*')
       .eq('fazenda_id', fazendaId)
       .order('created_at', { ascending: false })
 
     if (error) {
-      console.error('Erro ao buscar dietas:', error)
+      console.error('Erro ao buscar formulações:', error)
     } else {
-      setDietas(data as Dieta[])
+      setFormulacoes(data as Dieta[])
     }
     setLoading(false)
   }
@@ -107,7 +109,7 @@ export function Dietas() {
 
     const { data } = await supabase
       .from('insumos')
-      .select('id, nome, ms_percent, preco_ton')
+      .select('id, nome, ms_percent, preco_ton_mn')
       .eq('fazenda_id', fazendaId)
       .eq('ativo', true)
       .order('nome')
@@ -118,7 +120,7 @@ export function Dietas() {
   // Calculate all derived fields
   const calcularFormulacao = (items: DietaInsumoCalc[]): DietaInsumoCalc[] => {
     const metaPV = parseFloat(formData.meta_consumo_ms_percent_pv) || 0
-    const pesoVivo = parseFloat(formData.peso_vivo_atual) || 0
+    const pesoVivo = parseFloat(formData.peso_vivo_medio) || 0
     const consumoMSTotal = pesoVivo * (metaPV / 100)
 
     // Step 1: Calculate formula_mn_bruta for each item
@@ -138,10 +140,10 @@ export function Dietas() {
     // Step 3: Calculate costs and consumptions
     return withNormalized.map(item => {
       const ms = item.ms_percent / 100
-      const custoTonelada = (item.formula_mn_percent || 0) * item.preco_ton / 100
+      const custoTonelada = (item.formula_mn_percent || 0) * item.preco_ton_mn / 100
       const consumoMS = consumoMSTotal * (item.formula_ms_percent / 100)
       const consumoMN = ms > 0 ? consumoMS / ms : 0
-      const precoKg = item.preco_ton / 1000
+      const precoKg = item.preco_ton_mn / 1000
       const custoDieta = consumoMN * precoKg
       return {
         ...item,
@@ -171,7 +173,7 @@ export function Dietas() {
       insumo_id: insumo.id,
       nome: insumo.nome,
       ms_percent: insumo.ms_percent || 0,
-      preco_ton: insumo.preco_ton || 0,
+      preco_ton_mn: insumo.preco_ton_mn || 0,
       formula_ms_percent: 0,
     }])
   }
@@ -216,7 +218,7 @@ export function Dietas() {
 
     const fazendaId = vinculos[0].fazenda_id
     const metaPV = parseFloat(formData.meta_consumo_ms_percent_pv) || 0
-    const pesoVivo = parseFloat(formData.peso_vivo_atual) || 0
+    const pesoVivo = parseFloat(formData.peso_vivo_medio) || 0
 
     const data = {
       fazenda_id: fazendaId,
@@ -224,7 +226,8 @@ export function Dietas() {
       descricao: formData.descricao || null,
       tipo: formData.tipo || null,
       meta_consumo_ms_percent_pv: metaPV,
-      peso_vivo_atual: pesoVivo,
+      peso_vivo_medio: pesoVivo,
+      sistema_producao: formData.sistema_producao || null,
       insumos: recalculated as unknown as Record<string, unknown>[],
       custo_total: custoTotal,
       custo_diario_animal: custoDiarioTotal,
@@ -236,51 +239,53 @@ export function Dietas() {
     }
 
     let error
-    if (editingDieta) {
+    if (editingFormulacao) {
       const { error: updateError } = await supabase
-        .from('dietas')
+        .from('formulacoes')
         .update(data)
-        .eq('id', editingDieta.id)
+        .eq('id', editingFormulacao.id)
       error = updateError
     } else {
-      const { error: insertError } = await supabase.from('dietas').insert(data)
+      const { error: insertError } = await supabase.from('formulacoes').insert(data)
       error = insertError
     }
 
     if (error) {
-      console.error('Erro ao salvar dieta:', error)
+      console.error('Erro ao salvar formulação:', error)
     } else {
       setFormData({
         nome: '',
         descricao: '',
         tipo: '',
         meta_consumo_ms_percent_pv: '0.30',
-        peso_vivo_atual: '435',
+        peso_vivo_medio: '435',
+        sistema_producao: '',
         ativo: true,
       })
       setSelectedInsumos([])
       setShowForm(false)
-      setEditingDieta(null)
-      loadDietas()
+      setEditingFormulacao(null)
+      loadFormulacoes()
     }
     setSubmitting(false)
   }
 
   const handleEdit = (dieta: Dieta) => {
-    setEditingDieta(dieta)
+    setEditingFormulacao(dieta)
     setFormData({
       nome: dieta.nome,
       descricao: dieta.descricao || '',
       tipo: dieta.tipo || '',
       meta_consumo_ms_percent_pv: dieta.meta_consumo_ms_percent_pv?.toString() || '0.30',
-      peso_vivo_atual: dieta.peso_vivo_atual?.toString() || '435',
+      peso_vivo_medio: dieta.peso_vivo_medio?.toString() || '435',
+      sistema_producao: dieta.sistema_producao || '',
       ativo: dieta.ativo,
     })
     setSelectedInsumos(dieta.insumos?.map(i => ({
       insumo_id: i.insumo_id,
       nome: i.nome,
-      ms_percent: i.ms_percent,
-      preco_ton: i.preco_ton,
+      ms_percent: i.ms_percent ?? 0,
+      preco_ton_mn: (i as any).preco_ton_mn ?? (i as any).preco_ton ?? 0,
       formula_ms_percent: i.formula_ms_percent,
       formula_mn_bruta: i.formula_mn_bruta,
       formula_mn_percent: i.formula_mn_percent,
@@ -293,13 +298,14 @@ export function Dietas() {
   }
 
   const handleCancel = () => {
-    setEditingDieta(null)
+    setEditingFormulacao(null)
     setFormData({
       nome: '',
       descricao: '',
       tipo: '',
       meta_consumo_ms_percent_pv: '0.30',
-      peso_vivo_atual: '435',
+      peso_vivo_medio: '435',
+      sistema_producao: '',
       ativo: true,
     })
     setSelectedInsumos([])
@@ -307,35 +313,35 @@ export function Dietas() {
   }
 
   const handleDeleteClick = (id: string) => {
-    setDietaToDelete(id)
+    setFormulacaoToDelete(id)
     setShowDeleteModal(true)
   }
 
   const handleDeleteConfirm = async () => {
-    if (!dietaToDelete) return
+    if (!formulacaoToDelete) return
 
-    const { error } = await supabase.from('dietas').delete().eq('id', dietaToDelete)
+    const { error } = await supabase.from('formulacoes').delete().eq('id', formulacaoToDelete)
 
     if (error) {
-      console.error('Erro ao excluir dieta:', error)
+      console.error('Erro ao excluir formulação:', error)
     } else {
-      loadDietas()
+      loadFormulacoes()
     }
 
-    setDietaToDelete(null)
+    setFormulacaoToDelete(null)
     setShowDeleteModal(false)
   }
 
   const handleToggleActive = async (dieta: Dieta) => {
     const { error } = await supabase
-      .from('dietas')
+      .from('formulacoes')
       .update({ ativo: !dieta.ativo })
       .eq('id', dieta.id)
 
     if (error) {
-      console.error('Erro ao atualizar dieta:', error)
+      console.error('Erro ao atualizar formulação:', error)
     } else {
-      loadDietas()
+      loadFormulacoes()
     }
   }
 
@@ -343,7 +349,7 @@ export function Dietas() {
     {
       key: 'f',
       ctrl: true,
-      description: 'Buscar dietas',
+      description: 'Buscar formulações',
       action: () => {
         const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement
         searchInput?.focus()
@@ -375,16 +381,16 @@ export function Dietas() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-2xl font-bold text-gray-800">Dietas</h2>
+        <h2 className="text-2xl font-bold text-gray-800">Formulações</h2>
         <div className="flex gap-2 items-start">
           <Input
             type="text"
-            placeholder="Buscar dieta..."
+            placeholder="Buscar formulação..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-xs border-gray-200 focus:border-accent h-10"
           />
-          <Button onClick={() => setShowForm(true)} className="h-10">Nova Dieta</Button>
+          <Button onClick={() => setShowForm(true)} className="h-10">Nova Formulação</Button>
         </div>
       </div>
 
@@ -392,7 +398,7 @@ export function Dietas() {
         <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm">
           <div className="flex justify-between items-start mb-4">
             <h3 className="text-xl font-semibold text-gray-800">
-              {editingDieta ? 'Editar Formulação' : 'Nova Formulação'}
+              {editingFormulacao ? 'Editar Formulação' : 'Nova Formulação'}
             </h3>
             <button
               type="button"
@@ -415,19 +421,25 @@ export function Dietas() {
                   value={formData.nome}
                   onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                   required
-                  placeholder="Nome da dieta"
+                  placeholder="Nome da formulação"
                   className="border-gray-200 focus:border-accent"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
-                <Input
-                  type="text"
+                <select
                   value={formData.tipo}
                   onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
-                  placeholder="Ex: Engorda, Terminação"
-                  className="border-gray-200 focus:border-accent"
-                />
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base border-gray-200 focus:border-accent bg-white"
+                >
+                  <option value="">Selecione...</option>
+                  <option value="Sal Mineral">Sal Mineral</option>
+                  <option value="Sal Adensado">Sal Adensado</option>
+                  <option value="Proteico">Proteico</option>
+                  <option value="Proteico-Energético">Proteico-Energético</option>
+                  <option value="Ração">Ração</option>
+                  <option value="Premix">Premix</option>
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
@@ -444,7 +456,7 @@ export function Dietas() {
             {/* Parameters */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Meta Consumo MS/%PV</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Meta Consumo MS (%/PV)</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -455,15 +467,28 @@ export function Dietas() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Peso Vivo Atual (kg)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Peso Vivo Médio (kg)</label>
                 <Input
                   type="number"
                   step="0.01"
-                  value={formData.peso_vivo_atual}
-                  onChange={(e) => setFormData({ ...formData, peso_vivo_atual: e.target.value })}
+                  value={formData.peso_vivo_medio}
+                  onChange={(e) => setFormData({ ...formData, peso_vivo_medio: e.target.value })}
                   placeholder="Ex: 435"
                   className="border-gray-200 focus:border-accent"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Sistema de Produção</label>
+                <select
+                  value={formData.sistema_producao}
+                  onChange={(e) => setFormData({ ...formData, sistema_producao: e.target.value })}
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base border-gray-200 focus:border-accent bg-white"
+                >
+                  <option value="">Selecione...</option>
+                  <option value="Cria">Cria</option>
+                  <option value="Recria">Recria</option>
+                  <option value="Engorda">Engorda</option>
+                </select>
               </div>
             </div>
 
@@ -482,7 +507,7 @@ export function Dietas() {
                 <option value="">Selecione um insumo...</option>
                 {insumos.map((i) => (
                   <option key={i.id} value={i.id}>
-                    {i.nome} {i.ms_percent !== undefined ? `(MS: ${i.ms_percent}%)` : ''} {i.preco_ton !== undefined ? `- R$ ${i.preco_ton}/ton` : ''}
+                    {i.nome} {i.ms_percent !== undefined ? `(MS: ${i.ms_percent}%)` : ''} {i.preco_ton_mn !== undefined ? `- R$ ${i.preco_ton_mn}/Ton/MN` : ''}
                   </option>
                 ))}
               </select>
@@ -496,13 +521,13 @@ export function Dietas() {
                     <tr className="bg-gray-50 border-b border-gray-200">
                       <th className="text-left p-2 font-medium text-gray-700">Form. Proteinado</th>
                       <th className="text-right p-2 font-medium text-gray-700">MS Insumo (%)</th>
-                      <th className="text-right p-2 font-medium text-gray-700">Preço (R$/ton)</th>
+                      <th className="text-right p-2 font-medium text-gray-700">Preço (R$/Ton/MN)</th>
                       <th className="text-right p-2 font-medium text-gray-700 bg-green-50 w-28">Form. MS (%)</th>
                       <th className="text-right p-2 font-medium text-gray-700">Form. MN (%)</th>
-                      <th className="text-right p-2 font-medium text-gray-700">Custo Dieta (R$/ton)</th>
-                      <th className="text-right p-2 font-medium text-gray-700">Consumo MS (kg/cab/dia)</th>
-                      <th className="text-right p-2 font-medium text-gray-700">Consumo MN (kg/cab/dia)</th>
-                      <th className="text-right p-2 font-medium text-gray-700">Custo Dieta (R$/cab/dia)</th>
+                      <th className="text-right p-2 font-medium text-gray-700">Custo Dieta (R$/Ton)</th>
+                      <th className="text-right p-2 font-medium text-gray-700">Consumo MS (kg/Cab/Dia)</th>
+                      <th className="text-right p-2 font-medium text-gray-700">Consumo MN (kg/Cab/Dia)</th>
+                      <th className="text-right p-2 font-medium text-gray-700">Custo Dieta (R$/Cab/Dia)</th>
                       <th className="p-2 w-8"></th>
                     </tr>
                   </thead>
@@ -512,7 +537,7 @@ export function Dietas() {
                         <td className="p-2 font-medium text-gray-800">{item.nome}</td>
                         <td className="p-2 text-right text-gray-600">{item.ms_percent.toFixed(2)}%</td>
                         <td className="p-2 text-right text-gray-600">
-                          R$ {item.preco_ton.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          R$ {(item.preco_ton_mn || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                         <td className="p-2 text-right bg-green-50 w-28">
                           <Input
@@ -582,17 +607,23 @@ export function Dietas() {
 
             {/* Summary parameters */}
             {selectedInsumos.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-green-50 p-4 rounded-lg">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 bg-green-50 p-4 rounded-lg">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Meta Consumo MS/%PV</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Meta Consumo MS (%/PV)</label>
                   <div className="text-lg font-bold text-green-800">
                     {formData.meta_consumo_ms_percent_pv}%
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Peso Vivo Atual (kg)</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Peso Vivo Médio (kg)</label>
                   <div className="text-lg font-bold text-green-800">
-                    {formData.peso_vivo_atual}
+                    {formData.peso_vivo_medio}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Sistema de Produção</label>
+                  <div className="text-lg font-bold text-green-800">
+                    {formData.sistema_producao || '—'}
                   </div>
                 </div>
                 <div>
@@ -627,14 +658,14 @@ export function Dietas() {
         </Card>
       )}
 
-      {!showForm && dietas.length === 0 ? (
+      {!showForm && formulacoes.length === 0 ? (
         <Card className="bg-white p-12 border-0 shadow-sm text-center">
           <p className="text-gray-600 mb-4">Nenhuma formulação cadastrada</p>
           <Button onClick={() => setShowForm(true)}>Criar Primeira Formulação</Button>
         </Card>
       ) : !showForm ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {dietas
+          {formulacoes
             .filter((dieta) =>
               dieta.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
               (dieta.tipo && dieta.tipo.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -649,10 +680,13 @@ export function Dietas() {
               >
                 <div className="space-y-1 mb-4 text-sm text-gray-600">
                   {dieta.meta_consumo_ms_percent_pv != null && (
-                    <p><span className="font-medium">Meta MS/%PV:</span> {dieta.meta_consumo_ms_percent_pv}%</p>
+                    <p><span className="font-medium">Meta MS (%/PV):</span> {dieta.meta_consumo_ms_percent_pv}%</p>
                   )}
-                  {dieta.peso_vivo_atual != null && (
-                    <p><span className="font-medium">PV:</span> {dieta.peso_vivo_atual} kg</p>
+                  {dieta.peso_vivo_medio != null && (
+                    <p><span className="font-medium">PV Médio:</span> {dieta.peso_vivo_medio} kg</p>
+                  )}
+                  {dieta.sistema_producao && (
+                    <p><span className="font-medium">Sistema:</span> {dieta.sistema_producao}</p>
                   )}
                   {dieta.teor_ms_dieta != null && (
                     <p><span className="font-medium">Teor MS:</span> {dieta.teor_ms_dieta.toFixed(2)}%</p>
@@ -668,7 +702,7 @@ export function Dietas() {
                   )}
                 </div>
 
-                <div className="flex flex-wrap gap-1 sm:gap-2">
+                <div className="flex flex-wrap gap-1 sm:gap-2 mt-auto">
                   <Button
                     variant="secondary"
                     className="flex-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2"
@@ -709,8 +743,8 @@ export function Dietas() {
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handleDeleteConfirm}
-        title="Excluir Dieta"
-        message="Tem certeza que deseja excluir esta dieta? Esta ação não pode ser desfeita."
+        title="Excluir Formulação"
+        message="Tem certeza que deseja excluir esta formulação? Esta ação não pode ser desfeita."
         confirmText="Excluir"
         cancelText="Cancelar"
         variant="danger"

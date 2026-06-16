@@ -43,10 +43,7 @@ const menuStructure = [
     ),
     items: [
       { label: 'Insumos', path: '/controller/insumos' },
-      { label: 'Mineral', path: '/controller/mineral' },
-      { label: 'Proteinado', path: '/controller/proteinado' },
-      { label: 'Ração', path: '/controller/racao' },
-      { label: 'Dietas', path: '/controller/dietas' },
+      { label: 'Formulações', path: '/controller/formulacoes' },
     ],
   },
   {

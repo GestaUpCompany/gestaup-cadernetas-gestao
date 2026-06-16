@@ -35,10 +35,7 @@ import { Bebedouros } from './pages/controller/Bebedouros'
 import { BebedourosDetalhes } from './pages/controller/BebedourosDetalhes'
 import { Movimentacao } from './pages/controller/Movimentacao'
 import { MovimentacaoDetalhes } from './pages/controller/MovimentacaoDetalhes'
-import { Mineral } from './pages/controller/Mineral'
-import { Proteinado } from './pages/controller/Proteinado'
-import { Racao } from './pages/controller/Racao'
-import { Dietas } from './pages/controller/Dietas'
+import { Formulacoes } from './pages/controller/Formulacoes'
 import { Fornecedores } from './pages/controller/Fornecedores'
 import { Frigorificos } from './pages/controller/Frigorificos'
 import { CausasMorte } from './pages/controller/CausasMorte'
@@ -260,41 +257,11 @@ function App() {
           }
         />
         <Route
-          path="/controller/mineral"
+          path="/controller/formulacoes"
           element={
             <ControllerRoute>
               <ControllerLayout>
-                <Mineral />
-              </ControllerLayout>
-            </ControllerRoute>
-          }
-        />
-        <Route
-          path="/controller/proteinado"
-          element={
-            <ControllerRoute>
-              <ControllerLayout>
-                <Proteinado />
-              </ControllerLayout>
-            </ControllerRoute>
-          }
-        />
-        <Route
-          path="/controller/racao"
-          element={
-            <ControllerRoute>
-              <ControllerLayout>
-                <Racao />
-              </ControllerLayout>
-            </ControllerRoute>
-          }
-        />
-        <Route
-          path="/controller/dietas"
-          element={
-            <ControllerRoute>
-              <ControllerLayout>
-                <Dietas />
+                <Formulacoes />
               </ControllerLayout>
             </ControllerRoute>
           }

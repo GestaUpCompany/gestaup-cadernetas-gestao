@@ -272,7 +272,7 @@ export function Lotes() {
 
       // Fetch from all 4 tables
       const [insumos, minerais, racao, proteinado] = await Promise.all([
-        supabase.from('insumos').select('id, nome, tipo, consumo_meta_porcentagem_pesovivo').eq('fazenda_id', fazendaId).eq('ativo', true),
+        supabase.from('insumos').select('id, nome, tipo').eq('fazenda_id', fazendaId).eq('ativo', true),
         supabase.from('mineral').select('id, nome, tipo, consumo_meta_porcentagem_pesovivo').eq('fazenda_id', fazendaId).eq('ativo', true),
         supabase.from('racao').select('id, nome, tipo, consumo_meta_porcentagem_pesovivo').eq('fazenda_id', fazendaId).eq('ativo', true),
         supabase.from('proteinado').select('id, nome, tipo, consumo_meta_porcentagem_pesovivo').eq('fazenda_id', fazendaId).eq('ativo', true),
@@ -280,14 +280,14 @@ export function Lotes() {
 
       const options: {id: string, name: string, category: string, consumo_meta?: number}[] = []
 
-      // Add insumos
+      // Add insumos (sem consumo_meta)
       if (insumos.data) {
         insumos.data.forEach(item => {
           options.push({
             id: item.id,
             name: item.nome,
             category: item.tipo || 'Insumos',
-            consumo_meta: item.consumo_meta_porcentagem_pesovivo !== undefined && item.consumo_meta_porcentagem_pesovivo !== null ? Number(item.consumo_meta_porcentagem_pesovivo) : undefined
+            consumo_meta: undefined
           })
         })
       }
