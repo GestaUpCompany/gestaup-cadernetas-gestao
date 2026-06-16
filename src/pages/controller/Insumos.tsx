@@ -10,7 +10,7 @@ interface Insumo {
   nome: string
   tipo?: string
   fornecedor?: string
-  ms_percent?: number
+  teor_ms?: number
   preco_ton_mn?: number
   ativo: boolean
   created_at: string
@@ -28,7 +28,7 @@ export function Insumos() {
     nome: '',
     tipo: '',
     fornecedor: '',
-    ms_percent: '',
+    teor_ms: '',
     preco_ton_mn: '',
     ativo: true,
   })
@@ -97,7 +97,7 @@ export function Insumos() {
       nome: formData.nome,
       tipo: formData.tipo || null,
       fornecedor: formData.fornecedor || null,
-      ms_percent: formData.ms_percent ? parseFloat(formData.ms_percent) : null,
+      teor_ms: formData.teor_ms ? parseFloat(formData.teor_ms) : null,
       preco_ton_mn: formData.preco_ton_mn ? parseFloat(formData.preco_ton_mn) : null,
       ativo: formData.ativo,
     }
@@ -124,7 +124,7 @@ export function Insumos() {
         nome: '',
         tipo: '',
         fornecedor: '',
-        ms_percent: '',
+        teor_ms: '',
         preco_ton_mn: '',
         ativo: true,
       })
@@ -142,7 +142,7 @@ export function Insumos() {
       nome: insumo.nome,
       tipo: insumo.tipo || '',
       fornecedor: insumo.fornecedor || '',
-      ms_percent: insumo.ms_percent?.toString() || '',
+      teor_ms: insumo.teor_ms?.toString() || '',
       preco_ton_mn: insumo.preco_ton_mn?.toString() || '',
       ativo: insumo.ativo,
     })
@@ -155,7 +155,7 @@ export function Insumos() {
       nome: '',
       tipo: '',
       fornecedor: '',
-      ms_percent: '',
+      teor_ms: '',
       preco_ton_mn: '',
       ativo: true,
     })
@@ -305,13 +305,13 @@ export function Insumos() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  MS Insumo (%)
+                  Teor MS (%)
                 </label>
                 <Input
                   type="number"
                   step="0.01"
-                  value={formData.ms_percent}
-                  onChange={(e) => setFormData({ ...formData, ms_percent: e.target.value })}
+                  value={formData.teor_ms}
+                  onChange={(e) => setFormData({ ...formData, teor_ms: e.target.value })}
                   placeholder="Ex: 88.00"
                   className="border-gray-200 focus:border-accent"
                 />
@@ -382,9 +382,9 @@ export function Insumos() {
                       <span className="font-medium">Fornecedor:</span> {insumo.fornecedor}
                     </p>
                   )}
-                  {insumo.ms_percent !== undefined && insumo.ms_percent !== null && (
+                  {insumo.teor_ms !== undefined && insumo.teor_ms !== null && (
                     <p className="text-sm text-gray-500">
-                      <span className="font-medium">MS:</span> {insumo.ms_percent}%
+                      <span className="font-medium">Teor MS:</span> {insumo.teor_ms}%
                     </p>
                   )}
                   {insumo.preco_ton_mn !== undefined && insumo.preco_ton_mn !== null && (
