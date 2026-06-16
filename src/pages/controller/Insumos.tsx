@@ -14,6 +14,8 @@ interface Insumo {
   fornecedor?: string
   espacamento_ideal_cocho?: number
   consumo_meta_porcentagem_pesovivo?: number
+  ms_percent?: number
+  preco_ton?: number
   ativo: boolean
   created_at: string
   updated_at: string
@@ -34,6 +36,8 @@ export function Insumos() {
     fornecedor: '',
     espacamento_ideal_cocho: '',
     consumo_meta_porcentagem_pesovivo: '',
+    ms_percent: '',
+    preco_ton: '',
     ativo: true,
   })
   const [submitting, setSubmitting] = useState(false)
@@ -105,6 +109,8 @@ export function Insumos() {
       fornecedor: formData.fornecedor || null,
       espacamento_ideal_cocho: formData.espacamento_ideal_cocho ? parseFloat(formData.espacamento_ideal_cocho) : null,
       consumo_meta_porcentagem_pesovivo: formData.consumo_meta_porcentagem_pesovivo ? parseFloat(formData.consumo_meta_porcentagem_pesovivo) : null,
+      ms_percent: formData.ms_percent ? parseFloat(formData.ms_percent) : null,
+      preco_ton: formData.preco_ton ? parseFloat(formData.preco_ton) : null,
       ativo: formData.ativo,
     }
 
@@ -134,6 +140,8 @@ export function Insumos() {
         fornecedor: '',
         espacamento_ideal_cocho: '',
         consumo_meta_porcentagem_pesovivo: '',
+        ms_percent: '',
+        preco_ton: '',
         ativo: true,
       })
       setShowForm(false)
@@ -154,6 +162,8 @@ export function Insumos() {
       fornecedor: insumo.fornecedor || '',
       espacamento_ideal_cocho: insumo.espacamento_ideal_cocho?.toString() || '',
       consumo_meta_porcentagem_pesovivo: insumo.consumo_meta_porcentagem_pesovivo?.toString() || '',
+      ms_percent: insumo.ms_percent?.toString() || '',
+      preco_ton: insumo.preco_ton?.toString() || '',
       ativo: insumo.ativo,
     })
     setShowForm(true)
@@ -169,6 +179,8 @@ export function Insumos() {
       fornecedor: '',
       espacamento_ideal_cocho: '',
       consumo_meta_porcentagem_pesovivo: '',
+      ms_percent: '',
+      preco_ton: '',
       ativo: true,
     })
     setShowForm(false)
@@ -343,6 +355,34 @@ export function Insumos() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
+                  MS Insumo (%)
+                </label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={formData.ms_percent}
+                  onChange={(e) => setFormData({ ...formData, ms_percent: e.target.value })}
+                  placeholder="Ex: 88.00"
+                  className="border-gray-200 focus:border-accent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Preço (R$/ton)
+                </label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={formData.preco_ton}
+                  onChange={(e) => setFormData({ ...formData, preco_ton: e.target.value })}
+                  placeholder="Ex: 750,00"
+                  className="border-gray-200 focus:border-accent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Espaçamento ideal no cocho (m)
                 </label>
                 <Input
@@ -429,6 +469,16 @@ export function Insumos() {
                   {insumo.fornecedor && (
                     <p className="text-sm text-gray-500">
                       <span className="font-medium">Fornecedor:</span> {insumo.fornecedor}
+                    </p>
+                  )}
+                  {insumo.ms_percent !== undefined && insumo.ms_percent !== null && (
+                    <p className="text-sm text-gray-500">
+                      <span className="font-medium">MS:</span> {insumo.ms_percent}%
+                    </p>
+                  )}
+                  {insumo.preco_ton !== undefined && insumo.preco_ton !== null && (
+                    <p className="text-sm text-gray-500">
+                      <span className="font-medium">Preço:</span> R$ {insumo.preco_ton.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/ton
                     </p>
                   )}
                 </div>
