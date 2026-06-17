@@ -15,6 +15,7 @@ import { NovoUsuario } from './pages/admin/NovoUsuario'
 import { EditarUsuario } from './pages/admin/EditarUsuario'
 import { ControllerDashboard } from './pages/controller/Dashboard'
 import { Pastos } from './pages/controller/Pastos'
+import { ModulosPastos } from './pages/controller/ModulosPastos'
 import { Lotes } from './pages/controller/Lotes'
 import { Funcionarios } from './pages/controller/Funcionarios'
 import { Insumos } from './pages/controller/Insumos'
@@ -202,6 +203,16 @@ function App() {
             <ControllerRoute>
               <ControllerLayout>
                 <Pastos />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/modulos-pastos"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <ModulosPastos />
               </ControllerLayout>
             </ControllerRoute>
           }

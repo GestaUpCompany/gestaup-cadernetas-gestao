@@ -23,6 +23,8 @@ interface Pasto {
   kg_deposito?: number
   fonte_agua_principal?: string
   bebedouros?: {id: string, nome: string}[]
+  modulo_id?: string
+  modulo_nome?: string
   ativo: boolean
 }
 
@@ -129,14 +131,18 @@ export function Pastos() {
 
     const { data, error } = await supabase
       .from('pastos')
-      .select('*')
+      .select('*, modulos_pastos!left(nome)')
       .eq('fazenda_id', fazendaId)
       .order('created_at', { ascending: false })
 
     if (error) {
       console.error('Erro ao buscar pastos:', error)
     } else {
-      setPastos(data as Pasto[])
+      const pastosWithModulo = (data as any[]).map(pasto => ({
+        ...pasto,
+        modulo_nome: pasto.modulos_pastos?.nome || null
+      }))
+      setPastos(pastosWithModulo as Pasto[])
     }
 
     setLoading(false)
@@ -733,7 +739,7 @@ export function Pastos() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 sm:gap-4">
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                   Área Total (ha)
@@ -787,6 +793,19 @@ export function Pastos() {
                   className="border-gray-200 focus:border-accent text-sm bg-gray-50"
                 />
               </div>
+              {editingPasto && editingPasto.modulo_nome && (
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                    Módulo
+                  </label>
+                  <Input
+                    type="text"
+                    value={editingPasto.modulo_nome}
+                    disabled
+                    className="bg-gray-50 border-gray-200 text-sm"
+                  />
+                </div>
+              )}
             </div>
 
             <div>
@@ -972,6 +991,9 @@ export function Pastos() {
                   )}
                   {pasto.especie && (
                     <p className="text-sm text-gray-500"><span className="font-medium">Espécie:</span> {pasto.especie}</p>
+                  )}
+                  {pasto.modulo_nome && (
+                    <p className="text-sm text-gray-500"><span className="font-medium">Módulo:</span> {pasto.modulo_nome}</p>
                   )}
                   {pasto.metragem_cocho_m && (
                     <p className="text-sm text-gray-500"><span className="font-medium">Metragem Cocho:</span> {pasto.metragem_cocho_m} m</p>
