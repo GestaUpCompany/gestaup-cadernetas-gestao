@@ -270,60 +270,23 @@ export function Lotes() {
 
       const fazendaId = vinculos[0].fazenda_id
 
-      // Fetch from all 4 tables
-      const [insumos, minerais, racao, proteinado] = await Promise.all([
-        supabase.from('insumos').select('id, nome, tipo').eq('fazenda_id', fazendaId).eq('ativo', true),
-        supabase.from('mineral').select('id, nome, tipo, consumo_meta_porcentagem_pesovivo').eq('fazenda_id', fazendaId).eq('ativo', true),
-        supabase.from('racao').select('id, nome, tipo, consumo_meta_porcentagem_pesovivo').eq('fazenda_id', fazendaId).eq('ativo', true),
-        supabase.from('proteinado').select('id, nome, tipo, consumo_meta_porcentagem_pesovivo').eq('fazenda_id', fazendaId).eq('ativo', true),
-      ])
+      const { data } = await supabase
+        .from('formulacoes')
+        .select('id, nome, tipo, meta_consumo_ms_percent_pv, gmd')
+        .eq('fazenda_id', fazendaId)
+        .eq('ativo', true)
+        .order('nome')
 
-      const options: {id: string, name: string, category: string, consumo_meta?: number}[] = []
+      const options: {id: string, name: string, category: string, consumo_meta?: number, gmd?: number}[] = []
 
-      // Add insumos (sem consumo_meta)
-      if (insumos.data) {
-        insumos.data.forEach(item => {
+      if (data) {
+        data.forEach(item => {
           options.push({
             id: item.id,
             name: item.nome,
-            category: item.tipo || 'Insumos',
-            consumo_meta: undefined
-          })
-        })
-      }
-
-      // Add minerais
-      if (minerais.data) {
-        minerais.data.forEach(item => {
-          options.push({
-            id: item.id,
-            name: item.nome,
-            category: item.tipo || 'Minerais',
-            consumo_meta: item.consumo_meta_porcentagem_pesovivo !== undefined && item.consumo_meta_porcentagem_pesovivo !== null ? Number(item.consumo_meta_porcentagem_pesovivo) : undefined
-          })
-        })
-      }
-
-      // Add ração
-      if (racao.data) {
-        racao.data.forEach(item => {
-          options.push({
-            id: item.id,
-            name: item.nome,
-            category: item.tipo || 'Ração',
-            consumo_meta: item.consumo_meta_porcentagem_pesovivo !== undefined && item.consumo_meta_porcentagem_pesovivo !== null ? Number(item.consumo_meta_porcentagem_pesovivo) : undefined
-          })
-        })
-      }
-
-      // Add proteinado
-      if (proteinado.data) {
-        proteinado.data.forEach(item => {
-          options.push({
-            id: item.id,
-            name: item.nome,
-            category: item.tipo || 'Proteinado',
-            consumo_meta: item.consumo_meta_porcentagem_pesovivo !== undefined && item.consumo_meta_porcentagem_pesovivo !== null ? Number(item.consumo_meta_porcentagem_pesovivo) : undefined
+            category: item.tipo || 'Formulações',
+            consumo_meta: item.meta_consumo_ms_percent_pv !== undefined && item.meta_consumo_ms_percent_pv !== null ? Number(item.meta_consumo_ms_percent_pv) : undefined,
+            gmd: item.gmd !== undefined && item.gmd !== null ? Number(item.gmd) : undefined
           })
         })
       }
@@ -1524,19 +1487,16 @@ export function Lotes() {
                             </label>
                             <NumericInput
                               value={cat.gmd?.toString() || ''}
-                              onChange={(value) => {
-                                const updatedCategorias = [...formData.categorias]
-                                updatedCategorias[catIndex] = { ...cat, gmd: value || undefined }
-                                setFormData({ ...formData, categorias: updatedCategorias })
-                              }}
+                              onChange={() => {}}
                               placeholder="0,000"
                               decimalPlaces={3}
-                              className="border-gray-200 focus:border-accent"
+                              disabled
+                              className="border-gray-200 focus:border-accent opacity-60"
                             />
                           </div>
                         </div>
                         <div className="grid grid-cols-6 gap-2 mt-2">
-                          <div className="col-span-2">
+                          <div className="col-span-3">
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Estratégia Nutricional
                             </label>
@@ -1545,11 +1505,12 @@ export function Lotes() {
                               value={cat.estrategia_nutricional || ''}
                               onChange={(value) => {
                                 const updatedCategorias = [...formData.categorias]
-                                const selectedOption = nutritionalOptions.find(opt => opt.id === value)
-                                updatedCategorias[catIndex] = { 
-                                  ...cat, 
+                                const selectedOption = nutritionalOptions.find(opt => opt.name === value)
+                                updatedCategorias[catIndex] = {
+                                  ...cat,
                                   estrategia_nutricional: value,
-                                  consumo_meta_porcentagem_pesovivo: selectedOption?.consumo_meta !== undefined && selectedOption?.consumo_meta !== null ? Number(selectedOption.consumo_meta) : undefined
+                                  consumo_meta_porcentagem_pesovivo: selectedOption?.consumo_meta !== undefined && selectedOption?.consumo_meta !== null ? Number(selectedOption.consumo_meta) : undefined,
+                                  gmd: selectedOption?.gmd !== undefined && selectedOption?.gmd !== null ? selectedOption.gmd.toFixed(3).replace('.', ',') : undefined
                                 }
                                 setFormData({ ...formData, categorias: updatedCategorias })
                               }}
@@ -1557,7 +1518,7 @@ export function Lotes() {
                               className="border-gray-200 focus:border-accent"
                             />
                           </div>
-                          <div className="col-span-1">
+                          <div className="col-span-2">
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Consumo Meta (%/PV)
                             </label>
@@ -1605,7 +1566,7 @@ export function Lotes() {
                               <Input
                                 type="number"
                                 step="0.01"
-                                value={cat.rc_inicial?.toFixed(2) || ''}
+                                value={cat.rc_inicial?.toString() || ''}
                                 onChange={(e) => {
                                   const updatedCategorias = [...formData.categorias]
                                   updatedCategorias[catIndex] = { ...cat, rc_inicial: e.target.value ? parseFloat(e.target.value) : undefined }
@@ -2323,6 +2284,12 @@ export function Lotes() {
                   {lote.peso_vivo_atual_kg_cab && (
                     <p className="text-sm text-gray-500">
                       <span className="font-medium">Peso Vivo:</span> {lote.peso_vivo_atual_kg_cab} kg
+                    </p>
+                  )}
+
+                  {lote.pasto_nome && (
+                    <p className="text-sm text-gray-500">
+                      <span className="font-medium">Pasto:</span> {lote.pasto_nome}
                     </p>
                   )}
 

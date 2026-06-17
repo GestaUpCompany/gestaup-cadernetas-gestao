@@ -8,6 +8,11 @@ function fmt(n: number, digits = 2): string {
   return n.toFixed(digits).replace('.', ',')
 }
 
+function parseCommaDecimal(val: string): number {
+  const cleaned = val.replace(/\./g, '').replace(',', '.')
+  return parseFloat(cleaned) || 0
+}
+
 interface Dieta {
   id: string
   fazenda_id: string
@@ -17,6 +22,7 @@ interface Dieta {
   insumos?: DietaInsumoCalc[]
   meta_consumo_ms_percent_pv?: number
   peso_vivo_medio?: number
+  gmd?: number
   sistema_producao?: string
   custo_total?: number
   custo_diario_animal?: number
@@ -64,6 +70,7 @@ export function Formulacoes() {
     tipo: '',
     meta_consumo_ms_percent_pv: '0.30',
     peso_vivo_medio: '435.00',
+    gmd: '0.000',
     sistema_producao: '',
     ativo: true,
   })
@@ -232,6 +239,7 @@ export function Formulacoes() {
     const fazendaId = vinculos[0].fazenda_id
     const metaPV = parseFloat(parseFloat(formData.meta_consumo_ms_percent_pv || '0').toFixed(2))
     const pesoVivo = parseFloat(parseFloat(formData.peso_vivo_medio || '0').toFixed(2))
+    const gmd = parseFloat(parseCommaDecimal(formData.gmd || '0').toFixed(3))
 
     const data = {
       fazenda_id: fazendaId,
@@ -240,6 +248,7 @@ export function Formulacoes() {
       tipo: formData.tipo || null,
       meta_consumo_ms_percent_pv: metaPV,
       peso_vivo_medio: pesoVivo,
+      gmd: gmd || null,
       sistema_producao: formData.sistema_producao || null,
       insumos: recalculated as unknown as Record<string, unknown>[],
       custo_total: custoTotal,
@@ -272,6 +281,7 @@ export function Formulacoes() {
         tipo: '',
         meta_consumo_ms_percent_pv: '0.30',
         peso_vivo_medio: '435.00',
+        gmd: '0.000',
         sistema_producao: '',
         ativo: true,
       })
@@ -291,6 +301,7 @@ export function Formulacoes() {
       tipo: dieta.tipo || '',
       meta_consumo_ms_percent_pv: dieta.meta_consumo_ms_percent_pv?.toFixed(2) || '0.30',
       peso_vivo_medio: dieta.peso_vivo_medio?.toFixed(2) || '435.00',
+      gmd: dieta.gmd?.toFixed(3) || '0.000',
       sistema_producao: dieta.sistema_producao || '',
       ativo: dieta.ativo,
     })
@@ -318,6 +329,7 @@ export function Formulacoes() {
       tipo: '',
       meta_consumo_ms_percent_pv: '0.30',
       peso_vivo_medio: '435.00',
+      gmd: '0.000',
       sistema_producao: '',
       ativo: true,
     })
@@ -491,6 +503,18 @@ export function Formulacoes() {
                 />
               </div>
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">GMD (kg/Cab/Dia)</label>
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  value={formData.gmd}
+                  onChange={(e) => setFormData({ ...formData, gmd: e.target.value })}
+                  placeholder="Ex: 0,300"
+                  className="border-gray-200 focus:border-accent"
+                />
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Sistema de Produção</label>
                 <select
                   value={formData.sistema_producao}
@@ -637,6 +661,12 @@ export function Formulacoes() {
                   </div>
                 </div>
                 <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">GMD (kg/Cab/Dia)</label>
+                  <div className="text-lg font-bold text-green-800">
+                    {fmt(parseFloat(formData.gmd || '0'), 3)}
+                  </div>
+                </div>
+                <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Sistema de Produção</label>
                   <div className="text-lg font-bold text-green-800">
                     {formData.sistema_producao || '—'}
@@ -700,6 +730,9 @@ export function Formulacoes() {
                   )}
                   {dieta.peso_vivo_medio != null && (
                     <p><span className="font-medium">PV Médio:</span> {fmt(dieta.peso_vivo_medio)} kg</p>
+                  )}
+                  {dieta.gmd != null && (
+                    <p><span className="font-medium">GMD:</span> {fmt(dieta.gmd, 3)} kg/Cab/Dia</p>
                   )}
                   {dieta.sistema_producao && (
                     <p><span className="font-medium">Sistema:</span> {dieta.sistema_producao}</p>
