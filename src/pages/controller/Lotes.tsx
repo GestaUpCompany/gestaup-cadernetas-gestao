@@ -166,7 +166,9 @@ export function Lotes() {
     'boi magro',
     'garrote',
     'bezerro',
+    'bezerro ao pé',
     'bezerra',
+    'bezerra ao pé',
     'novilha',
     'tropa',
   ]
@@ -178,7 +180,9 @@ export function Lotes() {
     'boi magro': 'border-yellow-500',
     'garrote': 'border-purple-500',
     'bezerro': 'border-orange-500',
+    'bezerro ao pé': 'border-amber-500',
     'bezerra': 'border-pink-500',
+    'bezerra ao pé': 'border-rose-500',
     'novilha': 'border-teal-500',
     'tropa': 'border-indigo-500',
   }
@@ -190,7 +194,9 @@ export function Lotes() {
     'boi magro': 'bg-yellow-50',
     'garrote': 'bg-purple-50',
     'bezerro': 'bg-orange-50',
+    'bezerro ao pé': 'bg-amber-50',
     'bezerra': 'bg-pink-50',
+    'bezerra ao pé': 'bg-rose-50',
     'novilha': 'bg-teal-50',
     'tropa': 'bg-indigo-50',
   }
