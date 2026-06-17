@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, ConfirmModal, MultiSelect } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import * as XLSX from 'xlsx'
 
@@ -21,6 +21,8 @@ interface Pasto {
   altura_saida_cm?: number
   possui_deposito?: boolean
   kg_deposito?: number
+  fonte_agua_principal?: string
+  bebedouros?: {id: string, nome: string}[]
   ativo: boolean
 }
 
@@ -28,6 +30,8 @@ export function Pastos() {
   const { user } = useAuth()
   const [pastos, setPastos] = useState<Pasto[]>([])
   const [setores, setSetores] = useState<{ id: string; nome: string }[]>([])
+  const [bebedouros, setBebedouros] = useState<{id: string, nome: string, capacidade?: number}[]>([])
+  const [selectedBebedouros, setSelectedBebedouros] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingPasto, setEditingPasto] = useState<Pasto | null>(null)
@@ -46,6 +50,7 @@ export function Pastos() {
     altura_saida_cm: '',
     possui_deposito: false,
     kg_deposito: '',
+    fonte_agua_principal: '',
   })
   const [submitting, setSubmitting] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -53,11 +58,6 @@ export function Pastos() {
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
   const [importSuccess, setImportSuccess] = useState<string | null>(null)
-
-  useEffect(() => {
-    loadPastos()
-    loadSetores()
-  }, [user])
 
   const loadSetores = async () => {
     if (!user) return
@@ -83,6 +83,33 @@ export function Pastos() {
       console.error('Erro ao buscar setores:', error)
     } else {
       setSetores(data as { id: string; nome: string }[])
+    }
+  }
+
+  const loadBebedouros = async () => {
+    if (!user) return
+
+    const { data: vinculos } = await supabase
+      .from('usuario_fazenda')
+      .select('fazenda_id')
+      .eq('usuario_id', user.id)
+      .eq('ativo', true)
+
+    if (!vinculos || vinculos.length === 0) return
+
+    const fazendaId = vinculos[0].fazenda_id
+
+    const { data, error } = await supabase
+      .from('bebedouros')
+      .select('id, nome, capacidade')
+      .eq('fazenda_id', fazendaId)
+      .eq('ativo', true)
+      .order('nome')
+
+    if (error) {
+      console.error('Erro ao buscar bebedouros:', error)
+    } else {
+      setBebedouros(data as {id: string, nome: string, capacidade?: number}[])
     }
   }
 
@@ -115,11 +142,24 @@ export function Pastos() {
     setLoading(false)
   }
 
+  useEffect(() => {
+    loadPastos()
+    loadSetores()
+    loadBebedouros()
+  }, [user])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
 
     if (!user) {
+      setSubmitting(false)
+      return
+    }
+
+    // Validation: if Bebedouro is selected, at least one bebedouro must be selected
+    if (formData.fonte_agua_principal === 'Bebedouro' && selectedBebedouros.length === 0) {
+      alert('Selecione pelo menos um bebedouro quando a fonte de água principal for Bebedouro')
       setSubmitting(false)
       return
     }
@@ -147,7 +187,7 @@ export function Pastos() {
       nivel_degradacao: formData.nivel_degradacao ? parseInt(formData.nivel_degradacao) : null,
       area_total_ha: formData.area_total_ha ? parseFloat(formData.area_total_ha) : null,
       area_util_porcentagem: formData.area_util_porcentagem ? parseFloat(formData.area_util_porcentagem) : null,
-      area_util_ha: formData.area_total_ha && formData.area_util_porcentagem 
+      area_util_ha: formData.area_total_ha && formData.area_util_porcentagem
         ? parseFloat(formData.area_total_ha) * (parseFloat(formData.area_util_porcentagem) / 100)
         : formData.area_util_ha ? parseFloat(formData.area_util_ha) : null,
       especie: formData.especie || null,
@@ -155,6 +195,11 @@ export function Pastos() {
       altura_saida_cm: formData.altura_saida_cm ? parseFloat(formData.altura_saida_cm) : null,
       possui_deposito: formData.possui_deposito,
       kg_deposito: formData.kg_deposito ? parseFloat(formData.kg_deposito) : null,
+      fonte_agua_principal: formData.fonte_agua_principal || null,
+      bebedouros: selectedBebedouros.map(id => {
+        const bebedouro = bebedouros.find(b => b.id === id)
+        return { id, nome: bebedouro?.nome || '' }
+      }),
     }
 
     let error
@@ -175,6 +220,7 @@ export function Pastos() {
     if (error) {
       console.error('Erro ao salvar pasto:', error)
     } else {
+
       setFormData({
         nome: '',
         setor: '',
@@ -189,7 +235,9 @@ export function Pastos() {
         altura_saida_cm: '',
         possui_deposito: false,
         kg_deposito: '',
+        fonte_agua_principal: '',
       })
+      setSelectedBebedouros([])
       setShowForm(false)
       setEditingPasto(null)
       loadPastos()
@@ -198,7 +246,7 @@ export function Pastos() {
     setSubmitting(false)
   }
 
-  const handleEdit = (pasto: Pasto) => {
+  const handleEdit = async (pasto: Pasto) => {
     setEditingPasto(pasto)
     setFormData({
       nome: pasto.nome,
@@ -214,7 +262,12 @@ export function Pastos() {
       altura_saida_cm: pasto.altura_saida_cm?.toString() || '',
       possui_deposito: pasto.possui_deposito || false,
       kg_deposito: pasto.kg_deposito?.toString() || '',
+      fonte_agua_principal: pasto.fonte_agua_principal || '',
     })
+
+    // Load associated bebedouros from JSONB
+    setSelectedBebedouros(pasto.bebedouros?.map(b => b.id) || [])
+
     setShowForm(true)
   }
 
@@ -234,7 +287,9 @@ export function Pastos() {
       altura_saida_cm: '',
       possui_deposito: false,
       kg_deposito: '',
+      fonte_agua_principal: '',
     })
+    setSelectedBebedouros([])
     setShowForm(false)
   }
 
@@ -779,6 +834,44 @@ export function Pastos() {
                 />
               </div>
             </div>
+
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                Fonte de Água Principal
+              </label>
+              <select
+                value={formData.fonte_agua_principal}
+                onChange={(e) => {
+                  setFormData({ ...formData, fonte_agua_principal: e.target.value })
+                  if (e.target.value !== 'Bebedouro') {
+                    setSelectedBebedouros([])
+                  }
+                }}
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] rounded-lg border-2 border-gray-200 focus:border-accent bg-white text-gray-700 transition-all text-sm"
+              >
+                <option value="">Selecione...</option>
+                <option value="Bebedouro">Bebedouro</option>
+                <option value="Córrego">Córrego</option>
+                <option value="Represa">Represa</option>
+                <option value="Rio">Rio</option>
+              </select>
+            </div>
+
+            {formData.fonte_agua_principal === 'Bebedouro' && (
+              <MultiSelect
+                options={bebedouros.map(b => ({
+                  id: b.id,
+                  name: b.nome,
+                  subtitle: b.capacidade ? `Capacidade: ${b.capacidade} L` : undefined
+                }))}
+                value={selectedBebedouros}
+                onChange={setSelectedBebedouros}
+                placeholder="Selecione bebedouros..."
+                label="Bebedouros"
+                required
+                className="border-gray-200 focus:border-accent"
+              />
+            )}
 
             <div className="flex items-center gap-3">
               <label className="text-sm font-medium text-gray-700">Possui depósito?</label>
