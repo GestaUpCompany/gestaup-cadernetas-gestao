@@ -174,6 +174,17 @@ export function ModulosPastos() {
     if (error) {
       console.error('Erro ao salvar módulo:', error)
     } else if (moduloId) {
+      // Get old associations BEFORE deleting (to identify pastos to orphan)
+      let oldPastoIds: string[] = []
+      if (editingModulo) {
+        const { data: oldRotacoes } = await supabase
+          .from('rotacao_pastos')
+          .select('pasto_id')
+          .eq('modulo_id', moduloId)
+        
+        oldPastoIds = oldRotacoes?.map(r => r.pasto_id) || []
+      }
+
       // Remove existing associations
       await supabase
         .from('rotacao_pastos')
@@ -191,20 +202,14 @@ export function ModulosPastos() {
         await supabase.from('rotacao_pastos').insert(rotacoes)
       }
 
-      // Update pastos modulo_id
+      // Update pastos modulo_id for selected pastos
       await supabase
         .from('pastos')
         .update({ modulo_id: selectedPastos.length > 0 ? moduloId : null })
         .in('id', selectedPastos)
 
       // Reset modulo_id for pastos that were previously in this module but are no longer selected
-      if (editingModulo) {
-        const { data: oldRotacoes } = await supabase
-          .from('rotacao_pastos')
-          .select('pasto_id')
-        .eq('modulo_id', moduloId)
-        
-        const oldPastoIds = oldRotacoes?.map(r => r.pasto_id) || []
+      if (editingModulo && oldPastoIds.length > 0) {
         const toReset = oldPastoIds.filter(id => !selectedPastos.includes(id))
         if (toReset.length > 0) {
           await supabase
@@ -435,8 +440,8 @@ export function ModulosPastos() {
       ) : !showForm ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredModulos.map((modulo) => (
-            <Card key={modulo.id} className={`hover:shadow-lg transition-shadow ${!modulo.ativo ? 'opacity-60' : ''}`}>
-              <div className="space-y-3">
+            <Card key={modulo.id} className={`hover:shadow-lg transition-shadow flex flex-col ${!modulo.ativo ? 'opacity-60' : ''}`}>
+              <div className="flex flex-col flex-grow space-y-3">
                 <div className="flex justify-between items-start">
                   <div>
                     <h3 className="font-semibold text-lg">{modulo.nome}</h3>
@@ -467,36 +472,36 @@ export function ModulosPastos() {
                     </div>
                   </div>
                 )}
-                <div className="flex gap-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleEdit(modulo)}
-                    className="flex-1"
-                  >
-                    Editar
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleToggleActive(modulo)}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    {modulo.ativo ? 'Desativar' : 'Ativar'}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setModuloToDelete(modulo)
-                      setShowDeleteModal(true)
-                    }}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    Excluir
-                  </Button>
-                </div>
+              </div>
+              <div className="flex gap-2 mt-auto pt-3">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => handleEdit(modulo)}
+                  className="flex-1"
+                >
+                  Editar
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => handleToggleActive(modulo)}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  {modulo.ativo ? 'Desativar' : 'Ativar'}
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setModuloToDelete(modulo)
+                    setShowDeleteModal(true)
+                  }}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  Excluir
+                </Button>
               </div>
             </Card>
           ))}
