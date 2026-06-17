@@ -107,7 +107,7 @@ export function Lotes() {
   const [searchTerm, setSearchTerm] = useState('')
   const [pastos, setPastos] = useState<{id: string, nome: string}[]>([])
   const [racas, setRacas] = useState<{id: string, nome: string}[]>([])
-  const [nutritionalOptions, setNutritionalOptions] = useState<{id: string, name: string, category: string, consumo_meta?: number}[]>([])
+  const [nutritionalOptions, setNutritionalOptions] = useState<{id: string, name: string, category: string, consumo_meta?: number, gmd?: number}[]>([])
   const [movimentacaoData, setMovimentacaoData] = useState<any[]>([])
   const [maternidadeData, setMaternidadeData] = useState<any[]>([])
   const [morteData, setMorteData] = useState<any[]>([])
