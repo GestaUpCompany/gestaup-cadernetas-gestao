@@ -26,11 +26,11 @@ interface Dieta {
   sistema_producao?: string
   custo_total?: number
   custo_diario_animal?: number
-  consumo_diario_kg?: number
+  consumo_mn_kg_cab_dia?: number
   teor_ms_dieta?: number
   custo_ms_tonelada?: number
   custo_mn_tonelada?: number
-  consumo_ms_total?: number
+  consumo_ms_kg_cab_dia?: number
   ativo: boolean
   created_at: string
   updated_at: string
@@ -254,11 +254,11 @@ export function Formulacoes() {
       insumos: recalculated as unknown as Record<string, unknown>[],
       custo_total: custoTotal,
       custo_diario_animal: custoDiarioTotal,
-      consumo_diario_kg: consumoMNTotal,
+      consumo_mn_kg_cab_dia: consumoMNTotal,
       teor_ms_dieta: teorMSDieta,
       custo_ms_tonelada: custoMSTonelada,
       custo_mn_tonelada: custoTotal,
-      consumo_ms_total: consumoMSTotal,
+      consumo_ms_kg_cab_dia: consumoMSTotal,
       ativo: formData.ativo,
     }
 
@@ -742,8 +742,8 @@ export function Formulacoes() {
                   {dieta.teor_ms_dieta != null && (
                     <p><span className="font-medium">Teor MS:</span> {fmt(dieta.teor_ms_dieta)}%</p>
                   )}
-                  {dieta.consumo_ms_total != null && (
-                    <p><span className="font-medium">Consumo MS:</span> {fmt(dieta.consumo_ms_total, 3)} kg</p>
+                  {dieta.consumo_ms_kg_cab_dia != null && (
+                    <p><span className="font-medium">Consumo MS:</span> {fmt(dieta.consumo_ms_kg_cab_dia, 3)} kg</p>
                   )}
                   {dieta.custo_diario_animal != null && (
                     <p><span className="font-medium">Custo/dia:</span> R$ {dieta.custo_diario_animal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
