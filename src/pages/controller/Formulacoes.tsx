@@ -25,7 +25,7 @@ interface Dieta {
   gmd?: number
   sistema_producao?: string
   custo_total?: number
-  custo_diario_animal?: number
+  custo_dieta_reais_cab_dia?: number
   consumo_mn_kg_cab_dia?: number
   teor_ms_dieta?: number
   custo_ms_tonelada?: number
@@ -253,7 +253,7 @@ export function Formulacoes() {
       sistema_producao: formData.sistema_producao || null,
       insumos: recalculated as unknown as Record<string, unknown>[],
       custo_total: custoTotal,
-      custo_diario_animal: custoDiarioTotal,
+      custo_dieta_reais_cab_dia: custoDiarioTotal,
       consumo_mn_kg_cab_dia: consumoMNTotal,
       teor_ms_dieta: teorMSDieta,
       custo_ms_tonelada: custoMSTonelada,
@@ -745,8 +745,8 @@ export function Formulacoes() {
                   {dieta.consumo_ms_kg_cab_dia != null && (
                     <p><span className="font-medium">Consumo MS:</span> {fmt(dieta.consumo_ms_kg_cab_dia, 3)} kg</p>
                   )}
-                  {dieta.custo_diario_animal != null && (
-                    <p><span className="font-medium">Custo/dia:</span> R$ {dieta.custo_diario_animal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                  {dieta.custo_dieta_reais_cab_dia != null && (
+                    <p><span className="font-medium">Custo/dia:</span> R$ {dieta.custo_dieta_reais_cab_dia.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                   )}
                   {dieta.insumos && dieta.insumos.length > 0 && (
                     <p><span className="font-medium">Insumos:</span> {dieta.insumos.length}</p>
