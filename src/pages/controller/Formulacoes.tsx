@@ -29,6 +29,7 @@ interface Dieta {
   consumo_diario_kg?: number
   teor_ms_dieta?: number
   custo_ms_tonelada?: number
+  custo_mn_tonelada?: number
   consumo_ms_total?: number
   ativo: boolean
   created_at: string
@@ -256,6 +257,7 @@ export function Formulacoes() {
       consumo_diario_kg: consumoMNTotal,
       teor_ms_dieta: teorMSDieta,
       custo_ms_tonelada: custoMSTonelada,
+      custo_mn_tonelada: custoTotal,
       consumo_ms_total: consumoMSTotal,
       ativo: formData.ativo,
     }
