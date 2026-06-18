@@ -30,7 +30,7 @@ const menuStructure = [
     ),
     items: [
       { label: 'Pastos', path: '/controller/pastos' },
-      { label: 'Módulos de Pastos', path: '/controller/modulos-pastos' },
+      { label: 'Módulos', path: '/controller/modulos-pastos' },
       { label: 'Lotes', path: '/controller/lotes' },
       { label: 'Cadastros Auxiliares', path: '/controller/cadastros-auxiliares' },
     ],
