@@ -13,6 +13,8 @@ interface Bebedouro {
   capacidade?: number
   data_ultima_limpeza?: string
   meta_intervalo_limpeza?: number
+  setor_id?: string
+  setores?: { nome: string }
   ativo: boolean
   created_at: string
   updated_at?: string
@@ -37,12 +39,42 @@ export function BebedourosCadastro() {
     nome: '',
     capacidade: '',
     data_ultima_limpeza: '',
-    meta_intervalo_limpeza: ''
+    meta_intervalo_limpeza: '',
+    setor_id: ''
   })
+  const [setores, setSetores] = useState<{id: string, nome: string}[]>([])
 
   useEffect(() => {
     loadBebedouros()
+    loadSetores()
   }, [user])
+
+  const loadSetores = async () => {
+    if (!user) return
+
+    const { data: vinculos } = await supabase
+      .from('usuario_fazenda')
+      .select('fazenda_id')
+      .eq('usuario_id', user.id)
+      .eq('ativo', true)
+
+    if (!vinculos || vinculos.length === 0) return
+
+    const fazendaId = vinculos[0].fazenda_id
+
+    const { data, error } = await supabase
+      .from('setores')
+      .select('id, nome')
+      .eq('fazenda_id', fazendaId)
+      .eq('ativo', true)
+      .order('nome', { ascending: true })
+
+    if (error) {
+      console.error('Erro ao buscar setores:', error)
+    } else {
+      setSetores(data || [])
+    }
+  }
 
   const loadBebedouros = async () => {
     if (!user) return
@@ -59,7 +91,7 @@ export function BebedourosCadastro() {
 
     const { data, error } = await supabase
       .from('bebedouros')
-      .select('*')
+      .select('*, setores(nome)')
       .eq('fazenda_id', fazendaId)
       .order('nome', { ascending: true })
 
@@ -112,6 +144,7 @@ export function BebedourosCadastro() {
       capacidade: formData.capacidade ? parseFloat(formData.capacidade) : null,
       data_ultima_limpeza: formData.data_ultima_limpeza || null,
       meta_intervalo_limpeza: formData.meta_intervalo_limpeza ? parseInt(formData.meta_intervalo_limpeza) : null,
+      setor_id: formData.setor_id || null,
       ativo: true
     }
 
@@ -145,7 +178,8 @@ export function BebedourosCadastro() {
       nome: bebedouro.nome,
       capacidade: bebedouro.capacidade?.toString() || '',
       data_ultima_limpeza: bebedouro.data_ultima_limpeza_historico || '',
-      meta_intervalo_limpeza: bebedouro.meta_intervalo_limpeza?.toString() || ''
+      meta_intervalo_limpeza: bebedouro.meta_intervalo_limpeza?.toString() || '',
+      setor_id: bebedouro.setor_id || ''
     })
     setShowForm(true)
   }
@@ -389,7 +423,7 @@ export function BebedourosCadastro() {
   const handleCancel = () => {
     setShowForm(false)
     setEditingBebedouro(null)
-    setFormData({ nome: '', capacidade: '', data_ultima_limpeza: '', meta_intervalo_limpeza: '' })
+    setFormData({ nome: '', capacidade: '', data_ultima_limpeza: '', meta_intervalo_limpeza: '', setor_id: '' })
   }
 
   if (loading) {
@@ -505,6 +539,22 @@ export function BebedourosCadastro() {
               />
             </div>
 
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Setor
+              </label>
+              <select
+                value={formData.setor_id}
+                onChange={(e) => setFormData({ ...formData, setor_id: e.target.value })}
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-gray-200 rounded-lg focus:outline-none focus:border-accent bg-white text-gray-700"
+              >
+                <option value="">Selecione um setor</option>
+                {setores.map((setor) => (
+                  <option key={setor.id} value={setor.id}>{setor.nome}</option>
+                ))}
+              </select>
+            </div>
+
             <div className="flex gap-2">
               <Button type="submit" disabled={submitting}>
                 {submitting ? 'Salvando...' : 'Salvar'}
@@ -532,7 +582,10 @@ export function BebedourosCadastro() {
               <CardItem
                 key={bebedouro.id}
                 title={bebedouro.nome}
-                subtitle={bebedouro.capacidade ? `Capacidade: ${bebedouro.capacidade} L` : undefined}
+                subtitle={[
+                  bebedouro.capacidade ? `Capacidade: ${bebedouro.capacidade} L` : undefined,
+                  bebedouro.setores?.nome ? `Setor: ${bebedouro.setores.nome}` : undefined
+                ].filter(Boolean).join(' | ') || undefined}
                 status={bebedouro.ativo}
                 onClick={() => handleEdit(bebedouro)}
               >

@@ -365,7 +365,7 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
         )}
 
         {/* Main Content */}
-        <main className={`flex-1 p-6 md:p-8 transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
+        <main className={`flex-1 p-6 md:p-8 transition-all duration-300 min-w-0 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
           {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileMenuOpen(true)}

@@ -107,7 +107,7 @@ export function RegistrosCantina() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-4 sm:space-y-6 min-w-0">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Caderneta de Cantina</h2>
       </div>

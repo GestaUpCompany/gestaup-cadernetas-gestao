@@ -1205,7 +1205,7 @@ export function Lotes() {
               placeholder="Buscar lote..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-xs border-gray-200 focus:border-accent h-10"
+              className="flex-1 min-w-0 border-gray-200 focus:border-accent h-10"
             />
             <Button onClick={() => {
               setShowForm(true)
@@ -1239,7 +1239,7 @@ export function Lotes() {
             {/* Identificação Básica */}
             <div className="border-t pt-4">
               <h4 className="text-lg font-semibold text-gray-800 mb-4">Identificação Básica</h4>
-              <div className="grid grid-cols-6 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Nome <span className="text-red-500">*</span>
@@ -1269,7 +1269,7 @@ export function Lotes() {
                     ))}
                   </select>
                 </div>
-                <div className="col-span-2">
+                <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Sistema de Produção <span className="text-red-500">*</span>
                   </label>
@@ -1289,7 +1289,7 @@ export function Lotes() {
                     <option value="TIP">TIP</option>
                   </select>
                 </div>
-                <div className="col-span-2">
+                <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Meta de Intervalo de Rodeio (dias)
                   </label>
@@ -1361,7 +1361,7 @@ export function Lotes() {
                         <h6 className={`text-sm font-bold text-gray-800 mb-3 border-l-3 pl-3 py-1 rounded-r ${getCategoriaColor(cat.categoria)} ${getCategoriaBgColor(cat.categoria)}`}>
                           Identificação
                         </h6>
-                        <div className="grid grid-cols-6 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Raça <span className="text-red-500">*</span>
@@ -1426,7 +1426,7 @@ export function Lotes() {
                         <h6 className={`text-sm font-bold text-gray-800 mb-3 border-l-3 pl-3 py-1 rounded-r ${getCategoriaColor(cat.categoria)} ${getCategoriaBgColor(cat.categoria)}`}>
                           Quantidade e Datas
                         </h6>
-                        <div className="grid grid-cols-6 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                           <div className="col-span-1">
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Quant. Inicial (cab)
@@ -1501,8 +1501,8 @@ export function Lotes() {
                             />
                           </div>
                         </div>
-                        <div className="grid grid-cols-6 gap-2 mt-2">
-                          <div className="col-span-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2 mt-2">
+                          <div className="col-span-1 sm:col-span-2 lg:col-span-2 xl:col-span-3">
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Estratégia Nutricional
                             </label>
@@ -1524,7 +1524,7 @@ export function Lotes() {
                               className="border-gray-200 focus:border-accent"
                             />
                           </div>
-                          <div className="col-span-2">
+                          <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Consumo Meta (%/PV)
                             </label>
@@ -1548,7 +1548,7 @@ export function Lotes() {
                         {/* Entrada */}
                         <div className="mb-4">
                           <span className="text-sm font-bold text-gray-700 mb-2 block border-b border-gray-300 pb-1">Entrada</span>
-                          <div className="grid grid-cols-6 gap-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Peso Entrada (kg/cab)
@@ -1601,7 +1601,7 @@ export function Lotes() {
                         {/* Atual */}
                         <div className="mb-4">
                           <span className="text-sm font-bold text-gray-700 mb-2 block border-b border-gray-300 pb-1">Atual</span>
-                          <div className="grid grid-cols-6 gap-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Peso Vivo Atual (kg/cab)
@@ -1660,7 +1660,7 @@ export function Lotes() {
                         {/* Meta */}
                         <div className="mb-4">
                           <span className="text-sm font-bold text-gray-700 mb-2 block border-b border-gray-300 pb-1">Meta</span>
-                          <div className="grid grid-cols-6 gap-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Peso Vivo Meta (kg/cab)
@@ -1706,7 +1706,7 @@ export function Lotes() {
                                 className="bg-gray-50 border-gray-200 focus:border-accent opacity-60"
                               />
                             </div>
-                            <div className="col-span-2">
+                            <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
                               <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Produção Projetada (@/cab)
                               </label>
@@ -1718,7 +1718,7 @@ export function Lotes() {
                                 className="bg-gray-50 border-gray-200 focus:border-accent opacity-60"
                               />
                             </div>
-                            <div className="col-span-2">
+                            <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
                               <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Venda Total Projetada (@/Lote/Categoria)
                               </label>
@@ -1731,7 +1731,7 @@ export function Lotes() {
                               />
                             </div>
                           </div>
-                          <div className="grid grid-cols-6 gap-2 mt-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2 mt-2">
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Data Meta Projetada
@@ -1764,7 +1764,7 @@ export function Lotes() {
                         <h6 className={`text-sm font-bold text-gray-800 mb-3 border-l-3 pl-3 py-1 rounded-r ${getCategoriaColor(cat.categoria)} ${getCategoriaBgColor(cat.categoria)}`}>
                           Financeiro
                         </h6>
-                        <div className="grid grid-cols-6 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Preço Entrada (R$/kg)
@@ -1818,7 +1818,7 @@ export function Lotes() {
                               className="border-gray-200 focus:border-accent opacity-60"
                             />
                           </div>
-                          <div className="col-span-2">
+                          <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
                             <label className="block text-sm font-medium text-gray-700 mb-1 whitespace-nowrap">
                               Custo Operacional (R$/cab/dia)
                             </label>
@@ -1836,7 +1836,7 @@ export function Lotes() {
                           </div>
                         </div>
                         
-                        <div className="grid grid-cols-6 gap-2 mt-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2 mt-2">
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Custo Frete (R$/cab)
@@ -1888,7 +1888,7 @@ export function Lotes() {
                               className="border-gray-200 focus:border-accent"
                             />
                           </div>
-                          <div className="col-span-2">
+                          <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Custo Identificação/Rastreabilidade (R$/cab)
                             </label>
@@ -1907,9 +1907,9 @@ export function Lotes() {
                           </div>
                         </div>
                         
-                        <div className="mt-2 flex gap-2">
-                          <div className="max-w-xs">
-                            <label className="block text-sm font-medium text-gray-700 mb-1 whitespace-nowrap">
+                        <div className="mt-2 flex flex-col sm:flex-row gap-2">
+                          <div className="flex-1 min-w-0">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
                               Custo Total Entrada (R$/cab)
                             </label>
                             <Input
@@ -1920,8 +1920,8 @@ export function Lotes() {
                               className="bg-gray-50 border-gray-200 focus:border-accent opacity-60"
                             />
                           </div>
-                          <div className="max-w-xs">
-                            <label className="block text-sm font-medium text-gray-700 mb-1 whitespace-nowrap">
+                          <div className="flex-1 min-w-0">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
                               Custo Total Entrada (R$/Lote)
                             </label>
                             <Input
@@ -1937,7 +1937,7 @@ export function Lotes() {
                         {/* Calculated Prices */}
                         <div className="mt-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
                           <h6 className="text-sm font-semibold text-blue-800 mb-3">Preços Sugeridos de Venda</h6>
-                          <div className="grid grid-cols-6 gap-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                             <div>
                               <label className="block text-xs font-medium text-blue-700 mb-1">
                                 Preço Custo (R$/@)
@@ -1991,7 +1991,7 @@ export function Lotes() {
                                 className="bg-gray-100 border-green-300 focus:border-green-500 opacity-90 text-xs font-semibold text-green-700"
                               />
                             </div>
-                            <div className="col-span-2">
+                            <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
                               <label className="block text-xs font-medium text-green-700 mb-1">
                                 Faturamento Projetado (R$/Lote/Categoria)
                               </label>
@@ -2135,7 +2135,7 @@ export function Lotes() {
             {/* Informações Administrativas */}
             <div className="border-t pt-4">
               <h4 className="text-lg font-semibold text-gray-800 mb-4">Informações Administrativas</h4>
-              <div className="grid grid-cols-6 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Produtor Rural
@@ -2148,7 +2148,7 @@ export function Lotes() {
                     className="border-gray-200 focus:border-accent"
                   />
                 </div>
-                <div className="col-span-2">
+                <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Propriedade de Origem
                   </label>
@@ -2172,7 +2172,7 @@ export function Lotes() {
                     className="border-gray-200 focus:border-accent"
                   />
                 </div>
-                <div className="col-span-2">
+                <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Mês de Competência
                   </label>
@@ -2189,8 +2189,8 @@ export function Lotes() {
             {/* SISBOV e Logística */}
             <div className="border-t pt-4">
               <h4 className="text-lg font-semibold text-gray-800 mb-4">SISBOV e Logística</h4>
-              <div className="grid grid-cols-6 gap-2">
-                <div className="col-span-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
+                <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Data Liberação SISBOV
                   </label>
@@ -2201,7 +2201,7 @@ export function Lotes() {
                     className="border-gray-200 focus:border-accent"
                   />
                 </div>
-                <div className="col-span-2">
+                <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Período Liberação SISBOV
                   </label>
@@ -2214,7 +2214,7 @@ export function Lotes() {
                     className="border-gray-200 focus:border-accent opacity-60"
                   />
                 </div>
-                <div className="col-span-2">
+                <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Data Embarque Prevista
                   </label>

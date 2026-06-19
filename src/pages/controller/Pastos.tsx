@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton, ConfirmModal, MultiSelect } from '../../components/ui'
@@ -25,10 +26,12 @@ interface Pasto {
   bebedouros?: {id: string, nome: string}[]
   modulo_id?: string
   modulo_nome?: string
+  modulo_ativo?: boolean
   ativo: boolean
 }
 
 export function Pastos() {
+  const navigate = useNavigate()
   const { user } = useAuth()
   const [pastos, setPastos] = useState<Pasto[]>([])
   const [setores, setSetores] = useState<{ id: string; nome: string }[]>([])
@@ -131,7 +134,7 @@ export function Pastos() {
 
     const { data, error } = await supabase
       .from('pastos')
-      .select('*, modulos_pastos!left(nome)')
+      .select('*, modulos_pastos!left(nome, ativo)')
       .eq('fazenda_id', fazendaId)
       .order('created_at', { ascending: false })
 
@@ -140,7 +143,8 @@ export function Pastos() {
     } else {
       const pastosWithModulo = (data as any[]).map(pasto => ({
         ...pasto,
-        modulo_nome: pasto.modulos_pastos?.nome || null
+        modulo_nome: pasto.modulos_pastos?.nome || null,
+        modulo_ativo: pasto.modulos_pastos?.ativo ?? true
       }))
       setPastos(pastosWithModulo as Pasto[])
     }
@@ -641,9 +645,27 @@ export function Pastos() {
       {showForm && (
         <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm">
           <div className="flex justify-between items-start mb-4">
-            <h3 className="text-lg sm:text-xl font-semibold text-gray-800">
-              {editingPasto ? 'Editar Pasto' : 'Novo Pasto'}
-            </h3>
+            <div>
+              <h3 className="text-lg sm:text-xl font-semibold text-gray-800">
+                {editingPasto ? 'Editar Pasto' : 'Novo Pasto'}
+              </h3>
+              {editingPasto && !editingPasto.ativo && editingPasto.modulo_id && editingPasto.modulo_ativo === false && (
+                <div className="mt-1">
+                  <p className="text-sm text-amber-600">
+                    Este pasto foi desativado porque seu módulo "{editingPasto.modulo_nome}" também foi desativado.
+                    Para reativar este pasto, será necessário reativar seu módulo primeiro.
+                  </p>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="mt-2 text-xs"
+                    onClick={() => navigate('/controller/modulos-pastos', { state: { editModuloId: editingPasto.modulo_id } })}
+                  >
+                    Ir para Módulo
+                  </Button>
+                </div>
+              )}
+            </div>
             <button
               type="button"
               onClick={handleCancel}

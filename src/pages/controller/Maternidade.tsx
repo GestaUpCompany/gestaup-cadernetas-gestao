@@ -108,12 +108,12 @@ export function Maternidade() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="w-full min-w-0">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
         <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Caderneta de Maternidade</h2>
       </div>
 
-      <Card className="bg-white p-4 sm:p-6" disableHover>
+      <Card className="bg-white p-4 sm:p-6 mb-4" disableHover>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
           <h3 className="text-base sm:text-lg font-semibold text-gray-800">Filtros</h3>
           <Button
@@ -170,14 +170,18 @@ export function Maternidade() {
         <Card className="bg-white p-4 sm:p-6 text-center" disableHover>
           <p className="text-gray-600">Nenhum registro de maternidade encontrado</p>
         </Card>
+      ) : filteredRegistros.length === 0 ? (
+        <Card className="bg-white p-4 sm:p-6 text-center" disableHover>
+          <p className="text-gray-600">Nenhum registro encontrado com os filtros aplicados</p>
+        </Card>
       ) : (
         <>
           {/* Mobile Card View */}
-          <div className="sm:hidden space-y-3">
+          <div className="sm:hidden space-y-3 w-full">
             {filteredRegistros.map((registro) => (
               <Card
                 key={registro.id}
-                className="bg-white p-4 cursor-pointer hover:shadow-lg transition-shadow"
+                className="p-4 w-full"
                 onClick={() => navigate(`/controller/cadernetas/maternidade/${registro.id}`)}
               >
                 <div className="flex justify-between items-start mb-3">
@@ -200,19 +204,19 @@ export function Maternidade() {
                 <div className="space-y-2 text-xs sm:text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-500">ID Brinco:</span>
-                    <span className="text-gray-800 font-medium">{registro.id_brinco_mae || '-'}</span>
+                    <span className="text-gray-800 font-medium truncate max-w-[120px]">{registro.id_brinco_mae || '-'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">ID Chip:</span>
-                    <span className="text-gray-800 font-medium">{registro.id_chip_mae || '-'}</span>
+                    <span className="text-gray-800 font-medium truncate max-w-[120px]">{registro.id_chip_mae || '-'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Categoria Mãe:</span>
-                    <span className="text-gray-800 font-medium">{registro.categoria_mae || '-'}</span>
+                    <span className="text-gray-800 font-medium truncate max-w-[120px]">{registro.categoria_mae || '-'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">ID Provisório:</span>
-                    <span className="text-gray-800 font-medium">{registro.id_provisorio_cria || '-'}</span>
+                    <span className="text-gray-800 font-medium truncate max-w-[120px]">{registro.id_provisorio_cria || '-'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Sexo:</span>
@@ -224,15 +228,15 @@ export function Maternidade() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Tipo Parto:</span>
-                    <span className="text-gray-800 font-medium">{registro.tipo_parto || '-'}</span>
+                    <span className="text-gray-800 font-medium truncate max-w-[120px]">{registro.tipo_parto || '-'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Lote:</span>
-                    <span className="text-gray-800 font-medium">{registro.lote || '-'}</span>
+                    <span className="text-gray-800 font-medium truncate max-w-[120px]">{registro.lote || '-'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Pasto:</span>
-                    <span className="text-gray-800 font-medium">{registro.pasto || '-'}</span>
+                    <span className="text-gray-800 font-medium truncate max-w-[120px]">{registro.pasto || '-'}</span>
                   </div>
                 </div>
               </Card>
@@ -240,7 +244,7 @@ export function Maternidade() {
           </div>
 
           {/* Desktop Table View */}
-          <Card className="bg-white overflow-x-auto hidden sm:block" disableHover>
+          <Card className="bg-white overflow-x-auto hidden sm:block max-w-full min-w-0" disableHover>
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>

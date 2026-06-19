@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
@@ -8,9 +9,13 @@ interface ModuloPasto {
   fazenda_id: string
   nome: string
   area_util_total_ha: number
+  setor_id?: string
+  sistema_producao?: string
+  responsavel?: string
   ativo: boolean
   deleted_at?: string
   pastos?: Pasto[]
+  setores?: { nome: string }
 }
 
 interface Pasto {
@@ -22,6 +27,7 @@ interface Pasto {
 }
 
 export function ModulosPastos() {
+  const location = useLocation()
   const { user } = useAuth()
   const [modulos, setModulos] = useState<ModuloPasto[]>([])
   const [pastos, setPastos] = useState<Pasto[]>([])
@@ -32,12 +38,18 @@ export function ModulosPastos() {
   const [showInactive, setShowInactive] = useState(false)
   const [formData, setFormData] = useState({
     nome: '',
+    setor_id: '',
+    sistema_producao: '',
+    responsavel: '',
   })
+  const [setores, setSetores] = useState<{id: string, nome: string}[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [selectedPastos, setSelectedPastos] = useState<string[]>([])
   const [calculatedArea, setCalculatedArea] = useState(0)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [moduloToDelete, setModuloToDelete] = useState<ModuloPasto | null>(null)
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false)
+  const [moduloToDeactivate, setModuloToDeactivate] = useState<ModuloPasto | null>(null)
 
   const loadModulos = async () => {
     if (!user) return
@@ -57,7 +69,7 @@ export function ModulosPastos() {
 
     const { data, error } = await supabase
       .from('modulos_pastos')
-      .select('*, pastos(id, nome, area_util_ha, especie)')
+      .select('*, pastos(id, nome, area_util_ha, especie), setores(nome)')
       .eq('fazenda_id', fazendaId)
       .order('nome')
 
@@ -109,7 +121,48 @@ export function ModulosPastos() {
   useEffect(() => {
     loadModulos()
     loadPastos()
+    loadSetores()
   }, [user])
+
+  // Se navegou com state para editar um módulo específico
+  useEffect(() => {
+    const editModuloId = (location.state as any)?.editModuloId
+    if (editModuloId && modulos.length > 0) {
+      // Limpar o state para não reexecutar
+      window.history.replaceState({}, document.title)
+      const modulo = modulos.find(m => m.id === editModuloId)
+      if (modulo) {
+        handleEdit(modulo)
+      }
+    }
+  }, [modulos])
+
+  const loadSetores = async () => {
+    if (!user) return
+
+    const { data: vinculos } = await supabase
+      .from('usuario_fazenda')
+      .select('fazenda_id')
+      .eq('usuario_id', user.id)
+      .eq('ativo', true)
+
+    if (!vinculos || vinculos.length === 0) return
+
+    const fazendaId = vinculos[0].fazenda_id
+
+    const { data, error } = await supabase
+      .from('setores')
+      .select('id, nome')
+      .eq('fazenda_id', fazendaId)
+      .eq('ativo', true)
+      .order('nome', { ascending: true })
+
+    if (error) {
+      console.error('Erro ao buscar setores:', error)
+    } else {
+      setSetores(data || [])
+    }
+  }
 
   useEffect(() => {
     // Recarregar pastos quando mudar entre criar/editar
@@ -153,6 +206,9 @@ export function ModulosPastos() {
     const data = {
       fazenda_id: fazendaId,
       nome: formData.nome,
+      setor_id: formData.setor_id || null,
+      sistema_producao: formData.sistema_producao || null,
+      responsavel: formData.responsavel || null,
     }
 
     let moduloId: string | undefined
@@ -219,7 +275,7 @@ export function ModulosPastos() {
         }
       }
 
-      setFormData({ nome: '' })
+      setFormData({ nome: '', setor_id: '', sistema_producao: '', responsavel: '' })
       setSelectedPastos([])
       setShowForm(false)
       setEditingModulo(null)
@@ -233,6 +289,9 @@ export function ModulosPastos() {
     setEditingModulo(modulo)
     setFormData({
       nome: modulo.nome,
+      setor_id: modulo.setor_id || '',
+      sistema_producao: modulo.sistema_producao || '',
+      responsavel: modulo.responsavel || '',
     })
     
     // Load associated pastos
@@ -246,7 +305,53 @@ export function ModulosPastos() {
     setShowForm(true)
   }
 
+  const handleDeactivateClick = (modulo: ModuloPasto) => {
+    setModuloToDeactivate(modulo)
+    setShowDeactivateModal(true)
+  }
+
+  const handleDeactivateConfirm = async () => {
+    if (!moduloToDeactivate) return
+
+    // Desativar os pastos associados ao módulo
+    const { error: pastosError } = await supabase
+      .from('pastos')
+      .update({ ativo: false })
+      .eq('modulo_id', moduloToDeactivate.id)
+
+    if (pastosError) {
+      console.error('Erro ao desativar pastos:', pastosError)
+    }
+
+    // Desativar o módulo
+    const { error } = await supabase
+      .from('modulos_pastos')
+      .update({ ativo: false })
+      .eq('id', moduloToDeactivate.id)
+
+    if (error) {
+      console.error('Erro ao desativar módulo:', error)
+    } else {
+      loadModulos()
+    }
+
+    setShowDeactivateModal(false)
+    setModuloToDeactivate(null)
+  }
+
   const handleToggleActive = async (modulo: ModuloPasto) => {
+    // Se estiver reativando o módulo, reativar também os pastos associados
+    if (!modulo.ativo) {
+      const { error: pastosError } = await supabase
+        .from('pastos')
+        .update({ ativo: true })
+        .eq('modulo_id', modulo.id)
+
+      if (pastosError) {
+        console.error('Erro ao reativar pastos:', pastosError)
+      }
+    }
+
     const { error } = await supabase
       .from('modulos_pastos')
       .update({ ativo: !modulo.ativo })
@@ -293,7 +398,7 @@ export function ModulosPastos() {
 
   const handleCancel = () => {
     setEditingModulo(null)
-    setFormData({ nome: '' })
+    setFormData({ nome: '', setor_id: '', sistema_producao: '', responsavel: '' })
     setSelectedPastos([])
     setShowForm(false)
   }
@@ -366,6 +471,55 @@ export function ModulosPastos() {
                 onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                 required
                 placeholder="Ex: Módulo 1"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Setor
+              </label>
+              <select
+                value={formData.setor_id}
+                onChange={(e) => setFormData({ ...formData, setor_id: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] bg-white"
+              >
+                <option value="">Selecione um setor</option>
+                {setores.map((setor) => (
+                  <option key={setor.id} value={setor.id}>{setor.nome}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Sistema de Produção
+              </label>
+              <select
+                value={formData.sistema_producao}
+                onChange={(e) => setFormData({ ...formData, sistema_producao: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] bg-white"
+              >
+                <option value="">Selecione</option>
+                <option value="Cria">Cria</option>
+                <option value="Recria">Recria</option>
+                <option value="Engorda">Engorda</option>
+                <option value="Volumosos">Volumosos</option>
+                <option value="RIP">RIP</option>
+                <option value="TIP">TIP</option>
+                <option value="Enfermaria">Enfermaria</option>
+                <option value="Confinamento">Confinamento</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Responsável
+              </label>
+              <Input
+                type="text"
+                value={formData.responsavel}
+                onChange={(e) => setFormData({ ...formData, responsavel: e.target.value })}
+                placeholder="Nome do responsável"
               />
             </div>
 
@@ -448,6 +602,15 @@ export function ModulosPastos() {
                     <p className="text-sm text-gray-600">
                       Área Útil Total: {modulo.area_util_total_ha?.toFixed(2) || 0} ha
                     </p>
+                    {modulo.setores?.nome && (
+                      <p className="text-sm text-gray-600">Setor: {modulo.setores.nome}</p>
+                    )}
+                    {modulo.sistema_producao && (
+                      <p className="text-sm text-gray-600">Sistema: {modulo.sistema_producao}</p>
+                    )}
+                    {modulo.responsavel && (
+                      <p className="text-sm text-gray-600">Responsável: {modulo.responsavel}</p>
+                    )}
                   </div>
                   <span
                     className={`px-2 py-1 text-xs rounded-full ${
@@ -482,14 +645,24 @@ export function ModulosPastos() {
                 >
                   Editar
                 </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => handleToggleActive(modulo)}
-                  className="text-red-600 hover:text-red-700"
-                >
-                  {modulo.ativo ? 'Desativar' : 'Ativar'}
-                </Button>
+                {modulo.ativo ? (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleDeactivateClick(modulo)}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    Desativar
+                  </Button>
+                ) : (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleToggleActive(modulo)}
+                  >
+                    Ativar
+                  </Button>
+                )}
                 <Button
                   variant="secondary"
                   size="sm"
@@ -509,6 +682,20 @@ export function ModulosPastos() {
       ) : null}
 
       <ConfirmModal
+        isOpen={showDeactivateModal}
+        onClose={() => {
+          setShowDeactivateModal(false)
+          setModuloToDeactivate(null)
+        }}
+        onConfirm={handleDeactivateConfirm}
+        title="Desativar Módulo"
+        message={`Tem certeza que deseja desativar o módulo "${moduloToDeactivate?.nome}"?`}
+        confirmText="Desativar"
+        cancelText="Cancelar"
+        variant="danger"
+      />
+
+      <ConfirmModal
         isOpen={showDeleteModal}
         onClose={() => {
           setShowDeleteModal(false)
@@ -516,7 +703,7 @@ export function ModulosPastos() {
         }}
         onConfirm={handleDelete}
         title="Excluir Módulo"
-        message={`Tem certeza que deseja excluir o módulo "${moduloToDelete?.nome}"? Esta ação pode ser desfeita reativando o módulo.`}
+        message={`Tem certeza que deseja excluir o módulo "${moduloToDelete?.nome}"?`}
       />
 
     </div>

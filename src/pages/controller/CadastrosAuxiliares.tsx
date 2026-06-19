@@ -216,6 +216,7 @@ const tabs: TabConfig[] = [
       { name: 'nome', label: 'Nome', required: true, placeholder: 'Nome do bebedouro' },
       { name: 'capacidade', label: 'Capacidade (L)', placeholder: 'Ex: 500' },
       { name: 'meta_intervalo_limpeza', label: 'Meta Intervalo Limpeza (dias)', placeholder: 'Ex: 30' },
+      { name: 'setor_id', label: 'Setor', placeholder: 'Selecione um setor' },
     ],
     searchPlaceholder: 'Buscar bebedouro...',
     category: 'Infraestrutura',
@@ -279,13 +280,35 @@ export function CadastrosAuxiliares() {
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
   const [importSuccess, setImportSuccess] = useState<string | null>(null)
+  const [setores, setSetores] = useState<{id: string, nome: string}[]>([])
 
   const currentTab = tabs.find((t) => t.key === activeTab)!
   const state = tabStates[activeTab]
 
   useEffect(() => {
     loadItems(activeTab)
+    if (activeTab === 'bebedouros') {
+      loadSetores()
+    }
   }, [activeTab, user])
+
+  const loadSetores = async () => {
+    const fazendaId = await getFazendaId()
+    if (!fazendaId) return
+
+    const { data, error } = await supabase
+      .from('setores')
+      .select('id, nome')
+      .eq('fazenda_id', fazendaId)
+      .eq('ativo', true)
+      .order('nome', { ascending: true })
+
+    if (error) {
+      console.error('Erro ao buscar setores:', error)
+    } else {
+      setSetores(data || [])
+    }
+  }
 
   const getFazendaId = async (): Promise<string | null> => {
     if (!user) return null
@@ -822,7 +845,18 @@ export function CadastrosAuxiliares() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       {field.label} {field.required && <span className="text-red-500">*</span>}
                     </label>
-                    {field.options ? (
+                    {field.name === 'setor_id' ? (
+                      <select
+                        value={state.formData[field.name] || ''}
+                        onChange={(e) => setFormField(field.name, e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] bg-white"
+                      >
+                        <option value="">{field.placeholder || 'Selecione'}</option>
+                        {setores.map((setor) => (
+                          <option key={setor.id} value={setor.id}>{setor.nome}</option>
+                        ))}
+                      </select>
+                    ) : field.options ? (
                       <select
                         value={state.formData[field.name] || ''}
                         onChange={(e) => setFormField(field.name, e.target.value)}
@@ -884,7 +918,12 @@ export function CadastrosAuxiliares() {
                     {currentTab.fields
                       .filter((f) => !['nome', 'nome_comercial'].includes(f.name) && item[f.name])
                       .map((f) => (
-                        <span key={f.name}>{f.label}: {item[f.name]}</span>
+                        <span key={f.name}>
+                          {f.label}: {f.name === 'setor_id' 
+                            ? setores.find(s => s.id === item[f.name])?.nome || item[f.name]
+                            : item[f.name]
+                          }
+                        </span>
                       ))}
                   </div>
                 }

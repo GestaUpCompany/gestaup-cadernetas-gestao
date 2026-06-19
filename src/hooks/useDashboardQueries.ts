@@ -265,13 +265,13 @@ export function useRecentActivities(userId: string | undefined) {
       const activities = []
 
       if (maternidadeData?.[0]) {
-        activities.push({ id: maternidadeData[0].id, type: 'Maternidade', title: 'Registro de parto', date: formatDateTime(maternidadeData[0].data), path: '/controller/maternidade' })
+        activities.push({ id: maternidadeData[0].id, type: 'Maternidade', title: 'Registro de parto', date: formatDateTime(maternidadeData[0].data), path: `/controller/cadernetas/maternidade/${maternidadeData[0].id}` })
       }
       if (enfermariaData?.[0]) {
-        activities.push({ id: enfermariaData[0].id, type: 'Enfermaria', title: 'Registro de tratamento', date: formatDateTime(enfermariaData[0].data), path: '/controller/enfermaria' })
+        activities.push({ id: enfermariaData[0].id, type: 'Enfermaria', title: 'Registro de tratamento', date: formatDateTime(enfermariaData[0].data), path: `/controller/cadernetas/enfermaria/${enfermariaData[0].id}` })
       }
       if (rodeioData?.[0]) {
-        activities.push({ id: rodeioData[0].id, type: 'Rodeio', title: 'Registro de rodeio', date: formatDateTime(rodeioData[0].data), path: '/controller/rodeio' })
+        activities.push({ id: rodeioData[0].id, type: 'Rodeio', title: 'Registro de rodeio', date: formatDateTime(rodeioData[0].data), path: `/controller/cadernetas/rodeio/${rodeioData[0].id}` })
       }
 
       return activities.slice(0, 5)
