@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton, ConfirmModal, CardItem } from '../../components/ui'
@@ -59,6 +60,7 @@ interface DietaInsumoCalc {
 
 export function Formulacoes() {
   const { user } = useAuth()
+  const [searchParams] = useSearchParams()
   const [formulacoes, setFormulacoes] = useState<Dieta[]>([])
   const [insumos, setInsumos] = useState<InsumoOption[]>([])
   const [loading, setLoading] = useState(true)
@@ -71,7 +73,7 @@ export function Formulacoes() {
     tipo: '',
     meta_consumo_ms_percent_pv: '0.30',
     peso_vivo_medio: '435.00',
-    gmd: '0.000',
+    gmd: '0,000',
     sistema_producao: '',
     ativo: true,
   })
@@ -84,6 +86,16 @@ export function Formulacoes() {
     loadFormulacoes()
     loadInsumos()
   }, [user])
+
+  useEffect(() => {
+    const editId = searchParams.get('edit')
+    if (editId && formulacoes.length > 0) {
+      const formulacaoToEdit = formulacoes.find(f => f.id === editId)
+      if (formulacaoToEdit) {
+        handleEdit(formulacaoToEdit)
+      }
+    }
+  }, [searchParams, formulacoes])
 
   const loadFormulacoes = async () => {
     if (!user) return
@@ -283,7 +295,7 @@ export function Formulacoes() {
         tipo: '',
         meta_consumo_ms_percent_pv: '0.30',
         peso_vivo_medio: '435.00',
-        gmd: '0.000',
+        gmd: '0,000',
         sistema_producao: '',
         ativo: true,
       })
@@ -303,7 +315,7 @@ export function Formulacoes() {
       tipo: dieta.tipo || '',
       meta_consumo_ms_percent_pv: dieta.meta_consumo_ms_percent_pv?.toFixed(2) || '0.30',
       peso_vivo_medio: dieta.peso_vivo_medio?.toFixed(2) || '435.00',
-      gmd: dieta.gmd?.toFixed(3) || '0.000',
+      gmd: dieta.gmd?.toFixed(3).replace('.', ',') || '0,000',
       sistema_producao: dieta.sistema_producao || '',
       ativo: dieta.ativo,
     })
@@ -331,7 +343,7 @@ export function Formulacoes() {
       tipo: '',
       meta_consumo_ms_percent_pv: '0.30',
       peso_vivo_medio: '435.00',
-      gmd: '0.000',
+      gmd: '0,000',
       sistema_producao: '',
       ativo: true,
     })
@@ -483,7 +495,7 @@ export function Formulacoes() {
             {/* Parameters */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Meta Consumo MS (%/PV)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Meta Consumo MS (%PV)</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -510,7 +522,10 @@ export function Formulacoes() {
                   type="text"
                   inputMode="decimal"
                   value={formData.gmd}
-                  onChange={(e) => setFormData({ ...formData, gmd: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value.replace('.', ',')
+                    setFormData({ ...formData, gmd: value })
+                  }}
                   placeholder="Ex: 0,300"
                   className="border-gray-200 focus:border-accent"
                 />
@@ -651,7 +666,7 @@ export function Formulacoes() {
             {selectedInsumos.length > 0 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 bg-green-50 p-4 rounded-lg">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Meta Consumo MS (%/PV)</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Meta Consumo MS (%PV)</label>
                   <div className="text-lg font-bold text-green-800">
                     {fmt(parseFloat(formData.meta_consumo_ms_percent_pv || '0'))}%
                   </div>
@@ -728,7 +743,7 @@ export function Formulacoes() {
               >
                 <div className="space-y-1 mb-4 text-sm text-gray-600">
                   {dieta.meta_consumo_ms_percent_pv != null && (
-                    <p><span className="font-medium">Meta MS (%/PV):</span> {fmt(dieta.meta_consumo_ms_percent_pv)}%</p>
+                    <p><span className="font-medium">Meta MS (%PV):</span> {fmt(dieta.meta_consumo_ms_percent_pv)}%</p>
                   )}
                   {dieta.peso_vivo_medio != null && (
                     <p><span className="font-medium">PV Médio:</span> {fmt(dieta.peso_vivo_medio)} kg</p>

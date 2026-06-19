@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton } from '../../components/ui'
-import { exportToCSV } from '../../utils/exportCSV'
+import { exportToExcel } from '../../utils/exportCSV'
 import { formatDate } from '../../utils/formatDate'
 
 interface RegistroSuplementacao {
@@ -15,7 +15,7 @@ interface RegistroSuplementacao {
   tratador?: string
   pasto?: string
   lote?: string
-  produto?: string
+  formulacao?: string
   gado?: string
   vaca?: boolean
   touro?: boolean
@@ -83,7 +83,7 @@ export function Suplementacao() {
       (registro.tratador && registro.tratador.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.lote && registro.lote.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.pasto && registro.pasto.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.produto && registro.produto.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.formulacao && registro.formulacao.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.sacos && registro.sacos.toString().includes(searchTerm.toLowerCase())) ||
       (registro.kg_cocho && registro.kg_cocho.toString().includes(searchTerm.toLowerCase())) ||
       (registro.kg_deposito && registro.kg_deposito.toString().includes(searchTerm.toLowerCase()))
@@ -119,11 +119,11 @@ export function Suplementacao() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
           <h3 className="text-base sm:text-lg font-semibold text-gray-800">Filtros</h3>
           <Button
-            onClick={() => exportToCSV(filteredRegistros, 'suplementacao-export')}
+            onClick={() => exportToExcel(filteredRegistros, 'suplementacao-export')}
             disabled={filteredRegistros.length === 0}
             className="w-full sm:w-auto text-sm"
           >
-            Exportar CSV
+            Exportar Excel
           </Button>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
@@ -209,8 +209,8 @@ export function Suplementacao() {
                     <span className="text-gray-800 font-medium">{registro.tratador || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Produto:</span>
-                    <span className="text-gray-800 font-medium">{registro.produto || '-'}</span>
+                    <span className="text-gray-500">Formulação:</span>
+                    <span className="text-gray-800 font-medium">{registro.formulacao || '-'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Lote:</span>
@@ -249,7 +249,7 @@ export function Suplementacao() {
                     Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
                   </th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tratador</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produto</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Formulação</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lote</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pasto</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sacos</th>
@@ -280,7 +280,7 @@ export function Suplementacao() {
                         {registro.tratador || '-'}
                       </td>
                       <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
-                        {registro.produto || '-'}
+                        {registro.formulacao || '-'}
                       </td>
                       <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                         {registro.lote || '-'}

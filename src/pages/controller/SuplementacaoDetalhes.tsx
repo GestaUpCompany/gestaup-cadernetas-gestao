@@ -13,7 +13,7 @@ interface RegistroSuplementacao {
   tratador?: string
   pasto?: string
   lote?: string
-  produto?: string
+  formulacao?: string
   categorias?: string
   leitura?: string
   kg_cocho?: number
@@ -47,6 +47,31 @@ export function SuplementacaoDetalhes() {
         return subword.charAt(0).toUpperCase() + subword.slice(1).toLowerCase()
       }).join(' ')
     }).join(', ')
+  }
+
+  const handleEditFormulacao = async () => {
+    if (!registro?.formulacao || !user) return
+
+    const { data: vinculos } = await supabase
+      .from('usuario_fazenda')
+      .select('fazenda_id')
+      .eq('usuario_id', user.id)
+      .eq('ativo', true)
+
+    if (!vinculos || vinculos.length === 0) return
+
+    const fazendaId = vinculos[0].fazenda_id
+
+    const { data: formulacao } = await supabase
+      .from('formulacoes')
+      .select('id')
+      .eq('nome', registro.formulacao)
+      .eq('fazenda_id', fazendaId)
+      .single()
+
+    if (formulacao) {
+      navigate(`/controller/formulacoes?edit=${formulacao.id}`)
+    }
   }
 
   useEffect(() => {
@@ -135,7 +160,17 @@ export function SuplementacaoDetalhes() {
             <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Formulação e Gado</h3>
             <div className="bg-gray-50 p-4 rounded-lg">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <p className="text-sm"><span className="font-medium text-gray-700">Formulação:</span> {registro.produto || '-'}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm"><span className="font-medium text-gray-700">Formulação:</span> {registro.formulacao || '-'}</p>
+                  {registro.formulacao && (
+                    <button
+                      onClick={handleEditFormulacao}
+                      className="text-xs text-primary hover:underline font-medium"
+                    >
+                      Visualizar
+                    </button>
+                  )}
+                </div>
                 <p className="text-sm"><span className="font-medium text-gray-700">Categorias:</span> {registro.categorias ? capitalizeWords(registro.categorias) : '-'}</p>
               </div>
             </div>
@@ -165,7 +200,7 @@ export function SuplementacaoDetalhes() {
             <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Indicadores</h3>
             <div className="bg-gray-50 p-4 rounded-lg">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <p className="text-sm"><span className="font-medium text-gray-700">Leitura:</span> {registro.leitura || '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Leitura de cocho:</span> {registro.leitura || '-'}</p>
                 <p className="text-sm"><span className="font-medium text-gray-700">Escore Fezes:</span> {registro.escore_fezes || '-'}</p>
                 {registro.espacamento_cocho_cm_cab !== undefined && (
                   <p className="text-sm"><span className="font-medium text-gray-700">Espaçamento Cocho (cm/cab):</span> {registro.espacamento_cocho_cm_cab}</p>
