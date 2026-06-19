@@ -15,25 +15,20 @@ interface RegistroSuplementacao {
   lote?: string
   produto?: string
   categorias?: string
-  leitura?: number
-  sacos?: number
+  leitura?: string
   kg_cocho?: number
   kg_deposito?: number
-  escore_fezes?: number
-  limpeza_cocho?: boolean
-  limpeza_cocho_obs?: string
-  cochos_condicoes?: boolean
-  cochos_condicoes_obs?: string
-  aterro_acesso_ideal?: boolean
-  aterro_acesso_ideal_obs?: string
-  espacamento_cocho_ideal?: boolean
-  espacamento_cocho_ideal_obs?: string
-  deposito_condicoes?: boolean
-  deposito_condicoes_obs?: string
-  estoque_deposito?: boolean
-  estoque_deposito_obs?: string
+  escore_fezes?: string
   espacamento_cocho_cm_cab?: number
   espacamento_cocho_obs?: string
+  espacamento_cocho_detalhes?: string
+  checklist?: {
+    limpeza_cocho?: { valor: boolean; observacao: string }
+    cochos_condicoes?: { valor: boolean; observacao: string }
+    deposito_condicoes?: { valor: boolean; observacao: string }
+    aterro_acesso_ideal?: { valor: boolean; observacao: string }
+    espacamento_cocho_adequado?: { valor: boolean; observacao: string }
+  }
   sync_status?: string
   created_at: string
   updated_at?: string
@@ -45,6 +40,14 @@ export function SuplementacaoDetalhes() {
   const navigate = useNavigate()
   const [registro, setRegistro] = useState<RegistroSuplementacao | null>(null)
   const [loading, setLoading] = useState(true)
+
+  const capitalizeWords = (str: string) => {
+    return str.split(', ').map(word => {
+      return word.split(' ').map(subword => {
+        return subword.charAt(0).toUpperCase() + subword.slice(1).toLowerCase()
+      }).join(' ')
+    }).join(', ')
+  }
 
   useEffect(() => {
     loadRegistro()
@@ -127,13 +130,13 @@ export function SuplementacaoDetalhes() {
             </div>
           </div>
 
-          {/* Produto */}
+          {/* Formulação e Gado */}
           <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Produto</h3>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Formulação e Gado</h3>
             <div className="bg-gray-50 p-4 rounded-lg">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <p className="text-sm"><span className="font-medium text-gray-700">Produto:</span> {registro.produto || '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Categorias:</span> {registro.categorias || '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Formulação:</span> {registro.produto || '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Categorias:</span> {registro.categorias ? capitalizeWords(registro.categorias) : '-'}</p>
               </div>
             </div>
           </div>
@@ -150,7 +153,6 @@ export function SuplementacaoDetalhes() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  <tr><td className="px-4 py-2 text-sm text-gray-900">Sacos</td><td className="px-4 py-2 text-sm text-gray-900 text-right">{registro.sacos || 0}</td></tr>
                   <tr><td className="px-4 py-2 text-sm text-gray-900">KG Cocho</td><td className="px-4 py-2 text-sm text-gray-900 text-right">{registro.kg_cocho || 0}</td></tr>
                   <tr><td className="px-4 py-2 text-sm text-gray-900">KG Depósito</td><td className="px-4 py-2 text-sm text-gray-900 text-right">{registro.kg_deposito || 0}</td></tr>
                 </tbody>
@@ -163,7 +165,7 @@ export function SuplementacaoDetalhes() {
             <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Indicadores</h3>
             <div className="bg-gray-50 p-4 rounded-lg">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <p className="text-sm"><span className="font-medium text-gray-700">Leitura:</span> {registro.leitura || 0}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Leitura:</span> {registro.leitura || '-'}</p>
                 <p className="text-sm"><span className="font-medium text-gray-700">Escore Fezes:</span> {registro.escore_fezes || '-'}</p>
                 {registro.espacamento_cocho_cm_cab !== undefined && (
                   <p className="text-sm"><span className="font-medium text-gray-700">Espaçamento Cocho (cm/cab):</span> {registro.espacamento_cocho_cm_cab}</p>
@@ -175,22 +177,39 @@ export function SuplementacaoDetalhes() {
           {/* Condições do Cocho */}
           <div>
             <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Condições do Cocho</h3>
-            <div className="bg-gray-50 p-4 rounded-lg space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <p className="text-sm"><span className="font-medium text-gray-700">Limpeza Cocho:</span> {registro.limpeza_cocho ? 'Sim' : 'Não'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Cochos Condições:</span> {registro.cochos_condicoes ? 'Sim' : 'Não'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Aterro Acesso Ideal:</span> {registro.aterro_acesso_ideal ? 'Sim' : 'Não'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Espaçamento Cocho Ideal:</span> {registro.espacamento_cocho_ideal ? 'Sim' : 'Não'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Depósito Condições:</span> {registro.deposito_condicoes ? 'Sim' : 'Não'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Estoque Depósito:</span> {registro.estoque_deposito ? 'Sim' : 'Não'}</p>
-              </div>
-              {registro.limpeza_cocho_obs && <p className="text-sm"><span className="font-medium text-gray-700">Obs. Limpeza:</span> {registro.limpeza_cocho_obs}</p>}
-              {registro.cochos_condicoes_obs && <p className="text-sm"><span className="font-medium text-gray-700">Obs. Cochos:</span> {registro.cochos_condicoes_obs}</p>}
-              {registro.aterro_acesso_ideal_obs && <p className="text-sm"><span className="font-medium text-gray-700">Obs. Aterro:</span> {registro.aterro_acesso_ideal_obs}</p>}
-              {registro.espacamento_cocho_ideal_obs && <p className="text-sm"><span className="font-medium text-gray-700">Obs. Espaçamento:</span> {registro.espacamento_cocho_ideal_obs}</p>}
-              {registro.deposito_condicoes_obs && <p className="text-sm"><span className="font-medium text-gray-700">Obs. Depósito:</span> {registro.deposito_condicoes_obs}</p>}
-              {registro.estoque_deposito_obs && <p className="text-sm"><span className="font-medium text-gray-700">Obs. Estoque:</span> {registro.estoque_deposito_obs}</p>}
+            <div className="bg-gray-50 p-4 rounded-lg space-y-4">
+              {registro.checklist?.limpeza_cocho && (
+                <div className="space-y-1">
+                  <p className="text-sm"><span className="font-medium text-gray-700">Limpeza de cocho foi realizada?</span> {registro.checklist.limpeza_cocho.valor ? 'Sim' : 'Não'}</p>
+                  {registro.checklist.limpeza_cocho.observacao && <p className="text-sm text-gray-600"><span className="font-medium">Obs.:</span> {registro.checklist.limpeza_cocho.observacao}</p>}
+                </div>
+              )}
+              {registro.checklist?.cochos_condicoes && (
+                <div className="space-y-1">
+                  <p className="text-sm"><span className="font-medium text-gray-700">Cochos estão em boas condições?</span> {registro.checklist.cochos_condicoes.valor ? 'Sim' : 'Não'}</p>
+                  {registro.checklist.cochos_condicoes.observacao && <p className="text-sm text-gray-600"><span className="font-medium">Obs.:</span> {registro.checklist.cochos_condicoes.observacao}</p>}
+                </div>
+              )}
+              {registro.checklist?.aterro_acesso_ideal && (
+                <div className="space-y-1">
+                  <p className="text-sm"><span className="font-medium text-gray-700">Aterro / acesso ao cocho está ideal?</span> {registro.checklist.aterro_acesso_ideal.valor ? 'Sim' : 'Não'}</p>
+                  {registro.checklist.aterro_acesso_ideal.observacao && <p className="text-sm text-gray-600"><span className="font-medium">Obs.:</span> {registro.checklist.aterro_acesso_ideal.observacao}</p>}
+                </div>
+              )}
+              {registro.checklist?.espacamento_cocho_adequado && (
+                <div className="space-y-1">
+                  <p className="text-sm"><span className="font-medium text-gray-700">Espaçamento de cocho está adequado?</span> {registro.checklist.espacamento_cocho_adequado.valor ? 'Sim' : 'Não'}</p>
+                  {registro.checklist.espacamento_cocho_adequado.observacao && <p className="text-sm text-gray-600"><span className="font-medium">Obs.:</span> {registro.checklist.espacamento_cocho_adequado.observacao}</p>}
+                </div>
+              )}
+              {registro.checklist?.deposito_condicoes && (
+                <div className="space-y-1">
+                  <p className="text-sm"><span className="font-medium text-gray-700">Depósito está em boas condições?</span> {registro.checklist.deposito_condicoes.valor ? 'Sim' : 'Não'}</p>
+                  {registro.checklist.deposito_condicoes.observacao && <p className="text-sm text-gray-600"><span className="font-medium">Obs.:</span> {registro.checklist.deposito_condicoes.observacao}</p>}
+                </div>
+              )}
               {registro.espacamento_cocho_obs && <p className="text-sm"><span className="font-medium text-gray-700">Obs. Espaçamento Cocho:</span> {registro.espacamento_cocho_obs}</p>}
+              {registro.espacamento_cocho_detalhes && <p className="text-sm"><span className="font-medium text-gray-700">Detalhes Espaçamento:</span> {registro.espacamento_cocho_detalhes}</p>}
             </div>
           </div>
         </div>
