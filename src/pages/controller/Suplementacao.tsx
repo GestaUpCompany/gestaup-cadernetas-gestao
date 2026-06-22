@@ -180,7 +180,9 @@ export function Suplementacao() {
         <>
           {/* Mobile Card View */}
           <div className="sm:hidden space-y-3">
-            {filteredRegistros.map((registro) => (
+            {filteredRegistros
+              .filter((registro) => registro.id)
+              .map((registro) => (
               <Card
                 key={registro.id}
                 className="p-4"
@@ -258,7 +260,9 @@ export function Suplementacao() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredRegistros.map((registro) => {
+                {filteredRegistros
+                  .filter((registro) => registro.id)
+                  .map((registro) => {
                   const categorias = []
                   if (registro.vaca) categorias.push('Vaca')
                   if (registro.touro) categorias.push('Touro')

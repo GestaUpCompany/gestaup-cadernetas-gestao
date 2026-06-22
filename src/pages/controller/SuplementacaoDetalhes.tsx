@@ -21,7 +21,7 @@ interface RegistroSuplementacao {
   escore_fezes?: string
   espacamento_cocho_cm_cab?: number
   espacamento_cocho_obs?: string
-  espacamento_cocho_detalhes?: string
+  espacamento_cocho_detalhes?: string | {erro?: string}
   checklist?: {
     limpeza_cocho?: { valor: boolean; observacao: string }
     cochos_condicoes?: { valor: boolean; observacao: string }
@@ -244,7 +244,14 @@ export function SuplementacaoDetalhes() {
                 </div>
               )}
               {registro.espacamento_cocho_obs && <p className="text-sm"><span className="font-medium text-gray-700">Obs. Espaçamento Cocho:</span> {registro.espacamento_cocho_obs}</p>}
-              {registro.espacamento_cocho_detalhes && <p className="text-sm"><span className="font-medium text-gray-700">Detalhes Espaçamento:</span> {registro.espacamento_cocho_detalhes}</p>}
+              {registro.espacamento_cocho_detalhes && (
+                <p className="text-sm">
+                  <span className="font-medium text-gray-700">Detalhes Espaçamento:</span>{' '}
+                  {typeof registro.espacamento_cocho_detalhes === 'string'
+                    ? registro.espacamento_cocho_detalhes
+                    : registro.espacamento_cocho_detalhes.erro || JSON.stringify(registro.espacamento_cocho_detalhes)}
+                </p>
+              )}
             </div>
           </div>
         </div>
