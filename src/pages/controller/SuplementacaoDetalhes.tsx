@@ -19,15 +19,16 @@ interface RegistroSuplementacao {
   kg_cocho?: number
   kg_deposito?: number
   escore_fezes?: string
-  espacamento_cocho_cm_cab?: number
-  espacamento_cocho_obs?: string
-  espacamento_cocho_detalhes?: string | {erro?: string}
+  // Campos de espaçamento de cocho - desabilitados temporariamente
+  // espacamento_cocho_cm_cab?: number
+  // espacamento_cocho_obs?: string
+  // espacamento_cocho_detalhes?: string | {erro?: string}
   checklist?: {
     limpeza_cocho?: { valor: boolean; observacao: string }
     cochos_condicoes?: { valor: boolean; observacao: string }
     deposito_condicoes?: { valor: boolean; observacao: string }
     aterro_acesso_ideal?: { valor: boolean; observacao: string }
-    espacamento_cocho_adequado?: { valor: boolean; observacao: string }
+    // espacamento_cocho_adequado?: { valor: boolean; observacao: string }
   }
   sync_status?: string
   created_at: string
@@ -202,9 +203,10 @@ export function SuplementacaoDetalhes() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <p className="text-sm"><span className="font-medium text-gray-700">Leitura de cocho:</span> {registro.leitura || '-'}</p>
                 <p className="text-sm"><span className="font-medium text-gray-700">Escore Fezes:</span> {registro.escore_fezes || '-'}</p>
+                {/* Desabilitado temporariamente
                 {registro.espacamento_cocho_cm_cab !== undefined && (
                   <p className="text-sm"><span className="font-medium text-gray-700">Espaçamento Cocho (cm/cab):</span> {registro.espacamento_cocho_cm_cab}</p>
-                )}
+                )} */}
               </div>
             </div>
           </div>
@@ -231,18 +233,20 @@ export function SuplementacaoDetalhes() {
                   {registro.checklist.aterro_acesso_ideal.observacao && <p className="text-sm text-gray-600"><span className="font-medium">Obs.:</span> {registro.checklist.aterro_acesso_ideal.observacao}</p>}
                 </div>
               )}
+              {/* Desabilitado temporariamente
               {registro.checklist?.espacamento_cocho_adequado && (
                 <div className="space-y-1">
                   <p className="text-sm"><span className="font-medium text-gray-700">Espaçamento de cocho está adequado?</span> {registro.checklist.espacamento_cocho_adequado.valor ? 'Sim' : 'Não'}</p>
                   {registro.checklist.espacamento_cocho_adequado.observacao && <p className="text-sm text-gray-600"><span className="font-medium">Obs.:</span> {registro.checklist.espacamento_cocho_adequado.observacao}</p>}
                 </div>
-              )}
+              )} */}
               {registro.checklist?.deposito_condicoes && (
                 <div className="space-y-1">
                   <p className="text-sm"><span className="font-medium text-gray-700">Depósito está em boas condições?</span> {registro.checklist.deposito_condicoes.valor ? 'Sim' : 'Não'}</p>
                   {registro.checklist.deposito_condicoes.observacao && <p className="text-sm text-gray-600"><span className="font-medium">Obs.:</span> {registro.checklist.deposito_condicoes.observacao}</p>}
                 </div>
               )}
+              {/* Desabilitado temporariamente
               {registro.espacamento_cocho_obs && <p className="text-sm"><span className="font-medium text-gray-700">Obs. Espaçamento Cocho:</span> {registro.espacamento_cocho_obs}</p>}
               {registro.espacamento_cocho_detalhes && (
                 <p className="text-sm">
@@ -251,7 +255,7 @@ export function SuplementacaoDetalhes() {
                     ? registro.espacamento_cocho_detalhes
                     : registro.espacamento_cocho_detalhes.erro || JSON.stringify(registro.espacamento_cocho_detalhes)}
                 </p>
-              )}
+              )} */}
             </div>
           </div>
         </div>
