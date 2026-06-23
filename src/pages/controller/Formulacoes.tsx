@@ -58,6 +58,57 @@ interface DietaInsumoCalc {
   custo_dieta_reais_cab_dia?: number
 }
 
+function FormulaMsInput({
+  id,
+  value,
+  onChange,
+  className,
+}: {
+  id: string
+  value: number
+  onChange: (val: number) => void
+  className?: string
+}) {
+  const [raw, setRaw] = useState(value.toFixed(2).replace('.', ','))
+
+  useEffect(() => {
+    const formatted = value.toFixed(2).replace('.', ',')
+    // Only sync from prop if user is not actively editing (avoids cursor jump)
+    if (document.activeElement !== document.getElementById(id)) {
+      setRaw(formatted)
+    }
+  }, [value, id])
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let v = e.target.value.replace('.', ',')
+    // Allow only digits and at most one comma
+    v = v.replace(/[^\d,]/g, '')
+    const parts = v.split(',')
+    if (parts.length > 2) {
+      v = parts[0] + ',' + parts.slice(1).join('')
+    }
+    setRaw(v)
+  }
+
+  const handleBlur = () => {
+    const num = parseFloat(raw.replace(',', '.')) || 0
+    onChange(num)
+    setRaw(num.toFixed(2).replace('.', ','))
+  }
+
+  return (
+    <Input
+      id={id}
+      type="text"
+      inputMode="decimal"
+      value={raw}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      className={className}
+    />
+  )
+}
+
 export function Formulacoes() {
   const { user } = useAuth()
   const [searchParams] = useSearchParams()
@@ -594,14 +645,10 @@ export function Formulacoes() {
                           R$ {(item.preco_ton_mn || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                         <td className="p-2 text-right bg-green-50 w-28">
-                          <Input
-                            type="text"
-                            inputMode="decimal"
-                            value={fmt(item.formula_teor_ms)}
-                            onChange={(e) => {
-                              const val = e.target.value.replace(',', '.')
-                              handleFormulaChange(idx, parseFloat(val) || 0)
-                            }}
+                          <FormulaMsInput
+                            id={`formula-ms-${idx}`}
+                            value={item.formula_teor_ms}
+                            onChange={(val) => handleFormulaChange(idx, val)}
                             className="w-20 text-right border-gray-200 focus:border-accent py-1"
                           />
                         </td>
