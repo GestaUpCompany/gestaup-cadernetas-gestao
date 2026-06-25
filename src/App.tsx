@@ -70,6 +70,7 @@ import { ManutencaoMaquinas } from './pages/controller/ManutencaoMaquinas'
 import { ManutencaoMaquinasDetalhes } from './pages/controller/ManutencaoMaquinasDetalhes'
 import { Problemas } from './pages/controller/Problemas'
 import { ProblemasDetalhes } from './pages/controller/ProblemasDetalhes'
+import { HistoricoOcupacao } from './pages/controller/HistoricoOcupacao'
 
 // Redirecionamento baseado no papel do usuário
 function RoleRedirect() {
@@ -223,6 +224,16 @@ function App() {
             <ControllerRoute>
               <ControllerLayout>
                 <Lotes />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/historico-ocupacao"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <HistoricoOcupacao />
               </ControllerLayout>
             </ControllerRoute>
           }

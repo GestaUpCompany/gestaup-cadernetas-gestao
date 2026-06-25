@@ -93,13 +93,16 @@ export function MultiSelect({
                   className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium"
                 >
                   {opt.name}
-                  <button
-                    type="button"
-                    onClick={(e) => handleRemove(opt.id, e)}
-                    className="text-blue-500 hover:text-blue-700 focus:outline-none"
+                  <span
+                    role="button"
+                    aria-label={`Remover ${opt.name}`}
+                    tabIndex={0}
+                    onMouseDown={(e) => { e.stopPropagation(); handleRemove(opt.id, e as any) }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onChange(value.filter((id) => id !== opt.id)) } }}
+                    className="text-blue-500 hover:text-blue-700 focus:outline-none cursor-pointer"
                   >
                     ×
-                  </button>
+                  </span>
                 </span>
               ))}
               {selectedOptions.length > 3 && (

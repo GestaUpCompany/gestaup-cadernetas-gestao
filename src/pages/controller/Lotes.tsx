@@ -8,93 +8,95 @@ import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 interface LoteCategoria {
   id?: string
   categoria: string
-  quant_inicial?: number
-  data_pesagem?: string
-  peso_entrada_kg_cab?: number
-  peso_entrada_arrobas?: number
-  gmd?: string
-  periodo?: number
-  rc_inicial?: number
-  rc_final?: number
-  rc_atual?: number
-  quant_atual?: number
-  peso_vivo_atual_kg_cab?: number
-  peso_vivo_atual_arroba_cab?: number
-  producao_atual_arroba_cab?: number
-  peso_vivo_meta_kg_cab?: number
-  peso_venda_meta_arroba?: number
-  producao_projetada_arroba_cab?: number
-  venda_total_arroba_lote_categoria?: number
-  dias_restantes_meta?: number
-  data_meta_projetada?: string
-  estrategia_nutricional?: string
-  raca?: string
-  sexo?: string
-  idade?: number
-  preco_entrada_reais_kg?: number
-  preco_entrada_reais_arroba?: number
-  preco_entrada_reais_cab?: number
-  agio_percent?: number
-  custo_operacional_reais_cab_dia?: number
-  margem_lucro_percent?: number
-  preco_custo_reais_arroba?: number
-  preco_custo_cab?: number
-  preco_venda_projetado_reais_arroba?: number
-  preco_venda_sugerido_cab?: number
-  faturamento_projetado_reais_lote_categoria?: number
-  morte?: number
-  consumo?: number
-  abate?: number
-  transf_entrada?: number
-  transf_saida?: number
-  qtd_bezerros?: number
-  consumo_meta_porcentagem_pesovivo?: number
-  custo_frete_reais_cab?: number
-  custo_comissao_reais_cab?: number
-  custo_sanidade_reais_cab?: number
-  custo_identificacao_rastreabilidade_reais_cab?: number
-  custo_total_entrada_reais_cab?: number
-  custo_total_entrada_reais_lote?: number
-  ativo?: boolean
+  quant_inicial?: number | null
+  data_pesagem?: string | null
+  peso_entrada_kg_cab?: number | null
+  peso_entrada_arrobas?: number | null
+  gmd?: string | null
+  periodo?: number | null
+  rc_inicial?: number | null
+  rc_final?: number | null
+  rc_atual?: number | null
+  quant_atual?: number | null
+  peso_vivo_atual_kg_cab?: number | null
+  peso_vivo_atual_arroba_cab?: number | null
+  producao_atual_arroba_cab?: number | null
+  peso_vivo_meta_kg_cab?: number | null
+  peso_venda_meta_arroba?: number | null
+  producao_projetada_arroba_cab?: number | null
+  venda_total_arroba_lote_categoria?: number | null
+  dias_restantes_meta?: number | null
+  data_meta_projetada?: string | null
+  estrategia_nutricional?: string | null
+  raca?: string | null
+  sexo?: string | null
+  idade?: number | null
+  preco_entrada_reais_kg?: number | null
+  preco_entrada_reais_arroba?: number | null
+  preco_entrada_reais_cab?: number | null
+  agio_percent?: number | null
+  custo_operacional_reais_cab_dia?: number | null
+  margem_lucro_percent?: number | null
+  preco_custo_reais_arroba?: number | null
+  preco_custo_cab?: number | null
+  preco_venda_projetado_reais_arroba?: number | null
+  preco_venda_sugerido_cab?: number | null
+  faturamento_projetado_reais_lote_categoria?: number | null
+  morte?: number | null
+  consumo?: number | null
+  abate?: number | null
+  transf_entrada?: number | null
+  transf_saida?: number | null
+  qtd_bezerros?: number | null
+  consumo_meta_porcentagem_pesovivo?: number | null
+  custo_frete_reais_cab?: number | null
+  custo_comissao_reais_cab?: number | null
+  custo_sanidade_reais_cab?: number | null
+  custo_identificacao_rastreabilidade_reais_cab?: number | null
+  custo_total_entrada_reais_cab?: number | null
+  custo_total_entrada_reais_lote?: number | null
+  ativo?: boolean | null
 }
 
 interface Lote {
   id: string
   fazenda_id: string
   nome: string
-  n_cabecas?: number
+  n_cabecas?: number | null
   categorias?: LoteCategoria[]
-  peso_vivo_atual_kg_cab?: number
-  peso_vivo_meta_kg_cab?: number
-  data_meta_projetada?: string
-  qtd_bezerros?: number
-  quant_inicial?: number
-  data_pesagem?: string
-  peso_entrada_kg_cab?: number
-  gmd?: string
-  periodo?: number
-  ativo: boolean
-  pasto_id?: string
-  sistema_producao?: string
-  meta_intervalo_rodeio_dias?: number
-  rc_inicial?: number
-  preco_entrada_reais_kg?: number
-  preco_entrada_reais_cab?: number
-  custo_operacional_reais_cab_dia?: number
-  margem_lucro_percent?: number
-  raca?: string
-  sexo?: string
-  idade?: number
-  estrategia_nutricional?: string
-  dias_restantes_meta?: number
-  produtor_rural?: string
-  propriedade_origem?: string
-  numero_contrato?: string
-  mes_competencia?: string
-  data_liberacao_sisbov?: string
-  periodo_liberacao_sisbov?: number
-  data_embarque_prevista?: string
-  pasto_nome?: string
+  peso_vivo_atual_kg_cab?: number | null
+  peso_vivo_meta_kg_cab?: number | null
+  data_meta_projetada?: string | null
+  qtd_bezerros?: number | null
+  quant_inicial?: number | null
+  data_pesagem?: string | null
+  peso_entrada_kg_cab?: number | null
+  gmd?: string | null
+  periodo?: number | null
+  ativo: boolean | null
+  pasto_id?: string | null
+  pasto_nome?: string | null
+  modulo_id?: string | null
+  modulo_nome?: string | null
+  sistema_producao?: string | null
+  meta_intervalo_rodeio_dias?: number | null
+  rc_inicial?: number | null
+  preco_entrada_reais_kg?: number | null
+  preco_entrada_reais_cab?: number | null
+  custo_operacional_reais_cab_dia?: number | null
+  margem_lucro_percent?: number | null
+  raca?: string | null
+  sexo?: string | null
+  idade?: number | null
+  estrategia_nutricional?: string | null
+  dias_restantes_meta?: number | null
+  produtor_rural?: string | null
+  propriedade_origem?: string | null
+  numero_contrato?: string | null
+  mes_competencia?: string | null
+  data_liberacao_sisbov?: string | null
+  periodo_liberacao_sisbov?: number | null
+  data_embarque_prevista?: string | null
 }
 
 export function Lotes() {
@@ -158,6 +160,7 @@ export function Lotes() {
   const [loteToDelete, setLoteToDelete] = useState<string | null>(null)
   const [showCategoryRemoveModal, setShowCategoryRemoveModal] = useState(false)
   const [originalAtivo, setOriginalAtivo] = useState(true)
+  const [ocupacaoPorLote, setOcupacaoPorLote] = useState<Record<string, any>>({})
 
   const categoriasOpcoes = [
     'vaca',
@@ -739,6 +742,28 @@ export function Lotes() {
 
     setLotes(lotesComCategorias as Lote[])
     setLoading(false)
+
+    // Carregar ocupação atual dos lotes
+    const { data: ocupacaoPastoData } = await supabase
+      .from('v_lote_pasto_ocupacao_atual')
+      .select('*')
+
+    const { data: ocupacaoModuloData } = await supabase
+      .from('v_lote_modulo_ocupacao_atual')
+      .select('*')
+
+    if (ocupacaoPastoData || ocupacaoModuloData) {
+      const ocupacaoMap: Record<string, any> = {}
+      ocupacaoPastoData?.forEach((item: any) => {
+        if (!ocupacaoMap[item.lote_id]) ocupacaoMap[item.lote_id] = {}
+        ocupacaoMap[item.lote_id].pasto = item
+      })
+      ocupacaoModuloData?.forEach((item: any) => {
+        if (!ocupacaoMap[item.lote_id]) ocupacaoMap[item.lote_id] = {}
+        ocupacaoMap[item.lote_id].modulo = item
+      })
+      setOcupacaoPorLote(ocupacaoMap)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1799,7 +1824,7 @@ export function Lotes() {
                             </label>
                             <Input
                               type="text"
-                              value={cat.agio_percent !== undefined ? `${cat.agio_percent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%` : ''}
+                              value={cat.agio_percent != null ? `${cat.agio_percent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%` : ''}
                               disabled
                               placeholder="0,00%"
                               className="bg-gray-50 border-gray-200 focus:border-accent opacity-60"
@@ -1914,7 +1939,7 @@ export function Lotes() {
                             </label>
                             <Input
                               type="text"
-                              value={cat.custo_total_entrada_reais_cab !== undefined ? `R$ ${cat.custo_total_entrada_reais_cab.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
+                              value={cat.custo_total_entrada_reais_cab != null ? `R$ ${cat.custo_total_entrada_reais_cab.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
                               disabled
                               placeholder="R$ 0,00"
                               className="bg-gray-50 border-gray-200 focus:border-accent opacity-60"
@@ -1926,7 +1951,7 @@ export function Lotes() {
                             </label>
                             <Input
                               type="text"
-                              value={cat.custo_total_entrada_reais_lote !== undefined ? `R$ ${cat.custo_total_entrada_reais_lote.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
+                              value={cat.custo_total_entrada_reais_lote != null ? `R$ ${cat.custo_total_entrada_reais_lote.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
                               disabled
                               placeholder="R$ 0,00"
                               className="bg-gray-50 border-gray-200 focus:border-accent opacity-60"
@@ -2283,7 +2308,7 @@ export function Lotes() {
                   const total = lote.categorias?.reduce((sum, cat) => sum + (cat.quant_atual ?? cat.quant_inicial ?? 0), 0) || lote.n_cabecas || 0
                   return total > 0 ? `${total} cabeças` : undefined
                 })()}
-                status={lote.ativo}
+                status={lote.ativo ?? undefined}
                 onClick={() => handleEdit(lote)}
               >
                 <div className="space-y-2 mb-4 flex-1">
@@ -2296,6 +2321,24 @@ export function Lotes() {
                   {lote.pasto_nome && (
                     <p className="text-sm text-gray-500">
                       <span className="font-medium">Pasto:</span> {lote.pasto_nome}
+                    </p>
+                  )}
+
+                  {ocupacaoPorLote[lote.id]?.pasto && (
+                    <p className="text-sm text-gray-500">
+                      <span className="font-medium">Tempo no pasto:</span> {ocupacaoPorLote[lote.id].pasto.periodo_ocupacao_dias} dias
+                    </p>
+                  )}
+
+                  {ocupacaoPorLote[lote.id]?.modulo && (
+                    <p className="text-sm text-gray-500">
+                      <span className="font-medium">Módulo:</span> {ocupacaoPorLote[lote.id].modulo.modulo_nome}
+                    </p>
+                  )}
+
+                  {ocupacaoPorLote[lote.id]?.modulo && (
+                    <p className="text-sm text-gray-500">
+                      <span className="font-medium">Tempo no módulo:</span> {ocupacaoPorLote[lote.id].modulo.periodo_ocupacao_dias} dias
                     </p>
                   )}
 

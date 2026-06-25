@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton, ConfirmModal, MultiSelect } from '../../components/ui'
@@ -27,6 +27,7 @@ interface Pasto {
   modulo_id?: string
   modulo_nome?: string
   modulo_ativo?: boolean
+  meta_intervalo_ocupacao_dias?: number
   ativo: boolean
 }
 
@@ -40,7 +41,9 @@ export function Pastos() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingPasto, setEditingPasto] = useState<Pasto | null>(null)
+  const [searchParams] = useSearchParams()
   const [searchTerm, setSearchTerm] = useState('')
+  const [ocupacaoPorPasto, setOcupacaoPorPasto] = useState<Record<string, any>>({})
   const [formData, setFormData] = useState({
     nome: '',
     setor: '',
@@ -56,6 +59,7 @@ export function Pastos() {
     possui_deposito: false,
     kg_deposito: '',
     fonte_agua_principal: '',
+    meta_intervalo_ocupacao_dias: '',
   })
   const [submitting, setSubmitting] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -149,6 +153,19 @@ export function Pastos() {
       setPastos(pastosWithModulo as Pasto[])
     }
 
+    // Carregar ocupação atual dos pastos
+    const { data: ocupacaoData } = await supabase
+      .from('v_lote_pasto_ocupacao_atual')
+      .select('*')
+
+    if (ocupacaoData) {
+      const ocupacaoMap: Record<string, any> = {}
+      ocupacaoData.forEach((item: any) => {
+        ocupacaoMap[item.pasto_id] = item
+      })
+      setOcupacaoPorPasto(ocupacaoMap)
+    }
+
     setLoading(false)
   }
 
@@ -157,6 +174,14 @@ export function Pastos() {
     loadSetores()
     loadBebedouros()
   }, [user])
+
+  // Abrir formulário de edição direto via query param ?pasto=id (ex: vindo de notificação)
+  useEffect(() => {
+    const pastoId = searchParams.get('pasto')
+    if (!pastoId || pastos.length === 0) return
+    const pasto = pastos.find(p => p.id === pastoId)
+    if (pasto) handleEdit(pasto)
+  }, [searchParams, pastos])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -206,6 +231,7 @@ export function Pastos() {
       possui_deposito: formData.possui_deposito,
       kg_deposito: formData.kg_deposito ? parseFloat(formData.kg_deposito) : null,
       fonte_agua_principal: formData.fonte_agua_principal || null,
+      meta_intervalo_ocupacao_dias: formData.meta_intervalo_ocupacao_dias ? parseInt(formData.meta_intervalo_ocupacao_dias) : null,
       bebedouros: selectedBebedouros.map(id => {
         const bebedouro = bebedouros.find(b => b.id === id)
         return { id, nome: bebedouro?.nome || '' }
@@ -246,6 +272,7 @@ export function Pastos() {
         possui_deposito: false,
         kg_deposito: '',
         fonte_agua_principal: '',
+        meta_intervalo_ocupacao_dias: '',
       })
       setSelectedBebedouros([])
       setShowForm(false)
@@ -273,6 +300,7 @@ export function Pastos() {
       possui_deposito: pasto.possui_deposito || false,
       kg_deposito: pasto.kg_deposito?.toString() || '',
       fonte_agua_principal: pasto.fonte_agua_principal || '',
+      meta_intervalo_ocupacao_dias: pasto.meta_intervalo_ocupacao_dias?.toString() || '',
     })
 
     // Load associated bebedouros from JSONB
@@ -298,6 +326,7 @@ export function Pastos() {
       possui_deposito: false,
       kg_deposito: '',
       fonte_agua_principal: '',
+      meta_intervalo_ocupacao_dias: '',
     })
     setSelectedBebedouros([])
     setShowForm(false)
@@ -828,6 +857,20 @@ export function Pastos() {
                   />
                 </div>
               )}
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                  Meta de Ocupação (dias)
+                </label>
+                <Input
+                  type="number"
+                  step="1"
+                  min="1"
+                  value={formData.meta_intervalo_ocupacao_dias}
+                  onChange={(e) => setFormData({ ...formData, meta_intervalo_ocupacao_dias: e.target.value })}
+                  placeholder="Ex: 7"
+                  className="border-gray-200 focus:border-accent text-sm"
+                />
+              </div>
             </div>
 
             <div>
@@ -948,6 +991,77 @@ export function Pastos() {
               )}
             </div>
 
+            {editingPasto && (
+              <div className="border-t-2 border-gray-100 pt-4 mt-2">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  Ocupação Atual
+                </h3>
+                {ocupacaoPorPasto[editingPasto.id] ? (
+                  <div className={`rounded-xl p-4 space-y-2 ${ocupacaoPorPasto[editingPasto.id].meta_excedida ? 'bg-red-50 border border-red-200' : 'bg-green-50 border border-green-200'}`}>
+                    {ocupacaoPorPasto[editingPasto.id].meta_excedida && (
+                      <p className="text-xs font-bold text-red-700 flex items-center gap-1">
+                        ⚠️ Meta de ocupação excedida em {ocupacaoPorPasto[editingPasto.id].dias_acima_meta} dia(s)
+                      </p>
+                    )}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      <div>
+                        <p className="text-xs text-gray-500">Lote</p>
+                        <p className="text-sm font-medium text-gray-800">{ocupacaoPorPasto[editingPasto.id].lote_nome}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Tempo de ocupação</p>
+                        <p className="text-sm font-medium text-gray-800">{ocupacaoPorPasto[editingPasto.id].periodo_ocupacao_dias} dias</p>
+                      </div>
+                      {ocupacaoPorPasto[editingPasto.id].taxa_lotacao_ua_ha != null && (
+                        <div>
+                          <p className="text-xs text-gray-500">Taxa de lotação</p>
+                          <p className="text-sm font-semibold text-blue-700">{Number(ocupacaoPorPasto[editingPasto.id].taxa_lotacao_ua_ha).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} UA/ha</p>
+                        </div>
+                      )}
+                      {ocupacaoPorPasto[editingPasto.id].meta_intervalo_ocupacao_dias && (
+                        <div>
+                          <p className="text-xs text-gray-500">Meta</p>
+                          <p className={`text-sm font-medium ${ocupacaoPorPasto[editingPasto.id].meta_excedida ? 'text-red-700' : 'text-green-700'}`}>
+                            {ocupacaoPorPasto[editingPasto.id].meta_intervalo_ocupacao_dias} dias
+                          </p>
+                        </div>
+                      )}
+                      {ocupacaoPorPasto[editingPasto.id].cabecas_entrada && (
+                        <div>
+                          <p className="text-xs text-gray-500">Cabeças na entrada</p>
+                          <p className="text-sm font-medium text-gray-800">{ocupacaoPorPasto[editingPasto.id].cabecas_entrada}</p>
+                        </div>
+                      )}
+                      {ocupacaoPorPasto[editingPasto.id].peso_vivo_medio_entrada_kg && (
+                        <div>
+                          <p className="text-xs text-gray-500">Peso médio entrada</p>
+                          <p className="text-sm font-medium text-gray-800">{Number(ocupacaoPorPasto[editingPasto.id].peso_vivo_medio_entrada_kg).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} kg</p>
+                        </div>
+                      )}
+                      {ocupacaoPorPasto[editingPasto.id].data_hora_entrada && (
+                        <div>
+                          <p className="text-xs text-gray-500">Data de entrada</p>
+                          <p className="text-sm font-medium text-gray-800">{new Date(ocupacaoPorPasto[editingPasto.id].data_hora_entrada).toLocaleDateString('pt-BR')}</p>
+                        </div>
+                      )}
+                    </div>
+                    {ocupacaoPorPasto[editingPasto.id].desvio_percentual_atual != null && (
+                      <p className={`text-xs mt-1 ${ocupacaoPorPasto[editingPasto.id].meta_excedida ? 'text-red-600' : 'text-green-600'}`}>
+                        Desvio atual: {ocupacaoPorPasto[editingPasto.id].desvio_percentual_atual > 0 ? '+' : ''}{Number(ocupacaoPorPasto[editingPasto.id].desvio_percentual_atual).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="rounded-xl p-4 bg-gray-50 border border-gray-200">
+                    <p className="text-sm text-gray-500">Nenhum lote ocupando este pasto no momento.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="flex gap-2 items-center">
               <Button type="submit" disabled={submitting} className="flex-1 sm:flex-none text-sm">
                 {submitting ? 'Salvando...' : 'Salvar'}
@@ -975,7 +1089,11 @@ export function Pastos() {
             .map((pasto) => (
               <Card
                 key={pasto.id}
-                className="p-4 sm:p-6 border-0 shadow-sm cursor-pointer transition-all hover:shadow-xl flex flex-col"
+                className={`p-4 sm:p-6 shadow-sm cursor-pointer transition-all hover:shadow-xl flex flex-col ${
+                  ocupacaoPorPasto[pasto.id]?.meta_excedida
+                    ? 'border-2 border-red-400'
+                    : 'border-0'
+                }`}
                 onClick={() => handleEdit(pasto)}
               >
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
@@ -985,7 +1103,12 @@ export function Pastos() {
                       <p className="text-xs sm:text-sm text-gray-500">Área Útil: {pasto.area_util_ha} ha</p>
                     )}
                   </div>
-                  <div className="flex gap-2 items-center">
+                  <div className="flex gap-2 items-center flex-wrap">
+                    {ocupacaoPorPasto[pasto.id]?.meta_excedida && (
+                      <span className="px-2 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 flex items-center gap-1">
+                        ⚠️ Meta excedida
+                      </span>
+                    )}
                     <span
                       className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium self-start md:self-auto ${
                         pasto.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
@@ -1030,6 +1153,20 @@ export function Pastos() {
                       {pasto.altura_entrada_cm && pasto.altura_saida_cm && ' | '}
                       {pasto.altura_saida_cm && `Saída: ${pasto.altura_saida_cm} cm`}
                     </p>
+                  )}
+                  {ocupacaoPorPasto[pasto.id] && (
+                    <div className="mt-2 pt-2 border-t border-gray-100">
+                      <p className="text-sm text-gray-500"><span className="font-medium">Lote:</span> {ocupacaoPorPasto[pasto.id].lote_nome}</p>
+                      <p className="text-sm text-gray-500"><span className="font-medium">Tempo de ocupação:</span> {ocupacaoPorPasto[pasto.id].periodo_ocupacao_dias} dias</p>
+                      {ocupacaoPorPasto[pasto.id].meta_intervalo_ocupacao_dias && (
+                        <p className={`text-sm ${ocupacaoPorPasto[pasto.id].meta_excedida ? 'text-red-600' : 'text-gray-500'}`}>
+                          <span className="font-medium">Meta:</span> {ocupacaoPorPasto[pasto.id].meta_intervalo_ocupacao_dias} dias
+                          {ocupacaoPorPasto[pasto.id].meta_excedida && (
+                            <span className="ml-2">(⚠️ Excedida em {ocupacaoPorPasto[pasto.id].dias_acima_meta} dias)</span>
+                          )}
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
                 <div className="flex flex-wrap gap-1 sm:gap-2 mt-auto">

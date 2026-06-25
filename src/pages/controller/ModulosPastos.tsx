@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
@@ -8,26 +8,28 @@ interface ModuloPasto {
   id: string
   fazenda_id: string
   nome: string
-  area_util_total_ha: number
-  setor_id?: string
-  sistema_producao?: string
-  responsavel?: string
-  ativo: boolean
-  deleted_at?: string
+  area_util_total_ha: number | null
+  setor_id?: string | null
+  sistema_producao?: string | null
+  responsavel?: string | null
+  meta_intervalo_ocupacao_dias?: number | null
+  ativo: boolean | null
+  deleted_at?: string | null
   pastos?: Pasto[]
-  setores?: { nome: string }
+  setores?: { nome: string } | null
 }
 
 interface Pasto {
   id: string
   nome: string
-  area_util_ha?: number
-  especie?: string
-  modulo_id?: string
+  area_util_ha?: number | null
+  especie?: string | null
+  modulo_id?: string | null
 }
 
 export function ModulosPastos() {
   const location = useLocation()
+  const [searchParams] = useSearchParams()
   const { user } = useAuth()
   const [modulos, setModulos] = useState<ModuloPasto[]>([])
   const [pastos, setPastos] = useState<Pasto[]>([])
@@ -41,6 +43,7 @@ export function ModulosPastos() {
     setor_id: '',
     sistema_producao: '',
     responsavel: '',
+    meta_intervalo_ocupacao_dias: '',
   })
   const [setores, setSetores] = useState<{id: string, nome: string}[]>([])
   const [submitting, setSubmitting] = useState(false)
@@ -50,6 +53,7 @@ export function ModulosPastos() {
   const [moduloToDelete, setModuloToDelete] = useState<ModuloPasto | null>(null)
   const [showDeactivateModal, setShowDeactivateModal] = useState(false)
   const [moduloToDeactivate, setModuloToDeactivate] = useState<ModuloPasto | null>(null)
+  const [ocupacaoPorModulo, setOcupacaoPorModulo] = useState<Record<string, any[]>>({})
 
   const loadModulos = async () => {
     if (!user) return
@@ -80,6 +84,20 @@ export function ModulosPastos() {
     }
 
     setLoading(false)
+
+    // Carregar ocupação atual dos módulos (múltiplos lotes por módulo)
+    const { data: ocupacaoData } = await supabase
+      .from('v_lote_modulo_ocupacao_atual')
+      .select('*')
+
+    if (ocupacaoData) {
+      const ocupacaoMap: Record<string, any[]> = {}
+      ocupacaoData.forEach((item: any) => {
+        if (!ocupacaoMap[item.modulo_id]) ocupacaoMap[item.modulo_id] = []
+        ocupacaoMap[item.modulo_id].push(item)
+      })
+      setOcupacaoPorModulo(ocupacaoMap)
+    }
   }
 
   const loadPastos = async (moduloId?: string) => {
@@ -124,16 +142,14 @@ export function ModulosPastos() {
     loadSetores()
   }, [user])
 
-  // Se navegou com state para editar um módulo específico
+  // Se navegou com state ou query param para editar um módulo específico
   useEffect(() => {
-    const editModuloId = (location.state as any)?.editModuloId
-    if (editModuloId && modulos.length > 0) {
-      // Limpar o state para não reexecutar
+    if (modulos.length === 0) return
+    const editModuloId = (location.state as any)?.editModuloId || searchParams.get('modulo')
+    if (editModuloId) {
       window.history.replaceState({}, document.title)
       const modulo = modulos.find(m => m.id === editModuloId)
-      if (modulo) {
-        handleEdit(modulo)
-      }
+      if (modulo) handleEdit(modulo)
     }
   }, [modulos])
 
@@ -209,6 +225,7 @@ export function ModulosPastos() {
       setor_id: formData.setor_id || null,
       sistema_producao: formData.sistema_producao || null,
       responsavel: formData.responsavel || null,
+      meta_intervalo_ocupacao_dias: formData.meta_intervalo_ocupacao_dias ? parseInt(formData.meta_intervalo_ocupacao_dias) : null,
     }
 
     let moduloId: string | undefined
@@ -275,7 +292,7 @@ export function ModulosPastos() {
         }
       }
 
-      setFormData({ nome: '', setor_id: '', sistema_producao: '', responsavel: '' })
+      setFormData({ nome: '', setor_id: '', sistema_producao: '', responsavel: '', meta_intervalo_ocupacao_dias: '' })
       setSelectedPastos([])
       setShowForm(false)
       setEditingModulo(null)
@@ -292,8 +309,9 @@ export function ModulosPastos() {
       setor_id: modulo.setor_id || '',
       sistema_producao: modulo.sistema_producao || '',
       responsavel: modulo.responsavel || '',
+      meta_intervalo_ocupacao_dias: modulo.meta_intervalo_ocupacao_dias?.toString() || '',
     })
-    
+
     // Load associated pastos
     const { data: rotacoes } = await supabase
       .from('rotacao_pastos')
@@ -398,7 +416,7 @@ export function ModulosPastos() {
 
   const handleCancel = () => {
     setEditingModulo(null)
-    setFormData({ nome: '', setor_id: '', sistema_producao: '', responsavel: '' })
+    setFormData({ nome: '', setor_id: '', sistema_producao: '', responsavel: '', meta_intervalo_ocupacao_dias: '' })
     setSelectedPastos([])
     setShowForm(false)
   }
@@ -525,6 +543,20 @@ export function ModulosPastos() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
+                Meta de Ocupação (dias)
+              </label>
+              <Input
+                type="number"
+                step="1"
+                min="1"
+                value={formData.meta_intervalo_ocupacao_dias}
+                onChange={(e) => setFormData({ ...formData, meta_intervalo_ocupacao_dias: e.target.value })}
+                placeholder="Ex: 7"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Área Total (ha)
               </label>
               <Input
@@ -567,6 +599,85 @@ export function ModulosPastos() {
               </div>
             </div>
 
+            {editingModulo && (
+              <div className="border-t-2 border-gray-100 pt-4 mt-2">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  Ocupação Atual
+                </h3>
+                {ocupacaoPorModulo[editingModulo.id]?.length > 0 ? (
+                  <div className="space-y-2">
+                    {ocupacaoPorModulo[editingModulo.id].some((oc: any) => oc.meta_excedida) && (
+                      <p className="text-xs font-bold text-red-700 flex items-center gap-1 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                        ⚠️ Um ou mais lotes com meta de ocupação excedida
+                      </p>
+                    )}
+                    {ocupacaoPorModulo[editingModulo.id].map((oc: any) => (
+                      <div
+                        key={oc.lote_id}
+                        className={`rounded-xl p-4 space-y-2 ${oc.meta_excedida ? 'bg-red-50 border border-red-200' : 'bg-green-50 border border-green-200'}`}
+                      >
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          <div>
+                            <p className="text-xs text-gray-500">Lote</p>
+                            <p className="text-sm font-medium text-gray-800">{oc.lote_nome}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">Tempo de ocupação</p>
+                            <p className="text-sm font-medium text-gray-800">{oc.periodo_ocupacao_dias} dias</p>
+                          </div>
+                          {oc.taxa_lotacao_ua_ha != null && (
+                            <div>
+                              <p className="text-xs text-gray-500">Taxa de lotação (módulo)</p>
+                              <p className="text-sm font-semibold text-blue-700">{Number(oc.taxa_lotacao_ua_ha).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} UA/ha</p>
+                            </div>
+                          )}
+                          {oc.meta_intervalo_ocupacao_dias && (
+                            <div>
+                              <p className="text-xs text-gray-500">Meta</p>
+                              <p className={`text-sm font-medium ${oc.meta_excedida ? 'text-red-700' : 'text-green-700'}`}>
+                                {oc.meta_intervalo_ocupacao_dias} dias
+                                {oc.meta_excedida && <span className="ml-1 text-xs">(+{oc.dias_acima_meta}d)</span>}
+                              </p>
+                            </div>
+                          )}
+                          {oc.cabecas_entrada && (
+                            <div>
+                              <p className="text-xs text-gray-500">Cabeças na entrada</p>
+                              <p className="text-sm font-medium text-gray-800">{oc.cabecas_entrada}</p>
+                            </div>
+                          )}
+                          {oc.peso_vivo_medio_entrada_kg && (
+                            <div>
+                              <p className="text-xs text-gray-500">Peso médio entrada</p>
+                              <p className="text-sm font-medium text-gray-800">{Number(oc.peso_vivo_medio_entrada_kg).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} kg</p>
+                            </div>
+                          )}
+                          {oc.data_hora_entrada && (
+                            <div>
+                              <p className="text-xs text-gray-500">Data de entrada</p>
+                              <p className="text-sm font-medium text-gray-800">{new Date(oc.data_hora_entrada).toLocaleDateString('pt-BR')}</p>
+                            </div>
+                          )}
+                        </div>
+                        {oc.desvio_percentual_atual != null && (
+                          <p className={`text-xs ${oc.meta_excedida ? 'text-red-600' : 'text-green-600'}`}>
+                            Desvio atual: {oc.desvio_percentual_atual > 0 ? '+' : ''}{Number(oc.desvio_percentual_atual).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-xl p-4 bg-gray-50 border border-gray-200">
+                    <p className="text-sm text-gray-500">Nenhum lote ocupando este módulo no momento.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="flex gap-3">
               <Button type="submit" disabled={submitting}>
                 {submitting ? 'Salvando...' : editingModulo ? 'Atualizar' : 'Salvar'}
@@ -594,7 +705,13 @@ export function ModulosPastos() {
       ) : !showForm ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredModulos.map((modulo) => (
-            <Card key={modulo.id} className={`hover:shadow-lg transition-shadow flex flex-col ${!modulo.ativo ? 'opacity-60' : ''}`}>
+            <Card key={modulo.id} className={`hover:shadow-lg transition-shadow flex flex-col ${
+                !modulo.ativo ? 'opacity-60' : ''
+              } ${
+                ocupacaoPorModulo[modulo.id]?.some((oc: any) => oc.meta_excedida)
+                  ? 'border-2 border-red-400'
+                  : ''
+              }`}>
               <div className="flex flex-col flex-grow space-y-3">
                 <div className="flex justify-between items-start">
                   <div>
@@ -612,13 +729,20 @@ export function ModulosPastos() {
                       <p className="text-sm text-gray-600">Responsável: {modulo.responsavel}</p>
                     )}
                   </div>
-                  <span
-                    className={`px-2 py-1 text-xs rounded-full ${
-                      modulo.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}
-                  >
-                    {modulo.ativo ? 'Ativo' : 'Inativo'}
-                  </span>
+                  <div className="flex flex-col items-end gap-1">
+                    {ocupacaoPorModulo[modulo.id]?.some((oc: any) => oc.meta_excedida) && (
+                      <span className="px-2 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700">
+                        ⚠️ Meta excedida
+                      </span>
+                    )}
+                    <span
+                      className={`px-2 py-1 text-xs rounded-full ${
+                        modulo.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}
+                    >
+                      {modulo.ativo ? 'Ativo' : 'Inativo'}
+                    </span>
+                  </div>
                 </div>
                 {modulo.pastos && modulo.pastos.length > 0 && (
                   <div>
@@ -633,6 +757,19 @@ export function ModulosPastos() {
                         </span>
                       ))}
                     </div>
+                  </div>
+                )}
+                {ocupacaoPorModulo[modulo.id]?.length > 0 && (
+                  <div className="mt-2 pt-2 border-t border-gray-100">
+                    <p className="text-sm text-gray-600 font-medium mb-1">Lotes em ocupação:</p>
+                    {ocupacaoPorModulo[modulo.id].map((oc: any) => (
+                      <div key={oc.lote_id} className="mb-1">
+                        <p className="text-sm text-gray-600">• <span className="font-medium">{oc.lote_nome}</span> — {oc.periodo_ocupacao_dias} dias</p>
+                        {oc.meta_intervalo_ocupacao_dias && oc.meta_excedida && (
+                          <p className="text-sm text-red-600 ml-3">⚠️ Meta de {oc.meta_intervalo_ocupacao_dias}d excedida em {oc.dias_acima_meta} dias</p>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
