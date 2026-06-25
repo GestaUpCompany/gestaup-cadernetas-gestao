@@ -49,15 +49,8 @@ export function HistoricoOcupacao() {
   // Filtros por métricas
   const [taxaLotacaoMin, setTaxaLotacaoMin] = useState('')
   const [taxaLotacaoMax, setTaxaLotacaoMax] = useState('')
-  const [cabecasMin, setCabecasMin] = useState('')
-  const [cabecasMax, setCabecasMax] = useState('')
   const [diasMin, setDiasMin] = useState('')
   const [diasMax, setDiasMax] = useState('')
-
-  // Filtros por meta
-  const [apenasExcedeuMeta, setApenasExcedeuMeta] = useState(false)
-  const [desvioMin, setDesvioMin] = useState('')
-  const [apenasComMeta, setApenasComMeta] = useState(false)
 
   // Filtro de status
   const [statusFiltro, setStatusFiltro] = useState<'todos' | 'ativos' | 'encerrados'>('todos')
@@ -164,20 +157,12 @@ export function HistoricoOcupacao() {
     // Filtros por métricas
     const matchTaxaMin = !taxaLotacaoMin || (item.taxa_lotacao_ua_ha != null && item.taxa_lotacao_ua_ha >= parseFloat(taxaLotacaoMin))
     const matchTaxaMax = !taxaLotacaoMax || (item.taxa_lotacao_ua_ha != null && item.taxa_lotacao_ua_ha <= parseFloat(taxaLotacaoMax))
-    const matchCabecasMin = !cabecasMin || (item.cabecas_entrada != null && item.cabecas_entrada >= parseInt(cabecasMin))
-    const matchCabecasMax = !cabecasMax || (item.cabecas_entrada != null && item.cabecas_entrada <= parseInt(cabecasMax))
     const matchDiasMin = !diasMin || (item.periodo_ocupacao_dias != null && item.periodo_ocupacao_dias >= parseFloat(diasMin))
     const matchDiasMax = !diasMax || (item.periodo_ocupacao_dias != null && item.periodo_ocupacao_dias <= parseFloat(diasMax))
 
-    // Filtros por meta
-    const matchExcedeuMeta = !apenasExcedeuMeta || (item.desvio_tempo_ocupacao_percent != null && item.desvio_tempo_ocupacao_percent > 0)
-    const matchDesvioMin = !desvioMin || (item.desvio_tempo_ocupacao_percent != null && item.desvio_tempo_ocupacao_percent >= parseFloat(desvioMin))
-    const matchComMeta = !apenasComMeta || item.meta_intervalo_ocupacao_dias != null
-
     return matchSearch && matchStatus && matchDataInicio && matchDataFim && matchPeriodoRapido &&
            matchLote && matchPasto && matchModulo &&
-           matchTaxaMin && matchTaxaMax && matchCabecasMin && matchCabecasMax && matchDiasMin && matchDiasMax &&
-           matchExcedeuMeta && matchDesvioMin && matchComMeta
+           matchTaxaMin && matchTaxaMax && matchDiasMin && matchDiasMax
   })
 
   const formatarData = (dataStr?: string | null) => {
@@ -200,6 +185,29 @@ export function HistoricoOcupacao() {
     return 'text-green-600'
   }
 
+  const limparFiltros = () => {
+    setSearchTerm('')
+    setStatusFiltro('todos')
+    setDataInicio('')
+    setDataFim('')
+    setPeriodoRapido('')
+    setLoteSelecionado('')
+    setPastoSelecionado('')
+    setModuloSelecionado('')
+    setTaxaLotacaoMin('')
+    setTaxaLotacaoMax('')
+    setDiasMin('')
+    setDiasMax('')
+  }
+
+  // Quando período rápido é selecionado, limpar os inputs de data manual
+  useEffect(() => {
+    if (periodoRapido) {
+      setDataInicio('')
+      setDataFim('')
+    }
+  }, [periodoRapido])
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
@@ -211,14 +219,14 @@ export function HistoricoOcupacao() {
 
       {/* Filtros */}
       <Card>
-        <div className="space-y-4">
+        <div className="space-y-3">
           {/* Primeira linha: Toggle, Busca, Status */}
-          <div className="flex flex-wrap gap-4 items-center">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 items-stretch sm:items-center">
             {/* Toggle Pasto / Módulo */}
-            <div className="flex bg-gray-100 rounded-lg p-1">
+            <div className="flex bg-gray-100 rounded-lg p-1 w-full sm:w-auto">
               <button
                 onClick={() => setTipo('pasto')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                className={`flex-1 sm:flex-none px-3 py-2 rounded-md text-sm font-medium transition-all ${
                   tipo === 'pasto' ? 'bg-white text-primary shadow-sm' : 'text-gray-600'
                 }`}
               >
@@ -226,7 +234,7 @@ export function HistoricoOcupacao() {
               </button>
               <button
                 onClick={() => setTipo('modulo')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                className={`flex-1 sm:flex-none px-3 py-2 rounded-md text-sm font-medium transition-all ${
                   tipo === 'modulo' ? 'bg-white text-primary shadow-sm' : 'text-gray-600'
                 }`}
               >
@@ -235,10 +243,10 @@ export function HistoricoOcupacao() {
             </div>
 
             {/* Busca geral */}
-            <div className="flex-1 min-w-[200px]">
+            <div className="flex-1 min-w-[180px]">
               <input
                 type="text"
-                placeholder="Buscar por lote, pasto ou módulo..."
+                placeholder="Buscar..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
@@ -246,172 +254,134 @@ export function HistoricoOcupacao() {
             </div>
 
             {/* Status */}
-            <select
-              value={statusFiltro}
-              onChange={(e) => setStatusFiltro(e.target.value as 'todos' | 'ativos' | 'encerrados')}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
-            >
-              <option value="todos">Todos os status</option>
-              <option value="ativos">Apenas ativos</option>
-              <option value="encerrados">Apenas encerrados</option>
-            </select>
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-gray-600">Status:</label>
+              <select
+                value={statusFiltro}
+                onChange={(e) => setStatusFiltro(e.target.value as 'todos' | 'ativos' | 'encerrados')}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent w-full sm:w-auto"
+              >
+                <option value="todos">Todos</option>
+                <option value="ativos">Ativos</option>
+                <option value="encerrados">Encerrados</option>
+              </select>
+            </div>
           </div>
 
-          {/* Segunda linha: Filtros temporais */}
-          <div className="flex flex-wrap gap-4 items-center">
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-gray-600">De:</label>
+          {/* Segunda linha: Filtros agrupados */}
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 items-stretch sm:items-center text-sm">
+            {/* Filtros temporais */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg w-full sm:w-auto">
+              <span className="text-xs font-medium text-gray-600 whitespace-nowrap">Data:</span>
               <input
                 type="date"
                 value={dataInicio}
                 onChange={(e) => setDataInicio(e.target.value)}
-                className="px-2 py-1 border border-gray-300 rounded text-sm"
+                className="px-2 py-1.5 border border-gray-300 rounded text-xs w-full sm:w-auto"
               />
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-gray-600">Até:</label>
+              <span className="text-gray-400 hidden sm:inline">—</span>
               <input
                 type="date"
                 value={dataFim}
                 onChange={(e) => setDataFim(e.target.value)}
-                className="px-2 py-1 border border-gray-300 rounded text-sm"
+                className="px-2 py-1.5 border border-gray-300 rounded text-xs w-full sm:w-auto"
               />
+              <select
+                value={periodoRapido}
+                onChange={(e) => setPeriodoRapido(e.target.value)}
+                className="px-2 py-1.5 border border-gray-300 rounded text-xs w-full sm:w-auto"
+              >
+                <option value="">Rápido</option>
+                <option value="7">7d</option>
+                <option value="30">30d</option>
+                <option value="90">90d</option>
+                <option value="365">1a</option>
+              </select>
             </div>
-            <select
-              value={periodoRapido}
-              onChange={(e) => setPeriodoRapido(e.target.value)}
-              className="px-2 py-1 border border-gray-300 rounded text-sm"
-            >
-              <option value="">Período rápido...</option>
-              <option value="7">Últimos 7 dias</option>
-              <option value="30">Últimos 30 dias</option>
-              <option value="90">Últimos 90 dias</option>
-              <option value="365">Último ano</option>
-            </select>
-          </div>
 
-          {/* Terceira linha: Filtros por entidade */}
-          <div className="flex flex-wrap gap-4 items-center">
-            <select
-              value={loteSelecionado}
-              onChange={(e) => setLoteSelecionado(e.target.value)}
-              className="px-2 py-1 border border-gray-300 rounded text-sm min-w-[150px]"
-            >
-              <option value="">Todos os lotes</option>
-              {lotesDisponiveis.map(l => (
-                <option key={l.id} value={l.id}>{l.nome}</option>
-              ))}
-            </select>
-            <select
-              value={pastoSelecionado}
-              onChange={(e) => setPastoSelecionado(e.target.value)}
-              className="px-2 py-1 border border-gray-300 rounded text-sm min-w-[150px]"
-            >
-              <option value="">Todos os pastos</option>
-              {pastosDisponiveis.map(p => (
-                <option key={p.id} value={p.id}>{p.nome}</option>
-              ))}
-            </select>
-            <select
-              value={moduloSelecionado}
-              onChange={(e) => setModuloSelecionado(e.target.value)}
-              className="px-2 py-1 border border-gray-300 rounded text-sm min-w-[150px]"
-            >
-              <option value="">Todos os módulos</option>
-              {modulosDisponiveis.map(m => (
-                <option key={m.id} value={m.id}>{m.nome}</option>
-              ))}
-            </select>
-          </div>
+            {/* Filtros por entidade */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg w-full sm:w-auto">
+              <span className="text-xs font-medium text-gray-600 whitespace-nowrap">Entidade:</span>
+              <select
+                value={loteSelecionado}
+                onChange={(e) => setLoteSelecionado(e.target.value)}
+                className="px-2 py-1.5 border border-gray-300 rounded text-xs w-full sm:w-auto min-w-[120px]"
+              >
+                <option value="">Lote</option>
+                {lotesDisponiveis.map(l => (
+                  <option key={l.id} value={l.id}>{l.nome}</option>
+                ))}
+              </select>
+              <select
+                value={pastoSelecionado}
+                onChange={(e) => setPastoSelecionado(e.target.value)}
+                className="px-2 py-1.5 border border-gray-300 rounded text-xs w-full sm:w-auto min-w-[120px]"
+              >
+                <option value="">Pasto</option>
+                {pastosDisponiveis.map(p => (
+                  <option key={p.id} value={p.id}>{p.nome}</option>
+                ))}
+              </select>
+              <select
+                value={moduloSelecionado}
+                onChange={(e) => setModuloSelecionado(e.target.value)}
+                className="px-2 py-1.5 border border-gray-300 rounded text-xs w-full sm:w-auto min-w-[120px]"
+              >
+                <option value="">Módulo</option>
+                {modulosDisponiveis.map(m => (
+                  <option key={m.id} value={m.id}>{m.nome}</option>
+                ))}
+              </select>
+            </div>
 
-          {/* Quarta linha: Filtros por métricas */}
-          <div className="flex flex-wrap gap-4 items-center">
-            <div className="flex items-center gap-1">
-              <label className="text-xs text-gray-600">Taxa UA/ha:</label>
-              <input
-                type="number"
-                placeholder="Min"
-                value={taxaLotacaoMin}
-                onChange={(e) => setTaxaLotacaoMin(e.target.value)}
-                className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
-              />
-              <span className="text-xs text-gray-400">-</span>
-              <input
-                type="number"
-                placeholder="Max"
-                value={taxaLotacaoMax}
-                onChange={(e) => setTaxaLotacaoMax(e.target.value)}
-                className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
-              />
+            {/* Filtros por métricas */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg w-full sm:w-auto">
+              <span className="text-xs font-medium text-gray-600 whitespace-nowrap">Métricas:</span>
+              <div className="flex items-center gap-1 w-full sm:w-auto">
+                <span className="text-xs text-gray-500 whitespace-nowrap">UA/ha</span>
+                <input
+                  type="number"
+                  placeholder="Min"
+                  value={taxaLotacaoMin}
+                  onChange={(e) => setTaxaLotacaoMin(e.target.value)}
+                  className="w-16 px-2 py-1.5 border border-gray-300 rounded text-xs"
+                />
+                <span className="text-gray-400">-</span>
+                <input
+                  type="number"
+                  placeholder="Max"
+                  value={taxaLotacaoMax}
+                  onChange={(e) => setTaxaLotacaoMax(e.target.value)}
+                  className="w-16 px-2 py-1.5 border border-gray-300 rounded text-xs"
+                />
+              </div>
+              <div className="flex items-center gap-1 w-full sm:w-auto">
+                <span className="text-xs text-gray-500 whitespace-nowrap">Dias</span>
+                <input
+                  type="number"
+                  placeholder="Min"
+                  value={diasMin}
+                  onChange={(e) => setDiasMin(e.target.value)}
+                  className="w-12 px-1 py-1.5 border border-gray-300 rounded text-xs"
+                />
+                <span className="text-gray-400">-</span>
+                <input
+                  type="number"
+                  placeholder="Max"
+                  value={diasMax}
+                  onChange={(e) => setDiasMax(e.target.value)}
+                  className="w-12 px-1 py-1.5 border border-gray-300 rounded text-xs"
+                />
+              </div>
             </div>
-            <div className="flex items-center gap-1">
-              <label className="text-xs text-gray-600">Cabeças:</label>
-              <input
-                type="number"
-                placeholder="Min"
-                value={cabecasMin}
-                onChange={(e) => setCabecasMin(e.target.value)}
-                className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
-              />
-              <span className="text-xs text-gray-400">-</span>
-              <input
-                type="number"
-                placeholder="Max"
-                value={cabecasMax}
-                onChange={(e) => setCabecasMax(e.target.value)}
-                className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
-              />
-            </div>
-            <div className="flex items-center gap-1">
-              <label className="text-xs text-gray-600">Dias:</label>
-              <input
-                type="number"
-                placeholder="Min"
-                value={diasMin}
-                onChange={(e) => setDiasMin(e.target.value)}
-                className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
-              />
-              <span className="text-xs text-gray-400">-</span>
-              <input
-                type="number"
-                placeholder="Max"
-                value={diasMax}
-                onChange={(e) => setDiasMax(e.target.value)}
-                className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
-              />
-            </div>
-          </div>
 
-          {/* Quinta linha: Filtros por meta */}
-          <div className="flex flex-wrap gap-4 items-center">
-            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={apenasExcedeuMeta}
-                onChange={(e) => setApenasExcedeuMeta(e.target.checked)}
-                className="rounded border-gray-300"
-              />
-              Apenas excedeu meta
-            </label>
-            <div className="flex items-center gap-1">
-              <label className="text-xs text-gray-600">Desvio mínimo %:</label>
-              <input
-                type="number"
-                placeholder="0"
-                value={desvioMin}
-                onChange={(e) => setDesvioMin(e.target.value)}
-                className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
-              />
-            </div>
-            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={apenasComMeta}
-                onChange={(e) => setApenasComMeta(e.target.checked)}
-                className="rounded border-gray-300"
-              />
-              Apenas com meta definida
-            </label>
+            {/* Botão limpar filtros */}
+            <button
+              onClick={limparFiltros}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors w-full sm:w-auto"
+            >
+              Limpar filtros
+            </button>
           </div>
         </div>
       </Card>
@@ -426,12 +396,12 @@ export function HistoricoOcupacao() {
       ) : filtrado.length === 0 ? (
         <Card>
           <p className="text-center text-gray-500 py-8">
-            {searchTerm || statusFiltro !== 'todos' || dataInicio || dataFim || periodoRapido || loteSelecionado || pastoSelecionado || moduloSelecionado || taxaLotacaoMin || taxaLotacaoMax || cabecasMin || cabecasMax || diasMin || diasMax || apenasExcedeuMeta || desvioMin || apenasComMeta ? 'Nenhum registro encontrado com os filtros aplicados' : 'Nenhum histórico de ocupação disponível'}
+            {searchTerm || statusFiltro !== 'todos' || dataInicio || dataFim || periodoRapido || loteSelecionado || pastoSelecionado || moduloSelecionado || taxaLotacaoMin || taxaLotacaoMax || diasMin || diasMax ? 'Nenhum registro encontrado com os filtros aplicados' : 'Nenhum histórico de ocupação disponível'}
           </p>
         </Card>
       ) : (
         <Card>
-          <div className="overflow-x-auto -mx-4 sm:-mx-6 px-0">
+          <div className="overflow-x-auto -mx-4 sm:-mx-6 px-4 sm:px-6">
             <table className="min-w-full divide-y divide-gray-200 text-sm">
               <thead>
                 <tr className="bg-gray-50">
