@@ -26,6 +26,7 @@ interface RegistroMaternidade {
   id_brinco_cria?: string
   id_chip_cria?: string
   id_provisorio_cria?: string
+  individuo_id_cria?: string
   sync_status?: string
   created_at: string
   updated_at?: string
@@ -134,6 +135,17 @@ export function MaternidadeDetalhes() {
                   <p className="text-sm"><span className="font-medium text-gray-700">ID Chip:</span> {registro.id_chip_cria || '-'}</p>
                   <p className="text-sm"><span className="font-medium text-gray-700">Sexo:</span> {registro.sexo || '-'}</p>
                   <p className="text-sm"><span className="font-medium text-gray-700">Peso (kg):</span> {registro.peso_cria_kg || '-'}</p>
+                  {registro.individuo_id_cria && (
+                    <p className="text-sm pt-2 border-t border-gray-200 mt-2">
+                      <span className="font-medium text-gray-700">Indivíduo:</span>{' '}
+                      <button
+                        onClick={() => navigate(`/controller/individuos/${registro.individuo_id_cria}`)}
+                        className="text-primary hover:underline font-medium"
+                      >
+                        Ver indivíduo
+                      </button>
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

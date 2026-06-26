@@ -26,6 +26,7 @@ interface RegistroMorte {
   escore?: number
   nutricao_atual?: string
   nutricao_anterior?: string
+  individuo_id?: string
   sync_status?: string
   version?: number
   created_at: string
@@ -123,6 +124,19 @@ export function RegistrosMorteDetalhes() {
                 <p className="text-sm"><span className="font-medium text-gray-700">Chip:</span> {registro.chip || '-'}</p>
                 <p className="text-sm"><span className="font-medium text-gray-700">Categoria:</span> {registro.categoria || '-'}{registro.categoria === 'outros' && registro.categoria_outros ? ` (${registro.categoria_outros})` : ''}</p>
               </div>
+              {registro.individuo_id && (
+                <div className="mt-3 pt-3 border-t border-gray-200">
+                  <p className="text-sm">
+                    <span className="font-medium text-gray-700">Indivíduo:</span>{' '}
+                    <button
+                      onClick={() => navigate(`/controller/individuos/${registro.individuo_id}`)}
+                      className="text-primary hover:underline font-medium"
+                    >
+                      Ver indivíduo
+                    </button>
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 

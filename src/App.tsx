@@ -71,6 +71,9 @@ import { ManutencaoMaquinasDetalhes } from './pages/controller/ManutencaoMaquina
 import { Problemas } from './pages/controller/Problemas'
 import { ProblemasDetalhes } from './pages/controller/ProblemasDetalhes'
 import { HistoricoOcupacao } from './pages/controller/HistoricoOcupacao'
+import { Individuos } from './pages/controller/Individuos'
+import { IndividuoNovo } from './pages/controller/IndividuoNovo'
+import { IndividuoDetalhes } from './pages/controller/IndividuoDetalhes'
 
 // Redirecionamento baseado no papel do usuário
 function RoleRedirect() {
@@ -764,6 +767,37 @@ function App() {
             <ControllerRoute>
               <ControllerLayout>
                 <ProblemasDetalhes />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+
+        <Route
+          path="/controller/individuos"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <Individuos />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/individuos/novo"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <IndividuoNovo />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/individuos/:id"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <IndividuoDetalhes />
               </ControllerLayout>
             </ControllerRoute>
           }

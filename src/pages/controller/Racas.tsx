@@ -46,6 +46,7 @@ export function Racas() {
       .from('racas')
       .select('*')
       .eq('fazenda_id', fazendaId)
+      .is('deleted_at', null)
       .order('nome', { ascending: true })
 
     if (error) {
@@ -130,7 +131,10 @@ export function Racas() {
   const handleDeleteConfirm = async () => {
     if (!racaToDelete) return
 
-    const { error } = await supabase.from('racas').delete().eq('id', racaToDelete)
+    const { error } = await supabase
+      .from('racas')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', racaToDelete)
 
     if (error) {
       console.error('Erro ao excluir raça:', error)

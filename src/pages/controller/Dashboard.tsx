@@ -298,6 +298,18 @@ export function ControllerDashboard() {
           </Card>
           <Card 
             className="bg-white p-3 sm:p-6 shadow-md rounded-xl border border-gray-100 cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => navigate('/controller/cadernetas/enfermaria')}
+          >
+            <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
+              <img src={CADERNETA_IMAGES.enfermaria} alt={CADERNETA_TITLES.enfermaria} className="w-12 h-12 sm:w-16 sm:h-16 rounded-[24px] sm:rounded-[32px]" />
+              <div>
+                <p className="text-xs sm:text-sm text-gray-500 mb-0.5 sm:mb-1">{CADERNETA_TITLES.enfermaria}</p>
+                <p className="text-2xl sm:text-4xl font-bold text-gray-800">{cadernetaStats.enfermaria}</p>
+              </div>
+            </div>
+          </Card>
+          <Card 
+            className="bg-white p-3 sm:p-6 shadow-md rounded-xl border border-gray-100 cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() => navigate('/controller/cadernetas/morte')}
           >
             <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">

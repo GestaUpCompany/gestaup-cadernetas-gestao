@@ -709,6 +709,7 @@ export function Lotes() {
         pastos (nome)
       `)
       .eq('fazenda_id', fazendaId)
+      .is('deleted_at', null)
       .order('nome', { ascending: true })
 
     if (lotesError) {
@@ -1161,7 +1162,10 @@ export function Lotes() {
   const handleDeleteConfirm = async () => {
     if (!loteToDelete) return
 
-    const { error } = await supabase.from('lotes').delete().eq('id', loteToDelete)
+    const { error } = await supabase
+      .from('lotes')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', loteToDelete)
 
     if (error) {
       console.error('Erro ao excluir lote:', error)

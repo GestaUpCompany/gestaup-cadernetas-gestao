@@ -26,6 +26,7 @@ interface RegistroMaternidade {
   id_brinco_mae?: string
   id_chip_mae?: string
   id_provisorio_cria?: string
+  individuo_id_cria?: string
   sync_status?: string
   created_at: string
 }
@@ -238,6 +239,19 @@ export function Maternidade() {
                     <span className="text-gray-500">Pasto:</span>
                     <span className="text-gray-800 font-medium truncate max-w-[120px]">{registro.pasto || '-'}</span>
                   </div>
+                  {registro.individuo_id_cria && (
+                    <div className="pt-2 border-t border-gray-100">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          navigate(`/controller/individuos/${registro.individuo_id_cria}`)
+                        }}
+                        className="text-sm text-primary hover:underline font-medium"
+                      >
+                        Ver indivíduo criado
+                      </button>
+                    </div>
+                  )}
                 </div>
               </Card>
             ))}
@@ -263,6 +277,7 @@ export function Maternidade() {
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo Parto</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lote</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pasto</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Indivíduo</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -301,6 +316,21 @@ export function Maternidade() {
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                       {registro.pasto || '-'}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      {registro.individuo_id_cria ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            navigate(`/controller/individuos/${registro.individuo_id_cria}`)
+                          }}
+                          className="text-primary hover:underline font-medium"
+                        >
+                          Ver indivíduo
+                        </button>
+                      ) : (
+                        '-'
+                      )}
                     </td>
                   </tr>
                 ))}

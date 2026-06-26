@@ -32,6 +32,7 @@ const menuStructure = [
       { label: 'Pastos', path: '/controller/pastos' },
       { label: 'Módulos', path: '/controller/modulos-pastos' },
       { label: 'Lotes', path: '/controller/lotes' },
+      { label: 'Indivíduos', path: '/controller/individuos' },
       { label: 'Histórico de Ocupação', path: '/controller/historico-ocupacao' },
       { label: 'Cadastros Auxiliares', path: '/controller/cadastros-auxiliares' },
     ],

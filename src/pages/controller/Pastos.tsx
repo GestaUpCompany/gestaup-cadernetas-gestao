@@ -140,6 +140,7 @@ export function Pastos() {
       .from('pastos')
       .select('*, modulos_pastos!left(nome, ativo)')
       .eq('fazenda_id', fazendaId)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -340,7 +341,10 @@ export function Pastos() {
   const handleDeleteConfirm = async () => {
     if (!pastoToDelete) return
 
-    const { error } = await supabase.from('pastos').delete().eq('id', pastoToDelete)
+    const { error } = await supabase
+      .from('pastos')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', pastoToDelete)
 
     if (error) {
       console.error('Erro ao excluir pasto:', error)

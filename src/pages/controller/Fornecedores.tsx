@@ -64,6 +64,7 @@ export function Fornecedores() {
       .from('fornecedores')
       .select('*')
       .eq('fazenda_id', fazendaId)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false })
 
     if (error) {
