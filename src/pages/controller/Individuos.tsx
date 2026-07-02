@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
@@ -59,6 +59,15 @@ const syncStatusList = [
   { value: 'manual_incompleto', label: 'Incompleto' },
 ]
 
+const PER_PAGE_OPTIONS = [10, 25, 50, 100]
+const PER_PAGE_STORAGE_KEY = 'gestaup_individuos_per_page'
+
+function getStoredPerPage(): number {
+  const stored = localStorage.getItem(PER_PAGE_STORAGE_KEY)
+  const value = stored ? Number(stored) : 50
+  return PER_PAGE_OPTIONS.includes(value) ? value : 50
+}
+
 export function Individuos() {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -79,10 +88,34 @@ export function Individuos() {
   const [filtroPasto, setFiltroPasto] = useState('')
   const [filtroIncompletos, setFiltroIncompletos] = useState(false)
   const [filtroAutomaticos, setFiltroAutomaticos] = useState(false)
+  const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState(getStoredPerPage)
+  const [totalCount, setTotalCount] = useState(0)
+
+  const from = (page - 1) * perPage
+  const to = from + perPage - 1
 
   useEffect(() => {
     loadData()
-  }, [user])
+  }, [user, page, perPage])
+
+  useEffect(() => {
+    setPage(1)
+  }, [
+    searchTerm,
+    filtroTipoIdentificacao,
+    filtroStatus,
+    filtroSexo,
+    filtroCategoria,
+    filtroRaca,
+    filtroOrigem,
+    filtroSyncStatus,
+    filtroLote,
+    filtroPasto,
+    filtroIncompletos,
+    filtroAutomaticos,
+    perPage,
+  ])
 
   useEffect(() => {
     if (!user) return
@@ -127,6 +160,48 @@ export function Individuos() {
     }
   }, [user])
 
+  const buildFilters = (query: any) => {
+    if (filtroStatus) query = query.eq('status', filtroStatus)
+    if (filtroSexo) query = query.eq('sexo', filtroSexo)
+    if (filtroCategoria) query = query.eq('categoria', filtroCategoria)
+    if (filtroRaca) query = query.eq('raca', filtroRaca)
+    if (filtroOrigem) query = query.eq('origem', filtroOrigem)
+    if (filtroSyncStatus) query = query.eq('sync_status', filtroSyncStatus)
+    if (filtroLote) query = query.eq('lote_atual', filtroLote)
+    if (filtroPasto) query = query.eq('pasto_atual', filtroPasto)
+
+    if (filtroIncompletos) {
+      query = query.in('sync_status', ['automatico_incompleto', 'manual_incompleto'])
+    } else if (filtroAutomaticos) {
+      query = query.eq('sync_status', 'automatico_incompleto')
+    }
+
+    const term = searchTerm.trim().toLowerCase()
+    if (term) {
+      const ilikeTerm = `%${term}%`
+      if (filtroTipoIdentificacao === 'brinco') {
+        query = query.ilike('id_brinco', ilikeTerm)
+      } else if (filtroTipoIdentificacao === 'chip') {
+        query = query.ilike('id_chip', ilikeTerm)
+      } else if (filtroTipoIdentificacao === 'manejo') {
+        query = query.ilike('id_manejo', ilikeTerm)
+      } else if (filtroTipoIdentificacao === 'provisorio') {
+        query = query.ilike('id_provisorio_cria', ilikeTerm)
+      } else {
+        query = query.or(
+          `id_brinco.ilike.${ilikeTerm}, id_chip.ilike.${ilikeTerm}, id_manejo.ilike.${ilikeTerm}, id_provisorio_cria.ilike.${ilikeTerm}`
+        )
+      }
+    } else if (filtroTipoIdentificacao !== 'todos') {
+      if (filtroTipoIdentificacao === 'brinco') query = query.not('id_brinco', 'is', null)
+      else if (filtroTipoIdentificacao === 'chip') query = query.not('id_chip', 'is', null)
+      else if (filtroTipoIdentificacao === 'manejo') query = query.not('id_manejo', 'is', null)
+      else if (filtroTipoIdentificacao === 'provisorio') query = query.not('id_provisorio_cria', 'is', null)
+    }
+
+    return query
+  }
+
   const loadData = async () => {
     if (!user) return
 
@@ -140,17 +215,35 @@ export function Individuos() {
 
     const fazendaId = vinculos[0].fazenda_id
 
-    const [individuosRes, lotesRes, pastosRes, racasRes] = await Promise.all([
-      supabase
-        .from('individuos')
-        .select('*')
-        .eq('fazenda_id', fazendaId)
-        .is('deleted_at', null)
-        .order('created_at', { ascending: false }),
+    let countQuery: any = supabase
+      .from('individuos')
+      .select('*', { count: 'exact', head: true })
+      .eq('fazenda_id', fazendaId)
+      .is('deleted_at', null)
+    countQuery = buildFilters(countQuery)
+
+    let dataQuery: any = supabase
+      .from('individuos')
+      .select('*')
+      .eq('fazenda_id', fazendaId)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+    dataQuery = buildFilters(dataQuery)
+    dataQuery = dataQuery.range(from, to)
+
+    const [countRes, individuosRes, lotesRes, pastosRes, racasRes] = await Promise.all([
+      countQuery,
+      dataQuery,
       supabase.from('lotes').select('id, nome').eq('fazenda_id', fazendaId).is('deleted_at', null),
       supabase.from('pastos').select('id, nome').eq('fazenda_id', fazendaId).is('deleted_at', null),
       supabase.from('racas').select('id, nome').eq('fazenda_id', fazendaId).is('deleted_at', null),
     ])
+
+    if (countRes.error) {
+      console.error('Erro ao contar indivíduos:', countRes.error)
+    } else {
+      setTotalCount(countRes.count || 0)
+    }
 
     if (individuosRes.error) {
       console.error('Erro ao buscar indivíduos:', individuosRes.error)
@@ -215,56 +308,16 @@ export function Individuos() {
     }
   }
 
-  const filteredIndividuos = useMemo(() => {
-    return individuos.filter((ind) => {
-      const term = searchTerm.toLowerCase()
-      const identificacao = getIdentificacao(ind, filtroTipoIdentificacao)
+  const totalPages = Math.ceil(totalCount / perPage) || 1
+  const startItem = totalCount === 0 ? 0 : from + 1
+  const endItem = Math.min(from + perPage, totalCount)
 
-      const matchesTipo = filtroTipoIdentificacao === 'todos' || identificacao !== null
-      const matchesSearch = !term || (identificacao?.value.toLowerCase().includes(term) ?? false)
-
-      const matchesStatus = !filtroStatus || ind.status === filtroStatus
-      const matchesSexo = !filtroSexo || ind.sexo === filtroSexo
-      const matchesCategoria = !filtroCategoria || ind.categoria === filtroCategoria
-      const matchesRaca = !filtroRaca || ind.raca === filtroRaca
-      const matchesOrigem = !filtroOrigem || ind.origem === filtroOrigem
-      const matchesSyncStatus = !filtroSyncStatus || ind.sync_status === filtroSyncStatus
-      const matchesLote = !filtroLote || ind.lote_atual === filtroLote
-      const matchesPasto = !filtroPasto || ind.pasto_atual === filtroPasto
-
-      const matchesIncompletos = !filtroIncompletos || ind.sync_status === 'automatico_incompleto' || ind.sync_status === 'manual_incompleto'
-      const matchesAutomaticos = !filtroAutomaticos || ind.sync_status === 'automatico_incompleto'
-
-      return (
-        matchesTipo &&
-        matchesSearch &&
-        matchesStatus &&
-        matchesSexo &&
-        matchesCategoria &&
-        matchesRaca &&
-        matchesOrigem &&
-        matchesSyncStatus &&
-        matchesLote &&
-        matchesPasto &&
-        matchesIncompletos &&
-        matchesAutomaticos
-      )
-    })
-  }, [
-    individuos,
-    searchTerm,
-    filtroTipoIdentificacao,
-    filtroStatus,
-    filtroSexo,
-    filtroCategoria,
-    filtroRaca,
-    filtroOrigem,
-    filtroSyncStatus,
-    filtroLote,
-    filtroPasto,
-    filtroIncompletos,
-    filtroAutomaticos,
-  ])
+  const handlePerPageChange = (value: string) => {
+    const newPerPage = Number(value)
+    setPerPage(newPerPage)
+    localStorage.setItem(PER_PAGE_STORAGE_KEY, String(newPerPage))
+    setPage(1)
+  }
 
   const limparFiltros = () => {
     setSearchTerm('')
@@ -340,7 +393,7 @@ export function Individuos() {
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Indivíduos</h2>
           <p className="text-sm text-gray-500 mt-1">
-            {filteredIndividuos.length} de {individuos.length} indivíduos
+            {totalCount} indivíduo{totalCount !== 1 ? 's' : ''} no total
           </p>
         </div>
         <Button onClick={() => navigate('/controller/individuos/novo')} className="h-10">
@@ -482,7 +535,7 @@ export function Individuos() {
             </div>
             {searchTerm && (
               <span className="text-sm text-gray-500 whitespace-nowrap">
-                {filteredIndividuos.length} resultado{filteredIndividuos.length !== 1 ? 's' : ''}
+                {individuos.length} resultado{individuos.length !== 1 ? 's' : ''}
               </span>
             )}
           </div>
@@ -491,12 +544,12 @@ export function Individuos() {
 
       {/* Mobile cards */}
       <div className="md:hidden space-y-4">
-        {filteredIndividuos.length === 0 ? (
+        {individuos.length === 0 ? (
           <Card className="p-8 text-center border-0 shadow-sm">
             <p className="text-gray-600">Nenhum indivíduo encontrado</p>
           </Card>
         ) : (
-          filteredIndividuos.map((ind) => {
+          individuos.map((ind) => {
             const identificacao = getIdentificacao(ind, filtroTipoIdentificacao)
             return (
             <Card
@@ -606,75 +659,121 @@ export function Individuos() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filteredIndividuos.length === 0 ? (
+              {individuos.length === 0 ? (
                 <tr>
                   <td colSpan={10} className="px-4 py-8 text-center text-gray-600">
                     Nenhum indivíduo encontrado
                   </td>
                 </tr>
               ) : (
-                filteredIndividuos.map((ind) => {
+                individuos.map((ind) => {
                   const identificacao = getIdentificacao(ind, filtroTipoIdentificacao)
                   return (
-                  <tr
-                    key={ind.id}
-                    className="hover:bg-gray-50 transition-colors cursor-pointer"
-                    onClick={() => navigate(`/controller/individuos/${ind.id}`)}
-                  >
-                    <td className="px-4 py-3">
-                      {identificacao ? (
-                        <div className="font-medium text-gray-900">
-                          <span className="text-xs font-normal text-gray-500">{identificacao.label}:</span>{' '}
-                          {identificacao.value}
+                    <tr
+                      key={ind.id}
+                      className="hover:bg-gray-50 transition-colors cursor-pointer"
+                      onClick={() => navigate(`/controller/individuos/${ind.id}`)}
+                    >
+                      <td className="px-4 py-3">
+                        {identificacao ? (
+                          <div className="font-medium text-gray-900">
+                            <span className="text-xs font-normal text-gray-500">{identificacao.label}:</span>{' '}
+                            {identificacao.value}
+                          </div>
+                        ) : (
+                          <div className="font-medium text-gray-900">-</div>
+                        )}
+                        {ind.id_provisorio_cria && identificacao?.label !== 'Provisório' && (
+                          <div className="text-xs text-gray-500">Prov: {ind.id_provisorio_cria}</div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{ind.categoria}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{ind.sexo}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{ind.raca}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">
+                        {ind.data_nascimento
+                          ? new Date(ind.data_nascimento).toLocaleDateString('pt-BR')
+                          : '-'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{ind.status}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{getNomeLote(ind.lote_atual)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{getNomePasto(ind.pasto_atual)}</td>
+                      <td className="px-4 py-3">{getCompletudeBadge(ind.sync_status)}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              navigate(`/controller/individuos/${ind.id}`)
+                            }}
+                          >
+                            Ver
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              navigate(`/controller/individuos/${ind.id}`)
+                            }}
+                          >
+                            Editar
+                          </Button>
                         </div>
-                      ) : (
-                        <div className="font-medium text-gray-900">-</div>
-                      )}
-                      {ind.id_provisorio_cria && identificacao?.label !== 'Provisório' && (
-                        <div className="text-xs text-gray-500">Prov: {ind.id_provisorio_cria}</div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{ind.categoria}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{ind.sexo}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{ind.raca}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">
-                      {ind.data_nascimento
-                        ? new Date(ind.data_nascimento).toLocaleDateString('pt-BR')
-                        : '-'}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{ind.status}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{getNomeLote(ind.lote_atual)}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{getNomePasto(ind.pasto_atual)}</td>
-                    <td className="px-4 py-3">{getCompletudeBadge(ind.sync_status)}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            navigate(`/controller/individuos/${ind.id}`)
-                          }}
-                        >
-                          Ver
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            navigate(`/controller/individuos/${ind.id}`)
-                          }}
-                        >
-                          Editar
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              }
-            ))}
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* Pagination */}
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <span>
+            {startItem}–{endItem} de {totalCount}
+          </span>
+          <span>|</span>
+          <div className="flex items-center gap-2">
+            <label htmlFor="per-page">Por página:</label>
+            <select
+              id="per-page"
+              value={perPage}
+              onChange={(e) => handlePerPageChange(e.target.value)}
+              className="border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              {PER_PAGE_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page <= 1}
+          >
+            Anterior
+          </Button>
+          <span className="text-sm text-gray-600 px-2">
+            Página {page} de {totalPages}
+          </span>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page >= totalPages}
+          >
+            Próxima
+          </Button>
         </div>
       </div>
     </div>

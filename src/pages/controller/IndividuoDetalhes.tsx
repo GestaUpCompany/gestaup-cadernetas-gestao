@@ -13,6 +13,11 @@ import {
   statusList,
   origens,
 } from '../../utils/individualValidation'
+import {
+  checkDuplicateIdentification,
+  getIdentificationLabel,
+  type IdentificationField,
+} from '../../utils/checkDuplicateIdentification'
 
 interface Individuo {
   id: string
@@ -66,12 +71,6 @@ interface Individuo {
 interface SelectOption {
   id: string
   nome: string
-}
-
-interface Formulacao {
-  id: string
-  nome: string
-  tipo?: string
 }
 
 interface Maternidade {
@@ -147,7 +146,6 @@ export function IndividuoDetalhes() {
   const [fornecedores, setFornecedores] = useState<SelectOption[]>([])
   const [individuosMacho, setIndividuosMacho] = useState<SelectOption[]>([])
   const [individuosFemea, setIndividuosFemea] = useState<SelectOption[]>([])
-  const [formulacoes, setFormulacoes] = useState<Formulacao[]>([])
   const [maternidade, setMaternidade] = useState<Maternidade | null>(null)
   const [registroMorte, setRegistroMorte] = useState<RegistroMorte | null>(null)
   const [openSections, setOpenSections] = useState<Set<string>>(new Set(['identificacao', 'nascimento']))
@@ -170,7 +168,7 @@ export function IndividuoDetalhes() {
 
     const fazendaId = vinculos[0].fazenda_id
 
-    const [individuoRes, racasRes, lotesRes, pastosRes, setoresRes, fornecedoresRes, machosRes, femeasRes, maternidadeRes, formulacoesRes] =
+    const [individuoRes, racasRes, lotesRes, pastosRes, setoresRes, fornecedoresRes, machosRes, femeasRes, maternidadeRes] =
       await Promise.all([
         supabase.from('individuos').select('*').eq('id', id).eq('fazenda_id', fazendaId).single(),
         supabase.from('racas').select('id, nome').eq('fazenda_id', fazendaId).is('deleted_at', null),
@@ -197,11 +195,7 @@ export function IndividuoDetalhes() {
           .select('id, data, id_brinco_mae, id_chip_mae')
           .eq('individuo_id_cria', id)
           .maybeSingle(),
-        supabase.from('formulacoes').select('id, nome, tipo').eq('fazenda_id', fazendaId).eq('ativo', true),
       ])
-
-    if (formulacoesRes.error) console.error('Erro ao buscar formulações:', formulacoesRes.error)
-    else setFormulacoes(formulacoesRes.data as Formulacao[])
 
     if (individuoRes.error) {
       console.error('Erro ao buscar indivíduo:', individuoRes.error)
@@ -265,13 +259,22 @@ export function IndividuoDetalhes() {
           item.id,
       }))
 
+    const { data: descendentesData } = await supabase.rpc('get_descendentes_individuo', {
+      p_individuo_id: id,
+    })
+    const descendentesSet = new Set<string>((descendentesData || []).map((d: any) => d.descendente_id))
+
     setRacas(mapOptions(racasRes.data))
     setLotes(mapOptions(lotesRes.data))
     setPastos(mapOptions(pastosRes.data))
     setSetores(mapOptions(setoresRes.data))
     setFornecedores(mapOptions(fornecedoresRes.data))
-    setIndividuosMacho(mapIndividuos(machosRes.data))
-    setIndividuosFemea(mapIndividuos(femeasRes.data))
+    setIndividuosMacho(
+      mapIndividuos((machosRes.data || []).filter((i: any) => !descendentesSet.has(i.id)))
+    )
+    setIndividuosFemea(
+      mapIndividuos((femeasRes.data || []).filter((i: any) => !descendentesSet.has(i.id)))
+    )
     setMaternidade(maternidadeRes.data as Maternidade | null)
 
     if (ind.status === 'Morto') {
@@ -318,14 +321,41 @@ export function IndividuoDetalhes() {
     }
   }
 
-  const handleFormulacaoChange = (formulacaoId: string) => {
-    const formulacao = formulacoes.find((f) => f.id === formulacaoId)
-    setForm((prev) => ({
-      ...prev,
-      estrategia_nutricional_id: formulacao ? formulacao.id : '',
-      estrategia_nutricional_nome: formulacao ? formulacao.nome : '',
-      estrategia_nutricional_tipo: formulacao ? formulacao.tipo || '' : '',
-    }))
+  const handleIdentificationBlur = async (field: IdentificationField) => {
+    if (!individuo) return
+    const value = form[field]
+    if (!value || value.trim() === '') return
+
+    const isDuplicate = await checkDuplicateIdentification(individuo.fazenda_id, field, value, id)
+    if (isDuplicate) {
+      setErrors((prev) => ({
+        ...prev,
+        [field]: `${getIdentificationLabel(field)} "${value}" já está em uso nesta fazenda.`,
+      }))
+    }
+  }
+
+  const validateDuplicates = async (): Promise<boolean> => {
+    if (!individuo) return true
+
+    const fields: IdentificationField[] = ['id_brinco', 'id_chip', 'id_manejo']
+    let hasDuplicate = false
+
+    for (const field of fields) {
+      const value = form[field]
+      if (!value || value.trim() === '') continue
+
+      const isDuplicate = await checkDuplicateIdentification(individuo.fazenda_id, field, value, id)
+      if (isDuplicate) {
+        hasDuplicate = true
+        setErrors((prev) => ({
+          ...prev,
+          [field]: `${getIdentificationLabel(field)} "${value}" já está em uso nesta fazenda.`,
+        }))
+      }
+    }
+
+    return !hasDuplicate
   }
 
   const toggleSection = (section: string) => {
@@ -400,6 +430,9 @@ export function IndividuoDetalhes() {
       return
     }
 
+    const hasDuplicates = !(await validateDuplicates())
+    if (hasDuplicates) return
+
     setSubmitting(true)
 
     const dataToUpdate: any = {
@@ -468,8 +501,8 @@ export function IndividuoDetalhes() {
           openSections.has(section) ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
         }`}
       >
-        <div className="overflow-hidden">
-          <div className="p-4">{children}</div>
+        <div className="min-h-0 overflow-visible">
+          <div className={`p-4 ${openSections.has(section) ? '' : 'invisible'}`}>{children}</div>
         </div>
       </div>
     </Card>
@@ -545,12 +578,19 @@ export function IndividuoDetalhes() {
       {/* Score de completude */}
       <Card className="p-4 border-0 shadow-sm">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-gray-700">Completude do cadastro</span>
+          <span className="text-sm font-medium text-gray-700">
+            {individuo.sync_status === 'automatico_incompleto' ? 'Revisão pendente' : 'Completude do cadastro'}
+          </span>
           <span className="text-sm font-bold text-gray-900">{score}%</span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2.5">
           <div className={`${getScoreColor()} h-2.5 rounded-full transition-all`} style={{ width: `${score}%` }} />
         </div>
+        {individuo.sync_status === 'automatico_incompleto' && (
+          <p className="text-xs text-gray-500 mt-2">
+            Este indivíduo foi criado automaticamente. Revise os dados para completar o cadastro.
+          </p>
+        )}
       </Card>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -560,18 +600,21 @@ export function IndividuoDetalhes() {
               label="Brinco"
               value={form.id_brinco}
               onChange={(e) => handleChange('id_brinco', e.target.value)}
+              onBlur={() => handleIdentificationBlur('id_brinco')}
               error={errors.id_brinco || errors.identificacao}
             />
             <Input
               label="Chip"
               value={form.id_chip}
               onChange={(e) => handleChange('id_chip', e.target.value)}
+              onBlur={() => handleIdentificationBlur('id_chip')}
               error={errors.id_chip}
             />
             <Input
               label="Manejo"
               value={form.id_manejo}
               onChange={(e) => handleChange('id_manejo', e.target.value)}
+              onBlur={() => handleIdentificationBlur('id_manejo')}
               error={errors.id_manejo}
             />
             <Input
@@ -779,23 +822,40 @@ export function IndividuoDetalhes() {
 
         <Section title="Nutrição e Peso" section="nutricao">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <Select
-              label="Estratégia nutricional atual"
-              value={form.estrategia_nutricional_id}
-              onChange={handleFormulacaoChange}
-              options={formulacoes.map((f) => ({ value: f.id, label: f.nome }))}
-              placeholder="Selecione..."
-            />
-            <NumericInput
-              label="GMD (kg/cab/dia)"
-              value={form.gmd_kg_cab_dia}
-              onChange={(value) => handleNumericChange('gmd_kg_cab_dia', value)}
-            />
-            <NumericInput
-              label="Peso meta (kg)"
-              value={form.peso_meta_kg}
-              onChange={(value) => handleNumericChange('peso_meta_kg', value)}
-            />
+            <div className="space-y-1 mb-4">
+              <label className="block text-xs sm:text-sm font-semibold text-gray-700">
+                Estratégia nutricional atual
+              </label>
+              <p className="text-sm text-gray-900 min-h-[44px] flex items-center">
+                {form.estrategia_nutricional_nome || (
+                  <span className="text-gray-400 italic">
+                    Definida pela categoria do lote
+                  </span>
+                )}
+              </p>
+            </div>
+            <div className="space-y-1 mb-4">
+              <label className="block text-xs sm:text-sm font-semibold text-gray-700">
+                GMD (kg/cab/dia)
+              </label>
+              <p className="text-sm text-gray-900 min-h-[44px] flex items-center">
+                {form.gmd_kg_cab_dia || (
+                  <span className="text-gray-400 italic">-</span>
+                )}
+              </p>
+            </div>
+            <div className="space-y-1 mb-4">
+              <label className="block text-xs sm:text-sm font-semibold text-gray-700">
+                Peso meta (kg)
+              </label>
+              <p className="text-sm text-gray-900 min-h-[44px] flex items-center">
+                {form.peso_meta_kg || (
+                  <span className="text-gray-400 italic">
+                    Definido pela categoria do lote
+                  </span>
+                )}
+              </p>
+            </div>
           </div>
         </Section>
 

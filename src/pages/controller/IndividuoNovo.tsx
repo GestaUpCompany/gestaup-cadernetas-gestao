@@ -12,16 +12,15 @@ import {
   statusList,
   origens,
 } from '../../utils/individualValidation'
+import {
+  checkDuplicateIdentification,
+  getIdentificationLabel,
+  type IdentificationField,
+} from '../../utils/checkDuplicateIdentification'
 
 interface SelectOption {
   id: string
   nome: string
-}
-
-interface Formulacao {
-  id: string
-  nome: string
-  tipo?: string
 }
 
 const INITIAL_FORM = {
@@ -78,7 +77,6 @@ export function IndividuoNovo() {
   const [fornecedores, setFornecedores] = useState<SelectOption[]>([])
   const [individuosMacho, setIndividuosMacho] = useState<SelectOption[]>([])
   const [individuosFemea, setIndividuosFemea] = useState<SelectOption[]>([])
-  const [formulacoes, setFormulacoes] = useState<Formulacao[]>([])
   const [openSections, setOpenSections] = useState<Set<string>>(new Set(['identificacao', 'nascimento']))
 
   useEffect(() => {
@@ -99,7 +97,7 @@ export function IndividuoNovo() {
     const fazenda = vinculos[0].fazenda_id
     setFazendaId(fazenda)
 
-    const [racasRes, lotesRes, pastosRes, setoresRes, fornecedoresRes, machosRes, femeasRes, formulacoesRes] =
+    const [racasRes, lotesRes, pastosRes, setoresRes, fornecedoresRes, machosRes, femeasRes] =
       await Promise.all([
         supabase.from('racas').select('id, nome').eq('fazenda_id', fazenda).is('deleted_at', null),
         supabase.from('lotes').select('id, nome').eq('fazenda_id', fazenda).is('deleted_at', null),
@@ -118,11 +116,7 @@ export function IndividuoNovo() {
           .eq('fazenda_id', fazenda)
           .eq('sexo', 'Fêmea')
           .is('deleted_at', null),
-        supabase.from('formulacoes').select('id, nome, tipo').eq('fazenda_id', fazenda).eq('ativo', true),
       ])
-
-    if (formulacoesRes.error) console.error('Erro ao buscar formulações:', formulacoesRes.error)
-    else setFormulacoes(formulacoesRes.data as Formulacao[])
 
     const mapOptions = (data: any[] | null): SelectOption[] =>
       (data || []).map((item) => ({ id: item.id, nome: item.nome }))
@@ -145,16 +139,6 @@ export function IndividuoNovo() {
     setFornecedores(mapOptions(fornecedoresRes.data))
     setIndividuosMacho(mapIndividuos(machosRes.data))
     setIndividuosFemea(mapIndividuos(femeasRes.data))
-  }
-
-  const handleFormulacaoChange = (formulacaoId: string) => {
-    const formulacao = formulacoes.find((f) => f.id === formulacaoId)
-    setForm((prev) => ({
-      ...prev,
-      estrategia_nutricional_id: formulacao ? formulacao.id : '',
-      estrategia_nutricional_nome: formulacao ? formulacao.nome : '',
-      estrategia_nutricional_tipo: formulacao ? formulacao.tipo || '' : '',
-    }))
   }
 
   const handleChange = (field: keyof typeof form, value: string) => {
@@ -180,6 +164,43 @@ export function IndividuoNovo() {
         return next
       })
     }
+  }
+
+  const handleIdentificationBlur = async (field: IdentificationField) => {
+    if (!fazendaId) return
+    const value = form[field]
+    if (!value || value.trim() === '') return
+
+    const isDuplicate = await checkDuplicateIdentification(fazendaId, field, value)
+    if (isDuplicate) {
+      setErrors((prev) => ({
+        ...prev,
+        [field]: `${getIdentificationLabel(field)} "${value}" já está em uso nesta fazenda.`,
+      }))
+    }
+  }
+
+  const validateDuplicates = async (): Promise<boolean> => {
+    if (!fazendaId) return true
+
+    const fields: IdentificationField[] = ['id_brinco', 'id_chip', 'id_manejo']
+    let hasDuplicate = false
+
+    for (const field of fields) {
+      const value = form[field]
+      if (!value || value.trim() === '') continue
+
+      const isDuplicate = await checkDuplicateIdentification(fazendaId, field, value)
+      if (isDuplicate) {
+        hasDuplicate = true
+        setErrors((prev) => ({
+          ...prev,
+          [field]: `${getIdentificationLabel(field)} "${value}" já está em uso nesta fazenda.`,
+        }))
+      }
+    }
+
+    return !hasDuplicate
   }
 
   const toggleSection = (section: string) => {
@@ -218,6 +239,9 @@ export function IndividuoNovo() {
       setErrors(validationErrors)
       return
     }
+
+    const hasDuplicates = !(await validateDuplicates())
+    if (hasDuplicates) return
 
     setSubmitting(true)
 
@@ -265,7 +289,7 @@ export function IndividuoNovo() {
   }
 
   const Section = ({ title, section, children }: { title: string; section: string; children: React.ReactNode }) => (
-    <Card className="border-0 shadow-sm overflow-hidden">
+    <Card className="border-0 shadow-sm">
       <button
         type="button"
         onMouseDown={(e) => e.preventDefault()}
@@ -287,8 +311,8 @@ export function IndividuoNovo() {
           openSections.has(section) ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
         }`}
       >
-        <div className="overflow-hidden">
-          <div className="p-4">{children}</div>
+        <div className="min-h-0 overflow-visible">
+          <div className={`p-4 ${openSections.has(section) ? '' : 'invisible'}`}>{children}</div>
         </div>
       </div>
     </Card>
@@ -321,18 +345,21 @@ export function IndividuoNovo() {
               label="Brinco"
               value={form.id_brinco}
               onChange={(e) => handleChange('id_brinco', e.target.value)}
+              onBlur={() => handleIdentificationBlur('id_brinco')}
               error={errors.id_brinco || errors.identificacao}
             />
             <Input
               label="Chip"
               value={form.id_chip}
               onChange={(e) => handleChange('id_chip', e.target.value)}
+              onBlur={() => handleIdentificationBlur('id_chip')}
               error={errors.id_chip}
             />
             <Input
               label="Manejo"
               value={form.id_manejo}
               onChange={(e) => handleChange('id_manejo', e.target.value)}
+              onBlur={() => handleIdentificationBlur('id_manejo')}
               error={errors.id_manejo}
             />
             <Input
@@ -507,23 +534,34 @@ export function IndividuoNovo() {
 
         <Section title="Nutrição e Peso" section="nutricao">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <Select
-              label="Estratégia nutricional atual"
-              value={form.estrategia_nutricional_id}
-              onChange={handleFormulacaoChange}
-              options={formulacoes.map((f) => ({ value: f.id, label: f.nome }))}
-              placeholder="Selecione..."
-            />
-            <NumericInput
-              label="GMD (kg/cab/dia)"
-              value={form.gmd_kg_cab_dia}
-              onChange={(value) => handleNumericChange('gmd_kg_cab_dia', value)}
-            />
-            <NumericInput
-              label="Peso meta (kg)"
-              value={form.peso_meta_kg}
-              onChange={(value) => handleNumericChange('peso_meta_kg', value)}
-            />
+            <div className="space-y-1 mb-4">
+              <label className="block text-xs sm:text-sm font-semibold text-gray-700">
+                Estratégia nutricional atual
+              </label>
+              <p className="text-sm text-gray-900 min-h-[44px] flex items-center">
+                <span className="text-gray-400 italic">
+                  Definida automaticamente pela categoria do lote
+                </span>
+              </p>
+            </div>
+            <div className="space-y-1 mb-4">
+              <label className="block text-xs sm:text-sm font-semibold text-gray-700">
+                GMD (kg/cab/dia)
+              </label>
+              <p className="text-sm text-gray-900 min-h-[44px] flex items-center">
+                <span className="text-gray-400 italic">-</span>
+              </p>
+            </div>
+            <div className="space-y-1 mb-4">
+              <label className="block text-xs sm:text-sm font-semibold text-gray-700">
+                Peso meta (kg)
+              </label>
+              <p className="text-sm text-gray-900 min-h-[44px] flex items-center">
+                <span className="text-gray-400 italic">
+                  Definido automaticamente pela categoria do lote
+                </span>
+              </p>
+            </div>
           </div>
         </Section>
 

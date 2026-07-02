@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 
 interface SelectOption {
   value: string
@@ -13,6 +14,7 @@ interface SelectProps {
   className?: string
   label?: string
   required?: boolean
+  error?: string
 }
 
 export function Select({
@@ -23,23 +25,68 @@ export function Select({
   className = '',
   label,
   required = false,
+  error,
 }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({})
+  const triggerRef = useRef<HTMLButtonElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   const selectedOption = options.find((opt) => opt.value === value)
 
-  // Close dropdown when clicking outside
+  const updatePosition = useCallback(() => {
+    if (!triggerRef.current) return
+    const rect = triggerRef.current.getBoundingClientRect()
+    const spaceBelow = window.innerHeight - rect.bottom
+    const spaceAbove = rect.top
+    const dropdownHeight = Math.min(options.length * 38 + 8, 240)
+
+    if (spaceBelow >= dropdownHeight || spaceBelow >= spaceAbove) {
+      setDropdownStyle({
+        position: 'fixed',
+        top: rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+        zIndex: 9999,
+      })
+    } else {
+      setDropdownStyle({
+        position: 'fixed',
+        bottom: window.innerHeight - rect.top + 4,
+        left: rect.left,
+        width: rect.width,
+        zIndex: 9999,
+      })
+    }
+  }, [options.length])
+
+  useEffect(() => {
+    if (isOpen) updatePosition()
+  }, [isOpen, updatePosition])
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node
+      if (
+        triggerRef.current && !triggerRef.current.contains(target) &&
+        dropdownRef.current && !dropdownRef.current.contains(target)
+      ) {
         setIsOpen(false)
       }
     }
+    const handleScroll = () => {
+      if (isOpen) updatePosition()
+    }
 
     document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+    window.addEventListener('scroll', handleScroll, true)
+    window.addEventListener('resize', handleScroll)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      window.removeEventListener('scroll', handleScroll, true)
+      window.removeEventListener('resize', handleScroll)
+    }
+  }, [isOpen, updatePosition])
 
   const handleSelect = (option: SelectOption) => {
     onChange?.(option.value)
@@ -49,17 +96,20 @@ export function Select({
   return (
     <div className="mb-4">
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-2">
           {label}
           {required && <span className="text-red-500 ml-1">*</span>}
         </label>
       )}
-      <div className="relative" ref={dropdownRef}>
+      <div className="relative">
         {/* Trigger button */}
         <button
+          ref={triggerRef}
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base text-left border-gray-300 border-gray-200 focus:border-accent bg-white ${className}`}
+          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base text-left bg-white ${
+            error ? 'border-red-500' : 'border-gray-300'
+          } ${className}`}
         >
           {selectedOption ? (
             <span>{selectedOption.label}</span>
@@ -76,9 +126,13 @@ export function Select({
           </svg>
         </button>
 
-        {/* Dropdown */}
-        {isOpen && (
-          <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto">
+        {/* Dropdown rendered via portal to escape overflow:hidden parents */}
+        {isOpen && createPortal(
+          <div
+            ref={dropdownRef}
+            style={dropdownStyle}
+            className="bg-white border border-gray-200 rounded-lg shadow-xl max-h-60 overflow-auto"
+          >
             {options.length === 0 ? (
               <div className="p-4 text-center text-gray-500 text-sm">
                 Nenhuma opção disponível
@@ -97,9 +151,13 @@ export function Select({
                 </button>
               ))
             )}
-          </div>
+          </div>,
+          document.body
         )}
       </div>
+      {error && (
+        <p className="text-xs sm:text-sm text-red-500 mt-1">{error}</p>
+      )}
     </div>
   )
 }
