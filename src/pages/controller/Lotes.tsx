@@ -28,6 +28,7 @@ interface LoteCategoria {
   dias_restantes_meta?: number | null
   data_meta_projetada?: string | null
   estrategia_nutricional?: string | null
+  formulacao_id?: string | null
   raca?: string | null
   sexo?: string | null
   idade?: number | null
@@ -161,6 +162,7 @@ export function Lotes() {
   const [showCategoryRemoveModal, setShowCategoryRemoveModal] = useState(false)
   const [originalAtivo, setOriginalAtivo] = useState(true)
   const [ocupacaoPorLote, setOcupacaoPorLote] = useState<Record<string, any>>({})
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
 
   const categoriasOpcoes = [
     'vaca',
@@ -306,6 +308,18 @@ export function Lotes() {
     loadNutritionalOptions()
   }, [user])
 
+  const handleCategoryCollapse = (categoria: string) => {
+    setExpandedCategories(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(categoria)) {
+        newSet.delete(categoria)
+      } else {
+        newSet.add(categoria)
+      }
+      return newSet
+    })
+  }
+
   const handleCategoriaToggle = (categoria: string) => {
     const categoriaExists = formData.categorias.some(c => c.categoria.toLowerCase() === categoria.toLowerCase())
     if (categoriaExists) {
@@ -372,6 +386,14 @@ export function Lotes() {
     loadLotes()
   }, [user])
 
+  // Forçar recarregamento quando o componente montar
+  useEffect(() => {
+    if (user) {
+      loadLotes()
+    }
+  }, [])
+
+  
   // Calcular período automaticamente quando a data de pesagem mudar
   useEffect(() => {
     if (formData.data) {
@@ -718,28 +740,27 @@ export function Lotes() {
       return
     }
 
-    // Buscar categorias para cada lote
+    // Buscar categorias para cada lote (apenas ativas)
     const loteIds = lotesData?.map(l => l.id) || []
     const { data: categoriasData, error: categoriasError } = await supabase
       .from('lote_categorias')
       .select('*')
       .in('lote_id', loteIds)
+      .eq('ativo', true)
 
     if (categoriasError) {
       console.error('Erro ao buscar categorias:', categoriasError)
     }
 
-    // Combinar lotes com suas categorias
-    const lotesComCategorias = await Promise.all(
-      (lotesData || []).map(async (lote) => {
-        const categorias = (categoriasData || []).filter(cat => cat.lote_id === lote.id)
-        return {
-          ...lote,
-          pasto_nome: lote.pastos?.nome,
-          categorias: categorias
-        }
-      })
-    )
+    // Combinar lotes com suas categorias (apenas ativas)
+    const lotesComCategorias = (lotesData || []).map((lote) => {
+      const categorias = (categoriasData || []).filter(cat => cat.lote_id === lote.id && cat.ativo === true)
+      return {
+        ...lote,
+        pasto_nome: lote.pastos?.nome,
+        categorias: categorias
+      }
+    })
 
     setLotes(lotesComCategorias as Lote[])
     setLoading(false)
@@ -764,6 +785,48 @@ export function Lotes() {
         ocupacaoMap[item.lote_id].modulo = item
       })
       setOcupacaoPorLote(ocupacaoMap)
+    }
+  }
+
+  const syncIndividuosNutricional = async (loteId: string, categorias: LoteCategoria[]) => {
+    if (!loteId || categorias.length === 0) return
+
+    for (const cat of categorias) {
+      if (!cat.categoria) continue
+
+      let estrategiaMapeada = 'Ração'
+      if (cat.estrategia_nutricional) {
+        if (cat.estrategia_nutricional.includes('Proteico') || cat.estrategia_nutricional.includes('Proteinado')) {
+          estrategiaMapeada = 'Proteico-Energético'
+        } else if (cat.estrategia_nutricional.includes('Ração')) {
+          estrategiaMapeada = 'Ração'
+        }
+      }
+
+      const gmdNumber = cat.gmd ? parseFloat(cat.gmd.replace(',', '.')) : null
+      const pesoMeta = cat.peso_vivo_meta_kg_cab ? parseFloat(cat.peso_vivo_meta_kg_cab.toString()) : null
+
+      try {
+        const { error } = await supabase
+          .from('individuos')
+          .update({
+            estrategia_nutricional_tipo: estrategiaMapeada,
+            estrategia_nutricional_nome: cat.estrategia_nutricional,
+            gmd_kg_cab_dia: gmdNumber,
+            peso_meta_kg: pesoMeta,
+            estrategia_nutricional_id: cat.formulacao_id || null,
+            updated_at: new Date().toISOString()
+          })
+          .eq('lote_atual', loteId)
+          .eq('categoria', cat.categoria)
+          .is('deleted_at', null)
+
+        if (error) {
+          console.error(`Erro ao sincronizar nutrição dos indivíduos da categoria ${cat.categoria}:`, error)
+        }
+      } catch (syncError) {
+        console.error(`Erro ao sincronizar nutrição dos indivíduos da categoria ${cat.categoria}:`, syncError)
+      }
     }
   }
 
@@ -878,6 +941,7 @@ export function Lotes() {
       dias_restantes_meta: cat.dias_restantes_meta ? parseInt(cat.dias_restantes_meta.toString()) : null,
       data_meta_projetada: cat.data_meta_projetada || null,
       estrategia_nutricional: cat.estrategia_nutricional || null,
+      formulacao_id: cat.formulacao_id || null,
       raca: cat.raca || null,
       sexo: cat.sexo || null,
       idade: cat.idade ? parseInt(cat.idade.toString()) : null,
@@ -919,6 +983,9 @@ export function Lotes() {
       setSubmitting(false)
       return
     } else {
+      // Sincronizar dados nutricionais dos indivíduos deste lote
+      await syncIndividuosNutricional(loteId, recalculatedCategorias)
+
       setFormData({
         nome: '',
         numero_cabecas: '',
@@ -980,11 +1047,12 @@ export function Lotes() {
   const handleEdit = async (lote: Lote) => {
     setEditingLote(lote)
 
-    // Fetch categories with quant_atual from lote_categorias
+    // Fetch categories with quant_atual from lote_categorias (apenas ativas)
     const { data: categoriasData } = await supabase
       .from('lote_categorias')
       .select('*')
       .eq('lote_id', lote.id)
+      .eq('ativo', true)
 
     const updatedCategorias = categoriasData || lote.categorias || []
 
@@ -1028,12 +1096,10 @@ export function Lotes() {
 
       // Fetch movimentacao data
       const { data: movData } = await supabase
-        .from('registros_movimentacao')
+        .from('lote_historico')
         .select('*')
-        .or(`lote_origem_id.eq.${lote.id},lote_destino_id.eq.${lote.id}`)
-        .eq('fazenda_id', fazendaId)
-        .is('deleted_at', null)
-        .order('data', { ascending: false })
+        .eq('lote_id', lote.id)
+        .order('data_movimentacao', { ascending: false })
 
       setMovimentacaoData(movData || [])
 
@@ -1381,12 +1447,32 @@ export function Lotes() {
                   <h4 className="text-lg font-semibold text-gray-800 mb-4">Dados por Categoria</h4>
                   {formData.categorias.map((cat, catIndex) => (
                     <div key={catIndex} className="mb-10 p-6 bg-white rounded-xl border-2 border-gray-300 shadow-md">
-                      <h5 className={`text-xl font-bold text-gray-800 mb-5 capitalize border-l-4 pl-4 py-2 bg-gray-50 rounded-r ${getCategoriaColor(cat.categoria)}`}>
-                        Categoria: {cat.categoria}
-                      </h5>
+                      <div className="flex items-center justify-between mb-4">
+                        <h5 className={`text-xl font-bold text-gray-800 capitalize border-l-4 pl-4 py-2 bg-gray-50 rounded-r ${getCategoriaColor(cat.categoria)}`}>
+                          Categoria: {cat.categoria}
+                        </h5>
+                        <button
+                          type="button"
+                          onClick={() => handleCategoryCollapse(cat.categoria)}
+                          className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+                          aria-label={expandedCategories.has(cat.categoria) ? 'Colapsar' : 'Expandir'}
+                        >
+                          <svg 
+                            className={`w-4 h-4 text-gray-600 transition-transform ${expandedCategories.has(cat.categoria) ? 'rotate-180' : ''}`} 
+                            fill="none" 
+                            stroke="currentColor" 
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                      </div>
                       
-                      {/* Identificação */}
-                      <div className="mb-5">
+                      {/* Conteúdo colapsável */}
+                      {expandedCategories.has(cat.categoria) && (
+                        <>
+                          {/* Identificação */}
+                          <div className="mb-5">
                         <h6 className={`text-sm font-bold text-gray-800 mb-3 border-l-3 pl-3 py-1 rounded-r ${getCategoriaColor(cat.categoria)} ${getCategoriaBgColor(cat.categoria)}`}>
                           Identificação
                         </h6>
@@ -1544,6 +1630,7 @@ export function Lotes() {
                                 updatedCategorias[catIndex] = {
                                   ...cat,
                                   estrategia_nutricional: value,
+                                  formulacao_id: selectedOption?.id,
                                   consumo_meta_porcentagem_pesovivo: selectedOption?.consumo_meta !== undefined && selectedOption?.consumo_meta !== null ? Number(selectedOption.consumo_meta) : undefined,
                                   gmd: selectedOption?.gmd !== undefined && selectedOption?.gmd !== null ? selectedOption.gmd.toFixed(3).replace('.', ',') : undefined
                                 }
@@ -2051,6 +2138,8 @@ export function Lotes() {
                           />
                         </div>
                       </div>
+                        </>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -2072,7 +2161,7 @@ export function Lotes() {
                       {[...movimentacaoData.map(m => ({ ...m, type: 'movimentacao' })),
                         ...maternidadeData.map(m => ({ ...m, type: 'maternidade' })),
                         ...morteData.map(m => ({ ...m, type: 'morte' }))]
-                        .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
+                        .sort((a, b) => new Date(b.data_movimentacao).getTime() - new Date(a.data_movimentacao).getTime())
                         .map((event) => {
                           const getEventColor = (type: string) => {
                             switch(type) {
@@ -2085,26 +2174,12 @@ export function Lotes() {
 
                           const getEventLabel = (event: any) => {
                             if (event.type === 'movimentacao') {
-                              let movementType = event.motivo_movimentacao || event.tipo_saida || event.tipo_entrada;
-                              let isSource = event.lote_origem_id === editingLote?.id;
-                              let isDestination = event.lote_destino_id === editingLote?.id;
-                              let movementReason = '';
+                              let movementType = event.tipo_movimentacao || 'Movimentação';
 
-                              if (event.lote_origem_id && event.lote_destino_id) {
-                                if (isSource) {
-                                  movementType = 'Saída';
-                                } else if (isDestination) {
-                                  movementType = 'Entrada';
-                                }
-                              }
+                              // Capitalizar primeira letra
+                              movementType = movementType.charAt(0).toUpperCase() + movementType.slice(1);
 
-                              if (event.motivo_movimentacao === 'Entrevero') {
-                                movementReason = ' (Entrevero)';
-                              } else if (event.tipo_saida === 'Transferência' || event.tipo_saida === 'Apartação' || event.tipo_entrada === 'Transferência' || event.tipo_entrada === 'Apartação') {
-                                movementReason = ' (Movimentação)';
-                              }
-
-                              return { label: movementType + movementReason, category: event.categoria };
+                              return { label: movementType, category: event.categoria };
                             } else if (event.type === 'maternidade') {
                               return { label: 'Nascimento', category: event.categoria };
                             } else if (event.type === 'morte') {
@@ -2132,11 +2207,17 @@ export function Lotes() {
                                       <span className="text-xs text-gray-500 capitalize">{category}</span>
                                     )}
                                   </div>
-                                  <span className="text-xs text-gray-400">{new Date(event.data).toLocaleDateString('pt-BR')}</span>
+                                  <span className="text-xs text-gray-400">{new Date(event.data_movimentacao).toLocaleDateString('pt-BR')}</span>
                                 </div>
                                 
                                 <div className="text-xs text-gray-600 mt-2">
-                                  {event.type === 'movimentacao' && event.numero_cabecas && `${event.numero_cabecas} cabeças`}
+                                  {event.type === 'movimentacao' && (
+                                    <>
+                                      {event.quantidade && `${event.quantidade} cabeça${event.quantidade > 1 ? 's' : ''}`}
+                                      {event.peso_kg && ` • Peso: ${event.peso_kg} kg`}
+                                      {event.observacoes && ` • ${event.observacoes}`}
+                                    </>
+                                  )}
                                   {event.type === 'maternidade' && (
                                     <>
                                       {event.sexo && `Sexo: ${event.sexo}`}

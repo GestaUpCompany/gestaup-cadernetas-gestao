@@ -73,7 +73,6 @@ import { ProblemasDetalhes } from './pages/controller/ProblemasDetalhes'
 import { HistoricoOcupacao } from './pages/controller/HistoricoOcupacao'
 import { Individuos } from './pages/controller/Individuos'
 import { IndividuoNovo } from './pages/controller/IndividuoNovo'
-import { IndividuoDetalhes } from './pages/controller/IndividuoDetalhes'
 
 // Redirecionamento baseado no papel do usuário
 function RoleRedirect() {
@@ -797,7 +796,7 @@ function App() {
           element={
             <ControllerRoute>
               <ControllerLayout>
-                <IndividuoDetalhes />
+                <IndividuoNovo />
               </ControllerLayout>
             </ControllerRoute>
           }

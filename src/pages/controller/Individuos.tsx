@@ -120,7 +120,10 @@ export function Individuos() {
   useEffect(() => {
     if (!user) return
 
-    const getFazendaId = async () => {
+    let subscription: any
+    let isMounted = true
+
+    const setupSubscription = async () => {
       const { data: vinculos } = await supabase
         .from('usuario_fazenda')
         .select('fazenda_id')
@@ -128,16 +131,11 @@ export function Individuos() {
         .eq('ativo', true)
         .single()
 
-      return vinculos?.fazenda_id
-    }
-
-    let subscription: any
-
-    getFazendaId().then((fazendaId) => {
-      if (!fazendaId) return
+      const fazendaId = vinculos?.fazenda_id
+      if (!fazendaId || !isMounted) return
 
       subscription = supabase
-        .channel('individuos_changes')
+        .channel(`individuos_changes_${fazendaId}`)
         .on(
           'postgres_changes',
           {
@@ -147,13 +145,18 @@ export function Individuos() {
             filter: `fazenda_id=eq.${fazendaId}`,
           },
           () => {
-            loadData()
+            if (isMounted) {
+              loadData()
+            }
           }
         )
         .subscribe()
-    })
+    }
+
+    setupSubscription()
 
     return () => {
+      isMounted = false
       if (subscription) {
         supabase.removeChannel(subscription)
       }
@@ -592,23 +595,13 @@ export function Individuos() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  className="flex-1"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    navigate(`/controller/individuos/${ind.id}`)
-                  }}
-                >
-                  Ver
-                </Button>
-                <Button
+                                <Button
                   variant="secondary"
                   size="sm"
                   className="flex-1"
                   onClick={(e) => {
                     e.stopPropagation()
-                    navigate(`/controller/individuos/${ind.id}`)
+                    navigate(`/controller/individuos/novo?edit=${ind.id}`)
                   }}
                 >
                   Editar
