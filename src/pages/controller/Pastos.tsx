@@ -67,6 +67,7 @@ export function Pastos() {
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
   const [importSuccess, setImportSuccess] = useState<string | null>(null)
+  const [showInactive, setShowInactive] = useState(false)
 
   const loadSetores = async () => {
     if (!user) return
@@ -661,6 +662,23 @@ export function Pastos() {
         </div>
       )}
 
+      {/* Filter Toggle */}
+      {!showForm && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => setShowInactive(!showInactive)}
+            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 border-2 ${
+              showInactive
+                ? 'bg-primary text-white border-primary hover:bg-primary/90'
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            {showInactive ? '✓ Mostrando Desativados' : 'Mostrar Desativados'}
+          </button>
+        </div>
+      )}
+
       {/* Import Messages */}
       {importError && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-3 sm:px-4 py-2 sm:py-3 rounded-lg">
@@ -1087,8 +1105,9 @@ export function Pastos() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {pastos
             .filter((pasto) =>
-              pasto.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              (pasto.especie && pasto.especie.toLowerCase().includes(searchTerm.toLowerCase()))
+              (showInactive || pasto.ativo) &&
+              (pasto.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              (pasto.especie && pasto.especie.toLowerCase().includes(searchTerm.toLowerCase())))
             )
             .map((pasto) => (
               <Card
@@ -1173,37 +1192,34 @@ export function Pastos() {
                     </div>
                   )}
                 </div>
-                <div className="flex flex-wrap gap-1 sm:gap-2 mt-auto">
-                  <Button
-                    variant="secondary"
-                    className="flex-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleToggleActive(pasto)
-                    }}
-                  >
-                    {pasto.ativo ? 'Desativar' : 'Ativar'}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    className="flex-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2"
+                <div className="flex gap-2 mt-auto pt-3">
+                  <button
+                    className="rounded-lg font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 hover-scale-sm button-press whitespace-nowrap min-h-[44px] px-3 py-2 text-sm bg-gray-200 text-gray-800 focus:ring-gray-500 hover:shadow-md hover:bg-gray-300 flex-1"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleEdit(pasto)
                     }}
                   >
                     Editar
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    className="flex-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2"
+                  </button>
+                  <button
+                    className={`rounded-lg font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 hover-scale-sm button-press whitespace-nowrap min-h-[44px] px-3 py-2 text-sm bg-gray-200 text-gray-800 focus:ring-gray-500 hover:shadow-md hover:bg-gray-300 text-red-600 hover:text-red-700`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleToggleActive(pasto)
+                    }}
+                  >
+                    {pasto.ativo ? 'Desativar' : 'Ativar'}
+                  </button>
+                  <button
+                    className="rounded-lg font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 hover-scale-sm button-press whitespace-nowrap min-h-[44px] px-3 py-2 text-sm bg-gray-200 text-gray-800 focus:ring-gray-500 hover:shadow-md hover:bg-gray-300 text-red-600 hover:text-red-700"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleDeleteClick(pasto.id)
                     }}
                   >
                     Excluir
-                  </Button>
+                  </button>
                 </div>
               </Card>
             ))}

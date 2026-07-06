@@ -163,6 +163,7 @@ export function Lotes() {
   const [originalAtivo, setOriginalAtivo] = useState(true)
   const [ocupacaoPorLote, setOcupacaoPorLote] = useState<Record<string, any>>({})
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
+  const [showInactive, setShowInactive] = useState(false)
 
   const categoriasOpcoes = [
     'vaca',
@@ -1313,6 +1314,23 @@ export function Lotes() {
         </div>
       )}
 
+      {/* Filter Toggle */}
+      {!showForm && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => setShowInactive(!showInactive)}
+            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 border-2 ${
+              showInactive
+                ? 'bg-primary text-white border-primary hover:bg-primary/90'
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            {showInactive ? '✓ Mostrando Desativados' : 'Mostrar Desativados'}
+          </button>
+        </div>
+      )}
+
       {showForm && (
         <Card className="bg-white p-6 border-0 shadow-sm">
           <div className="flex justify-between items-start mb-4">
@@ -2383,6 +2401,7 @@ export function Lotes() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
           {lotes
             .filter((lote) =>
+              (showInactive || lote.ativo) &&
               lote.nome.toLowerCase().includes(searchTerm.toLowerCase())
             )
             .map((lote) => (
@@ -2450,37 +2469,34 @@ export function Lotes() {
                   )}
                 </div>
 
-                <div className="flex flex-wrap gap-1 sm:gap-2 mt-auto">
-                  <Button
-                    variant="secondary"
-                    className="flex-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleToggleActive(lote)
-                    }}
-                  >
-                    {lote.ativo ? 'Desativar' : 'Ativar'}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    className="flex-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2"
+                <div className="flex gap-2 mt-auto pt-3">
+                  <button
+                    className="rounded-lg font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 hover-scale-sm button-press whitespace-nowrap min-h-[44px] px-3 py-2 text-sm bg-gray-200 text-gray-800 focus:ring-gray-500 hover:shadow-md hover:bg-gray-300 flex-1"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleEdit(lote)
                     }}
                   >
                     Editar
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    className="flex-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2"
+                  </button>
+                  <button
+                    className="rounded-lg font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 hover-scale-sm button-press whitespace-nowrap min-h-[44px] px-3 py-2 text-sm bg-gray-200 text-gray-800 focus:ring-gray-500 hover:shadow-md hover:bg-gray-300 text-red-600 hover:text-red-700"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleToggleActive(lote)
+                    }}
+                  >
+                    {lote.ativo ? 'Desativar' : 'Ativar'}
+                  </button>
+                  <button
+                    className="rounded-lg font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 hover-scale-sm button-press whitespace-nowrap min-h-[44px] px-3 py-2 text-sm bg-gray-200 text-gray-800 focus:ring-gray-500 hover:shadow-md hover:bg-gray-300 text-red-600 hover:text-red-700"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleDeleteClick(lote.id)
                     }}
                   >
                     Excluir
-                  </Button>
+                  </button>
                 </div>
               </CardItem>
             ))}
