@@ -1740,13 +1740,16 @@ export function Lotes() {
                               <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Peso Vivo Atual (kg/cab)
                               </label>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                value={cat.peso_vivo_atual_kg_cab?.toFixed(2) || ''}
-                                disabled
-                                placeholder="0"
-                                className="border-gray-200 focus:border-accent opacity-60"
+                              <NumericInput
+                                value={cat.peso_vivo_atual_kg_cab?.toString() || ''}
+                                onChange={(value) => {
+                                  const updatedCategorias = [...formData.categorias]
+                                  updatedCategorias[catIndex] = { ...cat, peso_vivo_atual_kg_cab: value ? parseFloat(value.replace(',', '.')) : undefined }
+                                  setFormData({ ...formData, categorias: updatedCategorias })
+                                }}
+                                placeholder="0,00"
+                                decimalPlaces={2}
+                                className="border-gray-200 focus:border-accent"
                               />
                             </div>
                             <div>
