@@ -1,11 +1,11 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 
-interface SidebarItem {
+export interface SidebarItem {
   label: string
   path: string
-  icon?: string
+  icon?: ReactNode
 }
 
 interface SidebarProps {
@@ -14,6 +14,7 @@ interface SidebarProps {
   onToggle?: () => void
   mobileMenuOpen?: boolean
   setMobileMenuOpen?: (open: boolean) => void
+  title?: string
 }
 
 export function Sidebar({ items, isCollapsed = false, onToggle, mobileMenuOpen = false, setMobileMenuOpen }: SidebarProps) {
@@ -73,21 +74,29 @@ export function Sidebar({ items, isCollapsed = false, onToggle, mobileMenuOpen =
               </svg>
             </button>
           </div>
-          <nav className="space-y-2">
+          <nav className="space-y-1">
             {items.map((item) => {
-              const isActive = location.pathname === item.path
+              const isActive = location.pathname === item.path || location.pathname.startsWith(`${item.path}/`)
               return (
                 <button
                   key={item.path}
                   onClick={() => navigate(item.path)}
-                  className={`w-full text-left px-4 py-3 rounded-lg transition-all ${
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm font-medium ${
                     isActive
-                      ? 'bg-primary text-white'
-                      : 'text-gray-700'
+                      ? 'bg-primary/10 text-primary'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                   }`}
                   title={isCollapsed ? item.label : undefined}
                 >
-                  {isCollapsed ? item.label.charAt(0) : item.label}
+                  {item.icon && (
+                    <span className={`flex-shrink-0 ${isActive ? 'text-primary' : 'text-gray-400'}`}>
+                      {item.icon}
+                    </span>
+                  )}
+                  {!isCollapsed && <span className="truncate">{item.label}</span>}
+                  {isActive && !isCollapsed && (
+                    <span className="ml-auto w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0"></span>
+                  )}
                 </button>
               )
             })}

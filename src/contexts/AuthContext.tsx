@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { User, signIn, signUp, signOut, getCurrentUser } from '../services/authService'
+import { User, signIn, signUp, signOut, getCurrentUser, updateUltimoAcesso } from '../services/authService'
 
 interface AuthContextType {
   user: User | null
@@ -31,13 +31,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         clearTimeout(timeoutId)
         setUser(currentUser)
         setLoading(false)
+        if (currentUser) {
+          updateUltimoAcesso()
+        }
       })
       .catch((error) => {
         console.error('AuthProvider: Erro ao buscar usuário:', error)
         clearTimeout(timeoutId)
         setLoading(false)
       })
-  }, [])
+
+    // Atualizar último acesso a cada 5 minutos enquanto o app estiver aberto
+    const intervalId = setInterval(() => {
+      if (user) {
+        updateUltimoAcesso()
+      }
+    }, 5 * 60 * 1000)
+
+    return () => {
+      clearTimeout(timeoutId)
+      clearInterval(intervalId)
+    }
+  }, [user])
 
   const handleSignIn = async (email: string, password: string): Promise<User | null> => {
     const session = await signIn(email, password)

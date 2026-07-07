@@ -124,32 +124,36 @@ export function Individuos() {
     let isMounted = true
 
     const setupSubscription = async () => {
-      const { data: vinculos } = await supabase
-        .from('usuario_fazenda')
-        .select('fazenda_id')
-        .eq('usuario_id', user.id)
-        .eq('ativo', true)
-        .single()
+      const isAdmin = user.papel === 'admin'
+      let fazendaId: string | null = null
 
-      const fazendaId = vinculos?.fazenda_id
-      if (!fazendaId || !isMounted) return
+      if (!isAdmin) {
+        const { data: vinculos } = await supabase
+          .from('usuario_fazenda')
+          .select('fazenda_id')
+          .eq('usuario_id', user.id)
+          .eq('ativo', true)
+          .single()
+
+        fazendaId = vinculos?.fazenda_id || null
+        if (!fazendaId || !isMounted) return
+      }
+
+      const channelName = fazendaId ? `individuos_changes_${fazendaId}` : 'individuos_changes_admin'
+      const filterConfig: any = {
+        event: '*',
+        schema: 'public',
+        table: 'individuos',
+      }
+      if (fazendaId) filterConfig.filter = `fazenda_id=eq.${fazendaId}`
 
       subscription = supabase
-        .channel(`individuos_changes_${fazendaId}`)
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'individuos',
-            filter: `fazenda_id=eq.${fazendaId}`,
-          },
-          () => {
-            if (isMounted) {
-              loadData()
-            }
+        .channel(channelName)
+        .on('postgres_changes', filterConfig, () => {
+          if (isMounted) {
+            loadData()
           }
-        )
+        })
         .subscribe()
     }
 
@@ -208,38 +212,51 @@ export function Individuos() {
   const loadData = async () => {
     if (!user) return
 
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
+    const isAdmin = user.papel === 'admin'
+    let fazendaId: string | null = null
 
-    if (!vinculos || vinculos.length === 0) return
+    if (!isAdmin) {
+      const { data: vinculos } = await supabase
+        .from('usuario_fazenda')
+        .select('fazenda_id')
+        .eq('usuario_id', user.id)
+        .eq('ativo', true)
 
-    const fazendaId = vinculos[0].fazenda_id
+      if (!vinculos || vinculos.length === 0) return
+      fazendaId = vinculos[0].fazenda_id
+    }
 
     let countQuery: any = supabase
       .from('individuos')
       .select('*', { count: 'exact', head: true })
-      .eq('fazenda_id', fazendaId)
       .is('deleted_at', null)
+    if (fazendaId) countQuery = countQuery.eq('fazenda_id', fazendaId)
     countQuery = buildFilters(countQuery)
 
     let dataQuery: any = supabase
       .from('individuos')
       .select('*')
-      .eq('fazenda_id', fazendaId)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
+    if (fazendaId) dataQuery = dataQuery.eq('fazenda_id', fazendaId)
     dataQuery = buildFilters(dataQuery)
     dataQuery = dataQuery.range(from, to)
+
+    let lotesQuery = supabase.from('lotes').select('id, nome').is('deleted_at', null)
+    if (fazendaId) lotesQuery = lotesQuery.eq('fazenda_id', fazendaId)
+
+    let pastosQuery = supabase.from('pastos').select('id, nome').is('deleted_at', null)
+    if (fazendaId) pastosQuery = pastosQuery.eq('fazenda_id', fazendaId)
+
+    let racasQuery = supabase.from('racas').select('id, nome').is('deleted_at', null)
+    if (fazendaId) racasQuery = racasQuery.eq('fazenda_id', fazendaId)
 
     const [countRes, individuosRes, lotesRes, pastosRes, racasRes] = await Promise.all([
       countQuery,
       dataQuery,
-      supabase.from('lotes').select('id, nome').eq('fazenda_id', fazendaId).is('deleted_at', null),
-      supabase.from('pastos').select('id, nome').eq('fazenda_id', fazendaId).is('deleted_at', null),
-      supabase.from('racas').select('id, nome').eq('fazenda_id', fazendaId).is('deleted_at', null),
+      lotesQuery,
+      pastosQuery,
+      racasQuery,
     ])
 
     if (countRes.error) {

@@ -3,6 +3,35 @@ import { useNavigate } from 'react-router-dom'
 import { getUsuarios, Usuario } from '../../services/usuariosService'
 import { Button, Card } from '../../components/ui'
 
+const ONLINE_THRESHOLD_MINUTES = 5
+
+function getStatusInfo(ultimoAcesso?: string) {
+  if (!ultimoAcesso) {
+    return { online: false, text: 'Nunca acessou' }
+  }
+
+  const lastAccess = new Date(ultimoAcesso)
+  const now = new Date()
+  const diffMs = now.getTime() - lastAccess.getTime()
+  const diffMinutes = Math.floor(diffMs / (1000 * 60))
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+
+  if (diffMinutes < ONLINE_THRESHOLD_MINUTES) {
+    return { online: true, text: 'Online' }
+  }
+
+  if (diffMinutes < 60) {
+    return { online: false, text: `Há ${diffMinutes} min` }
+  }
+
+  if (diffHours < 24) {
+    return { online: false, text: `Há ${diffHours}h` }
+  }
+
+  return { online: false, text: `Há ${diffDays} dia${diffDays === 1 ? '' : 's'}` }
+}
+
 export function UsuariosList() {
   const navigate = useNavigate()
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
@@ -67,48 +96,64 @@ export function UsuariosList() {
       ) : (
         <Card className="bg-white p-4 sm:p-6">
           <div className="space-y-2 sm:space-y-3">
-            {usuarios.map((usuario) => (
-              <div
-                key={usuario.id}
-                className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg cursor-pointer"
-                onClick={() => navigate(`/admin/usuarios/${usuario.id}`)}
-              >
-                <div className="flex items-center gap-3 sm:gap-4">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-primary font-bold text-sm sm:text-lg">
-                      {usuario.nome.charAt(0).toUpperCase()}
+            {usuarios.map((usuario) => {
+              const status = getStatusInfo(usuario.ultimo_acesso)
+              return (
+                <div
+                  key={usuario.id}
+                  className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg cursor-pointer"
+                  onClick={() => navigate(`/admin/usuarios/${usuario.id}`)}
+                >
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="relative w-10 h-10 sm:w-12 sm:h-12 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-primary font-bold text-sm sm:text-lg">
+                        {usuario.nome.charAt(0).toUpperCase()}
+                      </span>
+                      {status.online && (
+                        <span className="absolute bottom-0 right-0 w-3 h-3 sm:w-3.5 sm:h-3.5 bg-green-500 border-2 border-white rounded-full"></span>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-gray-800 text-sm sm:text-base truncate">{usuario.nome}</h3>
+                      <p className="text-xs sm:text-sm text-gray-600 truncate">{usuario.email}</p>
+                      {usuario.telefone && (
+                        <p className="text-xs sm:text-sm text-gray-600 truncate">{usuario.telefone}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm ${
+                        status.online
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-gray-100 text-gray-600'
+                      }`}
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full ${status.online ? 'bg-green-500' : 'bg-gray-400'}`}></span>
+                      {status.text}
+                    </span>
+                    <span
+                      className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm capitalize ${
+                        usuario.papel === 'admin'
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-green-100 text-green-800'
+                      }`}
+                    >
+                      {usuario.papel}
+                    </span>
+                    <span
+                      className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm ${
+                        usuario.ativo
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}
+                    >
+                      {usuario.ativo ? 'Ativo' : 'Inativo'}
                     </span>
                   </div>
-                  <div className="min-w-0">
-                    <h3 className="font-semibold text-gray-800 text-sm sm:text-base truncate">{usuario.nome}</h3>
-                    <p className="text-xs sm:text-sm text-gray-600 truncate">{usuario.email}</p>
-                    {usuario.telefone && (
-                      <p className="text-xs sm:text-sm text-gray-600 truncate">{usuario.telefone}</p>
-                    )}
-                  </div>
                 </div>
-                <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-                  <span
-                    className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm capitalize ${
-                      usuario.papel === 'admin'
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-green-100 text-green-800'
-                    }`}
-                  >
-                    {usuario.papel}
-                  </span>
-                  <span
-                    className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm ${
-                      usuario.ativo
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}
-                  >
-                    {usuario.ativo ? 'Ativo' : 'Inativo'}
-                  </span>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </Card>
       )}

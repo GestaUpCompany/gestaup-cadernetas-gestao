@@ -13,6 +13,7 @@ import { DetalhesFazenda } from './pages/admin/DetalhesFazenda'
 import { UsuariosList } from './pages/admin/Usuarios'
 import { NovoUsuario } from './pages/admin/NovoUsuario'
 import { EditarUsuario } from './pages/admin/EditarUsuario'
+import { RelatorioAtividades } from './pages/admin/RelatorioAtividades'
 import { ControllerDashboard } from './pages/controller/Dashboard'
 import { Pastos } from './pages/controller/Pastos'
 import { ModulosPastos } from './pages/controller/ModulosPastos'
@@ -184,6 +185,16 @@ function App() {
             <AdminRoute>
               <AdminLayout>
                 <EditarUsuario />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/relatorio-atividades"
+          element={
+            <AdminRoute>
+              <AdminLayout>
+                <RelatorioAtividades />
               </AdminLayout>
             </AdminRoute>
           }

@@ -92,6 +92,20 @@ export async function signOut(): Promise<void> {
   }
 }
 
+export async function updateUltimoAcesso(): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+
+  const { error } = await supabase
+    .from('usuarios')
+    .update({ ultimo_acesso: new Date().toISOString() })
+    .eq('auth_id', user.id)
+
+  if (error) {
+    console.error('Erro ao atualizar último acesso:', error)
+  }
+}
+
 export async function getCurrentUser(): Promise<User | null> {
   const { data: { user }, error } = await supabase.auth.getUser()
 

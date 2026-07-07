@@ -7,6 +7,7 @@ export interface Usuario {
   telefone?: string
   papel: 'admin' | 'controller'
   ativo: boolean
+  ultimo_acesso?: string
   created_at: string
   updated_at: string
 }
