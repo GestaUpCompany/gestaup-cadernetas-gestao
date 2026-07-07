@@ -157,8 +157,6 @@ export function Lotes() {
     data_embarque_prevista: '',
   })
   const [submitting, setSubmitting] = useState(false)
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [loteToDelete, setLoteToDelete] = useState<string | null>(null)
   const [showCategoryRemoveModal, setShowCategoryRemoveModal] = useState(false)
   const [originalAtivo, setOriginalAtivo] = useState(true)
   const [ocupacaoPorLote, setOcupacaoPorLote] = useState<Record<string, any>>({})
@@ -1221,33 +1219,18 @@ export function Lotes() {
     setShowForm(false)
   }
 
-  const handleDeleteClick = (id: string) => {
-    setLoteToDelete(id)
-    setShowDeleteModal(true)
-  }
-
-  const handleDeleteConfirm = async () => {
-    if (!loteToDelete) return
-
-    const { error } = await supabase
-      .from('lotes')
-      .update({ deleted_at: new Date().toISOString() })
-      .eq('id', loteToDelete)
-
-    if (error) {
-      console.error('Erro ao excluir lote:', error)
-    } else {
-      loadLotes()
-    }
-
-    setShowDeleteModal(false)
-    setLoteToDelete(null)
-  }
-
   const handleToggleActive = async (lote: Lote) => {
+    const newAtivo = !lote.ativo
+    const updateData: any = { ativo: newAtivo }
+    
+    // Desvincular lote do pasto ao desativar
+    if (!newAtivo) {
+      updateData.pasto_id = null
+    }
+    
     const { error } = await supabase
       .from('lotes')
-      .update({ ativo: !lote.ativo })
+      .update(updateData)
       .eq('id', lote.id)
 
     if (error) {
@@ -2491,31 +2474,11 @@ export function Lotes() {
                   >
                     {lote.ativo ? 'Desativar' : 'Ativar'}
                   </button>
-                  <button
-                    className="rounded-lg font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 hover-scale-sm button-press whitespace-nowrap min-h-[44px] px-3 py-2 text-sm bg-gray-200 text-gray-800 focus:ring-gray-500 hover:shadow-md hover:bg-gray-300 text-red-600 hover:text-red-700"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleDeleteClick(lote.id)
-                    }}
-                  >
-                    Excluir
-                  </button>
                 </div>
               </CardItem>
             ))}
         </div>
       ) : null}
-
-      <ConfirmModal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
-        onConfirm={handleDeleteConfirm}
-        title="Excluir Lote"
-        message="Tem certeza que deseja excluir este lote? Esta ação não pode ser desfeita."
-        confirmText="Excluir"
-        cancelText="Cancelar"
-        variant="danger"
-      />
 
       <ConfirmModal
         isOpen={showCategoryRemoveModal}
