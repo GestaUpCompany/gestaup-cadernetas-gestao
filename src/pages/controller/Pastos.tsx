@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
@@ -69,8 +69,13 @@ export function Pastos() {
   const [importSuccess, setImportSuccess] = useState<string | null>(null)
   const [showInactive, setShowInactive] = useState(false)
 
-  const loadSetores = async () => {
+  // Paginação
+  const [paginaAtual, setPaginaAtual] = useState(1)
+  const ITENS_POR_PAGINA = 12
+
+  const loadData = async () => {
     if (!user) return
+    setLoading(true)
 
     const { data: vinculos } = await supabase
       .from('usuario_fazenda')
@@ -78,104 +83,72 @@ export function Pastos() {
       .eq('usuario_id', user.id)
       .eq('ativo', true)
 
-    if (!vinculos || vinculos.length === 0) return
-
-    const fazendaId = vinculos[0].fazenda_id
-
-    const { data, error } = await supabase
-      .from('setores')
-      .select('id, nome')
-      .eq('fazenda_id', fazendaId)
-      .eq('ativo', true)
-      .order('nome')
-
-    if (error) {
-      console.error('Erro ao buscar setores:', error)
-    } else {
-      setSetores(data as { id: string; nome: string }[])
+    if (!vinculos || vinculos.length === 0) {
+      setLoading(false)
+      return
     }
-  }
-
-  const loadBebedouros = async () => {
-    if (!user) return
-
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
-
-    if (!vinculos || vinculos.length === 0) return
 
     const fazendaId = vinculos[0].fazenda_id
 
-    const { data, error } = await supabase
-      .from('bebedouros')
-      .select('id, nome, capacidade')
-      .eq('fazenda_id', fazendaId)
-      .eq('ativo', true)
-      .order('nome')
+    const [pastosData, setoresData, bebedourosData] = await Promise.all([
+      supabase.from('pastos').select('*, modulos_pastos!left(nome, ativo)').eq('fazenda_id', fazendaId).is('deleted_at', null).order('created_at', { ascending: false }),
+      supabase.from('setores').select('id, nome').eq('fazenda_id', fazendaId).eq('ativo', true).order('nome'),
+      supabase.from('bebedouros').select('id, nome, capacidade').eq('fazenda_id', fazendaId).eq('ativo', true).order('nome'),
+    ])
 
-    if (error) {
-      console.error('Erro ao buscar bebedouros:', error)
+    if (pastosData.error) {
+      console.error('Erro ao buscar pastos:', pastosData.error)
     } else {
-      setBebedouros(data as {id: string, nome: string, capacidade?: number}[])
-    }
-  }
-
-  const loadPastos = async () => {
-    if (!user) return
-
-    // Buscar fazenda vinculada
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
-
-    if (!vinculos || vinculos.length === 0) return
-
-    const fazendaId = vinculos[0].fazenda_id
-
-    const { data, error } = await supabase
-      .from('pastos')
-      .select('*, modulos_pastos!left(nome, ativo)')
-      .eq('fazenda_id', fazendaId)
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false })
-
-    if (error) {
-      console.error('Erro ao buscar pastos:', error)
-    } else {
-      const pastosWithModulo = (data as any[]).map(pasto => ({
+      const pastosWithModulo = (pastosData.data as any[]).map((pasto) => ({
         ...pasto,
         modulo_nome: pasto.modulos_pastos?.nome || null,
-        modulo_ativo: pasto.modulos_pastos?.ativo ?? true
+        modulo_ativo: pasto.modulos_pastos?.ativo ?? true,
       }))
       setPastos(pastosWithModulo as Pasto[])
     }
 
-    // Carregar ocupação atual dos pastos
-    const { data: ocupacaoData } = await supabase
-      .from('v_lote_pasto_ocupacao_atual')
-      .select('*')
+    if (setoresData.error) {
+      console.error('Erro ao buscar setores:', setoresData.error)
+    } else {
+      setSetores(setoresData.data as { id: string; nome: string }[])
+    }
 
-    if (ocupacaoData) {
-      const ocupacaoMap: Record<string, any> = {}
-      ocupacaoData.forEach((item: any) => {
-        ocupacaoMap[item.pasto_id] = item
-      })
-      setOcupacaoPorPasto(ocupacaoMap)
+    if (bebedourosData.error) {
+      console.error('Erro ao buscar bebedouros:', bebedourosData.error)
+    } else {
+      setBebedouros(bebedourosData.data as { id: string; nome: string; capacidade?: number }[])
+    }
+
+    // Carregar ocupação apenas se houver pastos
+    const pastosCarregados = (pastosData.data as any[]) || []
+    if (pastosCarregados.length > 0) {
+      const pastoIds = pastosCarregados.map((p) => p.id)
+      const { data: ocupacaoData } = await supabase
+        .from('v_lote_pasto_ocupacao_atual')
+        .select('*')
+        .in('pasto_id', pastoIds)
+
+      if (ocupacaoData) {
+        const ocupacaoMap: Record<string, any> = {}
+        ocupacaoData.forEach((item: any) => {
+          ocupacaoMap[item.pasto_id] = item
+        })
+        setOcupacaoPorPasto(ocupacaoMap)
+      }
+    } else {
+      setOcupacaoPorPasto({})
     }
 
     setLoading(false)
   }
 
   useEffect(() => {
-    loadPastos()
-    loadSetores()
-    loadBebedouros()
+    loadData()
   }, [user])
+
+  useEffect(() => {
+    setPaginaAtual(1)
+  }, [searchTerm, showInactive])
 
   // Abrir formulário de edição direto via query param ?pasto=id (ex: vindo de notificação)
   useEffect(() => {
@@ -184,6 +157,22 @@ export function Pastos() {
     const pasto = pastos.find(p => p.id === pastoId)
     if (pasto) handleEdit(pasto)
   }, [searchParams, pastos])
+
+  const pastosFiltrados = useMemo(() => {
+    const termo = searchTerm.toLowerCase().trim()
+    return pastos.filter((pasto) => {
+      if (!showInactive && !pasto.ativo) return false
+      if (!termo) return true
+      return (
+        pasto.nome.toLowerCase().includes(termo) ||
+        (pasto.especie && pasto.especie.toLowerCase().includes(termo))
+      )
+    })
+  }, [pastos, searchTerm, showInactive])
+
+  const totalPaginas = Math.max(1, Math.ceil(pastosFiltrados.length / ITENS_POR_PAGINA))
+  const paginaSegura = Math.min(paginaAtual, totalPaginas)
+  const itensPaginados = pastosFiltrados.slice((paginaSegura - 1) * ITENS_POR_PAGINA, paginaSegura * ITENS_POR_PAGINA)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -279,7 +268,7 @@ export function Pastos() {
       setSelectedBebedouros([])
       setShowForm(false)
       setEditingPasto(null)
-      loadPastos()
+      loadData()
     }
 
     setSubmitting(false)
@@ -350,7 +339,7 @@ export function Pastos() {
     if (error) {
       console.error('Erro ao excluir pasto:', error)
     } else {
-      loadPastos()
+      loadData()
     }
 
     setShowDeleteModal(false)
@@ -366,7 +355,7 @@ export function Pastos() {
     if (error) {
       console.error('Erro ao atualizar pasto:', error)
     } else {
-      loadPastos()
+      loadData()
     }
   }
 
@@ -577,7 +566,7 @@ export function Pastos() {
       }
 
       setImportSuccess(successMessage)
-      loadPastos()
+      loadData()
 
       // Limpar input
       e.target.value = ''
@@ -1096,20 +1085,17 @@ export function Pastos() {
         </Card>
       )}
 
-      {!showForm && pastos.length === 0 ? (
+      {!showForm && pastosFiltrados.length === 0 ? (
         <Card className="bg-white p-8 sm:p-12 border-0 shadow-sm text-center">
-          <p className="text-gray-600 mb-4 text-sm sm:text-base">Nenhum pasto cadastrado</p>
-          <Button onClick={() => setShowForm(true)} className="text-sm">Criar Primeiro Pasto</Button>
+          <p className="text-gray-600 mb-4 text-sm sm:text-base">
+            {searchTerm ? 'Nenhum pasto encontrado para a busca' : 'Nenhum pasto cadastrado'}
+          </p>
+          {!searchTerm && <Button onClick={() => setShowForm(true)} className="text-sm">Criar Primeiro Pasto</Button>}
         </Card>
       ) : !showForm ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {pastos
-            .filter((pasto) =>
-              (showInactive || pasto.ativo) &&
-              (pasto.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              (pasto.especie && pasto.especie.toLowerCase().includes(searchTerm.toLowerCase())))
-            )
-            .map((pasto) => (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {itensPaginados.map((pasto) => (
               <Card
                 key={pasto.id}
                 className={`p-4 sm:p-6 shadow-sm cursor-pointer transition-all hover:shadow-xl flex flex-col ${
@@ -1223,6 +1209,29 @@ export function Pastos() {
                 </div>
               </Card>
             ))}
+          </div>
+
+          {totalPaginas > 1 && (
+            <div className="flex items-center justify-end gap-2">
+              <button
+                onClick={() => setPaginaAtual((p) => Math.max(1, p - 1))}
+                disabled={paginaSegura === 1}
+                className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Anterior
+              </button>
+              <span className="text-xs text-gray-500">
+                Página {paginaSegura} de {totalPaginas}
+              </span>
+              <button
+                onClick={() => setPaginaAtual((p) => Math.min(totalPaginas, p + 1))}
+                disabled={paginaSegura === totalPaginas}
+                className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Próxima
+              </button>
+            </div>
+          )}
         </div>
       ) : null}
 

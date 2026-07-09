@@ -216,7 +216,7 @@ export function Lotes() {
   }
 
   useEffect(() => {
-    const loadPastos = async () => {
+    const loadAuxiliaryData = async () => {
       if (!user) return
       const { data: vinculos } = await supabase
         .from('usuario_fazenda')
@@ -228,83 +228,29 @@ export function Lotes() {
 
       const fazendaId = vinculos[0].fazenda_id
 
-      const { data: pastosData } = await supabase
-        .from('pastos')
-        .select('id, nome')
-        .eq('fazenda_id', fazendaId)
-        .eq('ativo', true)
+      const [pastosData, racasData, formulacoesData] = await Promise.all([
+        supabase.from('pastos').select('id, nome').eq('fazenda_id', fazendaId).eq('ativo', true),
+        supabase.from('racas').select('id, nome').eq('fazenda_id', fazendaId).eq('ativo', true).order('nome'),
+        supabase.from('formulacoes').select('id, nome, tipo, meta_consumo_ms_percent_pv, gmd').eq('fazenda_id', fazendaId).eq('ativo', true).order('nome'),
+      ])
 
-      if (pastosData) {
-        setPastos(pastosData)
-      }
-    }
+      if (pastosData.data) setPastos(pastosData.data)
+      if (racasData.data) setRacas(racasData.data)
 
-    const loadRacas = async () => {
-      if (!user) return
-      const { data: vinculos } = await supabase
-        .from('usuario_fazenda')
-        .select('fazenda_id')
-        .eq('usuario_id', user.id)
-        .eq('ativo', true)
-
-      if (!vinculos || vinculos.length === 0) return
-
-      const fazendaId = vinculos[0].fazenda_id
-
-      const { data: racasData } = await supabase
-        .from('racas')
-        .select('id, nome')
-        .eq('fazenda_id', fazendaId)
-        .eq('ativo', true)
-        .order('nome')
-
-      if (racasData) {
-        setRacas(racasData)
-      }
-    }
-
-    loadPastos()
-    loadRacas()
-  }, [user])
-
-  useEffect(() => {
-    const loadNutritionalOptions = async () => {
-      if (!user) return
-      const { data: vinculos } = await supabase
-        .from('usuario_fazenda')
-        .select('fazenda_id')
-        .eq('usuario_id', user.id)
-        .eq('ativo', true)
-
-      if (!vinculos || vinculos.length === 0) return
-
-      const fazendaId = vinculos[0].fazenda_id
-
-      const { data } = await supabase
-        .from('formulacoes')
-        .select('id, nome, tipo, meta_consumo_ms_percent_pv, gmd')
-        .eq('fazenda_id', fazendaId)
-        .eq('ativo', true)
-        .order('nome')
-
-      const options: {id: string, name: string, category: string, consumo_meta?: number, gmd?: number}[] = []
-
-      if (data) {
-        data.forEach(item => {
-          options.push({
+      if (formulacoesData.data) {
+        setNutritionalOptions(
+          formulacoesData.data.map((item) => ({
             id: item.id,
             name: item.nome,
             category: item.tipo || 'Formulações',
-            consumo_meta: item.meta_consumo_ms_percent_pv !== undefined && item.meta_consumo_ms_percent_pv !== null ? Number(item.meta_consumo_ms_percent_pv) : undefined,
-            gmd: item.gmd !== undefined && item.gmd !== null ? Number(item.gmd) : undefined
-          })
-        })
+            consumo_meta: item.meta_consumo_ms_percent_pv != null ? Number(item.meta_consumo_ms_percent_pv) : undefined,
+            gmd: item.gmd != null ? Number(item.gmd) : undefined,
+          }))
+        )
       }
-
-      setNutritionalOptions(options)
     }
 
-    loadNutritionalOptions()
+    loadAuxiliaryData()
   }, [user])
 
   const handleCategoryCollapse = (categoria: string) => {
@@ -382,15 +328,10 @@ export function Lotes() {
   }
 
   useEffect(() => {
-    loadLotes()
-  }, [user])
-
-  // Forçar recarregamento quando o componente montar
-  useEffect(() => {
     if (user) {
       loadLotes()
     }
-  }, [])
+  }, [user])
 
   
   // Calcular período automaticamente quando a data de pesagem mudar
@@ -1046,14 +987,22 @@ export function Lotes() {
   const handleEdit = async (lote: Lote) => {
     setEditingLote(lote)
 
-    // Fetch categories with quant_atual from lote_categorias (apenas ativas)
-    const { data: categoriasData } = await supabase
-      .from('lote_categorias')
-      .select('*')
-      .eq('lote_id', lote.id)
-      .eq('ativo', true)
+    const fazendaId = lote.fazenda_id
 
-    const updatedCategorias = categoriasData || lote.categorias || []
+    // Buscar categorias, movimentação, maternidade e morte em paralelo
+    const [
+      categoriasData,
+      movData,
+      matData,
+      morData
+    ] = await Promise.all([
+      supabase.from('lote_categorias').select('*').eq('lote_id', lote.id).eq('ativo', true),
+      supabase.from('lote_historico').select('*').eq('lote_id', lote.id).order('data_movimentacao', { ascending: false }),
+      supabase.from('registros_maternidade').select('*').eq('lote_id', lote.id).eq('fazenda_id', fazendaId).is('deleted_at', null).order('data', { ascending: false }),
+      supabase.from('registros_morte').select('*').eq('lote_id', lote.id).eq('fazenda_id', fazendaId).is('deleted_at', null).order('data', { ascending: false }),
+    ])
+
+    const updatedCategorias = categoriasData.data || lote.categorias || []
 
     // Update categorias to include new fields if not present
     const categoriasWithMeta = updatedCategorias.map(cat => ({
@@ -1082,48 +1031,9 @@ export function Lotes() {
       custo_total_entrada_reais_lote: cat.custo_total_entrada_reais_lote ?? undefined
     }))
 
-    // Fetch movimentation data for this lot
-    if (!user) return
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
-
-    if (vinculos && vinculos.length > 0) {
-      const fazendaId = vinculos[0].fazenda_id
-
-      // Fetch movimentacao data
-      const { data: movData } = await supabase
-        .from('lote_historico')
-        .select('*')
-        .eq('lote_id', lote.id)
-        .order('data_movimentacao', { ascending: false })
-
-      setMovimentacaoData(movData || [])
-
-      // Fetch maternidade data
-      const { data: matData } = await supabase
-        .from('registros_maternidade')
-        .select('*')
-        .eq('lote_id', lote.id)
-        .eq('fazenda_id', fazendaId)
-        .is('deleted_at', null)
-        .order('data', { ascending: false })
-
-      setMaternidadeData(matData || [])
-
-      // Fetch morte data
-      const { data: morData } = await supabase
-        .from('registros_morte')
-        .select('*')
-        .eq('lote_id', lote.id)
-        .eq('fazenda_id', fazendaId)
-        .is('deleted_at', null)
-        .order('data', { ascending: false })
-
-      setMorteData(morData || [])
-    }
+    setMovimentacaoData(movData.data || [])
+    setMaternidadeData(matData.data || [])
+    setMorteData(morData.data || [])
 
     setFormData({
       nome: lote.nome,

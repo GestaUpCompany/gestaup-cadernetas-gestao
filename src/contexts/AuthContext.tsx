@@ -17,14 +17,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    console.log('AuthProvider: Iniciando verificação de usuário...')
-    
     // Timeout de 5 segundos para evitar travamento
     const timeoutId = setTimeout(() => {
       console.warn('AuthProvider: Timeout após 5 segundos, assumindo usuário não logado')
       setLoading(false)
     }, 5000)
-    
+
     // Verificar usuário atual
     getCurrentUser()
       .then((currentUser) => {
@@ -41,17 +39,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false)
       })
 
-    // Atualizar último acesso a cada 5 minutos enquanto o app estiver aberto
-    const intervalId = setInterval(() => {
-      if (user) {
-        updateUltimoAcesso()
-      }
-    }, 5 * 60 * 1000)
-
     return () => {
       clearTimeout(timeoutId)
-      clearInterval(intervalId)
     }
+  }, [])
+
+  // Atualizar último acesso a cada 5 minutos enquanto houver usuário logado
+  useEffect(() => {
+    if (!user) return
+
+    updateUltimoAcesso()
+    const intervalId = setInterval(() => {
+      updateUltimoAcesso()
+    }, 5 * 60 * 1000)
+
+    return () => clearInterval(intervalId)
   }, [user])
 
   const handleSignIn = async (email: string, password: string): Promise<User | null> => {

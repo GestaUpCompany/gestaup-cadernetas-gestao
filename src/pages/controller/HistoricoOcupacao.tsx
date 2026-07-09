@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Card, CardSkeleton } from '../../components/ui'
@@ -55,9 +55,17 @@ export function HistoricoOcupacao() {
   // Filtro de status
   const [statusFiltro, setStatusFiltro] = useState<'todos' | 'ativos' | 'encerrados'>('todos')
 
+  // Paginação
+  const [paginaAtual, setPaginaAtual] = useState(1)
+  const ITENS_POR_PAGINA = 25
+
   useEffect(() => {
     loadHistorico()
   }, [user, tipo])
+
+  useEffect(() => {
+    setPaginaAtual(1)
+  }, [searchTerm, statusFiltro, dataInicio, dataFim, periodoRapido, loteSelecionado, pastoSelecionado, moduloSelecionado, taxaLotacaoMin, taxaLotacaoMax, diasMin, diasMax, tipo])
 
   const loadHistorico = async () => {
     if (!user) return
@@ -77,7 +85,6 @@ export function HistoricoOcupacao() {
     }
 
     const fazendaId = vinculos[0].fazenda_id
-    const viewName = tipo === 'pasto' ? 'v_historico_ocupacao_pasto' : 'v_historico_ocupacao_modulo'
 
     // Buscar lotes, pastos e módulos da fazenda para os filtros
     const [lotesData, pastosData, modulosData] = await Promise.all([
@@ -90,19 +97,15 @@ export function HistoricoOcupacao() {
     setPastosDisponiveis(pastosData.data || [])
     setModulosDisponiveis(modulosData.data || [])
 
-    // Buscar apenas lotes da fazenda do usuário
-    const { data: lotesIdsData } = await supabase
-      .from('lotes')
-      .select('id')
-      .eq('fazenda_id', fazendaId)
+    const loteIds = lotesData.data?.map((l) => l.id) || []
 
-    if (!lotesIdsData || lotesIdsData.length === 0) {
+    if (loteIds.length === 0) {
       setHistorico([])
       setLoading(false)
       return
     }
 
-    const loteIds = lotesIdsData.map(l => l.id)
+    const viewName = tipo === 'pasto' ? 'v_historico_ocupacao_pasto' : 'v_historico_ocupacao_modulo'
 
     const { data, error } = await supabase
       .from(viewName as any)
@@ -119,51 +122,56 @@ export function HistoricoOcupacao() {
     setLoading(false)
   }
 
-  const filtrado = historico.filter((item) => {
-    const termoBusca = searchTerm.toLowerCase()
-    const matchSearch =
-      !searchTerm ||
-      item.lote_nome.toLowerCase().includes(termoBusca) ||
-      (item.pasto_nome?.toLowerCase().includes(termoBusca) ?? false) ||
-      (item.modulo_nome?.toLowerCase().includes(termoBusca) ?? false)
+  const filtrado = useMemo(() => {
+    const termoBusca = searchTerm.toLowerCase().trim()
+    const minTaxa = taxaLotacaoMin ? parseFloat(taxaLotacaoMin) : null
+    const maxTaxa = taxaLotacaoMax ? parseFloat(taxaLotacaoMax) : null
+    const minDias = diasMin ? parseFloat(diasMin) : null
+    const maxDias = diasMax ? parseFloat(diasMax) : null
+    const dataInicioValue = dataInicio ? new Date(dataInicio).getTime() : null
+    const dataFimValue = dataFim ? new Date(dataFim).getTime() + 24 * 60 * 60 * 1000 - 1 : null
 
-    // Filtro de status (substitui apenasAtivos)
-    const matchStatus =
-      statusFiltro === 'todos' ||
-      (statusFiltro === 'ativos' && item.data_hora_saida == null) ||
-      (statusFiltro === 'encerrados' && item.data_hora_saida != null)
-
-    // Filtros temporais
-    const dataEntrada = new Date(item.data_hora_entrada)
-    const matchDataInicio = !dataInicio || dataEntrada >= new Date(dataInicio)
-    const matchDataFim = !dataFim || dataEntrada <= new Date(dataFim)
-
-    // Período rápido
-    let matchPeriodoRapido = true
+    let limitePeriodoRapido: number | null = null
     if (periodoRapido) {
-      const agora = new Date()
       const diasAtras = { '7': 7, '30': 30, '90': 90, '365': 365 }[periodoRapido] || 0
       if (diasAtras > 0) {
-        const limite = new Date(agora.getTime() - diasAtras * 24 * 60 * 60 * 1000)
-        matchPeriodoRapido = dataEntrada >= limite
+        limitePeriodoRapido = new Date().getTime() - diasAtras * 24 * 60 * 60 * 1000
       }
     }
 
-    // Filtros por entidade
-    const matchLote = !loteSelecionado || item.lote_id === loteSelecionado
-    const matchPasto = !pastoSelecionado || item.pasto_id === pastoSelecionado
-    const matchModulo = !moduloSelecionado || item.modulo_id === moduloSelecionado
+    return historico.filter((item) => {
+      if (termoBusca) {
+        const busca =
+          item.lote_nome.toLowerCase().includes(termoBusca) ||
+          (item.pasto_nome?.toLowerCase().includes(termoBusca) ?? false) ||
+          (item.modulo_nome?.toLowerCase().includes(termoBusca) ?? false)
+        if (!busca) return false
+      }
 
-    // Filtros por métricas
-    const matchTaxaMin = !taxaLotacaoMin || (item.taxa_lotacao_ua_ha != null && item.taxa_lotacao_ua_ha >= parseFloat(taxaLotacaoMin))
-    const matchTaxaMax = !taxaLotacaoMax || (item.taxa_lotacao_ua_ha != null && item.taxa_lotacao_ua_ha <= parseFloat(taxaLotacaoMax))
-    const matchDiasMin = !diasMin || (item.periodo_ocupacao_dias != null && item.periodo_ocupacao_dias >= parseFloat(diasMin))
-    const matchDiasMax = !diasMax || (item.periodo_ocupacao_dias != null && item.periodo_ocupacao_dias <= parseFloat(diasMax))
+      if (statusFiltro === 'ativos' && item.data_hora_saida != null) return false
+      if (statusFiltro === 'encerrados' && item.data_hora_saida == null) return false
 
-    return matchSearch && matchStatus && matchDataInicio && matchDataFim && matchPeriodoRapido &&
-           matchLote && matchPasto && matchModulo &&
-           matchTaxaMin && matchTaxaMax && matchDiasMin && matchDiasMax
-  })
+      const dataEntrada = new Date(item.data_hora_entrada).getTime()
+      if (dataInicioValue && dataEntrada < dataInicioValue) return false
+      if (dataFimValue && dataEntrada > dataFimValue) return false
+      if (limitePeriodoRapido && dataEntrada < limitePeriodoRapido) return false
+
+      if (loteSelecionado && item.lote_id !== loteSelecionado) return false
+      if (pastoSelecionado && item.pasto_id !== pastoSelecionado) return false
+      if (moduloSelecionado && item.modulo_id !== moduloSelecionado) return false
+
+      if (minTaxa != null && (item.taxa_lotacao_ua_ha == null || item.taxa_lotacao_ua_ha < minTaxa)) return false
+      if (maxTaxa != null && (item.taxa_lotacao_ua_ha == null || item.taxa_lotacao_ua_ha > maxTaxa)) return false
+      if (minDias != null && (item.periodo_ocupacao_dias == null || item.periodo_ocupacao_dias < minDias)) return false
+      if (maxDias != null && (item.periodo_ocupacao_dias == null || item.periodo_ocupacao_dias > maxDias)) return false
+
+      return true
+    })
+  }, [historico, searchTerm, statusFiltro, dataInicio, dataFim, periodoRapido, loteSelecionado, pastoSelecionado, moduloSelecionado, taxaLotacaoMin, taxaLotacaoMax, diasMin, diasMax])
+
+  const totalPaginas = Math.max(1, Math.ceil(filtrado.length / ITENS_POR_PAGINA))
+  const paginaSegura = Math.min(paginaAtual, totalPaginas)
+  const itensPaginados = filtrado.slice((paginaSegura - 1) * ITENS_POR_PAGINA, paginaSegura * ITENS_POR_PAGINA)
 
   const formatarData = (dataStr?: string | null) => {
     if (!dataStr) return '—'
@@ -428,7 +436,7 @@ export function HistoricoOcupacao() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
-                {filtrado.map((item) => (
+                {itensPaginados.map((item) => (
                   <tr key={item.historico_id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3 font-medium text-gray-800 whitespace-nowrap">{item.lote_nome}</td>
                     {tipo === 'pasto' ? (
@@ -479,7 +487,29 @@ export function HistoricoOcupacao() {
               </tbody>
             </table>
           </div>
-          <p className="text-xs text-gray-400 mt-3 px-4 pb-2">{filtrado.length} registro{filtrado.length !== 1 ? 's' : ''}</p>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 pb-2 mt-3">
+            <p className="text-xs text-gray-400">
+              {filtrado.length} registro{filtrado.length !== 1 ? 's' : ''} | Página {paginaSegura} de {totalPaginas}
+            </p>
+            {totalPaginas > 1 && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPaginaAtual((p) => Math.max(1, p - 1))}
+                  disabled={paginaSegura === 1}
+                  className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Anterior
+                </button>
+                <button
+                  onClick={() => setPaginaAtual((p) => Math.min(totalPaginas, p + 1))}
+                  disabled={paginaSegura === totalPaginas}
+                  className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Próxima
+                </button>
+              </div>
+            )}
+          </div>
         </Card>
       )}
     </div>
