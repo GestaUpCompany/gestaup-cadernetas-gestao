@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { User, signIn, signUp, signOut, getCurrentUser, updateUltimoAcesso } from '../services/authService'
+import { supabase } from '../services/supabaseClient'
 
 interface AuthContextType {
   user: User | null
@@ -17,30 +18,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let isMounted = true
+
+    const initAuth = async () => {
+      try {
+        // getSession é síncrono e lê do localStorage, mais confiável na inicialização
+        const { data: { session } } = await supabase.auth.getSession()
+
+        if (session?.user && isMounted) {
+          const currentUser = await getCurrentUser()
+          if (isMounted) {
+            setUser(currentUser)
+            if (currentUser) updateUltimoAcesso()
+          }
+        }
+      } catch (error) {
+        console.error('AuthProvider: Erro ao buscar usuário:', error)
+      } finally {
+        if (isMounted) setLoading(false)
+      }
+    }
+
+    initAuth()
+
+    // Ouvi mudanças de autenticação (login, logout, refresh)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session: { user: { id: string } } | null) => {
+      if (!isMounted) return
+      if (session?.user) {
+        getCurrentUser().then((currentUser) => {
+          if (isMounted) {
+            setUser(currentUser)
+            if (currentUser) updateUltimoAcesso()
+          }
+        })
+      } else {
+        setUser(null)
+      }
+    })
+
     // Timeout de 5 segundos para evitar travamento
     const timeoutId = setTimeout(() => {
-      console.warn('AuthProvider: Timeout após 5 segundos, assumindo usuário não logado')
-      setLoading(false)
+      if (isMounted) setLoading(false)
     }, 5000)
 
-    // Verificar usuário atual
-    getCurrentUser()
-      .then((currentUser) => {
-        clearTimeout(timeoutId)
-        setUser(currentUser)
-        setLoading(false)
-        if (currentUser) {
-          updateUltimoAcesso()
-        }
-      })
-      .catch((error) => {
-        console.error('AuthProvider: Erro ao buscar usuário:', error)
-        clearTimeout(timeoutId)
-        setLoading(false)
-      })
-
     return () => {
+      isMounted = false
       clearTimeout(timeoutId)
+      subscription.unsubscribe()
     }
   }, [])
 
