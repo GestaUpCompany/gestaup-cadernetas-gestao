@@ -1,8 +1,11 @@
-import { useEffect, useState, ReactNode } from 'react'
+import { useEffect, useMemo, useState, ReactNode } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, ConfirmModal, CardItem } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, ConfirmModal, CardItem, Modal } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
+import { updateFazenda } from '../../services/fazendasService'
+import { hashPin } from '../../utils/pinHash'
+import { CADERNETAS } from '../../utils/cadernetas'
 import * as XLSX from 'xlsx'
 
 interface TabConfig {
@@ -277,13 +280,27 @@ export function CadastrosAuxiliares() {
   )
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [itemToDelete, setItemToDelete] = useState<{ tab: string; id: string } | null>(null)
+  const [showRbacAlertModal, setShowRbacAlertModal] = useState(false)
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
   const [importSuccess, setImportSuccess] = useState<string | null>(null)
   const [setores, setSetores] = useState<{id: string, nome: string}[]>([])
+  const [funcionarioRbac, setFuncionarioRbac] = useState({
+    acessa_app: false,
+    pin: '',
+    cadernetas_permitidas: [] as string[],
+  })
+  const [mostrarApenasComAcesso, setMostrarApenasComAcesso] = useState(false)
+  const [fazendaId, setFazendaId] = useState<string | null>(null)
+  const [controleAcessoHabilitado, setControleAcessoHabilitado] = useState(false)
+  const [controleAcessoLoading, setControleAcessoLoading] = useState(false)
 
   const currentTab = tabs.find((t) => t.key === activeTab)!
   const state = tabStates[activeTab]
+
+  useEffect(() => {
+    loadFazendaVinculada()
+  }, [user])
 
   useEffect(() => {
     loadItems(activeTab)
@@ -291,6 +308,24 @@ export function CadastrosAuxiliares() {
       loadSetores()
     }
   }, [activeTab, user])
+
+  const loadFazendaVinculada = async () => {
+    const id = await getFazendaId()
+    if (!id) return
+    setFazendaId(id)
+
+    const { data, error } = await supabase
+      .from('fazendas')
+      .select('controle_acesso_habilitado')
+      .eq('id', id)
+      .single()
+
+    if (error) {
+      console.error('Erro ao buscar configuração de acesso da fazenda:', error)
+    } else if (data) {
+      setControleAcessoHabilitado(!!data.controle_acesso_habilitado)
+    }
+  }
 
   const loadSetores = async () => {
     const fazendaId = await getFazendaId()
@@ -385,16 +420,58 @@ export function CadastrosAuxiliares() {
       data.nome = `${marca} ${modelo}`.trim() || null
     }
 
+    // RBAC para funcionários
+    if (activeTab === 'funcionarios') {
+      data.acessa_app = funcionarioRbac.acessa_app
+
+      if (funcionarioRbac.acessa_app) {
+        const temPinAtual = !!state.editingItem?.pin_hash
+        if (!/^[0-9]{4,6}$/.test(funcionarioRbac.pin) && !temPinAtual) {
+          alert('PIN deve ter entre 4 e 6 dígitos numéricos')
+          setTabStates((prev) => ({
+            ...prev,
+            [activeTab]: { ...prev[activeTab], submitting: false },
+          }))
+          return
+        }
+
+        if (funcionarioRbac.cadernetas_permitidas.length === 0) {
+          alert('Selecione pelo menos uma caderneta')
+          setTabStates((prev) => ({
+            ...prev,
+            [activeTab]: { ...prev[activeTab], submitting: false },
+          }))
+          return
+        }
+
+        data.cadernetas_permitidas = funcionarioRbac.cadernetas_permitidas
+      } else {
+        data.pin_hash = null
+        data.cadernetas_permitidas = []
+      }
+    }
+
     let error
+    let insertedId: string | null = null
+
     if (state.editingItem) {
       const { error: updateError } = await supabase
         .from(tab.table)
         .update(data)
         .eq('id', state.editingItem.id)
       error = updateError
+      insertedId = state.editingItem.id
     } else {
-      const { error: insertError } = await supabase.from(tab.table).insert(data)
+      const { data: inserted, error: insertError } = await supabase.from(tab.table).insert(data).select()
       error = insertError
+      insertedId = inserted && inserted.length > 0 ? (inserted[0] as GenericItem).id : null
+    }
+
+    // Gerar/atualizar hash do PIN para funcionários
+    if (!error && activeTab === 'funcionarios' && funcionarioRbac.acessa_app && funcionarioRbac.pin && insertedId) {
+      const pinHash = await hashPin(funcionarioRbac.pin, insertedId, fazendaId)
+      const { error: pinError } = await supabase.from(tab.table).update({ pin_hash: pinHash }).eq('id', insertedId)
+      error = pinError
     }
 
     if (error) {
@@ -427,6 +504,14 @@ export function CadastrosAuxiliares() {
       formData[f.name] = item[f.name] || ''
     })
 
+    if (activeTab === 'funcionarios') {
+      setFuncionarioRbac({
+        acessa_app: !!item.acessa_app,
+        pin: '',
+        cadernetas_permitidas: Array.isArray(item.cadernetas_permitidas) ? item.cadernetas_permitidas : [],
+      })
+    }
+
     setTabStates((prev) => ({
       ...prev,
       [activeTab]: {
@@ -440,6 +525,11 @@ export function CadastrosAuxiliares() {
 
   const handleCancel = () => {
     const tab = tabs.find((t) => t.key === activeTab)!
+    setFuncionarioRbac({
+      acessa_app: false,
+      pin: '',
+      cadernetas_permitidas: [],
+    })
     setTabStates((prev) => ({
       ...prev,
       [activeTab]: {
@@ -513,6 +603,42 @@ export function CadastrosAuxiliares() {
       ...prev,
       [activeTab]: { ...prev[activeTab], searchTerm: value },
     }))
+  }
+
+  const handleToggleControleAcesso = async () => {
+    if (!fazendaId) return
+
+    const novoEstado = !controleAcessoHabilitado
+
+    if (novoEstado) {
+      const { data: funcionariosComAcesso, error } = await supabase
+        .from('funcionarios')
+        .select('id')
+        .eq('fazenda_id', fazendaId)
+        .eq('acessa_app', true)
+        .not('pin_hash', 'is', null)
+        .limit(1)
+
+      if (error) {
+        console.error('Erro ao verificar funcionários com acesso:', error)
+        return
+      }
+
+      if (!funcionariosComAcesso || funcionariosComAcesso.length === 0) {
+        setShowRbacAlertModal(true)
+        return
+      }
+    }
+
+    setControleAcessoLoading(true)
+    const atualizada = await updateFazenda(fazendaId, { controle_acesso_habilitado: novoEstado })
+    setControleAcessoLoading(false)
+
+    if (atualizada) {
+      setControleAcessoHabilitado(novoEstado)
+    } else {
+      console.error('Erro ao atualizar controle de acesso da fazenda')
+    }
   }
 
   const setShowForm = (show: boolean) => {
@@ -703,17 +829,20 @@ export function CadastrosAuxiliares() {
 
   useKeyboardShortcuts(shortcuts)
 
-  const filteredItems = state.items.filter((item) => {
-    const search = state.searchTerm.toLowerCase()
-    if (!search) return true
-    return (
-      item.nome.toLowerCase().includes(search) ||
-      currentTab.fields.some((f) => {
-        const val = item[f.name]
-        return val && String(val).toLowerCase().includes(search)
-      })
-    )
-  })
+  const filteredItems = useMemo(() => {
+    const search = state.searchTerm.toLowerCase().trim()
+    return state.items.filter((item) => {
+      if (activeTab === 'funcionarios' && mostrarApenasComAcesso && !item.acessa_app) return false
+      if (!search) return true
+      return (
+        item.nome.toLowerCase().includes(search) ||
+        currentTab.fields.some((f) => {
+          const val = item[f.name]
+          return val && String(val).toLowerCase().includes(search)
+        })
+      )
+    })
+  }, [state.items, state.searchTerm, activeTab, mostrarApenasComAcesso, currentTab.fields])
 
   return (
     <div className="space-y-6 max-w-full min-w-0 overflow-x-hidden">
@@ -779,15 +908,57 @@ export function CadastrosAuxiliares() {
 
       {/* Active Tab Content */}
       <div className="space-y-4 max-w-full">
+        {activeTab === 'funcionarios' && (
+          <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-gray-800">Controle de acesso por funcionário</p>
+                <p className="text-xs text-gray-500">
+                  {controleAcessoHabilitado
+                    ? 'Ativado: app exige login do funcionário e mostra apenas cadernetas permitidas.'
+                    : 'Desativado: app funciona sem login (qualquer pessoa vê todas as cadernetas).'}
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={controleAcessoLoading}
+                onClick={handleToggleControleAcesso}
+                className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors disabled:opacity-50 ${
+                  controleAcessoHabilitado ? 'bg-primary' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                    controleAcessoHabilitado ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Search + Add */}
         <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
-          <Input
-            type="text"
-            placeholder={currentTab.searchPlaceholder}
-            value={state.searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full sm:max-w-xs border-gray-200 focus:border-accent h-10"
-          />
+          <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
+            <Input
+              type="text"
+              placeholder={currentTab.searchPlaceholder}
+              value={state.searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full sm:max-w-xs border-gray-200 focus:border-accent h-10"
+            />
+            {activeTab === 'funcionarios' && (
+              <label className="flex items-center gap-2 text-sm text-gray-700 whitespace-nowrap">
+                <input
+                  type="checkbox"
+                  checked={mostrarApenasComAcesso}
+                  onChange={(e) => setMostrarApenasComAcesso(e.target.checked)}
+                  className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                />
+                Com acesso ao app
+              </label>
+            )}
+          </div>
           <div className="flex flex-wrap gap-2 w-full sm:w-auto">
             {activeTab === 'bebedouros' && (
               <>
@@ -875,11 +1046,94 @@ export function CadastrosAuxiliares() {
                         onChange={(e) => setFormField(field.name, e.target.value)}
                         required={field.required}
                         placeholder={field.placeholder}
+                        autoComplete="off"
                         className="border-gray-200 focus:border-accent min-h-[44px]"
                       />
                     )}
                   </div>
                 ))}
+
+                {activeTab === 'funcionarios' && (
+                  <div className="md:col-span-2 space-y-4 border-t border-gray-100 pt-4 mt-2">
+                    <div className="flex items-center gap-3 py-2">
+                      <button
+                        type="button"
+                        onClick={() => setFuncionarioRbac({ ...funcionarioRbac, acessa_app: !funcionarioRbac.acessa_app })}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          funcionarioRbac.acessa_app ? 'bg-primary' : 'bg-gray-300'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            funcionarioRbac.acessa_app ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                      <label className="text-sm font-medium text-gray-700">
+                        Acessa o app das cadernetas
+                      </label>
+                    </div>
+
+                    {funcionarioRbac.acessa_app && (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            PIN {state.editingItem?.pin_hash ? '(deixe em branco para manter)' : '*'}
+                          </label>
+                          <Input
+                            type="password"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            maxLength={6}
+                            value={funcionarioRbac.pin}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\D/g, '')
+                              setFuncionarioRbac({ ...funcionarioRbac, pin: value })
+                            }}
+                            placeholder="4 a 6 dígitos"
+                            autoComplete="new-password"
+                            className="border-gray-200 focus:border-accent min-h-[44px]"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Cadernetas permitidas *
+                          </label>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            {CADERNETAS.map((caderneta) => (
+                              <label
+                                key={caderneta.id}
+                                className="flex items-center gap-2 p-2 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={funcionarioRbac.cadernetas_permitidas.includes(caderneta.id)}
+                                  onChange={(e) => {
+                                    const selected = funcionarioRbac.cadernetas_permitidas
+                                    if (e.target.checked) {
+                                      setFuncionarioRbac({
+                                        ...funcionarioRbac,
+                                        cadernetas_permitidas: [...selected, caderneta.id],
+                                      })
+                                    } else {
+                                      setFuncionarioRbac({
+                                        ...funcionarioRbac,
+                                        cadernetas_permitidas: selected.filter((id) => id !== caderneta.id),
+                                      })
+                                    }
+                                  }}
+                                  className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                                />
+                                <span className="text-xs text-gray-700">{caderneta.label}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
                 <Button type="submit" disabled={state.submitting} className="w-full sm:w-auto min-h-[44px]">
@@ -930,6 +1184,31 @@ export function CadastrosAuxiliares() {
                 status={item.ativo}
                 onClick={() => handleEdit(item)}
               >
+                {activeTab === 'funcionarios' && item.acessa_app && (
+                  <div className="mb-3 space-y-2">
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      </svg>
+                      Acessa o app
+                    </span>
+                    {Array.isArray(item.cadernetas_permitidas) && item.cadernetas_permitidas.length > 0 && (
+                      <div>
+                        <p className="text-xs text-gray-500 font-medium mb-1">Cadernetas:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {item.cadernetas_permitidas.map((id: string) => {
+                            const label = CADERNETAS.find((c) => c.id === id)?.label || id
+                            return (
+                              <span key={id} className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700">
+                                {label}
+                              </span>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div className="flex flex-wrap gap-1 sm:gap-2 mt-auto">
                   <Button
                     variant="secondary"
@@ -978,6 +1257,29 @@ export function CadastrosAuxiliares() {
         cancelText="Cancelar"
         variant="danger"
       />
+
+      <Modal
+        isOpen={showRbacAlertModal}
+        onClose={() => setShowRbacAlertModal(false)}
+        title="Controle de acesso"
+        size="sm"
+      >
+        <div className="flex items-start gap-4">
+          <div className="flex-shrink-0 w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+            <span className="text-2xl text-blue-600">ℹ️</span>
+          </div>
+          <div className="flex-1">
+            <p className="text-gray-700">
+              Cadastre pelo menos um funcionário com acesso ao app antes de ativar o controle de acesso.
+            </p>
+          </div>
+        </div>
+        <div className="flex justify-end mt-6">
+          <Button onClick={() => setShowRbacAlertModal(false)} className="min-h-[44px]">
+            Entendido
+          </Button>
+        </div>
+      </Modal>
     </div>
   )
 }

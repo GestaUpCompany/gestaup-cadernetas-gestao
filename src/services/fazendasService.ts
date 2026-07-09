@@ -49,6 +49,7 @@ export interface Fazenda {
   logo_url?: string
   planilha_id?: string
   ativo: boolean
+  controle_acesso_habilitado: boolean
   created_at: string
   updated_at: string
 }
@@ -163,6 +164,7 @@ export async function createFazendaWithController(
     logo_url: params.logo_url,
     planilha_id: params.planilha_id,
     ativo: params.ativo,
+    controle_acesso_habilitado: false,
   })
 
   if (!fazenda) {

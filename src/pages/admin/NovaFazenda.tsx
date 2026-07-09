@@ -115,6 +115,7 @@ export function NovaFazenda() {
         planilha_id: formData.planilha_id || undefined,
         logo_url: logoUrl || undefined,
         ativo: formData.ativo,
+        controle_acesso_habilitado: false,
       })
 
       if (!result) {
