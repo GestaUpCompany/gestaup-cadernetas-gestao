@@ -43,6 +43,7 @@ import { Frigorificos } from './pages/controller/Frigorificos'
 import { CausasMorte } from './pages/controller/CausasMorte'
 import { Racas } from './pages/controller/Racas'
 import { CadastrosAuxiliares } from './pages/controller/CadastrosAuxiliares'
+import { Rotinas } from './pages/controller/Rotinas'
 import { BebedourosCadastro } from './pages/controller/BebedourosCadastro'
 import { RegistrosMorte } from './pages/controller/RegistrosMorte'
 import { RegistrosMorteDetalhes } from './pages/controller/RegistrosMorteDetalhes'
@@ -347,6 +348,16 @@ function App() {
             <ControllerRoute>
               <ControllerLayout>
                 <CadastrosAuxiliares />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/rotinas"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <Rotinas />
               </ControllerLayout>
             </ControllerRoute>
           }
