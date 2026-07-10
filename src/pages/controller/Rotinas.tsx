@@ -49,7 +49,7 @@ interface RotinaFormData {
   funcionario_id: string
   cadernetas: string[]
   dias_semana: number[]
-  horario: string
+  horarios: Record<string, string>
   data_inicio: string
   data_fim: string
   ativo: boolean
@@ -67,7 +67,7 @@ const INITIAL_ROTINA_FORM: RotinaFormData = {
   funcionario_id: '',
   cadernetas: [],
   dias_semana: [1, 2, 3, 4, 5],
-  horario: '',
+  horarios: {},
   data_inicio: '',
   data_fim: '',
   ativo: true,
@@ -202,18 +202,26 @@ export function Rotinas() {
 
   const programacaoHoje = useMemo(() => {
     const rotinasHoje = getRotinasDoDia(rotinas, hoje)
-    const map = new Map<string, string[]>()
+    const map = new Map<string, { id: string; label: string; horario: string | null }[]>()
     rotinasHoje.forEach((r: Rotina) => {
       const existente = map.get(r.funcionario_id) || []
-      map.set(r.funcionario_id, [...new Set([...existente, ...r.cadernetas])])
-    })
-    return Array.from(map.entries()).map(([funcionarioId, cadernetas]: [string, string[]]) => ({
-      funcionarioId,
-      funcionarioNome: funcionarios.find((f) => f.id === funcionarioId)?.nome || funcionarioId,
-      cadernetas: cadernetas.map((id: string) => ({
+      const novas = r.cadernetas.map((id) => ({
         id,
         label: CADERNETAS.find((c) => c.id === id)?.label || id,
-      })),
+        horario: r.horarios?.[id] || null,
+      }))
+      const merged = [...existente]
+      novas.forEach((n) => {
+        const idx = merged.findIndex((m) => m.id === n.id)
+        if (idx === -1) merged.push(n)
+        else if (n.horario) merged[idx] = n
+      })
+      map.set(r.funcionario_id, merged)
+    })
+    return Array.from(map.entries()).map(([funcionarioId, cadernetas]) => ({
+      funcionarioId,
+      funcionarioNome: funcionarios.find((f) => f.id === funcionarioId)?.nome || funcionarioId,
+      cadernetas,
     }))
   }, [rotinas, hoje, funcionarios])
 
@@ -352,7 +360,7 @@ export function Rotinas() {
         funcionario_id: rotina.funcionario_id,
         cadernetas: rotina.cadernetas,
         dias_semana: rotina.dias_semana,
-        horario: rotina.horario || '',
+        horarios: (rotina.horarios || {}) as Record<string, string>,
         data_inicio: rotina.data_inicio,
         data_fim: rotina.data_fim || '',
         ativo: rotina.ativo,
@@ -413,7 +421,7 @@ export function Rotinas() {
       funcionario_id: rotinaForm.funcionario_id,
       cadernetas: rotinaForm.cadernetas,
       dias_semana: rotinaForm.dias_semana,
-      horario: rotinaForm.horario || null,
+      horarios: rotinaForm.horarios,
       data_inicio: rotinaForm.data_inicio,
       data_fim: rotinaForm.data_fim || null,
       ativo: rotinaForm.ativo,
@@ -547,8 +555,10 @@ export function Rotinas() {
                     <span
                       key={c.id}
                       className="px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                      title={c.horario ? `Às ${c.horario.substring(0, 5)}` : 'Sem horário definido'}
                     >
                       {c.label}
+                      {c.horario && <span className="ml-1">({c.horario.substring(0, 5)})</span>}
                     </span>
                   ))}
                 </div>
@@ -579,7 +589,7 @@ export function Rotinas() {
                     <th className="px-4 py-3">Usuário</th>
                     <th className="px-4 py-3">Cadernetas</th>
                     <th className="px-4 py-3">Dias</th>
-                    <th className="px-4 py-3">Horário</th>
+                    <th className="px-4 py-3">Horários</th>
                     <th className="px-4 py-3">Vigência</th>
                     <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3 text-right">Ações</th>
@@ -609,7 +619,15 @@ export function Rotinas() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-gray-700">{formatDiasSemana(rotina.dias_semana)}</td>
-                      <td className="px-4 py-3 text-gray-700">{rotina.horario || '-'}</td>
+                      <td className="px-4 py-3 text-gray-700">
+                        <div className="flex flex-col gap-1">
+                          {rotina.cadernetas.map((id: string) => (
+                            <span key={id} className="text-xs">
+                              {getCadernetaLabel(id)}: {rotina.horarios?.[id] || '-'}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
                       <td className="px-4 py-3 text-gray-700">
                         {formatDate(rotina.data_inicio)}
                         {rotina.data_fim ? ` a ${formatDate(rotina.data_fim)}` : ''}
@@ -1012,17 +1030,31 @@ export function Rotinas() {
             )}
           </div>
 
-          <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-              Horário (opcional)
-            </label>
-            <Input
-              type="time"
-              value={rotinaForm.horario}
-              onChange={(e) => setRotinaForm({ ...rotinaForm, horario: e.target.value })}
-              className="min-h-[44px]"
-            />
-          </div>
+          {rotinaForm.cadernetas.length > 0 && (
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                Horários por caderneta (opcionais)
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {rotinaForm.cadernetas.map((id: string) => (
+                  <div key={id}>
+                    <label className="block text-xs text-gray-600 mb-1">{getCadernetaLabel(id)}</label>
+                    <Input
+                      type="time"
+                      value={rotinaForm.horarios[id] || ''}
+                      onChange={(e) =>
+                        setRotinaForm((prev) => ({
+                          ...prev,
+                          horarios: { ...prev.horarios, [id]: e.target.value },
+                        }))
+                      }
+                      className="min-h-[44px]"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>

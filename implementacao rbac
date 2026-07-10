@@ -1,0 +1,137 @@
+Você vai implementar o cadastro e controle de acesso por funcionário às cadernetas do app. Contextualize-se primeiro lendo os arquivos relevantes do repositório Caderneta-Digital-Gesta-Up, depois implemente as telas/funcionalidades descritas abaixo.
+
+1. Contexto
+
+No app PWA das Cadernetas Digitais foi implementado um controle de acesso (RBAC) onde cada funcionário pode ter acesso apenas a cadernetas específicas. O app já foi alterado para:
+
+Ler a flag fazendas.controle_acesso_habilitado.
+Quando essa flag for true e existirem funcionários com acessa_app = true, exigir login do funcionário na abertura do app.
+Mostrar somente as cadernetas listadas em funcionarios.cadernetas_permitidas.
+Permitir trocar de funcionário por long press em um botão na home.
+Funcionar offline usando cache dos funcionários com acesso.
+Arquivos chave do app para consultar:
+
+@c:/Users/USER/Documents/Caderneta-Digital-Gesta-Up/frontend/src/components/FuncionarioLoginModal.tsx — tela de login no app.
+@c:/Users/USER/Documents/Caderneta-Digital-Gesta-Up/frontend/src/hooks/useFuncionarioAuth.ts — hook que gerencia autenticação.
+@c:/Users/USER/Documents/Caderneta-Digital-Gesta-Up/frontend/src/services/funcionarioAuthService.ts — cache e validação de funcionários.
+@c:/Users/USER/Documents/Caderneta-Digital-Gesta-Up/frontend/src/utils/pinHash.ts — algoritmo de hash do PIN.
+@c:/Users/USER/Documents/Caderneta-Digital-Gesta-Up/frontend/src/pages/ModulosMenuPage.tsx — filtro de cadernetas.
+@c:/Users/USER/Documents/Caderneta-Digital-Gesta-Up/frontend/src/utils/constants.ts — lista de cadernetas e seus slugs.
+2. Mudanças no banco (já aplicadas)
+
+Foram adicionadas as seguintes colunas via migration add_rbac_funcionarios_fazendas:
+
+
+
+sql
+-- tabela funcionarios
+acessa_app BOOLEAN DEFAULT false
+pin_hash TEXT
+cadernetas_permitidas JSONB DEFAULT '[]'::jsonb
+ 
+-- tabela fazendas
+controle_acesso_habilitado BOOLEAN DEFAULT false
+Você pode confirmar consultando information_schema.columns.
+
+3. O que você deve implementar no outro sistema
+
+A) CRUD de funcionários com campos de acesso ao app
+
+Na tela de cadastro/edição de funcionários, adicionar:
+
+Switch/checkbox "Acessa o app das cadernetas" (acessa_app).
+Quando marcado, exibir:
+Campo PIN numérico (4 a 6 dígitos), apenas números.
+Seleção múltipla de cadernetas permitidas (usar os slugs da lista abaixo).
+Ao salvar:
+
+Se acessa_app = false, limpar pin_hash e cadernetas_permitidas.
+Se acessa_app = true:
+Validar que PIN tem 4 a 6 dígitos numéricos.
+Validar que pelo menos uma caderneta foi selecionada.
+Gerar pin_hash conforme algoritmo abaixo.
+Salvar cadernetas_permitidas como JSONB array de strings.
+B) Toggle de ativação do RBAC por fazenda
+
+Criar um controle (botão, switch ou ação) na tela da fazenda:
+
+Label: "Controle de acesso por funcionário ativado".
+Altera fazendas.controle_acesso_habilitado.
+Antes de ativar para true, verificar se existe pelo menos um funcionário daquela fazenda com acessa_app = true e pin_hash preenchido. Se não houver, exibir mensagem: "Cadastre pelo menos um funcionário com acesso ao app antes de ativar o controle de acesso."
+Ao desativar (false), o app volta automaticamente para o modo legado (qualquer nome de usuário, todas as cadernetas visíveis).
+C) Listagem/visualização
+
+Na listagem de funcionários, indicar visualmente quem tem acesso ao app (ícone, badge ou cor).
+Permitir filtrar funcionários que acessam o app.
+Exibir, ao expandir/editar, quais cadernetas estão permitidas.
+4. Especificações técnicas obrigatórias
+
+A) Hash do PIN
+
+O app valida o PIN localmente, inclusive offline. O hash deve ser exatamente:
+
+
+
+js
+const raw = `${fazenda_id}:${funcionario_id}:${pin.trim()}`
+const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw))
+// converter para hex minúsculo, sem espaços
+Exemplo em TypeScript no repositório: @c:/Users/USER/Documents/Caderneta-Digital-Gesta-Up/frontend/src/utils/pinHash.ts.
+
+O funcionario_id é o UUID da tabela funcionarios. Portanto, o hash só pode ser gerado depois que o funcionário já foi inserido no banco (ou em uma transação/atualização posterior). Se o outro sistema permitir cadastrar funcionário e PIN ao mesmo tempo, a sequência deve ser:
+
+Inserir o funcionário com nome, cargo, etc.
+Pegar o id retornado.
+Gerar pin_hash com fazenda_id e o id.
+Atualizar o registro com pin_hash e cadernetas_permitidas.
+B) Slugs das cadernetas
+
+Usar exatamente estes valores em cadernetas_permitidas:
+
+
+
+json
+[
+  "maternidade",
+  "pastagens",
+  "rodeio",
+  "suplementacao",
+  "bebedouros",
+  "movimentacao",
+  "enfermaria",
+  "morte",
+  "clima",
+  "abastecimento",
+  "cantina",
+  "limpeza",
+  "operacoes-maquinas",
+  "manutencao-maquinas",
+  "problemas",
+  "almoxarifado",
+  "entrada-insumos",
+  "saida-insumos",
+  "leitura-cocho"
+]
+Fonte: constante CADERNETAS em @c:/Users/USER/Documents/Caderneta-Digital-Gesta-Up/frontend/src/utils/constants.ts.
+
+C) RLS/políticas
+
+Garantir que o outro sistema tenha permissão para:
+
+Ler e escrever na tabela funcionarios da fazenda em questão.
+Atualizar a tabela fazendas.
+5. Regras de negócio importantes
+
+Funcionários com acessa_app = false não aparecem na tela de login do app.
+Se controle_acesso_habilitado = true mas nenhum funcionário tem acessa_app = true, o app cai no modo legado (fallback de segurança).
+Não armazenar o PIN em texto plano. Armazenar apenas pin_hash.
+Permita ao administrador redefinir o PIN a qualquer momento.
+Ao desativar acessa_app de um funcionário, limpar pin_hash e cadernetas_permitidas.
+A troca de funcionário no app exige long press no botão TROCAR, portanto não precisa de um botão de logout explícito no outro sistema.
+6. Comportamento esperado após implementação
+
+Administrador cadastra funcionário João, PIN 1234, cadernetas ["maternidade", "rodeio"].
+Administrador ativa controle_acesso_habilitado = true.
+No próximo acesso/sincronização do app, o usuário verá apenas as cadernetas Maternidade e Rodeio, e deverá fazer login como João com PIN 1234.
+Se o administrador desativar o RBAC, o app volta ao fluxo antigo imediatamente após sincronizar.
+Implemente seguindo as convenções e padrões do outro sistema. Teste a geração do hash comparando com o algoritmo do app para garantir interoperabilidade.

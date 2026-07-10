@@ -44,6 +44,7 @@ import { CausasMorte } from './pages/controller/CausasMorte'
 import { Racas } from './pages/controller/Racas'
 import { CadastrosAuxiliares } from './pages/controller/CadastrosAuxiliares'
 import { Rotinas } from './pages/controller/Rotinas'
+import { AuditoriaRotinas } from './pages/controller/AuditoriaRotinas'
 import { BebedourosCadastro } from './pages/controller/BebedourosCadastro'
 import { RegistrosMorte } from './pages/controller/RegistrosMorte'
 import { RegistrosMorteDetalhes } from './pages/controller/RegistrosMorteDetalhes'
@@ -358,6 +359,16 @@ function App() {
             <ControllerRoute>
               <ControllerLayout>
                 <Rotinas />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/auditoria-rotinas"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <AuditoriaRotinas />
               </ControllerLayout>
             </ControllerRoute>
           }

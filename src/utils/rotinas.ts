@@ -4,7 +4,7 @@ export interface Rotina {
   funcionario_id: string
   cadernetas: string[]
   dias_semana: number[]
-  horario: string | null
+  horarios: Record<string, string | null>
   data_inicio: string
   data_fim: string | null
   ativo: boolean

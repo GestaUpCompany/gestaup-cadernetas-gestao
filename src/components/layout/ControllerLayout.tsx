@@ -71,6 +71,7 @@ const menuStructure = [
     items: [
       { label: 'Início', path: '/controller/cadernetas' },
       { label: 'Rotinas', path: '/controller/rotinas' },
+      { label: 'Auditoria de Rotinas', path: '/controller/auditoria-rotinas' },
     ],
   },
 ]
