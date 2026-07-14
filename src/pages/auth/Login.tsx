@@ -54,7 +54,7 @@ export function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 via-blue-50 to-gray-100 flex flex-col items-center justify-center px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-teal-50/70 to-emerald-100 flex flex-col items-center justify-center px-4 py-8">
       <div className="w-full max-w-lg space-y-10">
         {/* Logo Centralizado */}
         <div className="flex flex-col items-center animate-fade-in">
@@ -72,7 +72,7 @@ export function Login() {
         </div>
 
         {/* Formulário */}
-        <Card className="bg-white/80 backdrop-blur-lg shadow-xl border border-white/20 animate-scale-in" disableHover>
+        <Card className="bg-white shadow-xl border border-gray-100 animate-scale-in" disableHover>
           {error && (
             <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4 mb-6 flex items-start gap-3 animate-fade-in">
               <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
