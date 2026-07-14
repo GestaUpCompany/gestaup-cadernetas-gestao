@@ -1,6 +1,7 @@
-import { ReactNode, useState, useEffect, useRef } from 'react'
+import { ReactNode, useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
+import { useFazenda } from '../../hooks/useDashboardQueries'
 import { Header } from './Header'
 import { Breadcrumbs } from '../ui'
 import { KeyboardHelpModal } from '../ui/KeyboardHelpModal'
@@ -10,7 +11,15 @@ interface ControllerLayoutProps {
   children: ReactNode
 }
 
-const menuStructure = [
+interface MenuItem {
+  label: string
+  path?: string
+  standalone?: boolean
+  icon?: ReactNode
+  items?: { label: string; path: string }[]
+}
+
+const menuStructure: MenuItem[] = [
   {
     label: 'Dashboard',
     path: '/controller/dashboard',
@@ -62,16 +71,28 @@ const menuStructure = [
     ],
   },
   {
-    label: 'Cadernetas',
+    label: 'Aplicativo',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
       </svg>
     ),
     items: [
-      { label: 'Início', path: '/controller/cadernetas' },
+      { label: 'Cadernetas', path: '/controller/cadernetas' },
       { label: 'Rotinas', path: '/controller/rotinas' },
       { label: 'Auditoria de Rotinas', path: '/controller/auditoria-rotinas' },
+    ],
+  },
+  {
+    label: 'Confinamento',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5h16M4 5v14a2 2 0 002 2h12a2 2 0 002-2V5M4 5h16M9 9h6M9 13h6M9 17h6" />
+      </svg>
+    ),
+    items: [
+      { label: 'Currais', path: '/controller/currais' },
+      { label: 'Histórico de Dietas', path: '/controller/historico-dietas' },
     ],
   },
 ]
@@ -80,6 +101,7 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const { user } = useAuth()
+  const { data: fazenda } = useFazenda(user?.id)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [openMenus, setOpenMenus] = useState<Set<string>>(new Set())
   const [showHelpModal, setShowHelpModal] = useState(false)
@@ -131,14 +153,19 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
     }
   }, [mobileMenuOpen])
 
+  const visibleMenuStructure = useMemo(() => {
+    if (fazenda?.acesso_confinamento) return menuStructure
+    return menuStructure.filter((menu) => menu.label !== 'Confinamento')
+  }, [fazenda?.acesso_confinamento])
+
   // Auto-open submenu if current path is in it
   useEffect(() => {
-    menuStructure.forEach(menu => {
+    visibleMenuStructure.forEach(menu => {
       if (menu.items && isSubmenuActive(menu.items)) {
         setOpenMenus(prev => new Set(prev).add(menu.label))
       }
     })
-  }, [location.pathname])
+  }, [location.pathname, visibleMenuStructure])
 
   const toggleMenu = (label: string) => {
     const newOpenMenus = new Set(openMenus)
@@ -184,7 +211,7 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
               </button>
             </div>
             <nav className="space-y-1">
-              {menuStructure.map((menu, index) => {
+              {visibleMenuStructure.map((menu, index) => {
                 if (menu.standalone && menu.path) {
                   return (
                     <button
@@ -290,7 +317,7 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
                 </button>
               </div>
               <nav className="space-y-1">
-                {menuStructure.map((menu, index) => {
+                {visibleMenuStructure.map((menu, index) => {
                   if (menu.standalone && menu.path) {
                     return (
                       <button

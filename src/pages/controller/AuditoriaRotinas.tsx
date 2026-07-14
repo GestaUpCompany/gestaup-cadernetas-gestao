@@ -197,13 +197,11 @@ export function AuditoriaRotinas() {
 
   const formatDateTime = (utcValue: string | null, localValue?: string | null) => {
     if (!utcValue) return '-'
-    if (localValue) {
-      return new Date(`2000-01-01T${localValue}`).toLocaleString('pt-BR', {
-        dateStyle: 'short',
-        timeStyle: 'short',
-      })
-    }
     const d = new Date(utcValue)
+    if (localValue) {
+      const [h, m] = localValue.split(':')
+      d.setHours(parseInt(h || '0', 10), parseInt(m || '0', 10))
+    }
     return d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
   }
 

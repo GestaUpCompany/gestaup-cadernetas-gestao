@@ -455,20 +455,11 @@ export function Insumos() {
                   )}
                 </div>
 
-                <div className="flex flex-wrap gap-1 sm:gap-2">
+                <div className="flex gap-2 mt-auto pt-3">
                   <Button
+                    size="sm"
                     variant="secondary"
-                    className="flex-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleToggleActive(insumo)
-                    }}
-                  >
-                    {insumo.ativo ? 'Desativar' : 'Ativar'}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    className="flex-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2"
+                    className="flex-1"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleEdit(insumo)
@@ -477,8 +468,20 @@ export function Insumos() {
                     Editar
                   </Button>
                   <Button
+                    size="sm"
                     variant="secondary"
-                    className="flex-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2"
+                    className="text-red-600 hover:text-red-700"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleToggleActive(insumo)
+                    }}
+                  >
+                    {insumo.ativo ? 'Desativar' : 'Ativar'}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="text-red-600 hover:text-red-700"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleDeleteClick(insumo.id)

@@ -22,6 +22,7 @@ export function NovaFazenda() {
     email: '',
     planilha_id: '',
     ativo: true,
+    acesso_confinamento: false,
     controller_email: '',
     criar_usuario_controller: true,
   })
@@ -89,6 +90,7 @@ export function NovaFazenda() {
         planilha_id: formData.planilha_id || undefined,
         logo_url: logoUrl || undefined,
         ativo: formData.ativo,
+        acesso_confinamento: formData.acesso_confinamento,
         controller_email: formData.controller_email,
         controller_nome: `Controller ${formData.nome}`,
       })
@@ -116,6 +118,7 @@ export function NovaFazenda() {
         logo_url: logoUrl || undefined,
         ativo: formData.ativo,
         controle_acesso_habilitado: false,
+        acesso_confinamento: formData.acesso_confinamento,
       })
 
       if (!result) {
@@ -308,6 +311,19 @@ export function NovaFazenda() {
             />
             <label htmlFor="ativo" className="text-sm text-gray-700">
               Fazenda ativa
+            </label>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="acesso_confinamento"
+              checked={formData.acesso_confinamento}
+              onChange={(e) => setFormData(prev => ({ ...prev, acesso_confinamento: e.target.checked }))}
+              className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+            />
+            <label htmlFor="acesso_confinamento" className="text-sm text-gray-700">
+              Acesso ao Confinamento
             </label>
           </div>
 

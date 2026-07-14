@@ -80,9 +80,9 @@ export function GroupedSelect({
   }
 
   return (
-    <div className="mb-4">
+    <div>
       {label && (
-        <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-gray-700 mb-1">
           {label}
         </label>
       )}
@@ -91,7 +91,7 @@ export function GroupedSelect({
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base text-left border-gray-300 border-gray-200 focus:border-accent bg-white ${className}`}
+          className={`w-full px-3 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm text-left border-gray-200 focus:border-accent bg-white ${className}`}
         >
           {selectedOption ? (
             <span className="flex items-center gap-2">

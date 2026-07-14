@@ -126,6 +126,14 @@ export function DetalhesFazenda() {
               {fazenda.ativo ? 'Ativa' : 'Inativa'}
             </span>
           </div>
+          <div>
+            <p className="text-sm text-gray-500">Confinamento</p>
+            <span className={`px-3 py-1 rounded-full text-sm ${
+              fazenda.acesso_confinamento ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+            }`}>
+              {fazenda.acesso_confinamento ? 'Ativo' : 'Inativo'}
+            </span>
+          </div>
         </div>
       </Card>
 

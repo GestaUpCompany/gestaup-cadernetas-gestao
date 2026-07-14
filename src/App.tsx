@@ -5,6 +5,7 @@ import { AdminLayout } from './components/layout/AdminLayout'
 import { ControllerLayout } from './components/layout/ControllerLayout'
 import { AdminRoute } from './components/routes/AdminRoute'
 import { ControllerRoute } from './components/routes/ControllerRoute'
+import { ConfinamentoRoute } from './components/routes/ConfinamentoRoute'
 import { AdminDashboard } from './pages/admin/Dashboard'
 import { FazendasList } from './pages/admin/Fazendas'
 import { NovaFazenda } from './pages/admin/NovaFazenda'
@@ -45,6 +46,8 @@ import { Racas } from './pages/controller/Racas'
 import { CadastrosAuxiliares } from './pages/controller/CadastrosAuxiliares'
 import { Rotinas } from './pages/controller/Rotinas'
 import { AuditoriaRotinas } from './pages/controller/AuditoriaRotinas'
+import { Currais } from './pages/controller/Currais'
+import { HistoricoDietas } from './pages/controller/HistoricoDietas'
 import { BebedourosCadastro } from './pages/controller/BebedourosCadastro'
 import { RegistrosMorte } from './pages/controller/RegistrosMorte'
 import { RegistrosMorteDetalhes } from './pages/controller/RegistrosMorteDetalhes'
@@ -370,6 +373,30 @@ function App() {
               <ControllerLayout>
                 <AuditoriaRotinas />
               </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/currais"
+          element={
+            <ControllerRoute>
+              <ConfinamentoRoute>
+                <ControllerLayout>
+                  <Currais />
+                </ControllerLayout>
+              </ConfinamentoRoute>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/historico-dietas"
+          element={
+            <ControllerRoute>
+              <ConfinamentoRoute>
+                <ControllerLayout>
+                  <HistoricoDietas />
+                </ControllerLayout>
+              </ConfinamentoRoute>
             </ControllerRoute>
           }
         />

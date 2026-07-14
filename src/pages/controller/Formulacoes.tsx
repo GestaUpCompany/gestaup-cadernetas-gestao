@@ -624,7 +624,7 @@ export function Formulacoes() {
                 <table className="w-full text-sm border-collapse">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-200">
-                      <th className="text-left p-2 font-medium text-gray-700">Form. Proteinado</th>
+                      <th className="text-left p-2 font-medium text-gray-700">Insumos</th>
                       <th className="text-right p-2 font-medium text-gray-700">Teor MS (%)</th>
                       <th className="text-right p-2 font-medium text-gray-700">Preço (R$/Ton/MN)</th>
                       <th className="text-right p-2 font-medium text-gray-700 bg-green-50 w-28">Form. MS (%)</th>
@@ -815,20 +815,11 @@ export function Formulacoes() {
                   )}
                 </div>
 
-                <div className="flex flex-wrap gap-1 sm:gap-2 mt-auto">
+                <div className="flex gap-2 mt-auto pt-3">
                   <Button
+                    size="sm"
                     variant="secondary"
-                    className="flex-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleToggleActive(dieta)
-                    }}
-                  >
-                    {dieta.ativo ? 'Desativar' : 'Ativar'}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    className="flex-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2"
+                    className="flex-1"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleEdit(dieta)
@@ -837,8 +828,20 @@ export function Formulacoes() {
                     Editar
                   </Button>
                   <Button
+                    size="sm"
                     variant="secondary"
-                    className="flex-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2"
+                    className="text-red-600 hover:text-red-700"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleToggleActive(dieta)
+                    }}
+                  >
+                    {dieta.ativo ? 'Desativar' : 'Ativar'}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="text-red-600 hover:text-red-700"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleDeleteClick(dieta.id)

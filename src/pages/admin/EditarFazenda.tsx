@@ -23,6 +23,7 @@ export function EditarFazenda() {
     planilha_id: '',
     logo_url: '',
     ativo: true,
+    acesso_confinamento: false,
   })
 
   const [errors, setErrors] = useState({
@@ -51,6 +52,7 @@ export function EditarFazenda() {
         planilha_id: fazenda.planilha_id || '',
         logo_url: fazenda.logo_url || '',
         ativo: fazenda.ativo,
+        acesso_confinamento: fazenda.acesso_confinamento,
       })
       setLogoPreview(fazenda.logo_url || '')
     }
@@ -113,6 +115,7 @@ export function EditarFazenda() {
       planilha_id: formData.planilha_id || undefined,
       logo_url: logoUrl || undefined,
       ativo: formData.ativo,
+      acesso_confinamento: formData.acesso_confinamento,
     })
 
     setSaving(false)
@@ -166,19 +169,19 @@ export function EditarFazenda() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Upload de Logo */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">Logo</label>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Identidade Visual */}
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-gray-800">Identidade Visual</h3>
             <div className="flex items-center gap-4">
               {logoPreview ? (
                 <img
                   src={logoPreview}
                   alt="Preview"
-                  className="w-20 h-20 object-cover rounded-lg border-2 border-gray-300"
+                  className="w-24 h-24 object-cover rounded-lg border-2 border-gray-300"
                 />
               ) : (
-                <div className="w-20 h-20 bg-gray-200 rounded-lg border-2 border-gray-300 flex items-center justify-center">
+                <div className="w-24 h-24 bg-gray-200 rounded-lg border-2 border-gray-300 flex items-center justify-center">
                   <span className="text-gray-400 text-sm">Sem logo</span>
                 </div>
               )}
@@ -186,97 +189,123 @@ export function EditarFazenda() {
                 type="file"
                 accept="image/*"
                 onChange={handleLogoChange}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/80"
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/80"
               />
             </div>
           </div>
 
-          <Input
-            label="ID de Acesso *"
-            name="acesso_id"
-            value={formData.acesso_id}
-            onChange={handleChange}
-            placeholder="Ex: FAZ001"
-            error={errors.acesso_id}
-            required
-          />
-
-          <Input
-            label="Nome da Fazenda *"
-            name="nome"
-            value={formData.nome}
-            onChange={handleChange}
-            placeholder="Ex: Fazenda Santa Maria"
-            error={errors.nome}
-            required
-          />
-
-          <Input
-            label="CNPJ"
-            name="cnpj"
-            value={formData.cnpj}
-            onChange={handleChange}
-            placeholder="00.000.000/0000-00"
-          />
-
-          <Input
-            label="Endereço"
-            name="endereco"
-            value={formData.endereco}
-            onChange={handleChange}
-            placeholder="Rua, número, cidade, estado"
-          />
-
-          <Input
-            label="Telefone"
-            name="telefone"
-            value={formData.telefone}
-            onChange={handleChange}
-            placeholder="(00) 00000-0000"
-          />
-
-          <Input
-            label="Email"
-            name="email"
-            type="email"
-            value={formData.email}
-            onChange={handleChange}
-            placeholder="email@exemplo.com"
-          />
-
-          <Input
-            label="ID da Planilha (Google Sheets)"
-            name="planilha_id"
-            value={formData.planilha_id}
-            onChange={handleChange}
-            placeholder="ID da planilha para integração"
-          />
-
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="ativo"
-              checked={formData.ativo}
-              onChange={(e) => setFormData(prev => ({ ...prev, ativo: e.target.checked }))}
-              className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+          {/* Dados Principais */}
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-gray-800">Dados Principais</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="ID de Acesso *"
+                name="acesso_id"
+                value={formData.acesso_id}
+                onChange={handleChange}
+                placeholder="Ex: FAZ001"
+                error={errors.acesso_id}
+                required
+              />
+              <Input
+                label="Nome da Fazenda *"
+                name="nome"
+                value={formData.nome}
+                onChange={handleChange}
+                placeholder="Ex: Fazenda Santa Maria"
+                error={errors.nome}
+                required
+              />
+              <Input
+                label="CNPJ"
+                name="cnpj"
+                value={formData.cnpj}
+                onChange={handleChange}
+                placeholder="00.000.000/0000-00"
+              />
+              <Input
+                label="Telefone"
+                name="telefone"
+                value={formData.telefone}
+                onChange={handleChange}
+                placeholder="(00) 00000-0000"
+              />
+            </div>
+            <Input
+              label="Endereço"
+              name="endereco"
+              value={formData.endereco}
+              onChange={handleChange}
+              placeholder="Rua, número, cidade, estado"
             />
-            <label htmlFor="ativo" className="text-sm text-gray-700">
-              Fazenda ativa
-            </label>
           </div>
 
-          <div className="flex gap-4 pt-4">
-            <Button type="submit" disabled={saving} className="flex-1">
-              {saving ? 'Salvando...' : 'Salvar Alterações'}
-            </Button>
+          {/* Contato e Integrações */}
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-gray-800">Contato e Integrações</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="Email"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="email@exemplo.com"
+              />
+              <Input
+                label="ID da Planilha (Google Sheets)"
+                name="planilha_id"
+                value={formData.planilha_id}
+                onChange={handleChange}
+                placeholder="ID da planilha para integração"
+              />
+            </div>
+          </div>
+
+          {/* Configurações de Acesso */}
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-gray-800">Configurações de Acesso</h3>
+            <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  id="ativo"
+                  checked={formData.ativo}
+                  onChange={(e) => setFormData(prev => ({ ...prev, ativo: e.target.checked }))}
+                  className="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary"
+                />
+                <div>
+                  <span className="block text-sm font-medium text-gray-800">Fazenda ativa</span>
+                  <span className="block text-xs text-gray-500">Permite acesso aos controllers</span>
+                </div>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  id="acesso_confinamento"
+                  checked={formData.acesso_confinamento}
+                  onChange={(e) => setFormData(prev => ({ ...prev, acesso_confinamento: e.target.checked }))}
+                  className="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary"
+                />
+                <div>
+                  <span className="block text-sm font-medium text-gray-800">Acesso ao Confinamento</span>
+                  <span className="block text-xs text-gray-500">Exibe o menu e telas de confinamento no controller</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
             <Button
               type="button"
               variant="secondary"
               onClick={() => navigate('/admin/fazendas')}
               disabled={saving}
-              className="flex-1"
             >
               Cancelar
+            </Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? 'Salvando...' : 'Salvar Alterações'}
             </Button>
           </div>
         </form>

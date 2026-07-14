@@ -50,6 +50,7 @@ export interface Fazenda {
   planilha_id?: string
   ativo: boolean
   controle_acesso_habilitado: boolean
+  acesso_confinamento: boolean
   created_at: string
   updated_at: string
 }
@@ -138,6 +139,7 @@ export interface CreateFazendaWithControllerParams {
   logo_url?: string
   planilha_id?: string
   ativo: boolean
+  acesso_confinamento: boolean
   controller_email: string
   controller_nome?: string
 }
@@ -165,6 +167,7 @@ export async function createFazendaWithController(
     planilha_id: params.planilha_id,
     ativo: params.ativo,
     controle_acesso_habilitado: false,
+    acesso_confinamento: params.acesso_confinamento,
   })
 
   if (!fazenda) {
