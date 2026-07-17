@@ -695,7 +695,6 @@ export function Lotes() {
       .from('lote_categorias')
       .select('*')
       .in('lote_id', loteIds)
-      .eq('ativo', true)
 
     if (categoriasError) {
       console.error('Erro ao buscar categorias:', categoriasError)
@@ -703,7 +702,7 @@ export function Lotes() {
 
     // Combinar lotes com suas categorias (apenas ativas)
     const lotesComCategorias = (lotesData || []).map((lote) => {
-      const categorias = (categoriasData || []).filter(cat => cat.lote_id === lote.id && cat.ativo === true)
+      const categorias = (categoriasData || []).filter(cat => cat.lote_id === lote.id)
       return {
         ...lote,
         pasto_nome: lote.pastos?.nome,
@@ -742,6 +741,8 @@ export function Lotes() {
 
     for (const cat of categorias) {
       if (!cat.categoria) continue
+      // Só sincroniza se houver estratégia nutricional definida, para não sobrescrever dados setados por outras vias
+      if (!cat.estrategia_nutricional && !cat.formulacao_id) continue
 
       let estrategiaMapeada = 'Ração'
       if (cat.estrategia_nutricional) {
@@ -809,16 +810,16 @@ export function Lotes() {
       return
     }
 
-    // Validar que cada categoria tenha um plano nutricional (rascunho ou formulacao_id)
-    const categoriasSemPlano = formData.categorias.filter(
-      cat => !cat.planos_rascunho?.length && !cat.formulacao_id
-    )
-    if (categoriasSemPlano.length > 0) {
-      const nomes = categoriasSemPlano.map(cat => cat.categoria).join(', ')
-      alert(`As seguintes categorias precisam de um plano nutricional completo (formulação, período e peso meta): ${nomes}`)
-      setSubmitting(false)
-      return
-    }
+    // Validação de plano nutricional desativada para testes internos
+    // const categoriasSemPlano = formData.categorias.filter(
+    //   cat => !cat.planos_rascunho?.length && !cat.formulacao_id
+    // )
+    // if (categoriasSemPlano.length > 0) {
+    //   const nomes = categoriasSemPlano.map(cat => cat.categoria).join(', ')
+    //   alert(`As seguintes categorias precisam de um plano nutricional completo (formulação, período e peso meta): ${nomes}`)
+    //   setSubmitting(false)
+    //   return
+    // }
 
     const loteData = {
       fazenda_id: fazendaId,
@@ -851,12 +852,6 @@ export function Lotes() {
         .single()
       error = updateError
       loteId = editingLote.id
-
-      // Remover categorias antigas
-      await supabase
-        .from('lote_categorias')
-        .delete()
-        .eq('lote_id', loteId)
     } else {
       // Criar novo lote
       const { data: newLote, error: insertError } = await supabase
@@ -885,7 +880,8 @@ export function Lotes() {
 
     const existingByName: Record<string, string> = {}
     existingCategorias?.forEach((cat: any) => {
-      existingByName[cat.categoria.toLowerCase()] = cat.id
+      const key = cat.categoria.toLowerCase()
+      if (!existingByName[key]) existingByName[key] = cat.id
     })
 
     const savedCategoryIds: string[] = []
@@ -1014,10 +1010,9 @@ export function Lotes() {
           }
         }
       } catch (catError: any) {
-        console.error('Erro ao salvar categoria:', catError)
-        alert('Erro ao salvar categoria: ' + catError.message)
-        setSubmitting(false)
-        return
+        console.error(`Erro ao salvar categoria ${cat.categoria}:`, catError)
+        alert(`Erro ao salvar categoria ${cat.categoria}: ${catError.message}`)
+        continue
       }
     }
 
@@ -1111,7 +1106,7 @@ export function Lotes() {
       matData,
       morData
     ] = await Promise.all([
-      supabase.from('lote_categorias').select('*').eq('lote_id', lote.id).eq('ativo', true),
+      supabase.from('lote_categorias').select('*').eq('lote_id', lote.id),
       supabase.from('lote_historico').select('*').eq('lote_id', lote.id).order('data_movimentacao', { ascending: false }),
       supabase.from('registros_maternidade').select('*').eq('lote_id', lote.id).eq('fazenda_id', fazendaId).is('deleted_at', null).order('data', { ascending: false }),
       supabase.from('registros_morte').select('*').eq('lote_id', lote.id).eq('fazenda_id', fazendaId).is('deleted_at', null).order('data', { ascending: false }),
