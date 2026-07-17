@@ -17,6 +17,63 @@ export interface Session {
   token: string
 }
 
+// Erro lançado quando o usuário autentica com sucesso no Auth, mas não tem
+// permissão de acesso ao sistema (conta desativada ou fazenda desativada).
+export class AccessDeniedError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'AccessDeniedError'
+  }
+}
+
+// Verifica se o usuário possui vínculo ativo com ao menos uma fazenda ativa.
+async function hasActiveFazenda(usuarioId: string): Promise<boolean> {
+  const { data: vinculos, error: vinculosError } = await supabase
+    .from('usuario_fazenda')
+    .select('fazenda_id')
+    .eq('usuario_id', usuarioId)
+    .eq('ativo', true)
+
+  if (vinculosError) {
+    console.error('Erro ao buscar vínculos do usuário:', vinculosError)
+    return false
+  }
+
+  const fazendaIds = (vinculos ?? []).map((v) => v.fazenda_id)
+  if (fazendaIds.length === 0) return false
+
+  const { data: fazendas, error: fazendasError } = await supabase
+    .from('fazendas')
+    .select('id')
+    .in('id', fazendaIds)
+    .eq('ativo', true)
+
+  if (fazendasError) {
+    console.error('Erro ao verificar status das fazendas:', fazendasError)
+    return false
+  }
+
+  return (fazendas?.length ?? 0) > 0
+}
+
+// Garante que o usuário tem permissão de acesso ao sistema.
+// Retorna null se permitido; caso contrário retorna a mensagem do motivo do bloqueio.
+async function getAccessDeniedReason(userData: User): Promise<string | null> {
+  if (!userData.ativo) {
+    return 'Usuário desativado. Entre em contato com o administrador.'
+  }
+
+  // Admins não dependem de vínculo com fazenda.
+  if (userData.papel === 'admin') return null
+
+  const fazendaAtiva = await hasActiveFazenda(userData.id)
+  if (!fazendaAtiva) {
+    return 'Acesso indisponível: nenhuma fazenda ativa associada a este usuário. Entre em contato com o administrador.'
+  }
+
+  return null
+}
+
 export async function signIn(email: string, password: string): Promise<Session | null> {
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
@@ -43,6 +100,13 @@ export async function signIn(email: string, password: string): Promise<Session |
   if (!userData) {
     console.error('Usuário não encontrado na tabela usuarios')
     return null
+  }
+
+  // Bloquear login de usuários desativados ou de fazendas desativadas.
+  const deniedReason = await getAccessDeniedReason(userData as User)
+  if (deniedReason) {
+    await supabase.auth.signOut()
+    throw new AccessDeniedError(deniedReason)
   }
 
   return {
@@ -125,29 +189,39 @@ export async function getCurrentUser(): Promise<User | null> {
     .eq('auth_id', user.id)
     .maybeSingle()
 
-  // Se encontrou por auth_id, retorna
-  if (userDataByAuthId) {
-    return userDataByAuthId as User
-  }
+  let userData = userDataByAuthId as User | null
 
   // Se não encontrar por auth_id, tentar buscar por email
-  const { data: userDataByEmail, error: emailError } = await supabase
-    .from('usuarios')
-    .select('*')
-    .eq('email', user.email)
-    .maybeSingle()
+  if (!userData) {
+    const { data: userDataByEmail, error: emailError } = await supabase
+      .from('usuarios')
+      .select('*')
+      .eq('email', user.email)
+      .maybeSingle()
 
-  if (emailError) {
-    console.error('Erro ao buscar dados do usuário (DB):', emailError)
+    if (emailError) {
+      console.error('Erro ao buscar dados do usuário (DB):', emailError)
+      return null
+    }
+
+    if (!userDataByEmail) {
+      console.error('Usuário não encontrado na tabela usuarios')
+      return null
+    }
+
+    userData = userDataByEmail as User
+  }
+
+  // Revalidar acesso: encerra a sessão de usuários desativados ou de fazendas
+  // desativadas, mesmo que já estivessem logados.
+  const deniedReason = await getAccessDeniedReason(userData)
+  if (deniedReason) {
+    console.warn('Acesso negado ao usuário:', deniedReason)
+    await supabase.auth.signOut()
     return null
   }
 
-  if (!userDataByEmail) {
-    console.error('Usuário não encontrado na tabela usuarios')
-    return null
-  }
-
-  return userDataByEmail as User
+  return userData
 }
 
 export async function onAuthStateChange(callback: (user: User | null) => void) {

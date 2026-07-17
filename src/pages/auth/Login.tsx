@@ -41,14 +41,19 @@ export function Login() {
     setError('')
     setLoading(true)
 
-    const user = await signIn(email, password)
-    if (user) {
-      setShowSuccess(true)
-      setTimeout(() => {
-        navigate('/')
-      }, 1500)
-    } else {
-      setError('Email ou senha inválidos')
+    try {
+      const user = await signIn(email, password)
+      if (user) {
+        setShowSuccess(true)
+        setTimeout(() => {
+          navigate('/')
+        }, 1500)
+      } else {
+        setError('Email ou senha inválidos')
+        setLoading(false)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao fazer login')
       setLoading(false)
     }
   }

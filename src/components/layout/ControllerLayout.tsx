@@ -43,6 +43,7 @@ const menuStructure: MenuItem[] = [
       { label: 'Lotes', path: '/controller/lotes' },
       { label: 'Indivíduos', path: '/controller/individuos' },
       { label: 'Histórico de Ocupação', path: '/controller/historico-ocupacao' },
+      { label: 'Histórico de Planos', path: '/controller/historico-planos' },
       { label: 'Cadastros Auxiliares', path: '/controller/cadastros-auxiliares' },
     ],
   },

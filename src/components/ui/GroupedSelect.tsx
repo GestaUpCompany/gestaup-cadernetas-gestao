@@ -13,6 +13,7 @@ interface GroupedSelectProps {
   placeholder?: string
   className?: string
   label?: string
+  required?: boolean
 }
 
 // Function to remove accents from a string
@@ -27,6 +28,7 @@ export function GroupedSelect({
   placeholder = 'Selecione...',
   className = '',
   label,
+  required,
 }: GroupedSelectProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
@@ -87,6 +89,9 @@ export function GroupedSelect({
         </label>
       )}
       <div className="relative" ref={dropdownRef}>
+        {required && (
+          <input type="hidden" required={required} value={value || ''} />
+        )}
         {/* Trigger button */}
         <button
           type="button"

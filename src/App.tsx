@@ -48,6 +48,7 @@ import { Rotinas } from './pages/controller/Rotinas'
 import { AuditoriaRotinas } from './pages/controller/AuditoriaRotinas'
 import { Currais } from './pages/controller/Currais'
 import { HistoricoDietas } from './pages/controller/HistoricoDietas'
+import { HistoricoPlanos } from './pages/controller/HistoricoPlanos'
 import { BebedourosCadastro } from './pages/controller/BebedourosCadastro'
 import { RegistrosMorte } from './pages/controller/RegistrosMorte'
 import { RegistrosMorteDetalhes } from './pages/controller/RegistrosMorteDetalhes'
@@ -252,6 +253,16 @@ function App() {
             <ControllerRoute>
               <ControllerLayout>
                 <HistoricoOcupacao />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/historico-planos"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <HistoricoPlanos />
               </ControllerLayout>
             </ControllerRoute>
           }

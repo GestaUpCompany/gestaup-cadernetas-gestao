@@ -20,6 +20,7 @@ interface Dieta {
   nome: string
   descricao?: string
   tipo?: string
+  categoria?: string
   insumos?: DietaInsumoCalc[]
   meta_consumo_ms_percent_pv?: number
   peso_vivo_medio?: number
@@ -122,6 +123,7 @@ export function Formulacoes() {
     nome: '',
     descricao: '',
     tipo: '',
+    categoria: '',
     meta_consumo_ms_percent_pv: '0.30',
     peso_vivo_medio: '435.00',
     gmd: '0,000',
@@ -310,6 +312,7 @@ export function Formulacoes() {
       nome: formData.nome,
       descricao: formData.descricao || null,
       tipo: formData.tipo || null,
+      categoria: formData.categoria || null,
       meta_consumo_ms_percent_pv: metaPV,
       peso_vivo_medio: pesoVivo,
       gmd: gmd || null,
@@ -344,6 +347,7 @@ export function Formulacoes() {
         nome: '',
         descricao: '',
         tipo: '',
+        categoria: '',
         meta_consumo_ms_percent_pv: '0.30',
         peso_vivo_medio: '435.00',
         gmd: '0,000',
@@ -364,6 +368,7 @@ export function Formulacoes() {
       nome: dieta.nome,
       descricao: dieta.descricao || '',
       tipo: dieta.tipo || '',
+      categoria: dieta.categoria || '',
       meta_consumo_ms_percent_pv: dieta.meta_consumo_ms_percent_pv?.toFixed(2) || '0.30',
       peso_vivo_medio: dieta.peso_vivo_medio?.toFixed(2) || '435.00',
       gmd: dieta.gmd?.toFixed(3).replace('.', ',') || '0,000',
@@ -392,6 +397,7 @@ export function Formulacoes() {
       nome: '',
       descricao: '',
       tipo: '',
+      categoria: '',
       meta_consumo_ms_percent_pv: '0.30',
       peso_vivo_medio: '435.00',
       gmd: '0,000',
@@ -529,6 +535,28 @@ export function Formulacoes() {
                   <option value="Proteico-Energético">Proteico-Energético</option>
                   <option value="Ração">Ração</option>
                   <option value="Premix">Premix</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Categoria *</label>
+                <select
+                  value={formData.categoria}
+                  onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
+                  required
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base border-gray-200 focus:border-accent bg-white"
+                >
+                  <option value="">Selecione...</option>
+                  <option value="vaca">Vaca</option>
+                  <option value="touro">Touro</option>
+                  <option value="boi gordo">Boi Gordo</option>
+                  <option value="boi magro">Boi Magro</option>
+                  <option value="garrote">Garrote</option>
+                  <option value="bezerro">Bezerro</option>
+                  <option value="bezerro ao pé">Bezerro ao Pé</option>
+                  <option value="bezerra">Bezerra</option>
+                  <option value="bezerra ao pé">Bezerra ao Pé</option>
+                  <option value="novilha">Novilha</option>
+                  <option value="tropa">Tropa</option>
                 </select>
               </div>
               <div>
@@ -784,7 +812,7 @@ export function Formulacoes() {
               <CardItem
                 key={dieta.id}
                 title={dieta.nome}
-                subtitle={dieta.tipo}
+                subtitle={dieta.categoria ? `${dieta.tipo || 'Sem tipo'} • ${dieta.categoria}` : dieta.tipo}
                 status={dieta.ativo}
                 onClick={() => handleEdit(dieta)}
               >

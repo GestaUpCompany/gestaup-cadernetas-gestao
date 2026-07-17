@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, NumericInput, CardSkeleton, ConfirmModal, CardItem, GroupedSelect } from '../../components/ui'
+import { Button, Card, Input, NumericInput, CardSkeleton, ConfirmModal, CardItem } from '../../components/ui'
+import { PlanoNutricionalModal } from '../../components/plano-nutricional/PlanoNutricionalModal'
+import { PlanoNutricionalDraftModal, PlanoRascunho } from '../../components/plano-nutricional/PlanoNutricionalDraftModal'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 
 interface LoteCategoria {
@@ -57,6 +59,8 @@ interface LoteCategoria {
   custo_total_entrada_reais_cab?: number | null
   custo_total_entrada_reais_lote?: number | null
   ativo?: boolean | null
+  planos_rascunho?: PlanoRascunho[]
+  planos_cadastrados?: { id: string; nome: string; ativo: boolean; ordem: number; data_inicio: string | null; data_fim: string | null }[]
 }
 
 interface Lote {
@@ -110,7 +114,7 @@ export function Lotes() {
   const [searchTerm, setSearchTerm] = useState('')
   const [pastos, setPastos] = useState<{id: string, nome: string}[]>([])
   const [racas, setRacas] = useState<{id: string, nome: string}[]>([])
-  const [nutritionalOptions, setNutritionalOptions] = useState<{id: string, name: string, category: string, consumo_meta?: number, gmd?: number}[]>([])
+  const [nutritionalOptions, setNutritionalOptions] = useState<{id: string, name: string, category: string, categoria?: string, consumo_meta?: number, gmd?: number}[]>([])
   const [movimentacaoData, setMovimentacaoData] = useState<any[]>([])
   const [maternidadeData, setMaternidadeData] = useState<any[]>([])
   const [morteData, setMorteData] = useState<any[]>([])
@@ -162,6 +166,10 @@ export function Lotes() {
   const [ocupacaoPorLote, setOcupacaoPorLote] = useState<Record<string, any>>({})
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
   const [showInactive, setShowInactive] = useState(false)
+  const [isPlanoModalOpen, setIsPlanoModalOpen] = useState(false)
+  const [selectedCategoriaForPlanos, setSelectedCategoriaForPlanos] = useState<{ loteCategoriaId?: string; categoria: string } | null>(null)
+  const [isPlanoDraftModalOpen, setIsPlanoDraftModalOpen] = useState(false)
+  const [selectedDraftCategoriaIndex, setSelectedDraftCategoriaIndex] = useState<number | null>(null)
 
   const categoriasOpcoes = [
     'vaca',
@@ -231,7 +239,7 @@ export function Lotes() {
       const [pastosData, racasData, formulacoesData] = await Promise.all([
         supabase.from('pastos').select('id, nome').eq('fazenda_id', fazendaId).eq('ativo', true),
         supabase.from('racas').select('id, nome').eq('fazenda_id', fazendaId).eq('ativo', true).order('nome'),
-        supabase.from('formulacoes').select('id, nome, tipo, meta_consumo_ms_percent_pv, gmd').eq('fazenda_id', fazendaId).eq('ativo', true).order('nome'),
+        supabase.from('formulacoes').select('id, nome, tipo, categoria, meta_consumo_ms_percent_pv, gmd').eq('fazenda_id', fazendaId).eq('ativo', true).order('nome'),
       ])
 
       if (pastosData.data) setPastos(pastosData.data)
@@ -243,6 +251,7 @@ export function Lotes() {
             id: item.id,
             name: item.nome,
             category: item.tipo || 'Formulações',
+            categoria: item.categoria || undefined,
             consumo_meta: item.meta_consumo_ms_percent_pv != null ? Number(item.meta_consumo_ms_percent_pv) : undefined,
             gmd: item.gmd != null ? Number(item.gmd) : undefined,
           }))
@@ -800,6 +809,17 @@ export function Lotes() {
       return
     }
 
+    // Validar que cada categoria tenha um plano nutricional (rascunho ou formulacao_id)
+    const categoriasSemPlano = formData.categorias.filter(
+      cat => !cat.planos_rascunho?.length && !cat.formulacao_id
+    )
+    if (categoriasSemPlano.length > 0) {
+      const nomes = categoriasSemPlano.map(cat => cat.categoria).join(', ')
+      alert(`As seguintes categorias precisam de um plano nutricional completo (formulação, período e peso meta): ${nomes}`)
+      setSubmitting(false)
+      return
+    }
+
     const loteData = {
       fazenda_id: fazendaId,
       nome: formData.nome,
@@ -857,74 +877,170 @@ export function Lotes() {
     // Recalculate all categories to ensure calculated fields are up-to-date before saving
     const recalculatedCategorias = formData.categorias.map(recalcularCategoria)
 
-    // Salvar categorias em lote_categorias
-    const categoriasToInsert = recalculatedCategorias.map(cat => ({
-      lote_id: loteId,
-      categoria: cat.categoria,
-      quant_inicial: cat.quant_inicial ? parseInt(cat.quant_inicial.toString()) : null,
-      data_pesagem: cat.data_pesagem || null,
-      peso_entrada_kg_cab: cat.peso_entrada_kg_cab ? parseFloat(cat.peso_entrada_kg_cab.toString()) : null,
-      peso_entrada_arrobas: cat.peso_entrada_arrobas ? parseFloat(cat.peso_entrada_arrobas.toString()) : null,
-      gmd: cat.gmd?.toString() || null,
-      periodo: cat.periodo ? parseInt(cat.periodo.toString()) : null,
-      rc_inicial: cat.rc_inicial ? parseFloat(cat.rc_inicial.toString()) : null,
-      rc_final: cat.rc_final ? parseFloat(cat.rc_final.toString()) : null,
-      rc_atual: cat.rc_atual ? parseFloat(cat.rc_atual.toString()) : null,
-      quant_atual: cat.quant_atual ? parseInt(cat.quant_atual.toString()) : null,
-      peso_vivo_atual_kg_cab: cat.peso_vivo_atual_kg_cab ? parseFloat(cat.peso_vivo_atual_kg_cab.toString()) : null,
-      peso_vivo_atual_arroba_cab: cat.peso_vivo_atual_arroba_cab ? parseFloat(cat.peso_vivo_atual_arroba_cab.toString()) : null,
-      producao_atual_arroba_cab: cat.producao_atual_arroba_cab ? parseFloat(cat.producao_atual_arroba_cab.toString()) : null,
-      peso_vivo_meta_kg_cab: cat.peso_vivo_meta_kg_cab ? parseFloat(cat.peso_vivo_meta_kg_cab.toString()) : null,
-      peso_venda_meta_arroba: cat.peso_venda_meta_arroba ? parseFloat(cat.peso_venda_meta_arroba.toString()) : null,
-      producao_projetada_arroba_cab: cat.producao_projetada_arroba_cab ? parseFloat(cat.producao_projetada_arroba_cab.toString()) : null,
-      venda_total_arroba_lote_categoria: cat.venda_total_arroba_lote_categoria ? parseFloat(cat.venda_total_arroba_lote_categoria.toString()) : null,
-      dias_restantes_meta: cat.dias_restantes_meta ? parseInt(cat.dias_restantes_meta.toString()) : null,
-      data_meta_projetada: cat.data_meta_projetada || null,
-      estrategia_nutricional: cat.estrategia_nutricional || null,
-      formulacao_id: cat.formulacao_id || null,
-      raca: cat.raca || null,
-      sexo: cat.sexo || null,
-      idade: cat.idade ? parseInt(cat.idade.toString()) : null,
-      preco_entrada_reais_kg: cat.preco_entrada_reais_kg ? parseFloat(cat.preco_entrada_reais_kg.toString()) : null,
-      preco_entrada_reais_arroba: cat.preco_entrada_reais_arroba ? parseFloat(cat.preco_entrada_reais_arroba.toString()) : null,
-      preco_entrada_reais_cab: cat.preco_entrada_reais_cab ? parseFloat(cat.preco_entrada_reais_cab.toString()) : null,
-      agio_percent: cat.agio_percent ? parseFloat(cat.agio_percent.toString()) : null,
-      custo_operacional_reais_cab_dia: cat.custo_operacional_reais_cab_dia ? parseFloat(cat.custo_operacional_reais_cab_dia.toString()) : null,
-      margem_lucro_percent: cat.margem_lucro_percent ? parseFloat(cat.margem_lucro_percent.toString()) : null,
-      preco_custo_reais_arroba: cat.preco_custo_reais_arroba ? parseFloat(cat.preco_custo_reais_arroba.toString()) : null,
-      preco_custo_cab: cat.preco_custo_cab ? parseFloat(cat.preco_custo_cab.toString()) : null,
-      preco_venda_projetado_reais_arroba: cat.preco_venda_projetado_reais_arroba ? parseFloat(cat.preco_venda_projetado_reais_arroba.toString()) : null,
-      preco_venda_sugerido_cab: cat.preco_venda_sugerido_cab ? parseFloat(cat.preco_venda_sugerido_cab.toString()) : null,
-      faturamento_projetado_reais_lote_categoria: cat.faturamento_projetado_reais_lote_categoria ? parseFloat(cat.faturamento_projetado_reais_lote_categoria.toString()) : null,
-      morte: cat.morte ? parseInt(cat.morte.toString()) : 0,
-      consumo: cat.consumo ? parseInt(cat.consumo.toString()) : 0,
-      abate: cat.abate ? parseInt(cat.abate.toString()) : 0,
-      transf_entrada: cat.transf_entrada ? parseInt(cat.transf_entrada.toString()) : 0,
-      transf_saida: cat.transf_saida ? parseInt(cat.transf_saida.toString()) : 0,
-      qtd_bezerros: cat.qtd_bezerros ? parseInt(cat.qtd_bezerros.toString()) : null,
-      consumo_meta_porcentagem_pesovivo: cat.consumo_meta_porcentagem_pesovivo ? parseFloat(cat.consumo_meta_porcentagem_pesovivo.toString()) : null,
-      custo_frete_reais_cab: cat.custo_frete_reais_cab ? parseFloat(cat.custo_frete_reais_cab.toString()) : null,
-      custo_comissao_reais_cab: cat.custo_comissao_reais_cab ? parseFloat(cat.custo_comissao_reais_cab.toString()) : null,
-      custo_sanidade_reais_cab: cat.custo_sanidade_reais_cab ? parseFloat(cat.custo_sanidade_reais_cab.toString()) : null,
-      custo_identificacao_rastreabilidade_reais_cab: cat.custo_identificacao_rastreabilidade_reais_cab ? parseFloat(cat.custo_identificacao_rastreabilidade_reais_cab.toString()) : null,
-      custo_total_entrada_reais_cab: cat.custo_total_entrada_reais_cab ? parseFloat(cat.custo_total_entrada_reais_cab.toString()) : null,
-      custo_total_entrada_reais_lote: cat.custo_total_entrada_reais_lote ? parseFloat(cat.custo_total_entrada_reais_lote.toString()) : null,
-      ativo: cat.ativo ?? true,
-    }))
-
-    const { error: categoriasError } = await supabase
+    // Buscar categorias existentes para preservar IDs e planos
+    const { data: existingCategorias } = await supabase
       .from('lote_categorias')
-      .insert(categoriasToInsert)
+      .select('id, categoria')
+      .eq('lote_id', loteId)
 
-    if (categoriasError) {
-      console.error('Erro ao salvar categorias:', categoriasError)
-      console.error('Categorias data:', categoriasToInsert)
-      alert('Erro ao salvar categorias: ' + categoriasError.message)
-      setSubmitting(false)
-      return
-    } else {
-      // Sincronizar dados nutricionais dos indivíduos deste lote
-      await syncIndividuosNutricional(loteId, recalculatedCategorias)
+    const existingByName: Record<string, string> = {}
+    existingCategorias?.forEach((cat: any) => {
+      existingByName[cat.categoria.toLowerCase()] = cat.id
+    })
+
+    const savedCategoryIds: string[] = []
+
+    // Upsert categorias: preserva IDs existentes
+    for (const cat of recalculatedCategorias) {
+      const categoriaId = cat.id || existingByName[cat.categoria.toLowerCase()]
+      const categoriaPayload = {
+        lote_id: loteId,
+        categoria: cat.categoria,
+        quant_inicial: cat.quant_inicial ? parseInt(cat.quant_inicial.toString()) : null,
+        data_pesagem: cat.data_pesagem || null,
+        peso_entrada_kg_cab: cat.peso_entrada_kg_cab ? parseFloat(cat.peso_entrada_kg_cab.toString()) : null,
+        peso_entrada_arrobas: cat.peso_entrada_arrobas ? parseFloat(cat.peso_entrada_arrobas.toString()) : null,
+        gmd: cat.gmd?.toString() || null,
+        periodo: cat.periodo ? parseInt(cat.periodo.toString()) : null,
+        rc_inicial: cat.rc_inicial ? parseFloat(cat.rc_inicial.toString()) : null,
+        rc_final: cat.rc_final ? parseFloat(cat.rc_final.toString()) : null,
+        rc_atual: cat.rc_atual ? parseFloat(cat.rc_atual.toString()) : null,
+        quant_atual: cat.quant_atual ? parseInt(cat.quant_atual.toString()) : null,
+        peso_vivo_atual_kg_cab: cat.peso_vivo_atual_kg_cab ? parseFloat(cat.peso_vivo_atual_kg_cab.toString()) : null,
+        peso_vivo_atual_arroba_cab: cat.peso_vivo_atual_arroba_cab ? parseFloat(cat.peso_vivo_atual_arroba_cab.toString()) : null,
+        producao_atual_arroba_cab: cat.producao_atual_arroba_cab ? parseFloat(cat.producao_atual_arroba_cab.toString()) : null,
+        peso_vivo_meta_kg_cab: cat.peso_vivo_meta_kg_cab ? parseFloat(cat.peso_vivo_meta_kg_cab.toString()) : null,
+        peso_venda_meta_arroba: cat.peso_venda_meta_arroba ? parseFloat(cat.peso_venda_meta_arroba.toString()) : null,
+        producao_projetada_arroba_cab: cat.producao_projetada_arroba_cab ? parseFloat(cat.producao_projetada_arroba_cab.toString()) : null,
+        venda_total_arroba_lote_categoria: cat.venda_total_arroba_lote_categoria ? parseFloat(cat.venda_total_arroba_lote_categoria.toString()) : null,
+        dias_restantes_meta: cat.dias_restantes_meta ? parseInt(cat.dias_restantes_meta.toString()) : null,
+        data_meta_projetada: cat.data_meta_projetada || null,
+        estrategia_nutricional: cat.estrategia_nutricional || null,
+        formulacao_id: cat.formulacao_id || null,
+        raca: cat.raca || null,
+        sexo: cat.sexo || null,
+        idade: cat.idade ? parseInt(cat.idade.toString()) : null,
+        preco_entrada_reais_kg: cat.preco_entrada_reais_kg ? parseFloat(cat.preco_entrada_reais_kg.toString()) : null,
+        preco_entrada_reais_arroba: cat.preco_entrada_reais_arroba ? parseFloat(cat.preco_entrada_reais_arroba.toString()) : null,
+        preco_entrada_reais_cab: cat.preco_entrada_reais_cab ? parseFloat(cat.preco_entrada_reais_cab.toString()) : null,
+        agio_percent: cat.agio_percent ? parseFloat(cat.agio_percent.toString()) : null,
+        custo_operacional_reais_cab_dia: cat.custo_operacional_reais_cab_dia ? parseFloat(cat.custo_operacional_reais_cab_dia.toString()) : null,
+        margem_lucro_percent: cat.margem_lucro_percent ? parseFloat(cat.margem_lucro_percent.toString()) : null,
+        preco_custo_reais_arroba: cat.preco_custo_reais_arroba ? parseFloat(cat.preco_custo_reais_arroba.toString()) : null,
+        preco_custo_cab: cat.preco_custo_cab ? parseFloat(cat.preco_custo_cab.toString()) : null,
+        preco_venda_projetado_reais_arroba: cat.preco_venda_projetado_reais_arroba ? parseFloat(cat.preco_venda_projetado_reais_arroba.toString()) : null,
+        preco_venda_sugerido_cab: cat.preco_venda_sugerido_cab ? parseFloat(cat.preco_venda_sugerido_cab.toString()) : null,
+        faturamento_projetado_reais_lote_categoria: cat.faturamento_projetado_reais_lote_categoria ? parseFloat(cat.faturamento_projetado_reais_lote_categoria.toString()) : null,
+        morte: cat.morte ? parseInt(cat.morte.toString()) : 0,
+        consumo: cat.consumo ? parseInt(cat.consumo.toString()) : 0,
+        abate: cat.abate ? parseInt(cat.abate.toString()) : 0,
+        transf_entrada: cat.transf_entrada ? parseInt(cat.transf_entrada.toString()) : 0,
+        transf_saida: cat.transf_saida ? parseInt(cat.transf_saida.toString()) : 0,
+        qtd_bezerros: cat.qtd_bezerros ? parseInt(cat.qtd_bezerros.toString()) : null,
+        consumo_meta_porcentagem_pesovivo: cat.consumo_meta_porcentagem_pesovivo ? parseFloat(cat.consumo_meta_porcentagem_pesovivo.toString()) : null,
+        custo_frete_reais_cab: cat.custo_frete_reais_cab ? parseFloat(cat.custo_frete_reais_cab.toString()) : null,
+        custo_comissao_reais_cab: cat.custo_comissao_reais_cab ? parseFloat(cat.custo_comissao_reais_cab.toString()) : null,
+        custo_sanidade_reais_cab: cat.custo_sanidade_reais_cab ? parseFloat(cat.custo_sanidade_reais_cab.toString()) : null,
+        custo_identificacao_rastreabilidade_reais_cab: cat.custo_identificacao_rastreabilidade_reais_cab ? parseFloat(cat.custo_identificacao_rastreabilidade_reais_cab.toString()) : null,
+        custo_total_entrada_reais_cab: cat.custo_total_entrada_reais_cab ? parseFloat(cat.custo_total_entrada_reais_cab.toString()) : null,
+        custo_total_entrada_reais_lote: cat.custo_total_entrada_reais_lote ? parseFloat(cat.custo_total_entrada_reais_lote.toString()) : null,
+        ativo: cat.ativo ?? true,
+      }
+
+      try {
+        let savedId = categoriaId
+        if (categoriaId) {
+          const { error: updateCatError } = await supabase
+            .from('lote_categorias')
+            .update(categoriaPayload)
+            .eq('id', categoriaId)
+          if (updateCatError) throw updateCatError
+          savedId = categoriaId
+        } else {
+          const { data: newCat, error: insertCatError } = await supabase
+            .from('lote_categorias')
+            .insert(categoriaPayload)
+            .select('id')
+            .single()
+          if (insertCatError) throw insertCatError
+          savedId = newCat.id
+        }
+
+        savedCategoryIds.push(savedId)
+
+        // Criar planos nutricionais se a categoria ainda não tiver nenhum
+        const { data: planosExistentes } = await supabase
+          .from('planos_nutricionais')
+          .select('id')
+          .eq('lote_categoria_id', savedId)
+          .limit(1)
+
+        if (!planosExistentes || planosExistentes.length === 0) {
+          let planosParaInserir: any[] = []
+
+          if (cat.planos_rascunho && cat.planos_rascunho.length > 0) {
+            planosParaInserir = cat.planos_rascunho.map((plano, idx) => ({
+              lote_categoria_id: savedId,
+              fazenda_id: fazendaId,
+              nome: plano.nome,
+              formulacao_id: plano.formulacao_id,
+              periodo_dias: plano.periodo_dias,
+              peso_meta_kg: plano.peso_meta_kg,
+              ordem: plano.ordem ?? idx,
+              ativo: false,
+              data_inicio: null,
+              condicao_migracao: plano.condicao_migracao,
+            }))
+          } else if (cat.formulacao_id && cat.periodo && cat.peso_vivo_meta_kg_cab) {
+            planosParaInserir = [{
+              lote_categoria_id: savedId,
+              fazenda_id: fazendaId,
+              nome: cat.estrategia_nutricional || 'Plano Inicial',
+              formulacao_id: cat.formulacao_id,
+              periodo_dias: cat.periodo,
+              peso_meta_kg: cat.peso_vivo_meta_kg_cab,
+              ordem: 0,
+              ativo: false,
+              data_inicio: null,
+              condicao_migracao: 'periodo',
+            }]
+          }
+
+          if (planosParaInserir.length > 0) {
+            const { error: planoError } = await supabase.from('planos_nutricionais').insert(planosParaInserir)
+            if (planoError) {
+              console.error(`Erro ao criar planos nutricionais para ${cat.categoria}:`, planoError)
+            }
+          }
+        }
+      } catch (catError: any) {
+        console.error('Erro ao salvar categoria:', catError)
+        alert('Erro ao salvar categoria: ' + catError.message)
+        setSubmitting(false)
+        return
+      }
+    }
+
+    // Remover categorias que não estão mais no formulário (e seus planos, via cascade)
+    if (existingCategorias && existingCategorias.length > 0) {
+      const idsToDelete = existingCategorias
+        .filter((cat: any) => !savedCategoryIds.includes(cat.id))
+        .map((cat: any) => cat.id)
+
+      if (idsToDelete.length > 0) {
+        const { error: deleteError } = await supabase
+          .from('lote_categorias')
+          .delete()
+          .in('id', idsToDelete)
+
+        if (deleteError) {
+          console.error('Erro ao remover categorias antigas:', deleteError)
+        }
+      }
+    }
+
+    // Sincronizar dados nutricionais dos indivíduos deste lote
+    await syncIndividuosNutricional(loteId, recalculatedCategorias)
 
       setFormData({
         nome: '',
@@ -979,7 +1095,6 @@ export function Lotes() {
         queryClient.invalidateQueries({ queryKey: ['gado-stats', user.id] })
         queryClient.invalidateQueries({ queryKey: ['recent-activities', user.id] })
       }
-    }
 
     setSubmitting(false)
   }
@@ -1004,9 +1119,24 @@ export function Lotes() {
 
     const updatedCategorias = categoriasData.data || lote.categorias || []
 
+    // Buscar planos nutricionais das categorias
+    const categoriaIds = updatedCategorias.map((c: any) => c.id)
+    const { data: planosData } = await supabase
+      .from('planos_nutricionais')
+      .select('id, lote_categoria_id, nome, ativo, ordem, data_inicio, data_fim')
+      .in('lote_categoria_id', categoriaIds)
+      .order('ordem', { ascending: true })
+
+    const planosPorCategoria: Record<string, { id: string; nome: string; ativo: boolean; ordem: number; data_inicio: string | null; data_fim: string | null }[]> = {}
+    ;(planosData || []).forEach((p: any) => {
+      if (!planosPorCategoria[p.lote_categoria_id]) planosPorCategoria[p.lote_categoria_id] = []
+      planosPorCategoria[p.lote_categoria_id].push({ id: p.id, nome: p.nome, ativo: p.ativo, ordem: p.ordem, data_inicio: p.data_inicio, data_fim: p.data_fim })
+    })
+
     // Update categorias to include new fields if not present
-    const categoriasWithMeta = updatedCategorias.map(cat => ({
+    const categoriasWithMeta = updatedCategorias.map((cat: any) => ({
       ...cat,
+      planos_cadastrados: planosPorCategoria[cat.id] || [],
       consumo_meta_porcentagem_pesovivo: cat.consumo_meta_porcentagem_pesovivo ?? undefined,
       rc_final: cat.rc_final ?? undefined,
       rc_atual: cat.rc_atual ?? undefined,
@@ -1247,7 +1377,7 @@ export function Lotes() {
               <h4 className="text-lg font-semibold text-gray-800 mb-4">Identificação Básica</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                     Nome <span className="text-red-500">*</span>
                   </label>
                   <Input
@@ -1260,7 +1390,7 @@ export function Lotes() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                     Pasto <span className="text-red-500">*</span>
                   </label>
                   <select
@@ -1276,7 +1406,7 @@ export function Lotes() {
                   </select>
                 </div>
                 <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                     Sistema de Produção <span className="text-red-500">*</span>
                   </label>
                   <select
@@ -1296,7 +1426,7 @@ export function Lotes() {
                   </select>
                 </div>
                 <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                     Meta de Intervalo de Rodeio (dias)
                   </label>
                   <NumericInput
@@ -1310,7 +1440,7 @@ export function Lotes() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                   Categorias <span className="text-red-500">*</span>
                 </label>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
@@ -1340,7 +1470,7 @@ export function Lotes() {
               </div>
 
               <div className="w-1/4 mt-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                   Outra Categoria
                 </label>
                 <Input
@@ -1389,7 +1519,7 @@ export function Lotes() {
                         </h6>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                               Raça <span className="text-red-500">*</span>
                             </label>
                             <select
@@ -1409,7 +1539,7 @@ export function Lotes() {
                             </select>
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                               Sexo <span className="text-red-500">*</span>
                             </label>
                             <select
@@ -1428,7 +1558,7 @@ export function Lotes() {
                             </select>
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                               Idade (meses) <span className="text-red-500">*</span>
                             </label>
                             <Input
@@ -1454,7 +1584,7 @@ export function Lotes() {
                         </h6>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                           <div className="col-span-1">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                               Quant. Inicial (cab)
                             </label>
                             <Input
@@ -1471,7 +1601,7 @@ export function Lotes() {
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                               Quant. Atual (cab)
                             </label>
                             <Input
@@ -1487,8 +1617,8 @@ export function Lotes() {
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Data Entrada
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
+                              Data Entrada <span className="text-red-500">*</span>
                             </label>
                             <Input
                               type="date"
@@ -1498,23 +1628,12 @@ export function Lotes() {
                                 updatedCategorias[catIndex] = { ...cat, data_pesagem: e.target.value }
                                 setFormData({ ...formData, categorias: updatedCategorias })
                               }}
+                              required
                               className="border-gray-200 focus:border-accent"
                             />
                           </div>
-                          <div className="col-span-1">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Período (dias)
-                            </label>
-                            <Input
-                              type="number"
-                              value={cat.periodo?.toString() || ''}
-                              disabled
-                              placeholder="0"
-                              className="border-gray-200 focus:border-accent opacity-60"
-                            />
-                          </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                               GMD (kg/cab/dia)
                             </label>
                             <NumericInput
@@ -1528,40 +1647,107 @@ export function Lotes() {
                           </div>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2 mt-2">
-                          <div className="col-span-1 sm:col-span-2 lg:col-span-2 xl:col-span-3">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Estratégia Nutricional
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
+                              Peso Entrada (kg/cab) <span className="text-red-500">*</span>
                             </label>
-                            <GroupedSelect
-                              options={nutritionalOptions}
-                              value={cat.estrategia_nutricional || ''}
+                            <NumericInput
+                              value={cat.peso_entrada_kg_cab?.toString() || ''}
                               onChange={(value) => {
                                 const updatedCategorias = [...formData.categorias]
-                                const selectedOption = nutritionalOptions.find(opt => opt.name === value)
-                                updatedCategorias[catIndex] = {
-                                  ...cat,
-                                  estrategia_nutricional: value,
-                                  formulacao_id: selectedOption?.id,
-                                  consumo_meta_porcentagem_pesovivo: selectedOption?.consumo_meta !== undefined && selectedOption?.consumo_meta !== null ? Number(selectedOption.consumo_meta) : undefined,
-                                  gmd: selectedOption?.gmd !== undefined && selectedOption?.gmd !== null ? selectedOption.gmd.toFixed(3).replace('.', ',') : undefined
-                                }
+                                updatedCategorias[catIndex] = { ...cat, peso_entrada_kg_cab: value ? parseFloat(value.replace(',', '.')) : undefined }
                                 setFormData({ ...formData, categorias: updatedCategorias })
                               }}
-                              placeholder="Selecione..."
+                              required
+                              placeholder="0,00"
+                              decimalPlaces={2}
                               className="border-gray-200 focus:border-accent"
                             />
                           </div>
-                          <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Consumo Meta (%/PV)
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
+                              RC Inicial (%)
                             </label>
                             <Input
-                              type="text"
-                              value={cat.consumo_meta_porcentagem_pesovivo !== undefined && cat.consumo_meta_porcentagem_pesovivo !== null ? Number(cat.consumo_meta_porcentagem_pesovivo).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}
-                              disabled
-                              placeholder="0,00"
-                              className="bg-gray-50 border-gray-200 focus:border-accent opacity-60"
+                              type="number"
+                              step="0.01"
+                              value={cat.rc_inicial?.toString() || ''}
+                              onChange={(e) => {
+                                const updatedCategorias = [...formData.categorias]
+                                updatedCategorias[catIndex] = { ...cat, rc_inicial: e.target.value ? parseFloat(e.target.value) : undefined }
+                                setFormData({ ...formData, categorias: updatedCategorias })
+                              }}
+                              placeholder="Ex: 50"
+                              className="border-gray-200 focus:border-accent"
                             />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
+                              Peso Entrada (@/cab)
+                            </label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={cat.peso_entrada_arrobas?.toFixed(2) || ''}
+                              disabled
+                              placeholder="0"
+                              className="border-gray-200 focus:border-accent opacity-60"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2 mt-2">
+                          <div className="col-span-1 sm:col-span-2 lg:col-span-4 xl:col-span-5">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
+                              Plano Nutricional <span className="text-red-500">*</span>
+                            </label>
+
+                            {(() => {
+                              const hasPlano = !!(cat.formulacao_id || cat.planos_rascunho?.length || cat.planos_cadastrados?.length)
+                              const formulacao = cat.formulacao_id ? nutritionalOptions.find(opt => opt.id === cat.formulacao_id) : null
+                              const titulo = formulacao?.name || (cat.planos_cadastrados?.find(p => p.ativo)?.nome) || 'Plano Nutricional'
+                              const gmdValor = cat.gmd ? Number(cat.gmd.replace(',', '.')) : (formulacao?.gmd ?? null)
+                              const consumoValor = cat.consumo_meta_porcentagem_pesovivo !== undefined && cat.consumo_meta_porcentagem_pesovivo !== null ? cat.consumo_meta_porcentagem_pesovivo : (formulacao?.consumo_meta ?? null)
+                              const planosCount = cat.planos_cadastrados?.filter(p => !p.data_fim).length || cat.planos_rascunho?.length || 0
+                              const hasVigente = cat.planos_cadastrados?.some(p => p.ativo) || !!cat.formulacao_id
+                              const planoVigenteData = cat.planos_cadastrados?.find(p => p.ativo)?.data_inicio || null
+
+                              return (
+                                <div className={`rounded-lg p-3 ${hasPlano ? (hasVigente ? 'bg-green-50 border border-green-200' : 'bg-blue-50 border border-blue-200') : 'bg-yellow-50 border border-yellow-200'}`}>
+                                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                    {hasPlano ? (
+                                      <div className="text-sm">
+                                        <p className="font-medium text-gray-900">{titulo}</p>
+                                        <p className="text-gray-600">
+                                          {hasVigente && planoVigenteData ? ` • Início: ${new Date(planoVigenteData + 'T00:00:00').toLocaleDateString('pt-BR')}` : null}
+                                          {hasVigente && cat.peso_vivo_meta_kg_cab ? ` • Meta: ${Number(cat.peso_vivo_meta_kg_cab).toFixed(2).replace('.', ',')} kg/cab` : null}
+                                          {hasVigente && gmdValor ? ` • GMD: ${Number(gmdValor).toFixed(3).replace('.', ',')} kg/cab/dia` : null}
+                                          {hasVigente && consumoValor ? ` • Consumo MS: ${Number(consumoValor).toFixed(2).replace('.', ',')}% PV` : null}
+                                          {planosCount > 1 ? ` • ${planosCount} planos na sequência` : null}
+                                          {!hasVigente && planosCount > 0 ? ' • Nenhum vigente' : null}
+                                        </p>
+                                      </div>
+                                    ) : (
+                                      <p className="text-sm text-yellow-800">Crie o plano nutricional para esta categoria</p>
+                                    )}
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      onClick={() => {
+                                        if (cat.id) {
+                                          setSelectedCategoriaForPlanos({ loteCategoriaId: cat.id, categoria: cat.categoria })
+                                          setIsPlanoModalOpen(true)
+                                        } else {
+                                          setSelectedDraftCategoriaIndex(catIndex)
+                                          setIsPlanoDraftModalOpen(true)
+                                        }
+                                      }}
+                                    >
+                                      {hasPlano ? 'Gerenciar Planos' : 'Criar Plano'}
+                                    </Button>
+                                  </div>
+                                </div>
+                              )
+                            })()}
                           </div>
                         </div>
                       </div>
@@ -1572,65 +1758,12 @@ export function Lotes() {
                           Peso e Performance
                         </h6>
                         
-                        {/* Entrada */}
-                        <div className="mb-4">
-                          <span className="text-sm font-bold text-gray-700 mb-2 block border-b border-gray-300 pb-1">Entrada</span>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Peso Entrada (kg/cab)
-                              </label>
-                              <NumericInput
-                                value={cat.peso_entrada_kg_cab?.toString() || ''}
-                                onChange={(value) => {
-                                  const updatedCategorias = [...formData.categorias]
-                                  updatedCategorias[catIndex] = { ...cat, peso_entrada_kg_cab: value ? parseFloat(value.replace(',', '.')) : undefined }
-                                  setFormData({ ...formData, categorias: updatedCategorias })
-                                }}
-                                placeholder="0,00"
-                                decimalPlaces={2}
-                                className="border-gray-200 focus:border-accent"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                RC Inicial (%)
-                              </label>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                value={cat.rc_inicial?.toString() || ''}
-                                onChange={(e) => {
-                                  const updatedCategorias = [...formData.categorias]
-                                  updatedCategorias[catIndex] = { ...cat, rc_inicial: e.target.value ? parseFloat(e.target.value) : undefined }
-                                  setFormData({ ...formData, categorias: updatedCategorias })
-                                }}
-                                placeholder="Ex: 50"
-                                className="border-gray-200 focus:border-accent"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Peso Entrada (@/cab)
-                              </label>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                value={cat.peso_entrada_arrobas?.toFixed(2) || ''}
-                                disabled
-                                placeholder="0"
-                                className="border-gray-200 focus:border-accent opacity-60"
-                              />
-                            </div>
-                          </div>
-                        </div>
-
                         {/* Atual */}
                         <div className="mb-4">
                           <span className="text-sm font-bold text-gray-700 mb-2 block border-b border-gray-300 pb-1">Atual</span>
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                              <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                                 Peso Vivo Atual (kg/cab)
                               </label>
                               <NumericInput
@@ -1646,7 +1779,7 @@ export function Lotes() {
                               />
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                              <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                                 RC Atual (%)
                               </label>
                               <NumericInput
@@ -1661,7 +1794,7 @@ export function Lotes() {
                               />
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                              <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                                 Peso Vivo Atual (@/cab)
                               </label>
                               <Input
@@ -1673,7 +1806,7 @@ export function Lotes() {
                               />
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                              <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                                 Produção Atual (@/cab)
                               </label>
                               <Input
@@ -1684,6 +1817,18 @@ export function Lotes() {
                                 className="bg-gray-50 border-gray-200 focus:border-accent opacity-60"
                               />
                             </div>
+                            <div className="col-span-1">
+                              <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
+                                Período (dias)
+                              </label>
+                              <Input
+                                type="number"
+                                value={cat.periodo?.toString() || ''}
+                                disabled
+                                placeholder="0"
+                                className="border-gray-200 focus:border-accent opacity-60"
+                              />
+                            </div>
                           </div>
                         </div>
 
@@ -1692,7 +1837,7 @@ export function Lotes() {
                           <span className="text-sm font-bold text-gray-700 mb-2 block border-b border-gray-300 pb-1">Meta</span>
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                              <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                                 Peso Vivo Meta (kg/cab)
                               </label>
                               <NumericInput
@@ -1708,7 +1853,7 @@ export function Lotes() {
                               />
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                              <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                                 RC Final (%)
                               </label>
                               <NumericInput
@@ -1724,7 +1869,7 @@ export function Lotes() {
                               />
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                              <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                                 Peso Venda Meta (@/cab)
                               </label>
                               <Input
@@ -1737,7 +1882,7 @@ export function Lotes() {
                               />
                             </div>
                             <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                              <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                                 Produção Projetada (@/cab)
                               </label>
                               <Input
@@ -1749,7 +1894,7 @@ export function Lotes() {
                               />
                             </div>
                             <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                              <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                                 Venda Total Projetada (@/Lote/Categoria)
                               </label>
                               <Input
@@ -1763,7 +1908,7 @@ export function Lotes() {
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2 mt-2">
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                              <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                                 Data Meta Projetada
                               </label>
                               <Input
@@ -1774,7 +1919,7 @@ export function Lotes() {
                               />
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                              <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                                 Dias Restantes Meta
                               </label>
                               <Input
@@ -1796,7 +1941,7 @@ export function Lotes() {
                         </h6>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                               Preço Entrada (R$/kg)
                             </label>
                             <NumericInput
@@ -1812,7 +1957,7 @@ export function Lotes() {
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                               Preço Entrada (R$/@)
                             </label>
                             <Input
@@ -1824,7 +1969,7 @@ export function Lotes() {
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                               Ágio (%)
                             </label>
                             <Input
@@ -1836,7 +1981,7 @@ export function Lotes() {
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                               Preço Entrada (R$/cab)
                             </label>
                             <Input
@@ -1849,7 +1994,7 @@ export function Lotes() {
                             />
                           </div>
                           <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1 whitespace-nowrap">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                               Custo Operacional (R$/cab/dia)
                             </label>
                             <NumericInput
@@ -1868,7 +2013,7 @@ export function Lotes() {
                         
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2 mt-2">
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                               Custo Frete (R$/cab)
                             </label>
                             <NumericInput
@@ -1885,7 +2030,7 @@ export function Lotes() {
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                               Custo Comissão (R$/cab)
                             </label>
                             <NumericInput
@@ -1902,7 +2047,7 @@ export function Lotes() {
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                               Custo Sanidade (R$/cab)
                             </label>
                             <NumericInput
@@ -1919,7 +2064,7 @@ export function Lotes() {
                             />
                           </div>
                           <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                               Custo Identificação/Rastreabilidade (R$/cab)
                             </label>
                             <NumericInput
@@ -1939,7 +2084,7 @@ export function Lotes() {
                         
                         <div className="mt-2 flex flex-col sm:flex-row gap-2">
                           <div className="flex-1 min-w-0">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                               Custo Total Entrada (R$/cab)
                             </label>
                             <Input
@@ -1951,7 +2096,7 @@ export function Lotes() {
                             />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                               Custo Total Entrada (R$/Lote)
                             </label>
                             <Input
@@ -1969,7 +2114,7 @@ export function Lotes() {
                           <h6 className="text-sm font-semibold text-blue-800 mb-3">Preços Sugeridos de Venda</h6>
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                             <div>
-                              <label className="block text-xs font-medium text-blue-700 mb-1">
+                              <label className="block text-xs font-medium text-blue-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                                 Preço Custo (R$/@)
                               </label>
                               <Input
@@ -1977,11 +2122,11 @@ export function Lotes() {
                                 value={cat.preco_custo_reais_arroba ? `R$ ${cat.preco_custo_reais_arroba.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
                                 disabled
                                 placeholder="R$ 0,00"
-                                className="bg-gray-100 border-blue-200 focus:border-blue-500 opacity-80 text-xs"
+                                className="bg-gray-100 border-blue-200 focus:border-blue-500 opacity-80"
                               />
                             </div>
                             <div>
-                              <label className="block text-xs font-medium text-blue-700 mb-1">
+                              <label className="block text-xs font-medium text-blue-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                                 Preço Custo (R$/cab)
                               </label>
                               <Input
@@ -1989,11 +2134,11 @@ export function Lotes() {
                                 value={cat.preco_custo_cab ? `R$ ${cat.preco_custo_cab.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
                                 disabled
                                 placeholder="R$ 0,00"
-                                className="bg-gray-100 border-blue-200 focus:border-blue-500 opacity-80 text-xs"
+                                className="bg-gray-100 border-blue-200 focus:border-blue-500 opacity-80"
                               />
                             </div>
                             <div>
-                              <label className="block text-xs font-medium text-green-700 mb-1">
+                              <label className="block text-xs font-medium text-green-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                                 Preço Venda Projetado (R$/@)
                               </label>
                               <NumericInput
@@ -2006,11 +2151,11 @@ export function Lotes() {
                                 placeholder="R$ 0,00"
                                 decimalPlaces={2}
                                 prefix="R$"
-                                className="bg-white border-green-300 focus:border-green-500 opacity-90 text-xs font-semibold text-green-700"
+                                className="bg-white border-green-300 focus:border-green-500 opacity-90 font-semibold text-green-700"
                               />
                             </div>
                             <div>
-                              <label className="block text-xs font-medium text-green-700 mb-1">
+                              <label className="block text-xs font-medium text-green-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                                 Preço Venda Sugerido (R$/cab)
                               </label>
                               <Input
@@ -2018,11 +2163,11 @@ export function Lotes() {
                                 value={cat.preco_venda_sugerido_cab ? `R$ ${cat.preco_venda_sugerido_cab.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
                                 disabled
                                 placeholder="R$ 0,00"
-                                className="bg-gray-100 border-green-300 focus:border-green-500 opacity-90 text-xs font-semibold text-green-700"
+                                className="bg-gray-100 border-green-300 focus:border-green-500 opacity-90 font-semibold text-green-700"
                               />
                             </div>
                             <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                              <label className="block text-xs font-medium text-green-700 mb-1">
+                              <label className="block text-xs font-medium text-green-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                                 Faturamento Projetado (R$/Lote/Categoria)
                               </label>
                               <Input
@@ -2030,14 +2175,14 @@ export function Lotes() {
                                 value={cat.faturamento_projetado_reais_lote_categoria ? `R$ ${cat.faturamento_projetado_reais_lote_categoria.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
                                 disabled
                                 placeholder="R$ 0,00"
-                                className="bg-gray-100 border-green-300 focus:border-green-500 opacity-90 text-xs font-semibold text-green-700"
+                                className="bg-gray-100 border-green-300 focus:border-green-500 opacity-90 font-semibold text-green-700"
                               />
                             </div>
                           </div>
                         </div>
                         
                         <div className="mt-4">
-                          <label className="block text-sm font-medium text-gray-700 mb-1 whitespace-nowrap">
+                          <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                             Margem de Lucro (%)
                           </label>
                           <NumericInput
@@ -2062,11 +2207,34 @@ export function Lotes() {
               {/* Histórico de Movimentação - Timeline View */}
               {showForm && (movimentacaoData.length > 0 || maternidadeData.length > 0 || morteData.length > 0) && (
                 <div className="border-t border-gray-200 pt-4 mt-4">
-                  <h6 className="text-sm font-bold text-gray-800 mb-4 border-l-3 border-red-500 pl-3 py-1 bg-red-50 rounded-r">
-                    Histórico de Movimentação
-                  </h6>
+                  <button
+                    type="button"
+                    onClick={() => setExpandedCategories(prev => {
+                      const newSet = new Set(prev)
+                      if (newSet.has('historico-movimentacao')) {
+                        newSet.delete('historico-movimentacao')
+                      } else {
+                        newSet.add('historico-movimentacao')
+                      }
+                      return newSet
+                    })}
+                    className="flex items-center gap-2 w-full text-left"
+                  >
+                    <svg
+                      className={`w-4 h-4 text-gray-600 transition-transform ${expandedCategories.has('historico-movimentacao') ? 'rotate-180' : ''}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                    <h6 className="text-sm font-bold text-gray-800 border-l-3 border-red-500 pl-3 py-1 bg-red-50 rounded-r">
+                      Histórico de Movimentação ({movimentacaoData.length + maternidadeData.length + morteData.length} eventos)
+                    </h6>
+                  </button>
                   
-                  <div className="relative">
+                  {expandedCategories.has('historico-movimentacao') && (
+                  <div className="relative mt-4">
                     {/* Timeline line */}
                     <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200"></div>
                     
@@ -2075,7 +2243,11 @@ export function Lotes() {
                       {[...movimentacaoData.map(m => ({ ...m, type: 'movimentacao' })),
                         ...maternidadeData.map(m => ({ ...m, type: 'maternidade' })),
                         ...morteData.map(m => ({ ...m, type: 'morte' }))]
-                        .sort((a, b) => new Date(b.data_movimentacao).getTime() - new Date(a.data_movimentacao).getTime())
+                        .sort((a, b) => {
+                          const dateA = a.type === 'movimentacao' ? a.data_movimentacao : a.data
+                          const dateB = b.type === 'movimentacao' ? b.data_movimentacao : b.data
+                          return new Date(dateB).getTime() - new Date(dateA).getTime()
+                        })
                         .map((event) => {
                           const getEventColor = (type: string) => {
                             switch(type) {
@@ -2121,7 +2293,7 @@ export function Lotes() {
                                       <span className="text-xs text-gray-500 capitalize">{category}</span>
                                     )}
                                   </div>
-                                  <span className="text-xs text-gray-400">{new Date(event.data_movimentacao).toLocaleDateString('pt-BR')}</span>
+                                  <span className="text-xs text-gray-400">{new Date(event.type === 'movimentacao' ? event.data_movimentacao : event.data).toLocaleDateString('pt-BR')}</span>
                                 </div>
                                 
                                 <div className="text-xs text-gray-600 mt-2">
@@ -2152,6 +2324,7 @@ export function Lotes() {
                         })}
                     </div>
                   </div>
+                  )}
                 </div>
               )}
             </div>
@@ -2161,7 +2334,7 @@ export function Lotes() {
               <h4 className="text-lg font-semibold text-gray-800 mb-4">Informações Administrativas</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                     Produtor Rural
                   </label>
                   <Input
@@ -2173,7 +2346,7 @@ export function Lotes() {
                   />
                 </div>
                 <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                     Propriedade de Origem
                   </label>
                   <Input
@@ -2185,7 +2358,7 @@ export function Lotes() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                     N° Contrato
                   </label>
                   <Input
@@ -2197,7 +2370,7 @@ export function Lotes() {
                   />
                 </div>
                 <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                     Mês de Competência
                   </label>
                   <Input
@@ -2215,7 +2388,7 @@ export function Lotes() {
               <h4 className="text-lg font-semibold text-gray-800 mb-4">SISBOV e Logística</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                 <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                     Data Liberação SISBOV
                   </label>
                   <Input
@@ -2226,7 +2399,7 @@ export function Lotes() {
                   />
                 </div>
                 <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                     Período Liberação SISBOV
                   </label>
                   <Input
@@ -2239,7 +2412,7 @@ export function Lotes() {
                   />
                 </div>
                 <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2 [-webkit-box-pack:end]">
                     Data Embarque Prevista
                   </label>
                   <Input
@@ -2400,6 +2573,59 @@ export function Lotes() {
         cancelText="Cancelar"
         variant="warning"
       />
+
+      {selectedCategoriaForPlanos && (
+        <PlanoNutricionalModal
+          isOpen={isPlanoModalOpen}
+          onClose={() => {
+            setIsPlanoModalOpen(false)
+            setSelectedCategoriaForPlanos(null)
+            loadLotes()
+          }}
+          loteCategoriaId={selectedCategoriaForPlanos.loteCategoriaId || ''}
+          categoria={selectedCategoriaForPlanos.categoria}
+          fazendaId={editingLote?.fazenda_id}
+          onPlanChanged={() => loadLotes()}
+        />
+      )}
+
+      {selectedDraftCategoriaIndex !== null && (
+        <PlanoNutricionalDraftModal
+          isOpen={isPlanoDraftModalOpen}
+          onClose={() => {
+            setIsPlanoDraftModalOpen(false)
+            setSelectedDraftCategoriaIndex(null)
+          }}
+          categoria={formData.categorias[selectedDraftCategoriaIndex]?.categoria || ''}
+          formulacoes={nutritionalOptions.map((opt) => ({
+            id: opt.id,
+            nome: opt.name,
+            categoria: opt.categoria,
+            gmd: opt.gmd,
+            meta_consumo_ms_percent_pv: opt.consumo_meta,
+          }))}
+          planos={formData.categorias[selectedDraftCategoriaIndex]?.planos_rascunho || []}
+          onSave={(planos) => {
+            const updatedCategorias = [...formData.categorias]
+            const cat = updatedCategorias[selectedDraftCategoriaIndex]
+            const primeiroPlano = planos[0]
+            const f = nutritionalOptions.find((opt) => opt.id === primeiroPlano?.formulacao_id)
+            updatedCategorias[selectedDraftCategoriaIndex] = {
+              ...cat,
+              planos_rascunho: planos,
+              estrategia_nutricional: primeiroPlano?.nome || f?.name,
+              formulacao_id: primeiroPlano?.formulacao_id,
+              periodo: primeiroPlano?.periodo_dias,
+              peso_vivo_meta_kg_cab: primeiroPlano?.peso_meta_kg,
+              gmd: f?.gmd !== undefined && f?.gmd !== null ? f.gmd.toFixed(3).replace('.', ',') : undefined,
+              consumo_meta_porcentagem_pesovivo: f?.consumo_meta !== undefined && f?.consumo_meta !== null ? Number(f.consumo_meta) : undefined,
+            }
+            setFormData({ ...formData, categorias: updatedCategorias })
+            setIsPlanoDraftModalOpen(false)
+            setSelectedDraftCategoriaIndex(null)
+          }}
+        />
+      )}
     </div>
   )
 }
