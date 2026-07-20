@@ -5,12 +5,23 @@ import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input } from '../../components/ui'
 import { GroupedSelect } from '../../components/ui/GroupedSelect'
 
+interface LinhaConfinamento {
+  id: string
+  fazenda_id: string
+  nome: string
+  largura_m: number | null
+  comprimento_m: number | null
+  metros_cocho_m: number | null
+  ativo: boolean
+}
+
 interface Curral {
   id: string
   fazenda_id: string
   nome: string
   lote_id: string | null
   formulacao_id: string | null
+  linha_id: string | null
   ativo: boolean
   lote_nome?: string
   formulacao_nome?: string
@@ -19,6 +30,23 @@ interface Curral {
 interface Lote {
   id: string
   nome: string
+  n_cabecas?: number | null
+}
+
+interface CategoriaInfo {
+  categoria: string
+  quant_atual: number | null
+  peso_vivo_atual_kg_cab: number | null
+  gmd: string | null
+  estrategia_nutricional: string | null
+}
+
+interface LoteInfo {
+  n_cabecas: number | null
+  peso_vivo_medio: number | null
+  gmd_medio: number | null
+  estrategias: string[]
+  categorias: CategoriaInfo[]
 }
 
 interface Formulacao {
@@ -33,23 +61,50 @@ interface FormulacaoOption {
   category: string
 }
 
+function formatCategoria(texto: string): string {
+  return texto
+    .split(' ')
+    .map((p) => (p.length ? p[0].toUpperCase() + p.slice(1).toLowerCase() : ''))
+    .join(' ')
+}
+
 export function Currais() {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const [linhas, setLinhas] = useState<LinhaConfinamento[]>([])
   const [currais, setCurrais] = useState<Curral[]>([])
   const [lotes, setLotes] = useState<Lote[]>([])
   const [formulacoes, setFormulacoes] = useState<Formulacao[]>([])
   const [loading, setLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
-  const [editingCurral, setEditingCurral] = useState<Curral | null>(null)
   const [showInactive, setShowInactive] = useState(false)
-  const [formData, setFormData] = useState({
+
+  // Linha form
+  const [showLinhaForm, setShowLinhaForm] = useState(false)
+  const [editingLinha, setEditingLinha] = useState<LinhaConfinamento | null>(null)
+  const [linhaFormData, setLinhaFormData] = useState({
+    nome: '',
+    largura_m: '',
+    comprimento_m: '',
+    metros_cocho_m: '',
+  })
+  const [submittingLinha, setSubmittingLinha] = useState(false)
+
+  // Curral form
+  const [showCurralForm, setShowCurralForm] = useState(false)
+  const [editingCurral, setEditingCurral] = useState<Curral | null>(null)
+  const [curralFormData, setCurralFormData] = useState({
     nome: '',
     lote_id: '',
     formulacao_id: '',
     formulacao_nome: '',
+    linha_id: '',
   })
-  const [submitting, setSubmitting] = useState(false)
+  const [loteInfo, setLoteInfo] = useState<LoteInfo | null>(null)
+  const [fetchingLoteInfo, setFetchingLoteInfo] = useState(false)
+  const [submittingCurral, setSubmittingCurral] = useState(false)
+
+  // Expanded linha accordion
+  const [expandedLinha, setExpandedLinha] = useState<string | null>(null)
 
   const formulacaoOptions: FormulacaoOption[] = useMemo(
     () =>
@@ -61,12 +116,27 @@ export function Currais() {
     [formulacoes]
   )
 
-  const curraisFiltrados = useMemo(() => {
-    return currais.filter((curral) => {
-      if (!showInactive && !curral.ativo) return false
+  const linhasFiltradas = useMemo(() => {
+    return linhas.filter((linha) => {
+      if (!showInactive && !linha.ativo) return false
       return true
     })
-  }, [currais, showInactive])
+  }, [linhas, showInactive])
+
+  const curraisPorLinha = useMemo(() => {
+    const map: Record<string, Curral[]> = {}
+    currais.forEach((c) => {
+      if (c.linha_id) {
+        if (!map[c.linha_id]) map[c.linha_id] = []
+        map[c.linha_id].push(c)
+      }
+    })
+    return map
+  }, [currais])
+
+  const curraisSemLinha = useMemo(() => {
+    return currais.filter((c) => !c.linha_id)
+  }, [currais])
 
   const loadData = async () => {
     if (!user) return
@@ -85,16 +155,28 @@ export function Currais() {
 
     const fazendaId = vinculos[0].fazenda_id
 
-    const [curraisData, lotesData, formulacoesData] = await Promise.all([
+    const [linhasData, curraisData, lotesData, formulacoesData] = await Promise.all([
+      supabase
+        .from('linhas_confinamento')
+        .select('*')
+        .eq('fazenda_id', fazendaId)
+        .is('deleted_at', null)
+        .order('nome', { ascending: true }),
       supabase
         .from('currais')
         .select('*, lotes(nome), formulacoes(nome)')
         .eq('fazenda_id', fazendaId)
         .is('deleted_at', null)
-        .order('created_at', { ascending: false }),
-      supabase.from('lotes').select('id, nome').eq('fazenda_id', fazendaId).eq('ativo', true).order('nome'),
+        .order('nome', { ascending: true }),
+      supabase.from('lotes').select('id, nome, n_cabecas').eq('fazenda_id', fazendaId).eq('ativo', true).order('nome'),
       supabase.from('formulacoes').select('id, nome, tipo').eq('fazenda_id', fazendaId).eq('ativo', true).order('nome'),
     ])
+
+    if (linhasData.error) {
+      console.error('Erro ao buscar linhas:', linhasData.error)
+    } else {
+      setLinhas(linhasData.data || [])
+    }
 
     if (curraisData.error) {
       console.error('Erro ao buscar currais:', curraisData.error)
@@ -127,12 +209,65 @@ export function Currais() {
     loadData()
   }, [user])
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const fetchLoteInfo = async (loteId: string) => {
+    if (!loteId) {
+      setLoteInfo(null)
+      return
+    }
+    setFetchingLoteInfo(true)
+    try {
+      const [loteData, categoriasData] = await Promise.all([
+        supabase.from('lotes').select('n_cabecas').eq('id', loteId).single(),
+        supabase
+          .from('lote_categorias')
+          .select('categoria, quant_atual, peso_vivo_atual_kg_cab, gmd, estrategia_nutricional')
+          .eq('lote_id', loteId),
+      ])
+
+      const categorias: CategoriaInfo[] = (categoriasData.data || []).map((c: any) => ({
+        categoria: c.categoria,
+        quant_atual: c.quant_atual,
+        peso_vivo_atual_kg_cab: c.peso_vivo_atual_kg_cab,
+        gmd: c.gmd,
+        estrategia_nutricional: c.estrategia_nutricional,
+      }))
+
+      const totalCabecas = categorias.reduce((sum, c) => sum + (c.quant_atual ?? 0), 0)
+
+      const pesoTotal = categorias.reduce(
+        (sum, c) => sum + ((c.quant_atual ?? 0) * (c.peso_vivo_atual_kg_cab ?? 0)),
+        0
+      )
+
+      const gmdTotal = categorias.reduce((sum, c) => {
+        const gmdNum = c.gmd ? parseFloat(c.gmd) : 0
+        return sum + ((c.quant_atual ?? 0) * (Number.isFinite(gmdNum) ? gmdNum : 0))
+      }, 0)
+
+      const estrategias = Array.from(
+        new Set(categorias.map((c) => c.estrategia_nutricional).filter(Boolean))
+      ) as string[]
+
+      setLoteInfo({
+        n_cabecas: loteData.data?.n_cabecas ?? null,
+        peso_vivo_medio: totalCabecas > 0 ? pesoTotal / totalCabecas : null,
+        gmd_medio: totalCabecas > 0 ? gmdTotal / totalCabecas : null,
+        estrategias,
+        categorias,
+      })
+    } catch {
+      setLoteInfo(null)
+    }
+    setFetchingLoteInfo(false)
+  }
+
+  // Linha handlers
+  const handleLinhaSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitting(true)
+    setSubmittingLinha(true)
 
     if (!user) {
-      setSubmitting(false)
+      setSubmittingLinha(false)
       return
     }
 
@@ -143,7 +278,7 @@ export function Currais() {
       .eq('ativo', true)
 
     if (!vinculos || vinculos.length === 0) {
-      setSubmitting(false)
+      setSubmittingLinha(false)
       return
     }
 
@@ -151,13 +286,100 @@ export function Currais() {
 
     const data = {
       fazenda_id: fazendaId,
-      nome: formData.nome,
-      lote_id: formData.lote_id || null,
-      formulacao_id: formData.formulacao_id || null,
+      nome: linhaFormData.nome,
+      largura_m: linhaFormData.largura_m ? parseFloat(linhaFormData.largura_m) : null,
+      comprimento_m: linhaFormData.comprimento_m ? parseFloat(linhaFormData.comprimento_m) : null,
+      metros_cocho_m: linhaFormData.metros_cocho_m ? parseFloat(linhaFormData.metros_cocho_m) : null,
     }
 
     let error
+    if (editingLinha) {
+      const { error: updateError } = await supabase.from('linhas_confinamento').update(data).eq('id', editingLinha.id)
+      error = updateError
+    } else {
+      const { error: insertError } = await supabase.from('linhas_confinamento').insert(data)
+      error = insertError
+    }
 
+    if (error) {
+      console.error('Erro ao salvar linha:', error)
+    } else {
+      setLinhaFormData({ nome: '', largura_m: '', comprimento_m: '', metros_cocho_m: '' })
+      setEditingLinha(null)
+      setShowLinhaForm(false)
+      loadData()
+    }
+
+    setSubmittingLinha(false)
+  }
+
+  const handleLinhaEdit = (linha: LinhaConfinamento) => {
+    setEditingLinha(linha)
+    setLinhaFormData({
+      nome: linha.nome,
+      largura_m: linha.largura_m?.toString() || '',
+      comprimento_m: linha.comprimento_m?.toString() || '',
+      metros_cocho_m: linha.metros_cocho_m?.toString() || '',
+    })
+    setShowLinhaForm(true)
+  }
+
+  const handleLinhaCancel = () => {
+    setEditingLinha(null)
+    setLinhaFormData({ nome: '', largura_m: '', comprimento_m: '', metros_cocho_m: '' })
+    setShowLinhaForm(false)
+  }
+
+  const handleLinhaToggleActive = async (linha: LinhaConfinamento) => {
+    const { error } = await supabase.from('linhas_confinamento').update({ ativo: !linha.ativo }).eq('id', linha.id)
+    if (error) {
+      console.error('Erro ao atualizar linha:', error)
+    } else {
+      loadData()
+    }
+  }
+
+  const handleLinhaDelete = async (id: string) => {
+    const { error } = await supabase.from('linhas_confinamento').update({ deleted_at: new Date().toISOString() }).eq('id', id)
+    if (error) {
+      console.error('Erro ao excluir linha:', error)
+    } else {
+      loadData()
+    }
+  }
+
+  // Curral handlers
+  const handleCurralSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubmittingCurral(true)
+
+    if (!user) {
+      setSubmittingCurral(false)
+      return
+    }
+
+    const { data: vinculos } = await supabase
+      .from('usuario_fazenda')
+      .select('fazenda_id')
+      .eq('usuario_id', user.id)
+      .eq('ativo', true)
+
+    if (!vinculos || vinculos.length === 0) {
+      setSubmittingCurral(false)
+      return
+    }
+
+    const fazendaId = vinculos[0].fazenda_id
+
+    const data = {
+      fazenda_id: fazendaId,
+      nome: curralFormData.nome,
+      lote_id: curralFormData.lote_id || null,
+      formulacao_id: curralFormData.formulacao_id || null,
+      linha_id: curralFormData.linha_id || null,
+    }
+
+    let error
     if (editingCurral) {
       const { error: updateError } = await supabase.from('currais').update(data).eq('id', editingCurral.id)
       error = updateError
@@ -169,35 +391,39 @@ export function Currais() {
     if (error) {
       console.error('Erro ao salvar curral:', error)
     } else {
-      setFormData({ nome: '', lote_id: '', formulacao_id: '', formulacao_nome: '' })
+      setCurralFormData({ nome: '', lote_id: '', formulacao_id: '', formulacao_nome: '', linha_id: '' })
+      setLoteInfo(null)
       setEditingCurral(null)
-      setShowForm(false)
+      setShowCurralForm(false)
       loadData()
     }
 
-    setSubmitting(false)
+    setSubmittingCurral(false)
   }
 
-  const handleEdit = (curral: Curral) => {
+  const handleCurralEdit = (curral: Curral) => {
     setEditingCurral(curral)
-    setFormData({
+    setCurralFormData({
       nome: curral.nome,
       lote_id: curral.lote_id || '',
       formulacao_id: curral.formulacao_id || '',
       formulacao_nome: curral.formulacao_nome || '',
+      linha_id: curral.linha_id || '',
     })
-    setShowForm(true)
+    if (curral.lote_id) fetchLoteInfo(curral.lote_id)
+    else setLoteInfo(null)
+    setShowCurralForm(true)
   }
 
-  const handleCancel = () => {
+  const handleCurralCancel = () => {
     setEditingCurral(null)
-    setFormData({ nome: '', lote_id: '', formulacao_id: '', formulacao_nome: '' })
-    setShowForm(false)
+    setCurralFormData({ nome: '', lote_id: '', formulacao_id: '', formulacao_nome: '', linha_id: '' })
+    setLoteInfo(null)
+    setShowCurralForm(false)
   }
 
-  const handleToggleActive = async (curral: Curral) => {
+  const handleCurralToggleActive = async (curral: Curral) => {
     const { error } = await supabase.from('currais').update({ ativo: !curral.ativo }).eq('id', curral.id)
-
     if (error) {
       console.error('Erro ao atualizar curral:', error)
     } else {
@@ -205,9 +431,8 @@ export function Currais() {
     }
   }
 
-  const handleDelete = async (id: string) => {
+  const handleCurralDelete = async (id: string) => {
     const { error } = await supabase.from('currais').update({ deleted_at: new Date().toISOString() }).eq('id', id)
-
     if (error) {
       console.error('Erro ao excluir curral:', error)
     } else {
@@ -215,10 +440,64 @@ export function Currais() {
     }
   }
 
+  const openNewCurralInLinha = (linhaId: string) => {
+    setEditingCurral(null)
+    setCurralFormData({ nome: '', lote_id: '', formulacao_id: '', formulacao_nome: '', linha_id: linhaId })
+    setLoteInfo(null)
+    setShowCurralForm(true)
+  }
+
+  const resetCurralForm = () => {
+    setEditingCurral(null)
+    setCurralFormData({ nome: '', lote_id: '', formulacao_id: '', formulacao_nome: '', linha_id: '' })
+    setLoteInfo(null)
+    setShowCurralForm(true)
+  }
+
+  const resetLinhaForm = () => {
+    setEditingLinha(null)
+    setLinhaFormData({ nome: '', largura_m: '', comprimento_m: '', metros_cocho_m: '' })
+    setShowLinhaForm(true)
+  }
+
+  const renderCurralCard = (curral: Curral) => (
+    <Card key={curral.id} className="p-4 shadow-sm border-0">
+      <div className="flex justify-between items-start mb-3">
+        <h4 className="font-semibold text-gray-800">{curral.nome}</h4>
+        <span
+          className={`px-2 py-1 rounded-full text-xs font-medium ${
+            curral.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+          }`}
+        >
+          {curral.ativo ? 'Ativo' : 'Inativo'}
+        </span>
+      </div>
+      <div className="space-y-1 text-sm text-gray-600 mb-4">
+        <p>
+          <span className="font-medium">Lote:</span> {curral.lote_nome || '-'}
+        </p>
+        <p>
+          <span className="font-medium">Formulação:</span> {curral.formulacao_nome || '-'}
+        </p>
+      </div>
+      <div className="flex gap-2 mt-auto pt-3">
+        <Button size="sm" variant="secondary" className="flex-1" onClick={() => handleCurralEdit(curral)}>
+          Editar
+        </Button>
+        <Button size="sm" variant="secondary" className="text-red-600 hover:text-red-700" onClick={() => handleCurralToggleActive(curral)}>
+          {curral.ativo ? 'Desativar' : 'Ativar'}
+        </Button>
+        <Button size="sm" variant="secondary" className="text-red-600 hover:text-red-700" onClick={() => handleCurralDelete(curral.id)}>
+          Excluir
+        </Button>
+      </div>
+    </Card>
+  )
+
   if (loading) {
     return (
       <div className="space-y-6">
-        <h2 className="text-2xl font-bold text-gray-800">Currais</h2>
+        <h2 className="text-2xl font-bold text-gray-800">Confinamento</h2>
         <p className="text-sm text-gray-500">Carregando...</p>
       </div>
     )
@@ -226,17 +505,22 @@ export function Currais() {
 
   return (
     <div className="space-y-6">
-      {!showForm && (
+      {/* Header */}
+      {!showLinhaForm && !showCurralForm && (
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-800">Currais</h2>
-            <p className="text-sm text-gray-500">Cadastro de currais de confinamento.</p>
+            <h2 className="text-2xl font-bold text-gray-800">Confinamento</h2>
+            <p className="text-sm text-gray-500">Linhas e currais de confinamento.</p>
           </div>
-          <Button onClick={() => setShowForm(true)}>Novo Curral</Button>
+          <div className="flex gap-2">
+            <Button onClick={resetLinhaForm}>Nova Linha</Button>
+            <Button variant="secondary" onClick={resetCurralForm}>Novo Curral</Button>
+          </div>
         </div>
       )}
 
-      {!showForm && (
+      {/* Toggle inativos */}
+      {!showLinhaForm && !showCurralForm && (
         <div className="flex justify-end">
           <button
             type="button"
@@ -252,15 +536,16 @@ export function Currais() {
         </div>
       )}
 
-      {showForm && (
+      {/* Formulário de Linha */}
+      {showLinhaForm && (
         <Card className="bg-white p-6 border-0 shadow-sm">
           <div className="flex justify-between items-start mb-4">
             <h3 className="text-lg font-semibold text-gray-800">
-              {editingCurral ? 'Editar Curral' : 'Novo Curral'}
+              {editingLinha ? 'Editar Linha' : 'Nova Linha'}
             </h3>
             <button
               type="button"
-              onClick={handleCancel}
+              onClick={handleLinhaCancel}
               className="text-gray-400 hover:text-gray-600 transition-colors p-1"
               aria-label="Fechar formulário"
             >
@@ -269,26 +554,124 @@ export function Currais() {
               </svg>
             </button>
           </div>
-          <form onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+          <form onSubmit={handleLinhaSubmit}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Nome <span className="text-red-500">*</span>
                 </label>
                 <Input
                   type="text"
-                  value={formData.nome}
-                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                  value={linhaFormData.nome}
+                  onChange={(e) => setLinhaFormData({ ...linhaFormData, nome: e.target.value })}
+                  required
+                  placeholder="Nome da linha"
+                  className="border-gray-200 focus:border-accent text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Largura (m)</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={linhaFormData.largura_m}
+                  onChange={(e) => setLinhaFormData({ ...linhaFormData, largura_m: e.target.value })}
+                  placeholder="0.00"
+                  className="border-gray-200 focus:border-accent text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Comprimento (m)</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={linhaFormData.comprimento_m}
+                  onChange={(e) => setLinhaFormData({ ...linhaFormData, comprimento_m: e.target.value })}
+                  placeholder="0.00"
+                  className="border-gray-200 focus:border-accent text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Metros de cocho (m)</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={linhaFormData.metros_cocho_m}
+                  onChange={(e) => setLinhaFormData({ ...linhaFormData, metros_cocho_m: e.target.value })}
+                  placeholder="0.00"
+                  className="border-gray-200 focus:border-accent text-sm"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-8 pt-2">
+              <Button type="submit" disabled={submittingLinha}>
+                {submittingLinha ? 'Salvando...' : 'Salvar'}
+              </Button>
+              <Button variant="secondary" onClick={handleLinhaCancel}>
+                Cancelar
+              </Button>
+            </div>
+          </form>
+        </Card>
+      )}
+
+      {/* Formulário de Curral */}
+      {showCurralForm && (
+        <Card className="bg-white p-6 border-0 shadow-sm">
+          <div className="flex justify-between items-start mb-4">
+            <h3 className="text-lg font-semibold text-gray-800">
+              {editingCurral ? 'Editar Curral' : 'Novo Curral'}
+            </h3>
+            <button
+              type="button"
+              onClick={handleCurralCancel}
+              className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+              aria-label="Fechar formulário"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <form onSubmit={handleCurralSubmit}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nome <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  type="text"
+                  value={curralFormData.nome}
+                  onChange={(e) => setCurralFormData({ ...curralFormData, nome: e.target.value })}
                   required
                   placeholder="Nome do curral"
                   className="border-gray-200 focus:border-accent text-sm"
                 />
               </div>
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Linha</label>
+                <select
+                  value={curralFormData.linha_id}
+                  onChange={(e) => setCurralFormData({ ...curralFormData, linha_id: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border-2 border-gray-200 focus:border-accent bg-white text-gray-700 text-sm min-h-[44px]"
+                >
+                  <option value="">Sem linha</option>
+                  {linhasFiltradas.map((linha) => (
+                    <option key={linha.id} value={linha.id}>
+                      {linha.nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Lote</label>
                 <select
-                  value={formData.lote_id}
-                  onChange={(e) => setFormData({ ...formData, lote_id: e.target.value })}
+                  value={curralFormData.lote_id}
+                  onChange={(e) => {
+                    const loteId = e.target.value
+                    setCurralFormData({ ...curralFormData, lote_id: loteId })
+                    fetchLoteInfo(loteId)
+                  }}
                   className="w-full px-3 py-2 rounded-lg border-2 border-gray-200 focus:border-accent bg-white text-gray-700 text-sm min-h-[44px]"
                 >
                   <option value="">Selecione...</option>
@@ -312,11 +695,11 @@ export function Currais() {
                 </div>
                 <GroupedSelect
                   options={formulacaoOptions}
-                  value={formData.formulacao_nome}
+                  value={curralFormData.formulacao_nome}
                   onChange={(value) => {
                     const selected = formulacaoOptions.find((opt) => opt.name === value)
-                    setFormData({
-                      ...formData,
+                    setCurralFormData({
+                      ...curralFormData,
                       formulacao_nome: value,
                       formulacao_id: selected?.id || '',
                     })
@@ -325,11 +708,61 @@ export function Currais() {
                 />
               </div>
             </div>
+
+            {/* Info on-the-fly do lote */}
+            {curralFormData.lote_id && (
+              <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200 text-sm text-gray-700">
+                {fetchingLoteInfo ? (
+                  <p className="text-gray-500">Carregando...</p>
+                ) : loteInfo ? (
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                    <span>
+                      <span className="font-medium">Cabeças:</span>{' '}
+                      {loteInfo.n_cabecas ??
+                        loteInfo.categorias.reduce((sum, c) => sum + (c.quant_atual ?? 0), 0) ??
+                        '-'}
+                    </span>
+                    {loteInfo.peso_vivo_medio != null && loteInfo.peso_vivo_medio > 0 && (
+                      <span>
+                        <span className="font-medium">PV médio:</span>{' '}
+                        {loteInfo.peso_vivo_medio.toFixed(0)} kg
+                      </span>
+                    )}
+                    {loteInfo.gmd_medio != null && loteInfo.gmd_medio > 0 && (
+                      <span>
+                        <span className="font-medium">GMD:</span>{' '}
+                        {loteInfo.gmd_medio.toFixed(2)} kg/dia
+                      </span>
+                    )}
+                    {loteInfo.estrategias.length > 0 && (
+                      <span>
+                        <span className="font-medium">Dieta:</span>{' '}
+                        {loteInfo.estrategias.map(formatCategoria).join(', ')}
+                      </span>
+                    )}
+                    {loteInfo.categorias.length > 0 && (
+                      <span className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium">Categoria(s):</span>
+                        {loteInfo.categorias.map((cat, i) => (
+                          <span key={i} className="text-gray-700">
+                            {formatCategoria(cat.categoria)}
+                            {loteInfo.categorias.length > 1 && ` (${cat.quant_atual ?? 0})`}
+                          </span>
+                        ))}
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-gray-500">Nenhuma informação encontrada.</p>
+                )}
+              </div>
+            )}
+
             <div className="flex gap-2 mt-8 pt-2">
-              <Button type="submit" disabled={submitting}>
-                {submitting ? 'Salvando...' : 'Salvar'}
+              <Button type="submit" disabled={submittingCurral}>
+                {submittingCurral ? 'Salvando...' : 'Salvar'}
               </Button>
-              <Button variant="secondary" onClick={handleCancel}>
+              <Button variant="secondary" onClick={handleCurralCancel}>
                 Cancelar
               </Button>
             </div>
@@ -337,48 +770,118 @@ export function Currais() {
         </Card>
       )}
 
-      {!showForm && (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {curraisFiltrados.map((curral) => (
-          <Card key={curral.id} className="p-4 shadow-sm border-0">
-            <div className="flex justify-between items-start mb-3">
-              <h3 className="font-semibold text-gray-800">{curral.nome}</h3>
-              <span
-                className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  curral.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                }`}
-              >
-                {curral.ativo ? 'Ativo' : 'Inativo'}
-              </span>
-            </div>
-            <div className="space-y-1 text-sm text-gray-600 mb-4">
-              <p>
-                <span className="font-medium">Lote:</span> {curral.lote_nome || '-'}
-              </p>
-              <p>
-                <span className="font-medium">Formulação:</span> {curral.formulacao_nome || '-'}
-              </p>
-            </div>
-            <div className="flex gap-2 mt-auto pt-3">
-              <Button size="sm" variant="secondary" className="flex-1" onClick={() => handleEdit(curral)}>
-                Editar
-              </Button>
-              <Button size="sm" variant="secondary" className="text-red-600 hover:text-red-700" onClick={() => handleToggleActive(curral)}>
-                {curral.ativo ? 'Desativar' : 'Ativar'}
-              </Button>
-              <Button size="sm" variant="secondary" className="text-red-600 hover:text-red-700" onClick={() => handleDelete(curral.id)}>
-                Excluir
-              </Button>
-            </div>
-          </Card>
-        ))}
-      </div>
-      )}
+      {/* Listagem: Linhas com currais */}
+      {!showLinhaForm && !showCurralForm && (
+        <div className="space-y-4">
+          {linhasFiltradas.map((linha) => {
+            const curraisDaLinha = curraisPorLinha[linha.id] || []
+            const isExpanded = expandedLinha === linha.id
+            return (
+              <Card key={linha.id} className="border-0 shadow-sm overflow-hidden">
+                {/* Header da linha */}
+                <div
+                  className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                  onClick={() => setExpandedLinha(isExpanded ? null : linha.id)}
+                >
+                  <div className="flex items-center gap-3">
+                    <svg
+                      className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                    <div>
+                      <h3 className="font-semibold text-gray-800">{linha.nome}</h3>
+                      <p className="text-xs text-gray-500">
+                        {curraisDaLinha.length} curral(is)
+                        {linha.largura_m != null && ` · ${linha.largura_m}m larg`}
+                        {linha.comprimento_m != null && ` · ${linha.comprimento_m}m comp`}
+                        {linha.metros_cocho_m != null && ` · ${linha.metros_cocho_m}m cocho`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        linha.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}
+                    >
+                      {linha.ativo ? 'Ativo' : 'Inativo'}
+                    </span>
+                    <Button size="sm" variant="secondary" onClick={() => handleLinhaEdit(linha)}>
+                      Editar
+                    </Button>
+                    <Button size="sm" variant="secondary" onClick={() => openNewCurralInLinha(linha.id)}>
+                      + Curral
+                    </Button>
+                    <Button size="sm" variant="secondary" className="text-red-600 hover:text-red-700" onClick={() => handleLinhaToggleActive(linha)}>
+                      {linha.ativo ? 'Desativar' : 'Ativar'}
+                    </Button>
+                    <Button size="sm" variant="secondary" className="text-red-600 hover:text-red-700" onClick={() => handleLinhaDelete(linha.id)}>
+                      Excluir
+                    </Button>
+                  </div>
+                </div>
 
-      {!showForm && currais.length === 0 && (
-        <Card className="p-8 text-center border-0">
-          <p className="text-gray-600">Nenhum curral cadastrado.</p>
-        </Card>
+                {/* Currais da linha (accordion) */}
+                {isExpanded && (
+                  <div className="border-t border-gray-100 p-4 bg-gray-50/50">
+                    {curraisDaLinha.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {curraisDaLinha.map(renderCurralCard)}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500 text-center py-4">
+                        Nenhum curral atribuído a esta linha.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </Card>
+            )
+          })}
+
+          {/* Currais sem linha */}
+          {curraisSemLinha.length > 0 && (
+            <Card className="border-0 shadow-sm overflow-hidden">
+              <div
+                className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                onClick={() => setExpandedLinha(expandedLinha === '__sem_linha' ? null : '__sem_linha')}
+              >
+                <div className="flex items-center gap-3">
+                  <svg
+                    className={`w-5 h-5 text-gray-400 transition-transform ${expandedLinha === '__sem_linha' ? 'rotate-90' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                  <div>
+                    <h3 className="font-semibold text-gray-800">Currais sem linha</h3>
+                    <p className="text-xs text-gray-500">{curraisSemLinha.length} curral(is)</p>
+                  </div>
+                </div>
+              </div>
+              {expandedLinha === '__sem_linha' && (
+                <div className="border-t border-gray-100 p-4 bg-gray-50/50">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {curraisSemLinha.map(renderCurralCard)}
+                  </div>
+                </div>
+              )}
+            </Card>
+          )}
+
+          {/* Empty state */}
+          {linhas.length === 0 && currais.length === 0 && (
+            <Card className="p-8 text-center border-0">
+              <p className="text-gray-600">Nenhuma linha ou curral cadastrado.</p>
+            </Card>
+          )}
+        </div>
       )}
     </div>
   )
