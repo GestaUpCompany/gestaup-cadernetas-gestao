@@ -480,14 +480,14 @@ export function Currais() {
           <span className="font-medium">Formulação:</span> {curral.formulacao_nome || '-'}
         </p>
       </div>
-      <div className="flex gap-2 mt-auto pt-3">
-        <Button size="sm" variant="secondary" className="flex-1" onClick={() => handleCurralEdit(curral)}>
+      <div className="flex flex-wrap gap-2 mt-auto pt-3">
+        <Button size="sm" variant="secondary" className="flex-1 min-w-[70px]" onClick={() => handleCurralEdit(curral)}>
           Editar
         </Button>
-        <Button size="sm" variant="secondary" className="text-red-600 hover:text-red-700" onClick={() => handleCurralToggleActive(curral)}>
+        <Button size="sm" variant="secondary" className="flex-1 min-w-[70px] text-red-600 hover:text-red-700" onClick={() => handleCurralToggleActive(curral)}>
           {curral.ativo ? 'Desativar' : 'Ativar'}
         </Button>
-        <Button size="sm" variant="secondary" className="text-red-600 hover:text-red-700" onClick={() => handleCurralDelete(curral.id)}>
+        <Button size="sm" variant="secondary" className="flex-1 min-w-[70px] text-red-600 hover:text-red-700" onClick={() => handleCurralDelete(curral.id)}>
           Excluir
         </Button>
       </div>
@@ -802,24 +802,24 @@ export function Currais() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex flex-wrap items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                     <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      className={`shrink-0 px-2 py-1 rounded-full text-xs font-medium ${
                         linha.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                       }`}
                     >
                       {linha.ativo ? 'Ativo' : 'Inativo'}
                     </span>
-                    <Button size="sm" variant="secondary" onClick={() => handleLinhaEdit(linha)}>
-                      Editar
+                    <Button size="sm" variant="secondary" className="flex-1 min-w-[70px]" onClick={() => handleLinhaEdit(linha)}>
+                      Editar Linha
                     </Button>
-                    <Button size="sm" variant="secondary" onClick={() => openNewCurralInLinha(linha.id)}>
+                    <Button size="sm" variant="secondary" className="flex-1 min-w-[70px]" onClick={() => openNewCurralInLinha(linha.id)}>
                       + Curral
                     </Button>
-                    <Button size="sm" variant="secondary" className="text-red-600 hover:text-red-700" onClick={() => handleLinhaToggleActive(linha)}>
+                    <Button size="sm" variant="secondary" className="flex-1 min-w-[70px] text-red-600 hover:text-red-700" onClick={() => handleLinhaToggleActive(linha)}>
                       {linha.ativo ? 'Desativar' : 'Ativar'}
                     </Button>
-                    <Button size="sm" variant="secondary" className="text-red-600 hover:text-red-700" onClick={() => handleLinhaDelete(linha.id)}>
+                    <Button size="sm" variant="secondary" className="flex-1 min-w-[70px] text-red-600 hover:text-red-700" onClick={() => handleLinhaDelete(linha.id)}>
                       Excluir
                     </Button>
                   </div>

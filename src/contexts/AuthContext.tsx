@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { User, signIn, signUp, signOut, getCurrentUser, updateUltimoAcesso } from '../services/authService'
 import { supabase } from '../services/supabaseClient'
 
@@ -16,6 +16,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const userRef = useRef<User | null>(null)
+  const authUserIdRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    userRef.current = user
+  }, [user])
 
   useEffect(() => {
     let isMounted = true
@@ -24,6 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         // getSession é síncrono e lê do localStorage, mais confiável na inicialização
         const { data: { session } } = await supabase.auth.getSession()
+        authUserIdRef.current = session?.user?.id ?? null
 
         if (session?.user && isMounted) {
           const currentUser = await getCurrentUser()
@@ -42,18 +49,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initAuth()
 
     // Ouvi mudanças de autenticação (login, logout, refresh)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session: { user: { id: string } } | null) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string, session: { user: { id: string } } | null) => {
       if (!isMounted) return
-      if (session?.user) {
-        getCurrentUser().then((currentUser) => {
-          if (isMounted) {
-            setUser(currentUser)
-            if (currentUser) updateUltimoAcesso()
-          }
-        })
-      } else {
-        setUser(null)
+
+      const authUserId = session?.user?.id ?? null
+
+      if (event === 'SIGNED_OUT' || !authUserId) {
+        authUserIdRef.current = null
+        if (userRef.current !== null) {
+          setUser(null)
+        }
+        return
       }
+
+      // Ignora eventos de refresh/visibilidade para o mesmo usuário já carregado,
+      // evitando re-renderização e refetch desnecessário em todas as páginas
+      if (authUserId === authUserIdRef.current && userRef.current) {
+        return
+      }
+
+      authUserIdRef.current = authUserId
+
+      getCurrentUser().then((currentUser) => {
+        if (isMounted) {
+          setUser(currentUser)
+          if (currentUser) updateUltimoAcesso()
+        }
+      })
     })
 
     // Timeout de 5 segundos para evitar travamento
