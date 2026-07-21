@@ -165,159 +165,166 @@ export function PlanoNutricionalDraftModal({
   const podeSalvarForm = formData.formulacao_id && formData.periodo_dias && formData.peso_meta_kg
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Planos Nutricionais - ${categoria}`} size="lg">
-      <div className="space-y-4">
-        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-3">
-          <h3 className="font-semibold text-gray-800 text-sm">
-            {editingIndex !== null ? 'Editar plano' : 'Adicionar novo plano'}
-          </h3>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Formulação</label>
-              <select
-                value={formData.formulacao_id}
-                onChange={(e) => {
-                  const fid = e.target.value
-                  const f = formulacoes.find((x) => x.id === fid)
-                  setFormData({
-                    ...formData,
-                    formulacao_id: fid,
-                    nome: f?.nome || formData.nome,
-                  })
-                }}
-                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-accent input-focus text-sm sm:text-base"
-              >
-                <option value="">Selecione uma formulação</option>
-                {formulacoesFiltradas.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.nome} {f.gmd ? `(GMD ${f.gmd.toFixed(3).replace('.', ',')})` : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nome do plano</label>
-              <Input
-                value={formData.nome}
-                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                placeholder="Ex: Engorda Inicial"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Período (dias)</label>
-              <Input
-                type="number"
-                value={formData.periodo_dias}
-                onChange={(e) => setFormData({ ...formData, periodo_dias: e.target.value })}
-                placeholder="Ex: 90"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Peso meta (kg/cab)</label>
-              <NumericInput
-                value={formData.peso_meta_kg}
-                onChange={(value) => setFormData({ ...formData, peso_meta_kg: value })}
-                placeholder="0,00"
-                decimalPlaces={2}
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Condição de migração</label>
-              <select
-                value={formData.condicao_migracao}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    condicao_migracao: e.target.value as 'periodo' | 'peso' | 'ambos',
-                  })
-                }
-                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-accent input-focus text-sm sm:text-base"
-              >
-                {Object.entries(CONDICOES).map(([key, label]) => (
-                  <option key={key} value={key}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </div>
+    <Modal isOpen={isOpen} onClose={onClose} title={`Planos Nutricionais — ${categoria ? categoria.replace(/\b\w/g, (c) => c.toUpperCase()) : ''}`} size="lg">
+      <div className="space-y-6">
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <h3 className="text-base font-semibold text-gray-800">Planos</h3>
+            <span className="text-xs text-gray-400">Visualize e gerencie a sequência</span>
           </div>
 
-          <div className="flex justify-end">
-            <Button type="button" size="sm" onClick={handleAddOrUpdate} disabled={!podeSalvarForm}>
-              {editingIndex !== null ? 'Atualizar' : 'Adicionar'} plano
-            </Button>
-          </div>
-
-          {selectedFormulacao && (
-            <div className="text-xs text-gray-600 flex flex-wrap gap-3">
-              <span>GMD: {selectedFormulacao.gmd?.toFixed(3).replace('.', ',') || '—'} kg/cab/dia</span>
-              <span>
-                Consumo MS: {selectedFormulacao.meta_consumo_ms_percent_pv?.toFixed(2).replace('.', ',') || '—'}% PV
-              </span>
+          {draftPlanos.length === 0 ? (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <p className="text-sm text-yellow-800">
+                Nenhum plano na sequência. Adicione ao menos um plano para a categoria.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <h4 className="font-medium text-gray-800">Sequência de Planos</h4>
+              <p className="text-xs text-gray-500">Arraste para reordenar.</p>
+              <div className="space-y-2">
+                {draftPlanos.map((plano, index) => {
+                  const f = formulacoes.find((x) => x.id === plano.formulacao_id)
+                  return (
+                    <div
+                      key={index}
+                      draggable
+                      onDragStart={handleDragStart(index)}
+                      onDragOver={handleDragOver(index)}
+                      onDrop={handleDrop(index)}
+                      onDragEnd={handleDragEnd}
+                      className={`flex items-center justify-between border rounded-lg p-3 transition-colors ${
+                        dragOverIndex === index ? 'border-primary bg-primary/5' : 'border-gray-200'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <span className="text-gray-400 select-none flex-shrink-0" title="Arraste para reordenar">⠿</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900 truncate">
+                            {index + 1}. {plano.nome}
+                          </p>
+                          <p className="text-sm text-gray-600 truncate">
+                            {f?.nome} • {plano.periodo_dias} dias • {plano.peso_meta_kg.toFixed(2).replace('.', ',')} kg • {CONDICOES[plano.condicao_migracao]}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 flex-shrink-0">
+                        <Button size="sm" variant="secondary" onClick={() => handleEdit(index)}>
+                          Editar
+                        </Button>
+                        <Button size="sm" variant="secondary" onClick={() => handleDelete(index)} className="text-red-600 hover:text-red-700">
+                          Excluir
+                        </Button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           )}
         </div>
 
-        <div>
-          <h3 className="font-semibold text-gray-800 text-sm mb-2">Planos na ordem de execução</h3>
-          {draftPlanos.length === 0 ? (
-            <p className="text-sm text-gray-500 bg-gray-50 p-4 rounded-lg text-center">
-              Nenhum plano adicionado. Adicione ao menos um plano para a categoria.
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {draftPlanos.map((plano, index) => {
-                const f = formulacoes.find((x) => x.id === plano.formulacao_id)
-                return (
-                  <div
-                    key={index}
-                    draggable
-                    onDragStart={handleDragStart(index)}
-                    onDragOver={handleDragOver(index)}
-                    onDrop={handleDrop(index)}
-                    onDragEnd={handleDragEnd}
-                    className={`flex items-center justify-between bg-white border rounded-lg p-3 cursor-move transition-colors ${
-                      dragOverIndex === index ? 'border-primary bg-primary/5' : 'border-gray-200'
-                    }`}
-                  >
-                    <div className="flex-1 min-w-0 select-none">
-                      <p className="font-medium text-sm text-gray-900 truncate">
-                        {index + 1}. {plano.nome}
-                      </p>
-                      <p className="text-xs text-gray-600 truncate">
-                        {f?.nome} • {plano.periodo_dias} dias • {plano.peso_meta_kg.toFixed(2).replace('.', ',')} kg •{' '}
-                        {CONDICOES[plano.condicao_migracao]}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1 ml-2 flex-shrink-0">
-                      <span className="p-1.5 text-gray-400" title="Arraste para reordenar">
-                        ⠿
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleEdit(index)}
-                        className="p-1.5 rounded hover:bg-blue-50 text-blue-600 text-sm"
-                      >
-                        Editar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(index)}
-                        className="p-1.5 rounded hover:bg-red-50 text-red-600 text-sm"
-                      >
-                        Excluir
-                      </button>
-                    </div>
-                  </div>
-                )
-              })}
+        <div className="border-t-2 border-gray-200 pt-6">
+          <div className="flex items-center gap-2 mb-4">
+            <h3 className="text-base font-semibold text-gray-800">
+              {editingIndex !== null ? 'Editar Plano' : 'Novo Plano'}
+            </h3>
+            <span className="text-xs text-gray-400">
+              {editingIndex !== null ? 'Altere os dados e salve' : 'Preencha os dados e adicione à sequência'}
+            </span>
+          </div>
+          <form onSubmit={(e) => { e.preventDefault(); handleAddOrUpdate() }} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nome do Plano</label>
+                <Input
+                  value={formData.nome}
+                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                  placeholder="Ex: Engorda Inicial"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Formulação *</label>
+                <select
+                  value={formData.formulacao_id}
+                  onChange={(e) => {
+                    const fid = e.target.value
+                    const f = formulacoes.find((x) => x.id === fid)
+                    setFormData({
+                      ...formData,
+                      formulacao_id: fid,
+                      nome: f?.nome || formData.nome,
+                    })
+                  }}
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-gray-200 rounded-lg focus:outline-none focus:border-accent input-focus text-sm sm:text-base bg-white"
+                >
+                  <option value="">Selecione uma formulação...</option>
+                  {formulacoesFiltradas.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.nome} {f.gmd ? `(${f.gmd.toFixed(3).replace('.', ',')})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Período (dias) *</label>
+                <Input
+                  type="number"
+                  value={formData.periodo_dias}
+                  onChange={(e) => setFormData({ ...formData, periodo_dias: e.target.value })}
+                  placeholder="Ex: 90"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Peso Meta (kg/cab) *</label>
+                <NumericInput
+                  value={formData.peso_meta_kg}
+                  onChange={(value) => setFormData({ ...formData, peso_meta_kg: value })}
+                  placeholder="0,00"
+                  decimalPlaces={2}
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Condição para Migração</label>
+                <div className="flex flex-wrap gap-3">
+                  {(['periodo', 'peso', 'ambos'] as const).map((cond) => (
+                    <button
+                      key={cond}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, condicao_migracao: cond })}
+                      className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                        formData.condicao_migracao === cond
+                          ? 'bg-primary text-white border-primary'
+                          : 'bg-white text-gray-700 border-gray-200 hover:border-primary hover:text-primary'
+                      }`}
+                    >
+                      {CONDICOES[cond]}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
-          )}
+
+            {selectedFormulacao && (
+              <div className="text-xs text-gray-600 flex flex-wrap gap-3">
+                <span>GMD: {selectedFormulacao.gmd?.toFixed(3).replace('.', ',') || '—'} kg/cab/dia</span>
+                <span>
+                  Consumo MS: {selectedFormulacao.meta_consumo_ms_percent_pv?.toFixed(2).replace('.', ',') || '—'}% PV
+                </span>
+              </div>
+            )}
+
+            <div className="flex justify-end">
+              <Button type="button" size="sm" onClick={handleAddOrUpdate} disabled={!podeSalvarForm}>
+                {editingIndex !== null ? 'Atualizar' : 'Adicionar'} plano
+              </Button>
+            </div>
+          </form>
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
@@ -330,5 +337,4 @@ export function PlanoNutricionalDraftModal({
         </div>
       </div>
     </Modal>
-  )
-}
+  )}
