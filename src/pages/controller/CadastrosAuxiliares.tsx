@@ -1242,11 +1242,11 @@ export function CadastrosAuxiliares() {
                     )}
                   </div>
                 )}
-                <div className="flex gap-2 mt-auto pt-3">
+                <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-auto pt-3">
                   <Button
                     size="sm"
                     variant="secondary"
-                    className="flex-1"
+                    className="flex-1 min-w-[70px] text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleEdit(item)
@@ -1257,7 +1257,7 @@ export function CadastrosAuxiliares() {
                   <Button
                     size="sm"
                     variant="secondary"
-                    className="text-red-600 hover:text-red-700"
+                    className="flex-1 min-w-[70px] text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 text-red-600 hover:text-red-700"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleToggleActive(item)
@@ -1268,7 +1268,7 @@ export function CadastrosAuxiliares() {
                   <Button
                     size="sm"
                     variant="secondary"
-                    className="text-red-600 hover:text-red-700"
+                    className="flex-1 min-w-[70px] text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 text-red-600 hover:text-red-700"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleDeleteClick(item.id)
