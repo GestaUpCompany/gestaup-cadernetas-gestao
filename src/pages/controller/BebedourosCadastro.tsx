@@ -332,7 +332,14 @@ export function BebedourosCadastro() {
 
         try {
           const nome = row[colIndices['nome/numero']]?.toString().trim()
-          const capacidade = parseFloat(row[colIndices['capacidade (l)']])
+          const capacidadeRaw = row[colIndices['capacidade (l)']]
+          let capacidade = parseFloat(capacidadeRaw)
+          if (isNaN(capacidade) && typeof capacidadeRaw === 'string') {
+            const match = capacidadeRaw.match(/(\d[\d.]*)/i)
+            if (match) {
+              capacidade = parseFloat(match[1].replace(/\./g, ''))
+            }
+          }
           const metaIntervalo = colIndices['meta de intervalo de limpeza (dias)'] !== undefined ? row[colIndices['meta de intervalo de limpeza (dias)']] ? parseInt(row[colIndices['meta de intervalo de limpeza (dias)']]) : null : null
 
           // Verificar duplicata de nome

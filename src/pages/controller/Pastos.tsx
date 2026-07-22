@@ -417,7 +417,7 @@ export function Pastos() {
       console.log('Headers encontrados:', headers)
 
       // Validar colunas obrigatórias (case-insensitive)
-      const requiredColumns = ['Nome', 'Especie', 'Area Util (ha)', 'Altura Entrada (cm)', 'Altura Saida (cm)', 'Tipo', 'Metragem Cocho (m)']
+      const requiredColumns = ['Nome', 'Especie', 'Area Util (ha)', 'Altura Entrada (cm)', 'Altura Saida (cm)']
       const headersLower = headers.map(h => h.toLowerCase())
       const missingColumns = requiredColumns.filter(col => !headersLower.includes(col.toLowerCase()))
 
@@ -461,9 +461,9 @@ export function Pastos() {
           const areaUtil = parseFloat(row[colIndices['area util (ha)']])
           const alturaEntrada = parseFloat(row[colIndices['altura entrada (cm)']])
           const alturaSaida = parseFloat(row[colIndices['altura saida (cm)']])
-          const tipo = row[colIndices['tipo']]?.toString().trim()
+          const tipo = colIndices['tipo'] !== undefined ? row[colIndices['tipo']]?.toString().trim() || null : null
           const setor = colIndices['setor'] !== undefined ? row[colIndices['setor']]?.toString().trim() || null : null
-          const metragemCocho = colIndices['metragem cocho (m)'] !== undefined ? row[colIndices['metragem cocho (m)']] ? parseFloat(row[colIndices['metragem cocho (m)']]) : null : null
+          const metragemCocho = colIndices['metragem cocho (m)'] !== undefined && row[colIndices['metragem cocho (m)']] ? parseFloat(row[colIndices['metragem cocho (m)']]) : null
           const nivelDegradacao = colIndices['nivel degradacao'] !== undefined ? row[colIndices['nivel degradacao']] ? parseInt(row[colIndices['nivel degradacao']]) : null : null
           const areaTotalHa = colIndices['area total (ha)'] !== undefined ? row[colIndices['area total (ha)']] ? parseFloat(row[colIndices['area total (ha)']]) : null : null
           const areaUtilPorcentagem = colIndices['area util (%)'] !== undefined ? row[colIndices['area util (%)']] ? parseFloat(row[colIndices['area util (%)']]) : null : null
@@ -482,8 +482,7 @@ export function Pastos() {
           if (isNaN(areaUtil) || areaUtil <= 0) missingFields.push('Area Util (ha) - deve ser número positivo')
           if (isNaN(alturaEntrada) || alturaEntrada <= 0) missingFields.push('Altura Entrada (cm) - deve ser número positivo')
           if (isNaN(alturaSaida) || alturaSaida <= 0) missingFields.push('Altura Saida (cm) - deve ser número positivo')
-          if (!tipo) missingFields.push('Tipo')
-          if (metragemCocho === null || metragemCocho === undefined || isNaN(metragemCocho) || metragemCocho <= 0) missingFields.push('Metragem Cocho (m) - deve ser número positivo')
+          if (metragemCocho !== null && (isNaN(metragemCocho) || metragemCocho <= 0)) missingFields.push('Metragem Cocho (m) - deve ser número positivo')
 
           const tiposValidos = ['Cria', 'Confinamento', 'Engorda', 'Enfermaria', 'Recria', 'RIP', 'TIP', 'Volumosos']
           if (tipo && !tiposValidos.includes(tipo)) {

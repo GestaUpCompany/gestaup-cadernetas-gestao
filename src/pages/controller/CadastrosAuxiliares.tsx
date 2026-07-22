@@ -295,6 +295,10 @@ export function CadastrosAuxiliares() {
   const [controleAcessoHabilitado, setControleAcessoHabilitado] = useState(false)
   const [controleAcessoLoading, setControleAcessoLoading] = useState(false)
 
+  // Paginação
+  const [paginaAtual, setPaginaAtual] = useState(1)
+  const ITENS_POR_PAGINA = 12
+
   const currentTab = tabs.find((t) => t.key === activeTab)!
   const state = tabStates[activeTab]
 
@@ -308,6 +312,10 @@ export function CadastrosAuxiliares() {
       loadSetores()
     }
   }, [activeTab, user])
+
+  useEffect(() => {
+    setPaginaAtual(1)
+  }, [state.searchTerm, activeTab, mostrarApenasComAcesso])
 
   const loadFazendaVinculada = async () => {
     const id = await getFazendaId()
@@ -844,6 +852,10 @@ export function CadastrosAuxiliares() {
     })
   }, [state.items, state.searchTerm, activeTab, mostrarApenasComAcesso, currentTab.fields])
 
+  const totalPaginas = Math.max(1, Math.ceil(filteredItems.length / ITENS_POR_PAGINA))
+  const paginaSegura = Math.min(paginaAtual, totalPaginas)
+  const itensPaginados = filteredItems.slice((paginaSegura - 1) * ITENS_POR_PAGINA, paginaSegura * ITENS_POR_PAGINA)
+
   return (
     <div className="space-y-6 max-w-full min-w-0 overflow-x-hidden">
       {/* Header */}
@@ -1162,8 +1174,9 @@ export function CadastrosAuxiliares() {
             </Button>
           </Card>
         ) : !state.showForm ? (
+          <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-            {filteredItems.map((item) => (
+            {itensPaginados.map((item) => (
               <CardItem
                 key={item.id}
                 title={item.nome || item.nome_comercial || 'Sem nome'}
@@ -1247,6 +1260,29 @@ export function CadastrosAuxiliares() {
               </CardItem>
             ))}
           </div>
+
+          {totalPaginas > 1 && (
+            <div className="flex items-center justify-end gap-2">
+              <button
+                onClick={() => setPaginaAtual((p) => Math.max(1, p - 1))}
+                disabled={paginaSegura === 1}
+                className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Anterior
+              </button>
+              <span className="text-xs text-gray-500">
+                Página {paginaSegura} de {totalPaginas}
+              </span>
+              <button
+                onClick={() => setPaginaAtual((p) => Math.min(totalPaginas, p + 1))}
+                disabled={paginaSegura === totalPaginas}
+                className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Próxima
+              </button>
+            </div>
+          )}
+          </>
         ) : null}
       </div>
 
