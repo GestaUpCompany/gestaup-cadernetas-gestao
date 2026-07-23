@@ -103,6 +103,7 @@ export function Pastos() {
         ...pasto,
         modulo_nome: pasto.modulos_pastos?.nome || null,
         modulo_ativo: pasto.modulos_pastos?.ativo ?? true,
+        bebedouros: [] as { id: string; nome: string }[],
       }))
       setPastos(pastosWithModulo as Pasto[])
     }
@@ -123,17 +124,34 @@ export function Pastos() {
     const pastosCarregados = (pastosData.data as any[]) || []
     if (pastosCarregados.length > 0) {
       const pastoIds = pastosCarregados.map((p) => p.id)
-      const { data: ocupacaoData } = await supabase
-        .from('v_lote_pasto_ocupacao_atual')
-        .select('*')
-        .in('pasto_id', pastoIds)
+      const [ocupacaoRes, vinculosRes] = await Promise.all([
+        supabase.from('v_lote_pasto_ocupacao_atual').select('*').in('pasto_id', pastoIds),
+        supabase.from('pasto_bebedouros').select('pasto_id, bebedouros(id, nome)').in('pasto_id', pastoIds),
+      ])
 
-      if (ocupacaoData) {
+      if (ocupacaoRes.data) {
         const ocupacaoMap: Record<string, any> = {}
-        ocupacaoData.forEach((item: any) => {
+        ocupacaoRes.data.forEach((item: any) => {
           ocupacaoMap[item.pasto_id] = item
         })
         setOcupacaoPorPasto(ocupacaoMap)
+      }
+
+      if (vinculosRes.data) {
+        const bebedourosPorPasto: Record<string, { id: string; nome: string }[]> = {}
+        ;(vinculosRes.data as any[]).forEach((row) => {
+          const b = row.bebedouros
+          if (b) {
+            const arr = Array.isArray(b) ? b : [b]
+            bebedourosPorPasto[row.pasto_id] = arr.map((x: any) => ({ id: x.id, nome: x.nome }))
+          }
+        })
+        setPastos((prev) =>
+          prev.map((p) => ({
+            ...p,
+            bebedouros: bebedourosPorPasto[p.id] || [],
+          }))
+        )
       }
     } else {
       setOcupacaoPorPasto({})
@@ -183,13 +201,6 @@ export function Pastos() {
       return
     }
 
-    // Validation: if Bebedouro is selected, at least one bebedouro must be selected
-    if (formData.fonte_agua_principal === 'Bebedouro' && selectedBebedouros.length === 0) {
-      alert('Selecione pelo menos um bebedouro quando a fonte de água principal for Bebedouro')
-      setSubmitting(false)
-      return
-    }
-
     // Buscar fazenda vinculada
     const { data: vinculos } = await supabase
       .from('usuario_fazenda')
@@ -223,13 +234,10 @@ export function Pastos() {
       kg_deposito: formData.kg_deposito ? parseFloat(formData.kg_deposito) : null,
       fonte_agua_principal: formData.fonte_agua_principal || null,
       meta_intervalo_ocupacao_dias: formData.meta_intervalo_ocupacao_dias ? parseInt(formData.meta_intervalo_ocupacao_dias) : null,
-      bebedouros: selectedBebedouros.map(id => {
-        const bebedouro = bebedouros.find(b => b.id === id)
-        return { id, nome: bebedouro?.nome || '' }
-      }),
     }
 
     let error
+    let pastoId: string | null = null
 
     if (editingPasto) {
       // Atualizar pasto existente
@@ -238,10 +246,25 @@ export function Pastos() {
         .update(data)
         .eq('id', editingPasto.id)
       error = updateError
+      pastoId = editingPasto.id
     } else {
       // Criar novo pasto
-      const { error: insertError } = await supabase.from('pastos').insert(data)
+      const { error: insertError, data: inserted } = await supabase.from('pastos').insert(data).select('id').single()
       error = insertError
+      pastoId = inserted?.id || null
+    }
+
+    // Sincronizar vínculos pasto_bebedouros (junction)
+    if (!error && pastoId) {
+      const { error: delError } = await supabase
+        .from('pasto_bebedouros')
+        .delete()
+        .eq('pasto_id', pastoId)
+
+      if (!delError && selectedBebedouros.length > 0) {
+        const rows = selectedBebedouros.map((bebedouro_id) => ({ pasto_id: pastoId, bebedouro_id }))
+        await supabase.from('pasto_bebedouros').insert(rows)
+      }
     }
 
     if (error) {
@@ -294,7 +317,7 @@ export function Pastos() {
       meta_intervalo_ocupacao_dias: pasto.meta_intervalo_ocupacao_dias?.toString() || '',
     })
 
-    // Load associated bebedouros from JSONB
+    // Load associated bebedouros from junction (pasto_bebedouros)
     setSelectedBebedouros(pasto.bebedouros?.map(b => b.id) || [])
 
     setShowForm(true)
@@ -935,12 +958,7 @@ export function Pastos() {
               </label>
               <select
                 value={formData.fonte_agua_principal}
-                onChange={(e) => {
-                  setFormData({ ...formData, fonte_agua_principal: e.target.value })
-                  if (e.target.value !== 'Bebedouro') {
-                    setSelectedBebedouros([])
-                  }
-                }}
+                onChange={(e) => setFormData({ ...formData, fonte_agua_principal: e.target.value })}
                 className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] rounded-lg border-2 border-gray-200 focus:border-accent bg-white text-gray-700 transition-all text-sm"
               >
                 <option value="">Selecione...</option>
@@ -951,21 +969,18 @@ export function Pastos() {
               </select>
             </div>
 
-            {formData.fonte_agua_principal === 'Bebedouro' && (
-              <MultiSelect
-                options={bebedouros.map(b => ({
-                  id: b.id,
-                  name: b.nome,
-                  subtitle: b.capacidade ? `Capacidade: ${b.capacidade} L` : undefined
-                }))}
-                value={selectedBebedouros}
-                onChange={setSelectedBebedouros}
-                placeholder="Selecione bebedouros..."
-                label="Bebedouros"
-                required
-                className="border-gray-200 focus:border-accent"
+            <MultiSelect
+              options={bebedouros.map(b => ({
+                id: b.id,
+                name: b.nome,
+                subtitle: b.capacidade ? `Capacidade: ${b.capacidade} L` : undefined
+              }))}
+              value={selectedBebedouros}
+              onChange={setSelectedBebedouros}
+              placeholder="Selecione bebedouros..."
+              label="Bebedouros"
+              className="border-gray-200 focus:border-accent"
               />
-            )}
 
             <div className="flex items-center gap-3">
               <label className="text-sm font-medium text-gray-700">Possui depósito?</label>
