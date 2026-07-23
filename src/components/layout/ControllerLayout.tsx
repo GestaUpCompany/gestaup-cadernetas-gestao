@@ -38,13 +38,34 @@ const menuStructure: MenuItem[] = [
       </svg>
     ),
     items: [
-      { label: 'Pastos', path: '/controller/pastos' },
-      { label: 'Módulos', path: '/controller/modulos-pastos' },
       { label: 'Lotes', path: '/controller/lotes' },
       { label: 'Indivíduos', path: '/controller/individuos' },
-      { label: 'Histórico de Ocupação', path: '/controller/historico-ocupacao' },
-      { label: 'Histórico de Planos', path: '/controller/historico-planos' },
       { label: 'Cadastros Auxiliares', path: '/controller/cadastros-auxiliares' },
+    ],
+  },
+  {
+    label: 'Pastagem e Ocupação',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+      </svg>
+    ),
+    items: [
+      { label: 'Pastos', path: '/controller/pastos' },
+      { label: 'Módulos', path: '/controller/modulos-pastos' },
+      { label: 'Histórico de Ocupação', path: '/controller/historico-ocupacao' },
+    ],
+  },
+  {
+    label: 'Confinamento',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5h16M4 5v14a2 2 0 002 2h12a2 2 0 002-2V5M4 5h16M9 9h6M9 13h6M9 17h6" />
+      </svg>
+    ),
+    items: [
+      { label: 'Currais', path: '/controller/currais' },
+      { label: 'Histórico de Dietas', path: '/controller/historico-dietas' },
     ],
   },
   {
@@ -57,6 +78,7 @@ const menuStructure: MenuItem[] = [
     items: [
       { label: 'Insumos', path: '/controller/insumos' },
       { label: 'Formulações', path: '/controller/formulacoes' },
+      { label: 'Histórico de Planos', path: '/controller/historico-planos' },
     ],
   },
   {
@@ -82,18 +104,6 @@ const menuStructure: MenuItem[] = [
       { label: 'Cadernetas', path: '/controller/cadernetas' },
       { label: 'Rotinas', path: '/controller/rotinas' },
       { label: 'Auditoria de Rotinas', path: '/controller/auditoria-rotinas' },
-    ],
-  },
-  {
-    label: 'Confinamento',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5h16M4 5v14a2 2 0 002 2h12a2 2 0 002-2V5M4 5h16M9 9h6M9 13h6M9 17h6" />
-      </svg>
-    ),
-    items: [
-      { label: 'Currais', path: '/controller/currais' },
-      { label: 'Histórico de Dietas', path: '/controller/historico-dietas' },
     ],
   },
 ]

@@ -872,6 +872,20 @@ export function Lotes() {
     // Recalculate all categories to ensure calculated fields are up-to-date before saving
     const recalculatedCategorias = formData.categorias.map(recalcularCategoria)
 
+    // Trava: peso meta deve ser maior que peso atual
+    const categoriasComPesoMetaInvalido = recalculatedCategorias.filter((cat) => {
+      const pesoMeta = cat.peso_vivo_meta_kg_cab ? parseFloat(cat.peso_vivo_meta_kg_cab.toString()) : null
+      const pesoAtual = cat.peso_vivo_atual_kg_cab ? parseFloat(cat.peso_vivo_atual_kg_cab.toString()) : null
+      return pesoMeta != null && pesoAtual != null && pesoMeta <= pesoAtual
+    })
+
+    if (categoriasComPesoMetaInvalido.length > 0) {
+      const nomes = categoriasComPesoMetaInvalido.map((cat) => cat.categoria).join(', ')
+      alert(`O peso meta deve ser maior que o peso atual nas categorias: ${nomes}`)
+      setSubmitting(false)
+      return
+    }
+
     // Buscar categorias existentes para preservar IDs e planos
     const { data: existingCategorias } = await supabase
       .from('lote_categorias')
@@ -982,6 +996,7 @@ export function Lotes() {
               formulacao_id: plano.formulacao_id,
               periodo_dias: plano.periodo_dias,
               peso_meta_kg: plano.peso_meta_kg,
+              gmd: plano.gmd ?? null,
               ordem: plano.ordem ?? idx,
               ativo: false,
               data_inicio: null,
@@ -1627,19 +1642,6 @@ export function Lotes() {
                               className="border-gray-200 focus:border-accent"
                             />
                           </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
-                              GMD (kg/cab/dia)
-                            </label>
-                            <NumericInput
-                              value={cat.gmd?.toString() || ''}
-                              onChange={() => {}}
-                              placeholder="0,000"
-                              decimalPlaces={3}
-                              disabled
-                              className="border-gray-200 focus:border-accent opacity-60"
-                            />
-                          </div>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2 mt-2">
                           <div>
@@ -1837,14 +1839,10 @@ export function Lotes() {
                               </label>
                               <NumericInput
                                 value={cat.peso_vivo_meta_kg_cab?.toString() || ''}
-                                onChange={(value) => {
-                                  const updatedCategorias = [...formData.categorias]
-                                  updatedCategorias[catIndex] = { ...cat, peso_vivo_meta_kg_cab: value ? parseFloat(value.replace(',', '.')) : undefined }
-                                  setFormData({ ...formData, categorias: updatedCategorias })
-                                }}
+                                disabled
                                 placeholder="0,00"
                                 decimalPlaces={2}
-                                className="border-gray-200 focus:border-accent"
+                                className="bg-gray-50 border-gray-200 focus:border-accent opacity-60"
                               />
                             </div>
                             <div>
@@ -2580,7 +2578,12 @@ export function Lotes() {
           loteCategoriaId={selectedCategoriaForPlanos.loteCategoriaId || ''}
           categoria={selectedCategoriaForPlanos.categoria}
           fazendaId={editingLote?.fazenda_id}
-          onPlanChanged={() => loadLotes()}
+          onPlanChanged={async () => {
+            await loadLotes()
+            if (editingLote) {
+              await handleEdit(editingLote)
+            }
+          }}
         />
       )}
 
@@ -2612,7 +2615,7 @@ export function Lotes() {
               formulacao_id: primeiroPlano?.formulacao_id,
               periodo: primeiroPlano?.periodo_dias,
               peso_vivo_meta_kg_cab: primeiroPlano?.peso_meta_kg,
-              gmd: f?.gmd !== undefined && f?.gmd !== null ? f.gmd.toFixed(3).replace('.', ',') : undefined,
+              gmd: primeiroPlano?.gmd != null ? primeiroPlano.gmd.toFixed(3).replace('.', ',') : (f?.gmd !== undefined && f?.gmd !== null ? f.gmd.toFixed(3).replace('.', ',') : undefined),
               consumo_meta_porcentagem_pesovivo: f?.consumo_meta !== undefined && f?.consumo_meta !== null ? Number(f.consumo_meta) : undefined,
             }
             setFormData({ ...formData, categorias: updatedCategorias })

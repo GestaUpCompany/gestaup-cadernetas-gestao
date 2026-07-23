@@ -19,6 +19,7 @@ interface PlanoNutricional {
   formulacao_id: string
   periodo_dias: number
   peso_meta_kg: number
+  gmd?: number | null
   ordem: number
   ativo: boolean
   data_inicio: string | null
@@ -56,6 +57,7 @@ export function PlanoNutricionalModal({
   const [formulacoes, setFormulacoes] = useState<Formulacao[]>([])
   const [loading, setLoading] = useState(false)
   const [fazendaId, setFazendaId] = useState<string | undefined>(fazendaIdProp)
+  const [pesoAtualCategoria, setPesoAtualCategoria] = useState<number | null>(null)
 
   const [editingPlano, setEditingPlano] = useState<PlanoNutricional | null>(null)
   const [formData, setFormData] = useState({
@@ -63,6 +65,7 @@ export function PlanoNutricionalModal({
     formulacao_id: '',
     periodo_dias: '',
     peso_meta_kg: '',
+    gmd: '',
     condicao_migracao: 'periodo' as 'periodo' | 'peso' | 'ambos',
     migracao_automatica: true,
     tipo_entrada_periodo: 'periodo' as 'periodo' | 'data_final',
@@ -80,6 +83,7 @@ export function PlanoNutricionalModal({
   const [message, setMessage] = useState<string | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null)
+  const [showEncerrados, setShowEncerrados] = useState(false)
 
   const selectedFormulacao = useMemo(
     () => formulacoes.find((f) => f.id === formData.formulacao_id),
@@ -104,6 +108,14 @@ export function PlanoNutricionalModal({
         .order('ordem', { ascending: true })
 
       if (planosError) throw planosError
+
+      // Buscar peso atual da categoria para comparação
+      const { data: categoriaPesoData } = await supabase
+        .from('lote_categorias')
+        .select('peso_vivo_atual_kg_cab')
+        .eq('id', loteCategoriaId)
+        .single()
+      setPesoAtualCategoria(categoriaPesoData?.peso_vivo_atual_kg_cab ?? null)
 
       // Se não temos fazendaId, buscar via lote_categorias -> lotes
       let fId = fazendaId
@@ -161,6 +173,7 @@ export function PlanoNutricionalModal({
       formulacao_id: '',
       periodo_dias: '',
       peso_meta_kg: '',
+      gmd: '',
       condicao_migracao: 'periodo',
       migracao_automatica: true,
       tipo_entrada_periodo: 'periodo',
@@ -176,6 +189,7 @@ export function PlanoNutricionalModal({
       formulacao_id: plano.formulacao_id,
       periodo_dias: String(plano.periodo_dias),
       peso_meta_kg: String(plano.peso_meta_kg),
+      gmd: plano.gmd != null ? plano.gmd.toString().replace('.', ',') : '',
       condicao_migracao: plano.condicao_migracao,
       migracao_automatica: plano.migracao_automatica,
       tipo_entrada_periodo: 'periodo',
@@ -196,6 +210,8 @@ export function PlanoNutricionalModal({
       if (dataFinal <= hoje) return 'Data final deve ser maior que a data atual'
     }
     if (!formData.peso_meta_kg || Number(formData.peso_meta_kg) <= 0) return 'Peso meta deve ser maior que zero'
+    if (pesoAtualCategoria != null && Number(formData.peso_meta_kg) <= pesoAtualCategoria) return `Peso meta deve ser maior que o peso atual de ${pesoAtualCategoria.toFixed(2).replace('.', ',')} kg`
+    if (!formData.gmd || Number(formData.gmd.replace(',', '.')) <= 0) return 'GMD deve ser maior que zero'
     return null
   }
 
@@ -217,6 +233,7 @@ export function PlanoNutricionalModal({
       periodo = Math.ceil((dataFinal.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24))
     }
     const pesoMeta = parseFloat(formData.peso_meta_kg.replace(',', '.'))
+    const gmdValue = parseFloat(formData.gmd.replace(',', '.'))
 
     if (!fazendaId) {
       setMessage('Não foi possível identificar a fazenda. Feche e reabra o modal.')
@@ -230,6 +247,7 @@ export function PlanoNutricionalModal({
       formulacao_id: formData.formulacao_id,
       periodo_dias: periodo,
       peso_meta_kg: pesoMeta,
+      gmd: gmdValue,
       condicao_migracao: formData.condicao_migracao,
       migracao_automatica: formData.migracao_automatica,
     }
@@ -284,9 +302,24 @@ export function PlanoNutricionalModal({
     })
   }
 
-  const handleIniciarPlano = async () => {
+  const handleIniciarPlano = async (planoId?: string) => {
     if (planos.length === 0) return
-    const primeiroPlano = [...planos].sort((a, b) => a.ordem - b.ordem)[0]
+
+    let planoParaIniciar: PlanoNutricional | undefined
+    if (planoId) {
+      planoParaIniciar = planos.find((p) => p.id === planoId)
+    } else {
+      planoParaIniciar = [...planos]
+        .sort((a, b) => a.ordem - b.ordem)
+        .find((p) => !p.data_fim)
+    }
+
+    if (!planoParaIniciar) {
+      setMessage('Nenhum plano disponível para iniciar.')
+      return
+    }
+
+    const primeiroPlano = planoParaIniciar
 
     setConfirmModal({
       isOpen: true,
@@ -309,6 +342,7 @@ export function PlanoNutricionalModal({
             .update({
               ativo: true,
               data_inicio: dataInicio,
+              data_fim: null,
               peso_inicio_kg_cab: catData?.peso_vivo_atual_kg_cab ?? null,
               rc_inicio: catData?.rc_atual ?? null,
             })
@@ -323,7 +357,7 @@ export function PlanoNutricionalModal({
               periodo: primeiroPlano.periodo_dias,
               peso_vivo_meta_kg_cab: primeiroPlano.peso_meta_kg,
               estrategia_nutricional: primeiroPlano.nome,
-              gmd: formulacao?.gmd ? formulacao.gmd.toFixed(3).replace('.', ',') : null,
+              gmd: primeiroPlano.gmd != null ? primeiroPlano.gmd.toFixed(3).replace('.', ',') : (formulacao?.gmd ? formulacao.gmd.toFixed(3).replace('.', ',') : null),
               consumo_meta_porcentagem_pesovivo: formulacao?.meta_consumo_ms_percent_pv ?? null,
             })
             .eq('id', loteCategoriaId)
@@ -370,7 +404,30 @@ export function PlanoNutricionalModal({
       return
     }
 
-    const proximoPlano = planos.find((p) => p.ordem > planoVigente.ordem)
+    if (isUltimoPlano(planoVigente.id)) {
+      setConfirmModal({
+        isOpen: true,
+        title: 'Encerrar Plano',
+        message: `Encerrar o plano "${planoVigente.nome}"?\n\nEste é o último plano da sequência. Ao atingir a condição, o plano será encerrado automaticamente.`,
+        variant: 'warning',
+        onConfirm: async () => {
+          try {
+            const { error } = await supabase.rpc('encerrar_plano_nutricional', {
+              p_lote_categoria_id: loteCategoriaId,
+            })
+            if (error) throw error
+            await loadData()
+            onPlanChanged?.()
+          } catch (error: any) {
+            console.error('Erro ao encerrar plano:', error)
+            setMessage(error.message || 'Erro ao encerrar plano')
+          }
+        },
+      })
+      return
+    }
+
+    const proximoPlano = planos.find((p) => p.ordem > planoVigente.ordem && !p.data_fim)
     if (!proximoPlano) {
       setMessage('Não há próximo plano cadastrado')
       return
@@ -402,6 +459,10 @@ export function PlanoNutricionalModal({
   }
 
   const planoVigente = planos.find((p) => p.ativo)
+
+  const planosNaoEncerrados = [...planos].filter((p) => !p.data_fim).sort((a, b) => a.ordem - b.ordem)
+  const ultimoPlanoNaoEncerrado = planosNaoEncerrados[planosNaoEncerrados.length - 1]
+  const isUltimoPlano = (planoId: string) => ultimoPlanoNaoEncerrado?.id === planoId
 
   const handleEncerrarPlano = () => {
     if (!planoVigente) return
@@ -520,14 +581,14 @@ export function PlanoNutricionalModal({
                   </p>
                 </div>
               </div>
-              {planoVigente.migracao_automatica && planos.some((p) => p.ordem > planoVigente.ordem && !p.data_fim) && (
+              {planoVigente.migracao_automatica && !isUltimoPlano(planoVigente.id) && planos.some((p) => p.ordem > planoVigente.ordem && !p.data_fim) && (
                 <div className="mt-4 pt-3 border-t border-green-200">
                   <Button size="sm" onClick={handleMigracaoAutomatica}>
                     Migrar para Próximo Plano
                   </Button>
                 </div>
               )}
-              {!planoVigente.migracao_automatica && !planos.some((p) => p.ordem > planoVigente.ordem && !p.data_fim) && (
+              {!planoVigente.migracao_automatica && (
                 <div className="mt-4 pt-3 border-t border-green-200">
                   <Button size="sm" variant="danger" onClick={handleEncerrarPlano}>
                     Encerrar Plano
@@ -537,26 +598,75 @@ export function PlanoNutricionalModal({
             </div>
           )}
 
-          {!planoVigente && planos.length > 0 && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-yellow-800">
-                  Nenhum plano está vigente. Inicie o primeiro plano da sequência para começar.
-                </p>
-                <Button size="sm" onClick={handleIniciarPlano} className="ml-4">
-                  Iniciar Plano
-                </Button>
+          {!planoVigente && planos.length > 0 && (() => {
+            const planosDisponiveis = [...planos]
+              .sort((a, b) => a.ordem - b.ordem)
+              .filter((p) => !p.data_fim)
+            const planosEncerrados = [...planos]
+              .sort((a, b) => a.ordem - b.ordem)
+              .filter((p) => p.data_fim)
+            return (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-yellow-800">
+                    Nenhum plano está vigente. Inicie um plano para começar.
+                  </p>
+                </div>
+                {planosDisponiveis.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {planosDisponiveis.map((plano) => (
+                      <Button
+                        key={plano.id}
+                        size="sm"
+                        onClick={() => handleIniciarPlano(plano.id)}
+                      >
+                        Iniciar “{plano.nome}”
+                      </Button>
+                    ))}
+                  </div>
+                )}
+                {planosEncerrados.length > 0 && (
+                  <div className="pt-2 border-t border-yellow-200">
+                    <p className="text-xs text-yellow-700 mb-2">Planos encerrados (podem ser reativados):</p>
+                    <div className="flex flex-wrap gap-2">
+                      {planosEncerrados.map((plano) => (
+                        <Button
+                          key={plano.id}
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleIniciarPlano(plano.id)}
+                        >
+                          Reativar “{plano.nome}”
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            )
+          })()}
 
           {/* Lista de planos */}
           {planos.length > 0 && (
             <div className="space-y-3">
-              <h4 className="font-medium text-gray-800">Sequência de Planos</h4>
-              <p className="text-xs text-gray-500">Arraste para reordenar. Planos já iniciados não podem ser movidos.</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-medium text-gray-800">Sequência de Planos</h4>
+                  <p className="text-xs text-gray-500">Arraste para reordenar. Planos já iniciados não podem ser movidos.</p>
+                </div>
+                {planos.some((p) => p.data_fim) && (
+                  <button
+                    type="button"
+                    onClick={() => setShowEncerrados(!showEncerrados)}
+                    className="text-xs text-gray-500 hover:text-gray-700 underline"
+                  >
+                    {showEncerrados ? 'Ocultar encerrados' : 'Mostrar encerrados'}
+                  </button>
+                )}
+              </div>
               {[...planos]
                 .sort((a, b) => a.ordem - b.ordem)
+                .filter((plano) => showEncerrados || !plano.data_fim)
                 .map((plano, sortedIndex) => {
                   const isVigente = plano.ativo
                   const canDrag = !plano.data_inicio
@@ -588,6 +698,9 @@ export function PlanoNutricionalModal({
                             {isVigente && (
                               <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-800 text-xs font-medium rounded">Vigente</span>
                             )}
+                            {plano.data_fim && !isVigente && (
+                              <span className="ml-2 px-2 py-0.5 bg-gray-200 text-gray-600 text-xs font-medium rounded">Encerrado</span>
+                            )}
                           </p>
                           <p className="text-sm text-gray-600 truncate">
                             {plano.periodo_dias} dias • Peso meta: {plano.peso_meta_kg.toFixed(2).replace('.', ',')} kg
@@ -612,7 +725,9 @@ export function PlanoNutricionalModal({
                                 className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
                                   plano.migracao_automatica ? 'bg-primary' : 'bg-gray-300'
                                 }`}
-                                title={plano.migracao_automatica ? 'Migração automática ativada' : 'Migração automática desativada'}
+                                title={plano.migracao_automatica
+                                  ? (isUltimoPlano(plano.id) ? 'Encerramento automático ativado' : 'Migração automática ativada')
+                                  : (isUltimoPlano(plano.id) ? 'Encerramento automático desativado' : 'Migração automática desativada')}
                               >
                                 <span
                                   className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
@@ -621,7 +736,9 @@ export function PlanoNutricionalModal({
                                 />
                               </button>
                               <span className="text-xs text-gray-500">
-                                {plano.migracao_automatica ? 'Migração automática' : 'Migração manual'}
+                                {plano.migracao_automatica
+                                  ? (isUltimoPlano(plano.id) ? 'Encerramento automático' : 'Migração automática')
+                                  : (isUltimoPlano(plano.id) ? 'Encerramento manual' : 'Migração manual')}
                               </span>
                             </div>
                           )}
@@ -650,6 +767,14 @@ export function PlanoNutricionalModal({
                         {!plano.ativo && !plano.data_fim && planoVigente && (
                           <Button size="sm" onClick={() => handleMigracaoManual(plano)}>
                             Migrar para este
+                          </Button>
+                        )}
+                        {plano.data_fim && !planoVigente && (
+                          <Button
+                            size="sm"
+                            onClick={() => handleIniciarPlano(plano.id)}
+                          >
+                            Reativar
                           </Button>
                         )}
                       </div>
@@ -779,13 +904,52 @@ export function PlanoNutricionalModal({
                     decimalPlaces={2}
                     placeholder="Ex: 450,00"
                   />
+                  {pesoAtualCategoria != null && formData.peso_meta_kg && (
+                    (() => {
+                      const pesoMeta = parseFloat(formData.peso_meta_kg)
+                      const diff = pesoMeta - pesoAtualCategoria
+                      if (isNaN(pesoMeta) || pesoMeta <= 0) return null
+                      return (
+                        <p className={`text-xs mt-1 ${diff <= 0 ? 'text-red-600' : 'text-gray-500'}`}>
+                          {diff > 0
+                            ? `${diff.toFixed(2).replace('.', ',')} kg acima do peso atual (${pesoAtualCategoria.toFixed(2).replace('.', ',')} kg)`
+                            : `Peso meta deve ser maior que o peso atual (${pesoAtualCategoria.toFixed(2).replace('.', ',')} kg)`}
+                        </p>
+                      )
+                    })()
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    GMD Esperado (kg/cab/dia) *
+                  </label>
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    value={formData.gmd}
+                    onChange={(e) => {
+                      const value = e.target.value.replace('.', ',')
+                      setFormData({ ...formData, gmd: value })
+                    }}
+                    placeholder="Ex: 0,300"
+                    required
+                    className="border-gray-200 focus:border-accent"
+                  />
+                  {selectedFormulacao?.gmd != null && !formData.gmd && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      GMD da formulação: {selectedFormulacao.gmd.toFixed(3).replace('.', ',')} kg/cab/dia
+                    </p>
+                  )}
                 </div>
               </div>
 
               {formData.migracao_automatica && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Condição para Migração Automática
+                  {editingPlano && isUltimoPlano(editingPlano.id)
+                    ? 'Condição para Encerramento Automático'
+                    : 'Condição para Migração Automática'}
                 </label>
                 <div className="flex flex-wrap gap-3">
                   {(['periodo', 'peso', 'ambos'] as const).map((cond) => (
@@ -830,8 +994,12 @@ export function PlanoNutricionalModal({
                   </button>
                   <span className="text-sm text-gray-600">
                     {formData.migracao_automatica
-                      ? 'Migra automaticamente ao atingir a condição'
-                      : 'Apenas migração manual pelo usuário'}
+                      ? (editingPlano && isUltimoPlano(editingPlano.id)
+                        ? 'Encerra automaticamente ao atingir a condição'
+                        : 'Migra automaticamente ao atingir a condição')
+                      : (editingPlano && isUltimoPlano(editingPlano.id)
+                        ? 'Apenas encerramento manual pelo usuário'
+                        : 'Apenas migração manual pelo usuário')}
                   </span>
                 </div>
               </div>
