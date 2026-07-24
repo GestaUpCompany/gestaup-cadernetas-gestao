@@ -19,7 +19,7 @@ interface PlanoNutricional {
   formulacao_id: string
   periodo_dias: number
   peso_meta_kg: number
-  gmd?: number | null
+  gmd_planejado?: number | null
   ordem: number
   ativo: boolean
   data_inicio: string | null
@@ -65,7 +65,7 @@ export function PlanoNutricionalModal({
     formulacao_id: '',
     periodo_dias: '',
     peso_meta_kg: '',
-    gmd: '',
+    gmd_planejado: '',
     condicao_migracao: 'periodo' as 'periodo' | 'peso' | 'ambos',
     migracao_automatica: true,
     tipo_entrada_periodo: 'periodo' as 'periodo' | 'data_final',
@@ -173,7 +173,7 @@ export function PlanoNutricionalModal({
       formulacao_id: '',
       periodo_dias: '',
       peso_meta_kg: '',
-      gmd: '',
+      gmd_planejado: '',
       condicao_migracao: 'periodo',
       migracao_automatica: true,
       tipo_entrada_periodo: 'periodo',
@@ -189,7 +189,7 @@ export function PlanoNutricionalModal({
       formulacao_id: plano.formulacao_id,
       periodo_dias: String(plano.periodo_dias),
       peso_meta_kg: String(plano.peso_meta_kg),
-      gmd: plano.gmd != null ? plano.gmd.toString().replace('.', ',') : '',
+      gmd_planejado: plano.gmd_planejado != null ? plano.gmd_planejado.toString().replace('.', ',') : '',
       condicao_migracao: plano.condicao_migracao,
       migracao_automatica: plano.migracao_automatica,
       tipo_entrada_periodo: 'periodo',
@@ -211,7 +211,7 @@ export function PlanoNutricionalModal({
     }
     if (!formData.peso_meta_kg || Number(formData.peso_meta_kg) <= 0) return 'Peso meta deve ser maior que zero'
     if (pesoAtualCategoria != null && Number(formData.peso_meta_kg) <= pesoAtualCategoria) return `Peso meta deve ser maior que o peso atual de ${pesoAtualCategoria.toFixed(2).replace('.', ',')} kg`
-    if (!formData.gmd || Number(formData.gmd.replace(',', '.')) <= 0) return 'GMD deve ser maior que zero'
+    if (!formData.gmd_planejado || Number(formData.gmd_planejado.replace(',', '.')) <= 0) return 'GMD deve ser maior que zero'
     return null
   }
 
@@ -233,7 +233,7 @@ export function PlanoNutricionalModal({
       periodo = Math.ceil((dataFinal.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24))
     }
     const pesoMeta = parseFloat(formData.peso_meta_kg.replace(',', '.'))
-    const gmdValue = parseFloat(formData.gmd.replace(',', '.'))
+    const gmdValue = parseFloat(formData.gmd_planejado.replace(',', '.'))
 
     if (!fazendaId) {
       setMessage('Não foi possível identificar a fazenda. Feche e reabra o modal.')
@@ -247,7 +247,7 @@ export function PlanoNutricionalModal({
       formulacao_id: formData.formulacao_id,
       periodo_dias: periodo,
       peso_meta_kg: pesoMeta,
-      gmd: gmdValue,
+      gmd_planejado: gmdValue,
       condicao_migracao: formData.condicao_migracao,
       migracao_automatica: formData.migracao_automatica,
     }
@@ -357,7 +357,7 @@ export function PlanoNutricionalModal({
               periodo: primeiroPlano.periodo_dias,
               peso_vivo_meta_kg_cab: primeiroPlano.peso_meta_kg,
               estrategia_nutricional: primeiroPlano.nome,
-              gmd: primeiroPlano.gmd != null ? primeiroPlano.gmd.toFixed(3).replace('.', ',') : (formulacao?.gmd ? formulacao.gmd.toFixed(3).replace('.', ',') : null),
+              gmd: primeiroPlano.gmd_planejado != null ? primeiroPlano.gmd_planejado.toFixed(3).replace('.', ',') : (formulacao?.gmd ? formulacao.gmd.toFixed(3).replace('.', ',') : null),
               consumo_meta_porcentagem_pesovivo: formulacao?.meta_consumo_ms_percent_pv ?? null,
             })
             .eq('id', loteCategoriaId)
@@ -948,16 +948,16 @@ export function PlanoNutricionalModal({
                   <Input
                     type="text"
                     inputMode="decimal"
-                    value={formData.gmd}
+                    value={formData.gmd_planejado}
                     onChange={(e) => {
                       const value = e.target.value.replace('.', ',')
-                      setFormData({ ...formData, gmd: value })
+                      setFormData({ ...formData, gmd_planejado: value })
                     }}
                     placeholder="Ex: 0,300"
                     required
                     className="border-gray-200 focus:border-accent"
                   />
-                  {selectedFormulacao?.gmd != null && !formData.gmd && (
+                  {selectedFormulacao?.gmd != null && !formData.gmd_planejado && (
                     <p className="text-xs text-gray-500 mt-1">
                       GMD da formulação: {selectedFormulacao.gmd.toFixed(3).replace('.', ',')} kg/cab/dia
                     </p>

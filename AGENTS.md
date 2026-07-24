@@ -41,3 +41,35 @@ Decisões tomadas:
 6. **Validação de continuidade**: a UI deve validar que não há gap nem sobreposição entre categorias consecutivas da mesma cadeia de sexo.
 
 Disparador: quando o usuário mencionar "cronologia do rebanho", "faixas de categorias", "faixas de peso", "cronologia evolutiva", ou pedir para implementar a tela de categorias por peso, lembrar este plano.
+
+### Destino do lote (corte vs reprodução) — adicionado em 2026-07-24
+
+Pesquisa web (Embrapa, DeHeus, Rehagro, Canal Rural) confirmou que sistema_producao e destino são eixos ortogonais:
+- **sistema_producao** determina onde o lote entra/sai na cronologia (trecho do fluxo).
+- **destino** determina o terminal (boi gordo para abate, touro para reprodução).
+
+Decisões:
+1. **Campo novo `destino` no lotes** (valores: "corte"/"reprodução"), independente de sistema_producao. Não substitui nem reutiliza sistema_producao.
+2. **Obrigatório em novos/edições**. Lotes existentes ficam sem destino até serem editados (não bloqueia, cronologia não aparece até preencher).
+3. **Fêmeas têm cronologia única** (bezerra ao pé → bezerra → novilha → vaca), sem bifurcar por destino.
+4. **Machos bifurcam**: corte termina em boi gordo (→ abate), reprodução termina em touro.
+5. **Default inteligente por sistema**: Engorda/TIP/Confinamento-terminação → corte; Cria → reprodução; Recria/RIP/Sequestro → sem default (usuário decide). Default é sugerido, não travado.
+
+Tabela combinatória machos (sistema × destino → entrada/saída na cronologia):
+- Cria + qualquer destino: bezerro ao pé → bezerro (venda desmama)
+- Recria + corte: bezerro → boi magro
+- Recria + reprodução: bezerro → garrote (→ touro)
+- Engorda + corte (obrigatório): boi magro → boi gordo
+- Confinamento + corte: boi magro → boi gordo
+- Confinamento + reprodução: novilha (cobrição)
+- RIP + corte: bezerro → boi magro (acelerado)
+- RIP + reprodução: bezerro → garrote (acelerado → touro)
+- Sequestro + qualquer: bezerro → garrote
+- TIP + corte (obrigatório): boi magro → boi gordo
+
+Tabela fêmeas (cronologia única, sistema define entrada/saída):
+- Cria: bezerra ao pé → bezerra (venda) ou vaca (matriz)
+- Recria: bezerra → novilha
+- Engorda/TIP/Confinamento: novilha → vaca (descarte)
+
+Disparador: quando o usuário mencionar "destino do lote", "corte vs reprodução", "finalidade do lote", ou retomar a discussão de cronologia, lembrar estas decisões.

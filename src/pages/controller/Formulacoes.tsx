@@ -596,7 +596,7 @@ export function Formulacoes() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">GMD (kg/Cab/Dia)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">GMD Planejado (kg/Cab/Dia)</label>
                 <Input
                   type="text"
                   inputMode="decimal"
@@ -753,7 +753,7 @@ export function Formulacoes() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">GMD (kg/Cab/Dia)</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">GMD Planejado (kg/Cab/Dia)</label>
                   <div className="text-lg font-bold text-green-800">
                     {fmt(parseFloat(formData.gmd || '0'), 3)}
                   </div>
@@ -812,7 +812,7 @@ export function Formulacoes() {
               <CardItem
                 key={dieta.id}
                 title={dieta.nome}
-                subtitle={dieta.categoria ? `${dieta.tipo || 'Sem tipo'} • ${dieta.categoria}` : dieta.tipo}
+                subtitle={dieta.categoria ? `${(dieta.tipo || 'Sem tipo').replace(/\b\w/g, (c) => c.toUpperCase())} • ${dieta.categoria.replace(/\b\w/g, (c) => c.toUpperCase())}` : (dieta.tipo ? dieta.tipo.replace(/\b\w/g, (c) => c.toUpperCase()) : undefined)}
                 status={dieta.ativo}
                 onClick={() => handleEdit(dieta)}
               >
@@ -824,7 +824,7 @@ export function Formulacoes() {
                     <p><span className="font-medium">PV Médio:</span> {fmt(dieta.peso_vivo_medio)} kg</p>
                   )}
                   {dieta.gmd != null && (
-                    <p><span className="font-medium">GMD:</span> {fmt(dieta.gmd, 3)} kg/Cab/Dia</p>
+                    <p><span className="font-medium">GMD Planejado:</span> {fmt(dieta.gmd, 3)} kg/Cab/Dia</p>
                   )}
                   {dieta.sistema_producao && (
                     <p><span className="font-medium">Sistema:</span> {dieta.sistema_producao}</p>

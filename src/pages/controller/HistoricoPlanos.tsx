@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Card, CardSkeleton, Button, Modal } from '../../components/ui'
 import * as XLSX from 'xlsx'
+import { gerarRelatorioPlanosPDF } from '../../utils/relatorioPlanosPDF'
 
 interface RegistroPlano {
   id: string
@@ -38,7 +39,7 @@ interface RegistroPlano {
   } | null
 }
 
-interface PlanoAgrupado {
+export interface PlanoAgrupado {
   plano_nutricional_id: string
   nomePlano: string
   nomeLote: string
@@ -63,6 +64,10 @@ export function HistoricoPlanos() {
   const [exportStep, setExportStep] = useState<1 | 2>(1)
   const [lotesSelecionados, setLotesSelecionados] = useState<Set<string>>(new Set())
   const [exportTipo, setExportTipo] = useState<'entrada' | 'saida' | 'ambos'>('ambos')
+
+  const [exportingPDF, setExportingPDF] = useState(false)
+  const [pdfModalOpen, setPdfModalOpen] = useState(false)
+  const [pdfLotesSelecionados, setPdfLotesSelecionados] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     carregarRegistros()
@@ -157,6 +162,34 @@ export function HistoricoPlanos() {
       categoria.includes(filtroCategoria.toLowerCase())
     )
   })
+
+  const handleExportPDF = async () => {
+    const planosParaPDF = pdfLotesSelecionados.size === 0
+      ? planosFiltrados
+      : planosFiltrados.filter((p) => pdfLotesSelecionados.has(p.nomeLote))
+
+    if (planosParaPDF.length === 0) return
+    setExportingPDF(true)
+    try {
+      let nomeFazenda = 'Fazenda'
+      if (user) {
+        const { data: vinculos } = await supabase
+          .from('usuario_fazenda')
+          .select('fazenda_id, fazendas:fazenda_id(nome)')
+          .eq('usuario_id', user.id)
+          .eq('ativo', true)
+          .limit(1)
+        if (vinculos && vinculos.length > 0) {
+          nomeFazenda = (vinculos[0] as any).fazendas?.nome || 'Fazenda'
+        }
+      }
+      await gerarRelatorioPlanosPDF(planosParaPDF, nomeFazenda, { lote: filtroLote, categoria: filtroCategoria })
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error)
+    } finally {
+      setExportingPDF(false)
+    }
+  }
 
   const COLUNAS_EXPORT: { key: string; label: string }[] = [
     { key: 'lote', label: 'Lote' },
@@ -323,9 +356,14 @@ export function HistoricoPlanos() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h2 className="text-2xl font-bold text-gray-800">Histórico de Planos Nutricionais</h2>
         {planosFiltrados.length > 0 && (
-          <Button size="sm" onClick={() => { setExportStep(1); setLotesSelecionados(new Set()); setExportModalOpen(true) }}>
-            Exportar xlsx
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" variant="secondary" onClick={() => { setExportStep(1); setLotesSelecionados(new Set()); setExportModalOpen(true) }}>
+              Exportar xlsx
+            </Button>
+            <Button size="sm" onClick={() => { setPdfLotesSelecionados(new Set()); setPdfModalOpen(true) }}>
+              Exportar PDF
+            </Button>
+          </div>
         )}
       </div>
 
@@ -668,6 +706,75 @@ export function HistoricoPlanos() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Modal de Exportação PDF */}
+      <Modal isOpen={pdfModalOpen} onClose={() => setPdfModalOpen(false)} title="Exportar Relatório PDF" size="md">
+        <div className="space-y-5">
+          <div className="flex items-center gap-2 text-gray-700">
+            <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary text-white text-sm font-bold">1</span>
+            <span className="text-sm font-semibold">Selecione os lotes para o relatório</span>
+          </div>
+
+          <p className="text-xs text-gray-500 -mt-2 ml-9">
+            O relatório PDF inclui sempre entrada e saída de cada plano. Planos sem saída mostram apenas a entrada.
+          </p>
+
+          <div className="bg-gray-50 rounded-lg p-3 flex items-center gap-3 cursor-pointer hover:bg-gray-100 transition-colors"
+            onClick={() => setPdfLotesSelecionados(new Set())}
+          >
+            <input
+              type="checkbox"
+              id="pdfSelectAll"
+              checked={pdfLotesSelecionados.size === 0}
+              onChange={(e) => { if (e.target.checked) setPdfLotesSelecionados(new Set()) }}
+              className="w-4 h-4 accent-primary"
+            />
+            <label htmlFor="pdfSelectAll" className="text-sm font-medium text-gray-800 cursor-pointer">Todos os lotes</label>
+          </div>
+
+          <div className="border border-gray-200 rounded-lg divide-y divide-gray-100 max-h-56 overflow-y-auto">
+            {[...new Set(planosFiltrados.map((p) => p.nomeLote))].map((nomeLote) => (
+              <div
+                key={nomeLote}
+                className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors ${pdfLotesSelecionados.has(nomeLote) ? 'bg-primary/5' : 'hover:bg-gray-50'}`}
+                onClick={() => {
+                  const next = new Set(pdfLotesSelecionados)
+                  if (next.has(nomeLote)) next.delete(nomeLote)
+                  else next.add(nomeLote)
+                  setPdfLotesSelecionados(next)
+                }}
+              >
+                <input
+                  type="checkbox"
+                  id={`pdf-lote-${nomeLote}`}
+                  checked={pdfLotesSelecionados.has(nomeLote)}
+                  onChange={(e) => {
+                    const next = new Set(pdfLotesSelecionados)
+                    if (e.target.checked) next.add(nomeLote)
+                    else next.delete(nomeLote)
+                    setPdfLotesSelecionados(next)
+                  }}
+                  className="w-4 h-4 accent-primary"
+                />
+                <label htmlFor={`pdf-lote-${nomeLote}`} className="text-sm text-gray-700 cursor-pointer flex-1">{nomeLote}</label>
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-gray-50 rounded-lg p-4 text-xs text-gray-600 space-y-1">
+            <div className="flex justify-between"><span className="text-gray-500">Lotes selecionados:</span><span className="font-medium text-gray-800">{pdfLotesSelecionados.size === 0 ? 'Todos' : pdfLotesSelecionados.size}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Conteúdo:</span><span className="font-medium text-gray-800">Entrada e Saída (completo)</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Formato:</span><span className="font-medium text-gray-800">PDF com gráficos e tabelas</span></div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button size="sm" variant="danger" onClick={() => setPdfModalOpen(false)}>Cancelar</Button>
+            <Button size="sm" onClick={() => { setPdfModalOpen(false); handleExportPDF() }} disabled={exportingPDF}>
+              {exportingPDF ? 'Gerando PDF...' : 'Gerar PDF'}
+            </Button>
+          </div>
+        </div>
       </Modal>
     </>
   )

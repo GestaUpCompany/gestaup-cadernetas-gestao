@@ -1082,7 +1082,7 @@ export function Lotes() {
               formulacao_id: plano.formulacao_id,
               periodo_dias: plano.periodo_dias,
               peso_meta_kg: plano.peso_meta_kg,
-              gmd: plano.gmd ?? null,
+              gmd_planejado: plano.gmd_planejado ?? null,
               ordem: plano.ordem ?? idx,
               ativo: false,
               data_inicio: null,
@@ -2754,7 +2754,7 @@ export function Lotes() {
               formulacao_id: primeiroPlano?.formulacao_id,
               periodo: primeiroPlano?.periodo_dias,
               peso_vivo_meta_kg_cab: primeiroPlano?.peso_meta_kg,
-              gmd: primeiroPlano?.gmd != null ? primeiroPlano.gmd.toFixed(3).replace('.', ',') : (f?.gmd !== undefined && f?.gmd !== null ? f.gmd.toFixed(3).replace('.', ',') : undefined),
+              gmd: primeiroPlano?.gmd_planejado != null ? primeiroPlano.gmd_planejado.toFixed(3).replace('.', ',') : (f?.gmd !== undefined && f?.gmd !== null ? f.gmd.toFixed(3).replace('.', ',') : undefined),
               consumo_meta_porcentagem_pesovivo: f?.consumo_meta !== undefined && f?.consumo_meta !== null ? Number(f.consumo_meta) : undefined,
             }
             setFormData({ ...formData, categorias: updatedCategorias })

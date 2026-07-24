@@ -18,7 +18,7 @@ export interface PlanoRascunho {
   peso_meta_kg: number
   ordem: number
   condicao_migracao: 'periodo' | 'peso' | 'ambos'
-  gmd?: number | null
+  gmd_planejado?: number | null
 }
 
 interface PlanoNutricionalDraftModalProps {
@@ -52,7 +52,7 @@ export function PlanoNutricionalDraftModal({
     formulacao_id: '',
     periodo_dias: '',
     peso_meta_kg: '',
-    gmd: '',
+    gmd_planejado: '',
     condicao_migracao: 'periodo' as 'periodo' | 'peso' | 'ambos',
   })
 
@@ -71,7 +71,7 @@ export function PlanoNutricionalDraftModal({
       formulacao_id: '',
       periodo_dias: '',
       peso_meta_kg: '',
-      gmd: '',
+      gmd_planejado: '',
       condicao_migracao: 'periodo',
     })
   }
@@ -82,7 +82,7 @@ export function PlanoNutricionalDraftModal({
   )
 
   const handleAddOrUpdate = () => {
-    if (!formData.formulacao_id || !formData.periodo_dias || !formData.peso_meta_kg || !formData.gmd) return
+    if (!formData.formulacao_id || !formData.periodo_dias || !formData.peso_meta_kg || !formData.gmd_planejado) return
 
     const nome = formData.nome.trim() || selectedFormulacao?.nome || 'Plano'
     const novoPlano: PlanoRascunho = {
@@ -90,7 +90,7 @@ export function PlanoNutricionalDraftModal({
       formulacao_id: formData.formulacao_id,
       periodo_dias: parseInt(formData.periodo_dias),
       peso_meta_kg: parseFloat(formData.peso_meta_kg.replace(',', '.')),
-      gmd: parseFloat(formData.gmd.replace(',', '.')),
+      gmd_planejado: parseFloat(formData.gmd_planejado.replace(',', '.')),
       condicao_migracao: formData.condicao_migracao,
       ordem: 0,
     }
@@ -118,7 +118,7 @@ export function PlanoNutricionalDraftModal({
       formulacao_id: p.formulacao_id,
       periodo_dias: p.periodo_dias.toString(),
       peso_meta_kg: p.peso_meta_kg.toString(),
-      gmd: p.gmd != null ? p.gmd.toString().replace('.', ',') : '',
+      gmd_planejado: p.gmd_planejado != null ? p.gmd_planejado.toString().replace('.', ',') : '',
       condicao_migracao: p.condicao_migracao,
     })
   }
@@ -167,7 +167,7 @@ export function PlanoNutricionalDraftModal({
     (f) => !categoria || (f.categoria || '').toLowerCase() === categoria.toLowerCase()
   )
 
-  const podeSalvarForm = formData.formulacao_id && formData.periodo_dias && formData.peso_meta_kg && formData.gmd
+  const podeSalvarForm = formData.formulacao_id && formData.periodo_dias && formData.peso_meta_kg && formData.gmd_planejado
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Planos Nutricionais — ${categoria ? categoria.replace(/\b\w/g, (c) => c.toUpperCase()) : ''}`} size="lg">
@@ -210,7 +210,7 @@ export function PlanoNutricionalDraftModal({
                             {index + 1}. {plano.nome}
                           </p>
                           <p className="text-sm text-gray-600 truncate">
-                            {f?.nome} • {plano.periodo_dias} dias • {plano.peso_meta_kg.toFixed(2).replace('.', ',')} kg • GMD: {plano.gmd?.toFixed(3).replace('.', ',') || '—'} • {CONDICOES[plano.condicao_migracao]}
+                            {f?.nome} • {plano.periodo_dias} dias • {plano.peso_meta_kg.toFixed(2).replace('.', ',')} kg • GMD: {plano.gmd_planejado?.toFixed(3).replace('.', ',') || '—'} • {CONDICOES[plano.condicao_migracao]}
                           </p>
                         </div>
                       </div>
@@ -299,15 +299,15 @@ export function PlanoNutricionalDraftModal({
                 <Input
                   type="text"
                   inputMode="decimal"
-                  value={formData.gmd}
+                  value={formData.gmd_planejado}
                   onChange={(e) => {
                     const value = e.target.value.replace('.', ',')
-                    setFormData({ ...formData, gmd: value })
+                    setFormData({ ...formData, gmd_planejado: value })
                   }}
                   placeholder="Ex: 0,300"
                   className="border-gray-200 focus:border-accent"
                 />
-                {selectedFormulacao?.gmd != null && !formData.gmd && (
+                {selectedFormulacao?.gmd != null && !formData.gmd_planejado && (
                   <p className="text-xs text-gray-500 mt-1">
                     GMD da formulação: {selectedFormulacao.gmd.toFixed(3).replace('.', ',')} kg/cab/dia
                   </p>
