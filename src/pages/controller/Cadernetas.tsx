@@ -70,7 +70,7 @@ export function Cadernetas() {
       title: CADERNETA_TITLES.cantina,
       description: CADERNETA_DESCRIPTIONS.cantina,
       image: CADERNETA_IMAGES.cantina,
-      path: '/controller/cadernetas/cantina',
+      path: '/controller/cadernetas/alimentacao',
     },
     {
       title: CADERNETA_TITLES.limpeza,

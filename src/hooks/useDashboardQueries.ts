@@ -77,7 +77,7 @@ export function useDashboardStats(userId: string | undefined) {
         supabase.from('registros_morte').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
         supabase.from('registros_clima').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
         supabase.from('registros_abastecimento').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
-        supabase.from('registros_cantina').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
+        supabase.from('registros_alimentacao').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
         supabase.from('registros_limpeza').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
         supabase.from('registros_operacoes_maquinas').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
         supabase.from('registros_almoxarifado').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),

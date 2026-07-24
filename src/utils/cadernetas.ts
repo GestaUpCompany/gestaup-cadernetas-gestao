@@ -14,7 +14,7 @@ export const CADERNETAS: CadernetaOption[] = [
   { id: 'morte', label: 'Morte' },
   { id: 'clima', label: 'Clima' },
   { id: 'abastecimento', label: 'Abastecimento' },
-  { id: 'cantina', label: 'Cantina' },
+  { id: 'cantina', label: 'Alimentação' },
   { id: 'limpeza', label: 'Limpeza' },
   { id: 'operacoes-maquinas', label: 'Operações de Máquinas' },
   { id: 'manutencao-maquinas', label: 'Manutenção de Máquinas' },

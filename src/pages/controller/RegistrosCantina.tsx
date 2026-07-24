@@ -56,7 +56,7 @@ export function RegistrosCantina() {
     const fazendaId = vinculos[0].fazenda_id
 
     let query = supabase
-      .from('registros_cantina')
+      .from('registros_alimentacao')
       .select('*')
       .eq('fazenda_id', fazendaId)
       .is('deleted_at', null)

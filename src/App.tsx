@@ -57,8 +57,8 @@ import { RegistrosClima } from './pages/controller/RegistrosClima'
 import { RegistrosClimaDetalhes } from './pages/controller/RegistrosClimaDetalhes'
 import { RegistrosAbastecimento } from './pages/controller/RegistrosAbastecimento'
 import { RegistrosAbastecimentoDetalhes } from './pages/controller/RegistrosAbastecimentoDetalhes'
-import { RegistrosCantina } from './pages/controller/RegistrosCantina'
-import { RegistrosCantinaDetalhes } from './pages/controller/RegistrosCantinaDetalhes'
+import { RegistrosAlimentacao } from './pages/controller/RegistrosAlimentacao'
+import { RegistrosAlimentacaoDetalhes } from './pages/controller/RegistrosAlimentacaoDetalhes'
 import { RegistrosLimpeza } from './pages/controller/RegistrosLimpeza'
 import { RegistrosLimpezaDetalhes } from './pages/controller/RegistrosLimpezaDetalhes'
 import { RegistrosOperacoesMaquinas } from './pages/controller/RegistrosOperacoesMaquinas'
@@ -642,21 +642,21 @@ function App() {
           }
         />
         <Route
-          path="/controller/cadernetas/cantina"
+          path="/controller/cadernetas/alimentacao"
           element={
             <ControllerRoute>
               <ControllerLayout>
-                <RegistrosCantina />
+                <RegistrosAlimentacao />
               </ControllerLayout>
             </ControllerRoute>
           }
         />
         <Route
-          path="/controller/cadernetas/cantina/:id"
+          path="/controller/cadernetas/alimentacao/:id"
           element={
             <ControllerRoute>
               <ControllerLayout>
-                <RegistrosCantinaDetalhes />
+                <RegistrosAlimentacaoDetalhes />
               </ControllerLayout>
             </ControllerRoute>
           }

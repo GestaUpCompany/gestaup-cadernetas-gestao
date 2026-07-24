@@ -52,7 +52,7 @@ export function RegistrosCantinaDetalhes() {
     const fazendaId = vinculos[0].fazenda_id
 
     const { data, error } = await supabase
-      .from('registros_cantina')
+      .from('registros_alimentacao')
       .select('*')
       .eq('id', id)
       .eq('fazenda_id', fazendaId)
