@@ -740,6 +740,27 @@ export function PlanoNutricionalModal({
                                   ? (isUltimoPlano(plano.id) ? 'Encerramento automático' : 'Migração automática')
                                   : (isUltimoPlano(plano.id) ? 'Encerramento manual' : 'Migração manual')}
                               </span>
+                              {plano.migracao_automatica && (
+                                <select
+                                  value={plano.condicao_migracao}
+                                  onChange={async (e) => {
+                                    e.stopPropagation()
+                                    await supabase
+                                      .from('planos_nutricionais')
+                                      .update({ condicao_migracao: e.target.value })
+                                      .eq('id', plano.id)
+                                    await loadData()
+                                    onPlanChanged?.()
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="text-xs border border-gray-200 rounded px-1.5 py-0.5 text-gray-700 bg-white focus:border-primary focus:outline-none cursor-pointer"
+                                  title="Condição para migração/encerramento automático"
+                                >
+                                  <option value="periodo">Período completo</option>
+                                  <option value="peso">Peso atingido</option>
+                                  <option value="ambos">O que vier primeiro</option>
+                                </select>
+                              )}
                             </div>
                           )}
                         </div>

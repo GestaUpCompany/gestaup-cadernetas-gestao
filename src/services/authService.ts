@@ -156,14 +156,20 @@ export async function signOut(): Promise<void> {
   }
 }
 
-export async function updateUltimoAcesso(): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return
+export async function updateUltimoAcesso(authId?: string): Promise<void> {
+  let userId = authId
+
+  if (!userId) {
+    const { data: { session } } = await supabase.auth.getSession()
+    userId = session?.user?.id
+  }
+
+  if (!userId) return
 
   const { error } = await supabase
     .from('usuarios')
     .update({ ultimo_acesso: new Date().toISOString() })
-    .eq('auth_id', user.id)
+    .eq('auth_id', userId)
 
   if (error) {
     console.error('Erro ao atualizar último acesso:', error)

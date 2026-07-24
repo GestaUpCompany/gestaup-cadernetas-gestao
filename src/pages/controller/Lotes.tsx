@@ -60,7 +60,8 @@ interface LoteCategoria {
   custo_total_entrada_reais_lote?: number | null
   ativo?: boolean | null
   planos_rascunho?: PlanoRascunho[]
-  planos_cadastrados?: { id: string; nome: string; ativo: boolean; ordem: number; data_inicio: string | null; data_fim: string | null }[]
+  data_ajuste_peso?: string | null
+  planos_cadastrados?: { id: string; nome: string; ativo: boolean; ordem: number; data_inicio: string | null; data_fim: string | null; peso_inicio_kg_cab: number | null }[]
 }
 
 interface Lote {
@@ -170,6 +171,12 @@ export function Lotes() {
   const [selectedCategoriaForPlanos, setSelectedCategoriaForPlanos] = useState<{ loteCategoriaId?: string; categoria: string } | null>(null)
   const [isPlanoDraftModalOpen, setIsPlanoDraftModalOpen] = useState(false)
   const [selectedDraftCategoriaIndex, setSelectedDraftCategoriaIndex] = useState<number | null>(null)
+  const [originalPesos, setOriginalPesos] = useState<Record<string, number | undefined>>({})
+  const [pesoEditModal, setPesoEditModal] = useState<{
+    isOpen: boolean
+    categoriasAlteradas: { categoria: string; pesoOriginal: number; novoPeso: number }[]
+  } | null>(null)
+  const [pendingSubmitData, setPendingSubmitData] = useState<{ loteId: string; recalculatedCategorias: LoteCategoria[] } | null>(null)
 
   const categoriasOpcoes = [
     'vaca',
@@ -292,6 +299,7 @@ export function Lotes() {
         categoria,
         quant_inicial: undefined,
         data_pesagem: undefined,
+        data_ajuste_peso: undefined,
         peso_entrada_kg_cab: undefined,
         peso_entrada_arrobas: undefined,
         gmd: undefined,
@@ -472,20 +480,42 @@ export function Lotes() {
       updatedCat = { ...updatedCat, peso_entrada_arrobas: pesoEntradaArrobas }
     }
 
-    // 2. Calcular período: dias desde data_pesagem até data atual
-    if (updatedCat.data_pesagem) {
+    // 2. Calcular período e peso_vivo_atual_kg_cab
+    const planoVigente = updatedCat.planos_cadastrados?.find(p => p.ativo && p.data_inicio)
+    const hasAjusteManual = !!updatedCat.data_ajuste_peso
+
+    if (hasAjusteManual) {
+      // Após edição manual: não recalcular peso_vivo_atual nem periodo automaticamente
+      // O peso foi definido manualmente pelo usuário; o cron somará GMD incrementalmente
+      if (updatedCat.data_ajuste_peso) {
+        const dataAjuste = new Date(updatedCat.data_ajuste_peso)
+        const currentDate = new Date()
+        const diffTime = currentDate.getTime() - dataAjuste.getTime()
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+        updatedCat = { ...updatedCat, periodo: diffDays > 0 ? diffDays : 0 }
+      }
+    } else if (planoVigente) {
+      // Plano vigente ativo: calcular periodo a partir de data_inicio do plano
+      // Não recalcular peso_vivo_atual_kg_cab aqui - o cron update_dados_lotes()
+      // atualiza server-side diariamente. O frontend deve respeitar o valor do banco.
+      const dataInicio = new Date(planoVigente.data_inicio!)
+      const currentDate = new Date()
+      const diffTime = currentDate.getTime() - dataInicio.getTime()
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+      updatedCat = { ...updatedCat, periodo: diffDays > 0 ? diffDays : 0 }
+    } else if (updatedCat.data_pesagem) {
+      // Sem plano vigente: comportamento legado com data_pesagem
       const dataPesagem = new Date(updatedCat.data_pesagem)
       const currentDate = new Date()
       const diffTime = currentDate.getTime() - dataPesagem.getTime()
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
       updatedCat = { ...updatedCat, periodo: diffDays > 0 ? diffDays : 0 }
-    }
 
-    // 3. Calcular peso_vivo_atual_kg_cab: peso_entrada_kg_cab + (periodo * gmd)
-    if (updatedCat.peso_entrada_kg_cab && updatedCat.gmd && updatedCat.periodo) {
-      const gmdNumber = parseFloat(updatedCat.gmd.replace(',', '.'))
-      const pesoVivoKg = updatedCat.peso_entrada_kg_cab + (updatedCat.periodo * gmdNumber)
-      updatedCat = { ...updatedCat, peso_vivo_atual_kg_cab: pesoVivoKg }
+      if (updatedCat.peso_entrada_kg_cab && updatedCat.gmd && updatedCat.periodo) {
+        const gmdNumber = parseFloat(updatedCat.gmd.replace(',', '.'))
+        const pesoVivoKg = updatedCat.peso_entrada_kg_cab + (updatedCat.periodo * gmdNumber)
+        updatedCat = { ...updatedCat, peso_vivo_atual_kg_cab: pesoVivoKg }
+      }
     }
 
     // 3.5. Calcular peso_vivo_atual_arroba_cab: peso_vivo_atual_kg_cab * ((rc_atual / 100) / 15)
@@ -640,6 +670,9 @@ export function Lotes() {
     formData.categorias.map(cat => cat.peso_entrada_kg_cab).join(','),
     formData.categorias.map(cat => cat.rc_inicial).join(','),
     formData.categorias.map(cat => cat.data_pesagem).join(','),
+    formData.categorias.map(cat => cat.data_ajuste_peso).join(','),
+    formData.categorias.map(cat => cat.planos_cadastrados?.find(p => p.ativo)?.data_inicio).join(','),
+    formData.categorias.map(cat => cat.planos_cadastrados?.find(p => p.ativo)?.peso_inicio_kg_cab).join(','),
     formData.categorias.map(cat => cat.gmd).join(','),
     formData.categorias.map(cat => cat.peso_vivo_meta_kg_cab).join(','),
     formData.categorias.map(cat => cat.rc_final).join(','),
@@ -886,6 +919,58 @@ export function Lotes() {
       return
     }
 
+    // Validar: peso atual não pode ser menor que o peso original (com plano vigente)
+    const categoriasComPesoInvalido = recalculatedCategorias.filter((cat) => {
+      const hasPlanoVigente = cat.planos_cadastrados?.some(p => p.ativo)
+      const pesoOriginal = originalPesos[cat.categoria.toLowerCase()]
+      const pesoAtual = cat.peso_vivo_atual_kg_cab
+      return hasPlanoVigente && pesoOriginal != null && pesoAtual != null && pesoAtual < pesoOriginal
+    })
+
+    if (categoriasComPesoInvalido.length > 0) {
+      const nomes = categoriasComPesoInvalido.map((cat) => cat.categoria).join(', ')
+      alert(`O peso atual não pode ser menor que o peso original nas categorias: ${nomes}`)
+      setSubmitting(false)
+      return
+    }
+
+    // Detectar categorias com peso atual alterado manualmente (maior que original, com plano vigente)
+    const categoriasComPesoAlterado = recalculatedCategorias.filter((cat) => {
+      const hasPlanoVigente = cat.planos_cadastrados?.some(p => p.ativo)
+      const pesoOriginal = originalPesos[cat.categoria.toLowerCase()]
+      const pesoAtual = cat.peso_vivo_atual_kg_cab
+      return hasPlanoVigente && pesoOriginal != null && pesoAtual != null && pesoAtual > pesoOriginal
+    }).map((cat) => ({
+      categoria: cat.categoria,
+      pesoOriginal: originalPesos[cat.categoria.toLowerCase()]!,
+      novoPeso: cat.peso_vivo_atual_kg_cab!,
+    }))
+
+    if (categoriasComPesoAlterado.length > 0) {
+      setPendingSubmitData({ loteId, recalculatedCategorias })
+      setPesoEditModal({
+        isOpen: true,
+        categoriasAlteradas: categoriasComPesoAlterado,
+      })
+      setSubmitting(false)
+      return
+    }
+
+    // Continuar com o save das categorias
+    await salvarCategorias(loteId, recalculatedCategorias)
+  }
+
+  const salvarCategorias = async (loteId: string, recalculatedCategorias: LoteCategoria[]) => {
+    setSubmitting(true)
+
+    // Buscar fazenda vinculada ao lote
+    const { data: loteData } = await supabase
+      .from('lotes')
+      .select('fazenda_id')
+      .eq('id', loteId)
+      .single()
+    const fazendaId = loteData?.fazenda_id || ''
+
     // Buscar categorias existentes para preservar IDs e planos
     const { data: existingCategorias } = await supabase
       .from('lote_categorias')
@@ -908,6 +993,7 @@ export function Lotes() {
         categoria: cat.categoria,
         quant_inicial: cat.quant_inicial ? parseInt(cat.quant_inicial.toString()) : null,
         data_pesagem: cat.data_pesagem || null,
+        data_ajuste_peso: cat.data_ajuste_peso || null,
         peso_entrada_kg_cab: cat.peso_entrada_kg_cab ? parseFloat(cat.peso_entrada_kg_cab.toString()) : null,
         peso_entrada_arrobas: cat.peso_entrada_arrobas ? parseFloat(cat.peso_entrada_arrobas.toString()) : null,
         gmd: cat.gmd?.toString() || null,
@@ -1133,19 +1219,20 @@ export function Lotes() {
     const categoriaIds = updatedCategorias.map((c: any) => c.id)
     const { data: planosData } = await supabase
       .from('planos_nutricionais')
-      .select('id, lote_categoria_id, nome, ativo, ordem, data_inicio, data_fim')
+      .select('id, lote_categoria_id, nome, ativo, ordem, data_inicio, data_fim, peso_inicio_kg_cab')
       .in('lote_categoria_id', categoriaIds)
       .order('ordem', { ascending: true })
 
-    const planosPorCategoria: Record<string, { id: string; nome: string; ativo: boolean; ordem: number; data_inicio: string | null; data_fim: string | null }[]> = {}
+    const planosPorCategoria: Record<string, { id: string; nome: string; ativo: boolean; ordem: number; data_inicio: string | null; data_fim: string | null; peso_inicio_kg_cab: number | null }[]> = {}
     ;(planosData || []).forEach((p: any) => {
       if (!planosPorCategoria[p.lote_categoria_id]) planosPorCategoria[p.lote_categoria_id] = []
-      planosPorCategoria[p.lote_categoria_id].push({ id: p.id, nome: p.nome, ativo: p.ativo, ordem: p.ordem, data_inicio: p.data_inicio, data_fim: p.data_fim })
+      planosPorCategoria[p.lote_categoria_id].push({ id: p.id, nome: p.nome, ativo: p.ativo, ordem: p.ordem, data_inicio: p.data_inicio, data_fim: p.data_fim, peso_inicio_kg_cab: p.peso_inicio_kg_cab })
     })
 
     // Update categorias to include new fields if not present
     const categoriasWithMeta = updatedCategorias.map((cat: any) => ({
       ...cat,
+      data_ajuste_peso: cat.data_ajuste_peso ?? undefined,
       planos_cadastrados: planosPorCategoria[cat.id] || [],
       consumo_meta_porcentagem_pesovivo: cat.consumo_meta_porcentagem_pesovivo ?? undefined,
       rc_final: cat.rc_final ?? undefined,
@@ -1174,6 +1261,12 @@ export function Lotes() {
     setMovimentacaoData(movData.data || [])
     setMaternidadeData(matData.data || [])
     setMorteData(morData.data || [])
+
+    const pesosOrig: Record<string, number | undefined> = {}
+    categoriasWithMeta.forEach((cat: any) => {
+      pesosOrig[cat.categoria.toLowerCase()] = cat.peso_vivo_atual_kg_cab ?? undefined
+    })
+    setOriginalPesos(pesosOrig)
 
     setFormData({
       nome: lote.nome,
@@ -1766,14 +1859,28 @@ export function Lotes() {
                               <NumericInput
                                 value={cat.peso_vivo_atual_kg_cab?.toString() || ''}
                                 onChange={(value) => {
+                                  const novoPeso = value ? parseFloat(value.replace(',', '.')) : undefined
                                   const updatedCategorias = [...formData.categorias]
-                                  updatedCategorias[catIndex] = { ...cat, peso_vivo_atual_kg_cab: value ? parseFloat(value.replace(',', '.')) : undefined }
+                                  updatedCategorias[catIndex] = { ...cat, peso_vivo_atual_kg_cab: novoPeso }
                                   setFormData({ ...formData, categorias: updatedCategorias })
                                 }}
                                 placeholder="0,00"
                                 decimalPlaces={2}
-                                className="border-gray-200 focus:border-accent"
+                                className={
+                                  cat.planos_cadastrados?.some(p => p.ativo) &&
+                                  cat.peso_vivo_atual_kg_cab != null &&
+                                  originalPesos[cat.categoria.toLowerCase()] != null &&
+                                  cat.peso_vivo_atual_kg_cab < (originalPesos[cat.categoria.toLowerCase()] ?? 0)
+                                    ? 'border-red-500 focus:border-red-500 bg-red-50'
+                                    : 'border-gray-200 focus:border-accent'
+                                }
                               />
+                              {cat.planos_cadastrados?.some(p => p.ativo) &&
+                                cat.peso_vivo_atual_kg_cab != null &&
+                                originalPesos[cat.categoria.toLowerCase()] != null &&
+                                cat.peso_vivo_atual_kg_cab < (originalPesos[cat.categoria.toLowerCase()] ?? 0) && (
+                                <p className="text-xs text-red-600 mt-1">O peso atual não pode ser menor que o peso original.</p>
+                              )}
                             </div>
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
@@ -2566,6 +2673,38 @@ export function Lotes() {
         cancelText="Cancelar"
         variant="warning"
       />
+
+      {pesoEditModal?.isOpen && (
+        <ConfirmModal
+          isOpen={pesoEditModal.isOpen}
+          onClose={() => {
+            setPesoEditModal(null)
+            setPendingSubmitData(null)
+          }}
+          onConfirm={() => {
+            if (!pesoEditModal || !pendingSubmitData) return
+            const today = new Date().toISOString().split('T')[0]
+            const { loteId, recalculatedCategorias } = pendingSubmitData
+            const categoriasComAjuste = recalculatedCategorias.map((cat) => {
+              const alterada = pesoEditModal.categoriasAlteradas.find(
+                (c) => c.categoria.toLowerCase() === cat.categoria.toLowerCase()
+              )
+              if (alterada) {
+                return { ...cat, data_ajuste_peso: today }
+              }
+              return cat
+            })
+            setPesoEditModal(null)
+            setPendingSubmitData(null)
+            salvarCategorias(loteId, categoriasComAjuste)
+          }}
+          title="Aviso: alteração do peso atual"
+          message={`Você está alterando o peso atual das seguintes categorias:\n\n${pesoEditModal.categoriasAlteradas.map((c) => `• ${c.categoria}: de ${c.pesoOriginal.toFixed(2).replace('.', ',')} kg para ${c.novoPeso.toFixed(2).replace('.', ',')} kg`).join('\n')}\n\nEsta alteração do peso atual vai impactar diretamente as métricas nutricionais e o cálculo de consumo do lote. A partir de agora, a projeção automática de peso passará a usar o valor informado como referência, em vez da data de início do plano.\n\nDeseja confirmar esta alteração do peso atual?`}
+          confirmText="Confirmar alteração do peso atual"
+          cancelText="Cancelar"
+          variant="warning"
+        />
+      )}
 
       {selectedCategoriaForPlanos && (
         <PlanoNutricionalModal

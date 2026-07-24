@@ -36,7 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const currentUser = await getCurrentUser()
           if (isMounted) {
             setUser(currentUser)
-            if (currentUser) updateUltimoAcesso()
+            if (currentUser) updateUltimoAcesso(session?.user?.id)
           }
         }
       } catch (error) {
@@ -73,7 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       getCurrentUser().then((currentUser) => {
         if (isMounted) {
           setUser(currentUser)
-          if (currentUser) updateUltimoAcesso()
+          if (currentUser) updateUltimoAcesso(authUserId)
         }
       })
     })
@@ -94,9 +94,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!user) return
 
-    updateUltimoAcesso()
+    updateUltimoAcesso(user.auth_id)
     const intervalId = setInterval(() => {
-      updateUltimoAcesso()
+      updateUltimoAcesso(user.auth_id)
     }, 5 * 60 * 1000)
 
     return () => clearInterval(intervalId)
