@@ -57,12 +57,12 @@ export function useDashboardStats(userId: string | undefined) {
         { count: manutencaoMaquinasCount },
         { count: problemasCount },
       ] = await Promise.all([
-        supabase.from('pastos').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
-        supabase.from('lotes').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
-        supabase.from('funcionarios').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
-        supabase.from('insumos').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
-        supabase.from('pluviometros').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
-        supabase.from('medicamentos').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
+        supabase.from('pastos').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('ativo', true),
+        supabase.from('lotes').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('ativo', true),
+        supabase.from('funcionarios').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('ativo', true),
+        supabase.from('insumos').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('ativo', true),
+        supabase.from('pluviometros').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('ativo', true),
+        supabase.from('medicamentos').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('ativo', true),
         supabase.from('registros_maternidade').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
         supabase.from('registros_enfermaria').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
         supabase.from('registros_pastagens').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId),
@@ -168,6 +168,7 @@ export function useGadoStats(userId: string | undefined) {
         .from('lote_categorias')
         .select('lote_id, quant_atual, quant_inicial, peso_vivo_atual_kg_cab, peso_entrada_kg_cab')
         .in('lote_id', loteIds)
+        .eq('ativo', true)
 
       // Agrupar categorias por lote
       const categoriasPorLote: Record<string, NonNullable<typeof categorias>[number][]> = {}
@@ -202,11 +203,15 @@ export function useGadoStats(userId: string | undefined) {
       const [{ data: mortesData }, { data: enfermariaData }, { data: causasMorte }] = await Promise.all([
         supabase.from('registros_morte').select('*').eq('fazenda_id', fazendaId),
         supabase.from('registros_enfermaria').select('*').eq('fazenda_id', fazendaId),
-        supabase.from('registros_morte').select('causa_morte').eq('fazenda_id', fazendaId).not('causa_morte', 'is', null),
+        supabase.from('registros_morte').select('causa_morte, lote_id').eq('fazenda_id', fazendaId).not('causa_morte', 'is', null),
       ])
 
+      const mortesAtivas = mortesData?.filter(r => !r.lote_id || loteIds.includes(r.lote_id)) || []
+      const enfermariaAtiva = enfermariaData?.filter(r => !r.lote_id || loteIds.includes(r.lote_id)) || []
+      const causasMorteAtivas = causasMorte?.filter(r => !r.lote_id || loteIds.includes(r.lote_id)) || []
+
       const causasCount: { [key: string]: number } = {}
-      causasMorte?.forEach(registro => {
+      causasMorteAtivas.forEach(registro => {
         if (registro.causa_morte) {
           causasCount[registro.causa_morte] = (causasCount[registro.causa_morte] || 0) + 1
         }
@@ -220,9 +225,9 @@ export function useGadoStats(userId: string | undefined) {
       return {
         totalAnimais,
         animaisPorLote,
-        mortesMesAtual: mortesData?.length || 0,
+        mortesMesAtual: mortesAtivas.length,
         pesoMedioLotes,
-        enfermariaMesAtual: enfermariaData?.length || 0,
+        enfermariaMesAtual: enfermariaAtiva.length,
         causasMorteFrequentes,
       }
     },
@@ -237,11 +242,25 @@ export function useRecentActivities(userId: string | undefined) {
       const fazendaId = await getFazendaId(userId!)
       if (!fazendaId) return []
 
-      const [{ data: maternidadeData }, { data: enfermariaData }, { data: rodeioData }] = await Promise.all([
-        supabase.from('registros_maternidade').select('id, data').eq('fazenda_id', fazendaId).order('data', { ascending: false }).limit(1),
-        supabase.from('registros_enfermaria').select('id, data').eq('fazenda_id', fazendaId).order('data', { ascending: false }).limit(1),
-        supabase.from('registros_rodeio').select('id, data').eq('fazenda_id', fazendaId).order('data', { ascending: false }).limit(1),
+      const [{ data: lotesAtivos }, { data: pastosAtivos }] = await Promise.all([
+        supabase.from('lotes').select('id').eq('fazenda_id', fazendaId).eq('ativo', true),
+        supabase.from('pastos').select('id').eq('fazenda_id', fazendaId).eq('ativo', true),
       ])
+      const loteIds = new Set(lotesAtivos?.map(l => l.id) || [])
+      const pastoIds = new Set(pastosAtivos?.map(p => p.id) || [])
+
+      const ativo = (r: { lote_id?: string | null; pasto_id?: string | null }) =>
+        (!r.lote_id || loteIds.has(r.lote_id)) && (!r.pasto_id || pastoIds.has(r.pasto_id))
+
+      const [{ data: maternidadeData }, { data: enfermariaData }, { data: rodeioData }] = await Promise.all([
+        supabase.from('registros_maternidade').select('id, data, lote_id, pasto_id').eq('fazenda_id', fazendaId).order('data', { ascending: false }).limit(20),
+        supabase.from('registros_enfermaria').select('id, data, lote_id, pasto_id').eq('fazenda_id', fazendaId).order('data', { ascending: false }).limit(20),
+        supabase.from('registros_rodeio').select('id, data, lote_id, pasto_id').eq('fazenda_id', fazendaId).order('data', { ascending: false }).limit(20),
+      ])
+
+      const maternidadeAtiva = maternidadeData?.find(ativo)
+      const enfermariaAtiva = enfermariaData?.find(ativo)
+      const rodeioAtivo = rodeioData?.find(ativo)
 
       const formatDateTime = (isoString: string): string => {
         const d = new Date(isoString)
@@ -260,14 +279,14 @@ export function useRecentActivities(userId: string | undefined) {
 
       const activities = []
 
-      if (maternidadeData?.[0]) {
-        activities.push({ id: maternidadeData[0].id, type: 'Maternidade', title: 'Registro de parto', date: formatDateTime(maternidadeData[0].data), path: `/controller/cadernetas/maternidade/${maternidadeData[0].id}` })
+      if (maternidadeAtiva) {
+        activities.push({ id: maternidadeAtiva.id, type: 'Maternidade', title: 'Registro de parto', date: formatDateTime(maternidadeAtiva.data), path: `/controller/cadernetas/maternidade/${maternidadeAtiva.id}` })
       }
-      if (enfermariaData?.[0]) {
-        activities.push({ id: enfermariaData[0].id, type: 'Enfermaria', title: 'Registro de tratamento', date: formatDateTime(enfermariaData[0].data), path: `/controller/cadernetas/enfermaria/${enfermariaData[0].id}` })
+      if (enfermariaAtiva) {
+        activities.push({ id: enfermariaAtiva.id, type: 'Enfermaria', title: 'Registro de tratamento', date: formatDateTime(enfermariaAtiva.data), path: `/controller/cadernetas/enfermaria/${enfermariaAtiva.id}` })
       }
-      if (rodeioData?.[0]) {
-        activities.push({ id: rodeioData[0].id, type: 'Rodeio', title: 'Registro de rodeio', date: formatDateTime(rodeioData[0].data), path: `/controller/cadernetas/rodeio/${rodeioData[0].id}` })
+      if (rodeioAtivo) {
+        activities.push({ id: rodeioAtivo.id, type: 'Rodeio', title: 'Registro de rodeio', date: formatDateTime(rodeioAtivo.data), path: `/controller/cadernetas/rodeio/${rodeioAtivo.id}` })
       }
 
       return activities.slice(0, 5)
