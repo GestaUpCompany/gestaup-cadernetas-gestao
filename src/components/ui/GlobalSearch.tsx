@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
+import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
 interface SearchResult {
   id: string
@@ -74,18 +75,12 @@ export function GlobalSearch() {
         return
       }
 
-      const { data: vinculos } = await supabase
-        .from('usuario_fazenda')
-        .select('fazenda_id')
-        .eq('usuario_id', user.id)
-        .eq('ativo', true)
-
-      if (!vinculos || vinculos.length === 0) {
+      const fazendaId = await getFazendaIdForUser(user.id)
+      if (!fazendaId) {
         setLoading(false)
         return
       }
 
-      const fazendaId = vinculos[0].fazenda_id
       const searchResults: SearchResult[] = []
 
       // Buscar em pastos

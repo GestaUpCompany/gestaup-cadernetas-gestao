@@ -3,6 +3,7 @@ import { useLocation, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
+import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
 interface ModuloPasto {
   id: string
@@ -58,11 +59,8 @@ export function ModulosPastos() {
   const loadModulos = async () => {
     if (!user) return
 
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
+    const _fazendaId = await getFazendaIdForUser(user.id)
+    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
     if (!vinculos || vinculos.length === 0) {
       setLoading(false)
@@ -103,11 +101,8 @@ export function ModulosPastos() {
   const loadPastos = async (moduloId?: string) => {
     if (!user) return
 
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
+    const _fazendaId = await getFazendaIdForUser(user.id)
+    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
     if (!vinculos || vinculos.length === 0) return
 
@@ -156,11 +151,8 @@ export function ModulosPastos() {
   const loadSetores = async () => {
     if (!user) return
 
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
+    const _fazendaId = await getFazendaIdForUser(user.id)
+    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
     if (!vinculos || vinculos.length === 0) return
 
@@ -206,11 +198,8 @@ export function ModulosPastos() {
       return
     }
 
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
+    const _fazendaId = await getFazendaIdForUser(user.id)
+    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
     if (!vinculos || vinculos.length === 0) {
       setSubmitting(false)

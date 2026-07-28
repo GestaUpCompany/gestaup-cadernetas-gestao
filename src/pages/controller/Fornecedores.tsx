@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton, CardItem } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
+import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
 interface Fornecedor {
   id: string
@@ -50,11 +51,8 @@ export function Fornecedores() {
     if (!user) return
 
     // Buscar fazenda vinculada
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
+    const _fazendaId = await getFazendaIdForUser(user.id)
+    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
     if (!vinculos || vinculos.length === 0) return
 
@@ -86,11 +84,8 @@ export function Fornecedores() {
     }
 
     // Buscar fazenda vinculada
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
+    const _fazendaId = await getFazendaIdForUser(user.id)
+    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
     if (!vinculos || vinculos.length === 0) {
       setSubmitting(false)

@@ -620,7 +620,7 @@ export function PlanoNutricionalModal({
                         size="sm"
                         onClick={() => handleIniciarPlano(plano.id)}
                       >
-                        Iniciar “{plano.nome}”
+                        Iniciar "{plano.nome}"
                       </Button>
                     ))}
                   </div>
@@ -636,7 +636,7 @@ export function PlanoNutricionalModal({
                           variant="secondary"
                           onClick={() => handleIniciarPlano(plano.id)}
                         >
-                          Reativar “{plano.nome}”
+                          Reativar "{plano.nome}"
                         </Button>
                       ))}
                     </div>
@@ -820,7 +820,7 @@ export function PlanoNutricionalModal({
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                     Nome do Plano
                   </label>
                   <Input
@@ -836,7 +836,7 @@ export function PlanoNutricionalModal({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                     Formulação *
                   </label>
                   <select
@@ -914,7 +914,7 @@ export function PlanoNutricionalModal({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                     Peso Meta (kg/cab) *
                   </label>
                   <NumericInput
@@ -942,7 +942,7 @@ export function PlanoNutricionalModal({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                     GMD Esperado (kg/cab/dia) *
                   </label>
                   <Input

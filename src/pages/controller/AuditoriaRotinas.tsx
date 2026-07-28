@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
+import { getFazendaIdForUser } from '../../utils/fazendaContext'
 import {
   getExecucoes,
   getResumo,
@@ -95,14 +96,8 @@ export function AuditoriaRotinas() {
 
   const loadFazendaId = async () => {
     if (!user) return
-    const { data } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
-      .single()
-
-    if (data) setFazendaId(data.fazenda_id)
+    const fazendaId = await getFazendaIdForUser(user.id)
+    if (fazendaId) setFazendaId(fazendaId)
   }
 
   const loadFuncionarios = async () => {
@@ -259,7 +254,7 @@ export function AuditoriaRotinas() {
       <Card className="bg-white p-5">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Funcionário</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Funcionário</label>
             <Select
               options={funcionarioOptions}
               value={filtros.funcionarioId}
@@ -267,7 +262,7 @@ export function AuditoriaRotinas() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Data início</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data início</label>
             <Input
               type="date"
               value={filtros.dataInicio}
@@ -276,7 +271,7 @@ export function AuditoriaRotinas() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Data fim</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data fim</label>
             <Input
               type="date"
               value={filtros.dataFim}
@@ -285,7 +280,7 @@ export function AuditoriaRotinas() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Caderneta</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Caderneta</label>
             <Select
               options={CADERNETA_OPTIONS}
               value={filtros.cadernetaId}
@@ -293,7 +288,7 @@ export function AuditoriaRotinas() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Status</label>
             <Select
               options={STATUS_OPTIONS}
               value={filtros.status}
@@ -522,7 +517,7 @@ export function AuditoriaRotinas() {
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Funcionário</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Funcionário</label>
             <Select
               options={funcionarioOptions}
               value={dispensarModal.funcionarioId}
@@ -530,7 +525,7 @@ export function AuditoriaRotinas() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Caderneta</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Caderneta</label>
             <Select
               options={CADERNETA_OPTIONS}
               value={dispensarModal.cadernetaId}
@@ -538,7 +533,7 @@ export function AuditoriaRotinas() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Data</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data</label>
             <Input
               type="date"
               value={dispensarModal.data}
@@ -547,7 +542,7 @@ export function AuditoriaRotinas() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Motivo</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Motivo</label>
             <textarea
               value={dispensarModal.motivo}
               onChange={(e) => setDispensarModal((prev) => ({ ...prev, motivo: e.target.value }))}

@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { Card, Button, Input } from '../../components/ui'
 import { supabase } from '../../services/supabaseClient'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
 interface Lote {
   id: string
@@ -31,11 +32,8 @@ export function RelatorioGado() {
   const loadLotes = async () => {
     if (!user) return
 
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
+    const _fazendaId = await getFazendaIdForUser(user.id)
+    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
     if (!vinculos || vinculos.length === 0) return
 

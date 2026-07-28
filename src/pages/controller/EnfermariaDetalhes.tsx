@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card } from '../../components/ui'
 import { formatDate } from '../../utils/formatDate'
+import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
 interface RegistroEnfermaria {
   id: string
@@ -43,11 +44,8 @@ export function EnfermariaDetalhes() {
   const loadRegistro = async () => {
     if (!id || !user) return
 
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
+    const _fazendaId = await getFazendaIdForUser(user.id)
+    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
     if (!vinculos || vinculos.length === 0) return
 

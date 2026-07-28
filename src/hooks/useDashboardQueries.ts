@@ -1,13 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../services/supabaseClient'
+import { getFazendaIdForUser } from '../utils/fazendaContext'
 
 async function getFazendaId(userId: string): Promise<string | null> {
-  const { data: vinculos } = await supabase
-    .from('usuario_fazenda')
-    .select('fazenda_id')
-    .eq('usuario_id', userId)
-    .eq('ativo', true)
-  return vinculos?.[0]?.fazenda_id ?? null
+  return getFazendaIdForUser(userId)
 }
 
 export function useFazenda(userId: string | undefined) {
@@ -275,6 +271,28 @@ export function useRecentActivities(userId: string | undefined) {
       }
 
       return activities.slice(0, 5)
+    },
+  })
+}
+
+export function useFormulacoesBackfillAlert(userId: string | undefined) {
+  return useQuery({
+    queryKey: ['formulacoes-backfill-alert', userId],
+    enabled: !!userId,
+    queryFn: async () => {
+      const fazendaId = await getFazendaId(userId!)
+      if (!fazendaId) return [] as { id: string; nome: string; categoria: string | null; categoria_inferida_observacao: string | null }[]
+
+      const { data, error } = await supabase
+        .from('formulacoes')
+        .select('id, nome, categoria, categoria_inferida_observacao')
+        .eq('fazenda_id', fazendaId)
+        .eq('ativo', true)
+        .eq('categoria_inferida_automaticamente', true)
+        .order('nome', { ascending: true })
+
+      if (error) throw error
+      return (data as { id: string; nome: string; categoria: string | null; categoria_inferida_observacao: string | null }[]) || []
     },
   })
 }

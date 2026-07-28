@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton, ConfirmModal, CardItem } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
+import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
 const tiposComuns = [
   'Antibiótico',
@@ -62,11 +63,8 @@ export function Medicamentos() {
   const loadMedicamentos = async () => {
     if (!user) return
 
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
+    const _fazendaId = await getFazendaIdForUser(user.id)
+    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
     if (!vinculos || vinculos.length === 0) return
 
@@ -101,11 +99,8 @@ export function Medicamentos() {
       return
     }
 
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
+    const _fazendaId = await getFazendaIdForUser(user.id)
+    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
     if (!vinculos || vinculos.length === 0) {
       setSubmitting(false)

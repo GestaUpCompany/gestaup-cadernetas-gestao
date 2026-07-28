@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton, ConfirmModal, CardItem } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
+import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
 function fmt(n: number, digits = 2): string {
   return n.toFixed(digits).replace('.', ',')
@@ -34,6 +35,8 @@ interface Dieta {
   custo_mn_tonelada?: number
   consumo_ms_kg_cab_dia?: number
   ativo: boolean
+  categoria_inferida_automaticamente?: boolean
+  categoria_inferida_observacao?: string
   created_at: string
   updated_at: string
 }
@@ -152,11 +155,8 @@ export function Formulacoes() {
 
   const loadFormulacoes = async () => {
     if (!user) return
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
+    const _fazendaId = await getFazendaIdForUser(user.id)
+    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
     if (!vinculos || vinculos.length === 0) return
     const fazendaId = vinculos[0].fazenda_id
 
@@ -176,11 +176,8 @@ export function Formulacoes() {
 
   const loadInsumos = async () => {
     if (!user) return
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
+    const _fazendaId = await getFazendaIdForUser(user.id)
+    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
     if (!vinculos || vinculos.length === 0) return
     const fazendaId = vinculos[0].fazenda_id
 
@@ -291,11 +288,8 @@ export function Formulacoes() {
       return
     }
 
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
+    const _fazendaId = await getFazendaIdForUser(user.id)
+    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
     if (!vinculos || vinculos.length === 0) {
       setSubmitting(false)
@@ -326,6 +320,8 @@ export function Formulacoes() {
       custo_mn_tonelada: custoTotal,
       consumo_ms_kg_cab_dia: consumoMSTotal,
       ativo: formData.ativo,
+      categoria_inferida_automaticamente: false,
+      categoria_inferida_observacao: null,
     }
 
     let error
@@ -511,7 +507,7 @@ export function Formulacoes() {
             {/* Basic info */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Nome *</label>
                 <Input
                   type="text"
                   value={formData.nome}
@@ -522,7 +518,7 @@ export function Formulacoes() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Tipo</label>
                 <select
                   value={formData.tipo}
                   onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
@@ -538,7 +534,18 @@ export function Formulacoes() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Categoria *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Categoria *</label>
+                {editingFormulacao?.categoria_inferida_automaticamente && (
+                  <div className="mb-2 p-3 rounded-lg bg-amber-50 border border-amber-300 text-xs text-amber-900">
+                    <p className="font-semibold mb-1">Categoria preenchida automaticamente</p>
+                    <p>
+                      A categoria desta formulação foi inferida automaticamente a partir do nome e parâmetros. É fortemente recomendado que você confirme manualmente o valor correto abaixo.
+                    </p>
+                    {editingFormulacao.categoria_inferida_observacao && (
+                      <p className="mt-2 italic">Observação: {editingFormulacao.categoria_inferida_observacao}</p>
+                    )}
+                  </div>
+                )}
                 <select
                   value={formData.categoria}
                   onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
@@ -560,7 +567,7 @@ export function Formulacoes() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Descrição</label>
                 <Input
                   type="text"
                   value={formData.descricao}
@@ -574,7 +581,7 @@ export function Formulacoes() {
             {/* Parameters */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Meta Consumo MS (%PV)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Meta Consumo MS (%PV)</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -585,7 +592,7 @@ export function Formulacoes() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Peso Vivo Médio (kg)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Peso Vivo Médio (kg)</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -596,7 +603,7 @@ export function Formulacoes() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">GMD Planejado (kg/Cab/Dia)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">GMD Planejado (kg/Cab/Dia)</label>
                 <Input
                   type="text"
                   inputMode="decimal"
@@ -611,7 +618,7 @@ export function Formulacoes() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Sistema de Produção</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Sistema de Produção</label>
                 <select
                   value={formData.sistema_producao}
                   onChange={(e) => setFormData({ ...formData, sistema_producao: e.target.value })}

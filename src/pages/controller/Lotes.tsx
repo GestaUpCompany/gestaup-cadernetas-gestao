@@ -6,6 +6,7 @@ import { Button, Card, Input, NumericInput, CardSkeleton, ConfirmModal, CardItem
 import { PlanoNutricionalModal } from '../../components/plano-nutricional/PlanoNutricionalModal'
 import { PlanoNutricionalDraftModal, PlanoRascunho } from '../../components/plano-nutricional/PlanoNutricionalDraftModal'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
+import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
 interface LoteCategoria {
   id?: string
@@ -233,11 +234,8 @@ export function Lotes() {
   useEffect(() => {
     const loadAuxiliaryData = async () => {
       if (!user) return
-      const { data: vinculos } = await supabase
-        .from('usuario_fazenda')
-        .select('fazenda_id')
-        .eq('usuario_id', user.id)
-        .eq('ativo', true)
+      const _fazendaId = await getFazendaIdForUser(user.id)
+    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
       if (!vinculos || vinculos.length === 0) return
 
@@ -695,11 +693,8 @@ export function Lotes() {
     if (!user) return
 
     // Buscar fazenda vinculada
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
+    const _fazendaId = await getFazendaIdForUser(user.id)
+    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
     if (!vinculos || vinculos.length === 0) return
 
@@ -823,11 +818,8 @@ export function Lotes() {
     }
 
     // Buscar fazenda vinculada
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
+    const _fazendaId = await getFazendaIdForUser(user.id)
+    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
     if (!vinculos || vinculos.length === 0) {
       setSubmitting(false)
@@ -1480,7 +1472,7 @@ export function Lotes() {
               <h4 className="text-lg font-semibold text-gray-800 mb-4">Identificação Básica</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                     Nome <span className="text-red-500">*</span>
                   </label>
                   <Input
@@ -1493,7 +1485,7 @@ export function Lotes() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                     Pasto <span className="text-red-500">*</span>
                   </label>
                   <select
@@ -1509,7 +1501,7 @@ export function Lotes() {
                   </select>
                 </div>
                 <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                     Sistema de Produção <span className="text-red-500">*</span>
                   </label>
                   <select
@@ -1529,7 +1521,7 @@ export function Lotes() {
                   </select>
                 </div>
                 <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                     Meta de Intervalo de Rodeio (dias)
                   </label>
                   <NumericInput
@@ -1543,7 +1535,7 @@ export function Lotes() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                   Categorias <span className="text-red-500">*</span>
                 </label>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
@@ -1573,7 +1565,7 @@ export function Lotes() {
               </div>
 
               <div className="w-1/4 mt-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                   Outra Categoria
                 </label>
                 <Input
@@ -1622,7 +1614,7 @@ export function Lotes() {
                         </h6>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                               Raça <span className="text-red-500">*</span>
                             </label>
                             <select
@@ -1642,7 +1634,7 @@ export function Lotes() {
                             </select>
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                               Sexo <span className="text-red-500">*</span>
                             </label>
                             <select
@@ -1661,7 +1653,7 @@ export function Lotes() {
                             </select>
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                               Idade (meses) <span className="text-red-500">*</span>
                             </label>
                             <Input
@@ -1687,7 +1679,7 @@ export function Lotes() {
                         </h6>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                           <div className="col-span-1">
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                               Quant. Inicial (cab)
                             </label>
                             <Input
@@ -1704,7 +1696,7 @@ export function Lotes() {
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                               Quant. Atual (cab)
                             </label>
                             <Input
@@ -1720,7 +1712,7 @@ export function Lotes() {
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                               Data Entrada <span className="text-red-500">*</span>
                             </label>
                             <Input
@@ -1738,7 +1730,7 @@ export function Lotes() {
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2 mt-2">
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                               Peso Entrada (kg/cab) <span className="text-red-500">*</span>
                             </label>
                             <NumericInput
@@ -1755,7 +1747,7 @@ export function Lotes() {
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                               RC Inicial (%)
                             </label>
                             <Input
@@ -1772,7 +1764,7 @@ export function Lotes() {
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                               Peso Entrada (@/cab)
                             </label>
                             <Input
@@ -1787,7 +1779,7 @@ export function Lotes() {
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2 mt-2">
                           <div className="col-span-1 sm:col-span-2 lg:col-span-4 xl:col-span-5">
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                               Plano Nutricional <span className="text-red-500">*</span>
                             </label>
 
@@ -1853,7 +1845,7 @@ export function Lotes() {
                           <span className="text-sm font-bold text-gray-700 mb-2 block border-b border-gray-300 pb-1">Atual</span>
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                              <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                                 Peso Vivo Atual (kg/cab)
                               </label>
                               <NumericInput
@@ -1883,7 +1875,7 @@ export function Lotes() {
                               )}
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                              <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                                 RC Atual (%)
                               </label>
                               <NumericInput
@@ -1898,7 +1890,7 @@ export function Lotes() {
                               />
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                              <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                                 Peso Vivo Atual (@/cab)
                               </label>
                               <Input
@@ -1910,7 +1902,7 @@ export function Lotes() {
                               />
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                              <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                                 Produção Atual (@/cab)
                               </label>
                               <Input
@@ -1922,7 +1914,7 @@ export function Lotes() {
                               />
                             </div>
                             <div className="col-span-1">
-                              <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                              <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                                 Período (dias)
                               </label>
                               <Input
@@ -1941,7 +1933,7 @@ export function Lotes() {
                           <span className="text-sm font-bold text-gray-700 mb-2 block border-b border-gray-300 pb-1">Meta</span>
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                              <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                                 Peso Vivo Meta (kg/cab)
                               </label>
                               <NumericInput
@@ -1953,7 +1945,7 @@ export function Lotes() {
                               />
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                              <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                                 RC Final (%)
                               </label>
                               <NumericInput
@@ -1969,7 +1961,7 @@ export function Lotes() {
                               />
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                              <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                                 Peso Venda Meta (@/cab)
                               </label>
                               <Input
@@ -1982,7 +1974,7 @@ export function Lotes() {
                               />
                             </div>
                             <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                              <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                              <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                                 Produção Projetada (@/cab)
                               </label>
                               <Input
@@ -1994,7 +1986,7 @@ export function Lotes() {
                               />
                             </div>
                             <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                              <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                              <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                                 Venda Total Projetada (@/Lote/Categoria)
                               </label>
                               <Input
@@ -2008,7 +2000,7 @@ export function Lotes() {
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2 mt-2">
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                              <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                                 Data Meta Projetada
                               </label>
                               <Input
@@ -2019,7 +2011,7 @@ export function Lotes() {
                               />
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                              <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                                 Dias Restantes Meta
                               </label>
                               <Input
@@ -2041,7 +2033,7 @@ export function Lotes() {
                         </h6>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                               Preço Entrada (R$/kg)
                             </label>
                             <NumericInput
@@ -2057,7 +2049,7 @@ export function Lotes() {
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                               Preço Entrada (R$/@)
                             </label>
                             <Input
@@ -2069,7 +2061,7 @@ export function Lotes() {
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                               Ágio (%)
                             </label>
                             <Input
@@ -2081,7 +2073,7 @@ export function Lotes() {
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                               Preço Entrada (R$/cab)
                             </label>
                             <Input
@@ -2094,7 +2086,7 @@ export function Lotes() {
                             />
                           </div>
                           <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                               Custo Operacional (R$/cab/dia)
                             </label>
                             <NumericInput
@@ -2113,7 +2105,7 @@ export function Lotes() {
                         
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2 mt-2">
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                               Custo Frete (R$/cab)
                             </label>
                             <NumericInput
@@ -2130,7 +2122,7 @@ export function Lotes() {
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                               Custo Comissão (R$/cab)
                             </label>
                             <NumericInput
@@ -2147,7 +2139,7 @@ export function Lotes() {
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                               Custo Sanidade (R$/cab)
                             </label>
                             <NumericInput
@@ -2164,7 +2156,7 @@ export function Lotes() {
                             />
                           </div>
                           <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                               Custo Identificação/Rastreabilidade (R$/cab)
                             </label>
                             <NumericInput
@@ -2184,7 +2176,7 @@ export function Lotes() {
                         
                         <div className="mt-2 flex flex-col sm:flex-row gap-2">
                           <div className="flex-1 min-w-0">
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                               Custo Total Entrada (R$/cab)
                             </label>
                             <Input
@@ -2196,7 +2188,7 @@ export function Lotes() {
                             />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                               Custo Total Entrada (R$/Lote)
                             </label>
                             <Input
@@ -2282,7 +2274,7 @@ export function Lotes() {
                         </div>
                         
                         <div className="mt-4">
-                          <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                             Margem de Lucro (%)
                           </label>
                           <NumericInput
@@ -2434,7 +2426,7 @@ export function Lotes() {
               <h4 className="text-lg font-semibold text-gray-800 mb-4">Informações Administrativas</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                     Produtor Rural
                   </label>
                   <Input
@@ -2446,7 +2438,7 @@ export function Lotes() {
                   />
                 </div>
                 <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                     Propriedade de Origem
                   </label>
                   <Input
@@ -2458,7 +2450,7 @@ export function Lotes() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                     N° Contrato
                   </label>
                   <Input
@@ -2470,7 +2462,7 @@ export function Lotes() {
                   />
                 </div>
                 <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                     Mês de Competência
                   </label>
                   <Input
@@ -2488,7 +2480,7 @@ export function Lotes() {
               <h4 className="text-lg font-semibold text-gray-800 mb-4">SISBOV e Logística</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                 <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                     Data Liberação SISBOV
                   </label>
                   <Input
@@ -2499,7 +2491,7 @@ export function Lotes() {
                   />
                 </div>
                 <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                     Período Liberação SISBOV
                   </label>
                   <Input
@@ -2512,7 +2504,7 @@ export function Lotes() {
                   />
                 </div>
                 <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                     Data Embarque Prevista
                   </label>
                   <Input

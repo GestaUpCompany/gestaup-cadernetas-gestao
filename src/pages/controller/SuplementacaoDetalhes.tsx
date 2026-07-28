@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card } from '../../components/ui'
+import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
 interface RegistroSuplementacao {
   id: string
@@ -53,11 +54,8 @@ export function SuplementacaoDetalhes() {
   const handleEditFormulacao = async () => {
     if (!registro?.formulacao || !user) return
 
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
+    const _fazendaId = await getFazendaIdForUser(user.id)
+    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
     if (!vinculos || vinculos.length === 0) return
 
@@ -82,11 +80,8 @@ export function SuplementacaoDetalhes() {
   const loadRegistro = async () => {
     if (!id || !user) return
 
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
+    const _fazendaId = await getFazendaIdForUser(user.id)
+    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
     if (!vinculos || vinculos.length === 0) return
 

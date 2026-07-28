@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
+import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
 interface MaquinaVeiculo {
   id: string
@@ -65,11 +66,8 @@ export function MaquinasVeiculos() {
     if (!user) return
 
     // Buscar fazenda vinculada usando auth_id
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
+    const _fazendaId = await getFazendaIdForUser(user.id)
+    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
     if (!vinculos || vinculos.length === 0) return
 
@@ -100,11 +98,8 @@ export function MaquinasVeiculos() {
     }
 
     // Buscar fazenda vinculada
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
+    const _fazendaId = await getFazendaIdForUser(user.id)
+    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
     if (!vinculos || vinculos.length === 0) {
       setSubmitting(false)
@@ -323,7 +318,7 @@ export function MaquinasVeiculos() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Nome *</label>
                 <Input
                   value={formData.nome}
                   onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
@@ -331,7 +326,7 @@ export function MaquinasVeiculos() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Tipo *</label>
                 <select
                   value={formData.tipo}
                   onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
@@ -344,7 +339,7 @@ export function MaquinasVeiculos() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Categoria *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Categoria *</label>
                 <select
                   value={formData.categoria}
                   onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
@@ -358,14 +353,14 @@ export function MaquinasVeiculos() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Modelo</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Modelo</label>
                 <Input
                   value={formData.modelo}
                   onChange={(e) => setFormData({ ...formData, modelo: e.target.value })}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Ano</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Ano</label>
                 <Input
                   type="number"
                   value={formData.ano}
@@ -373,14 +368,14 @@ export function MaquinasVeiculos() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Placa</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Placa</label>
                 <Input
                   value={formData.placa}
                   onChange={(e) => setFormData({ ...formData, placa: e.target.value })}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Combustível</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Tipo de Combustível</label>
                 <select
                   value={formData.tipo_combustivel}
                   onChange={(e) => setFormData({ ...formData, tipo_combustivel: e.target.value })}
@@ -395,7 +390,7 @@ export function MaquinasVeiculos() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Capacidade (L)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Capacidade (L)</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -404,7 +399,7 @@ export function MaquinasVeiculos() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Horímetro (h)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Horímetro (h)</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -413,7 +408,7 @@ export function MaquinasVeiculos() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Quilometragem (km)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Quilometragem (km)</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -422,7 +417,7 @@ export function MaquinasVeiculos() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Custo por Hora (R$)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Custo por Hora (R$)</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -431,7 +426,7 @@ export function MaquinasVeiculos() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Custo por km (R$)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Custo por km (R$)</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -440,14 +435,14 @@ export function MaquinasVeiculos() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Operador Padrão</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Operador Padrão</label>
                 <Input
                   value={formData.operador_padrao}
                   onChange={(e) => setFormData({ ...formData, operador_padrao: e.target.value })}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Status *</label>
                 <select
                   value={formData.status}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value })}
@@ -460,7 +455,7 @@ export function MaquinasVeiculos() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Última Manutenção</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Última Manutenção</label>
                 <Input
                   type="date"
                   value={formData.data_ultima_manutencao}
@@ -468,7 +463,7 @@ export function MaquinasVeiculos() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Próxima Manutenção</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Próxima Manutenção</label>
                 <Input
                   type="date"
                   value={formData.data_proxima_manutencao}
@@ -477,7 +472,7 @@ export function MaquinasVeiculos() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Observações</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Observações</label>
               <textarea
                 value={formData.observacoes}
                 onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}

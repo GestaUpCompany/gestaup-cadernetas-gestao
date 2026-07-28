@@ -20,6 +20,7 @@ import {
 import { getRotinas, createRotina, updateRotina, deleteRotina } from '../../services/rotinasService'
 import { CADERNETAS } from '../../utils/cadernetas'
 import { Rotina, rotinaEstaAtivaHoje, getRotinasDoDia } from '../../utils/rotinas'
+import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
 const CHECKLIST_CADERNETAS = ['bebedouros', 'suplementacao', 'rodeio', 'pastagens']
 
@@ -131,15 +132,8 @@ export function Rotinas() {
 
   const loadFazendaId = async () => {
     if (!user) return
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
-
-    if (vinculos && vinculos.length > 0) {
-      setFazendaId(vinculos[0].fazenda_id)
-    }
+    const fazendaId = await getFazendaIdForUser(user.id)
+    if (fazendaId) setFazendaId(fazendaId)
   }
 
   const loadFuncionarios = async () => {
@@ -861,7 +855,7 @@ export function Rotinas() {
           </div>
 
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
               Tipo de regra
             </label>
             <select
@@ -883,7 +877,7 @@ export function Rotinas() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                 Data de início <span className="text-red-500">*</span>
               </label>
               <Input
@@ -897,7 +891,7 @@ export function Rotinas() {
               )}
             </div>
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                 Data de fim
               </label>
               <Input
@@ -967,7 +961,7 @@ export function Rotinas() {
       >
         <form onSubmit={handleRotinaSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
               Funcionário <span className="text-red-500">*</span>
             </label>
             <select
@@ -1058,7 +1052,7 @@ export function Rotinas() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                 Data de início <span className="text-red-500">*</span>
               </label>
               <Input
@@ -1072,7 +1066,7 @@ export function Rotinas() {
               )}
             </div>
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                 Data de fim
               </label>
               <Input

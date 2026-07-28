@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { createFazenda, createFazendaWithController } from '../../services/fazendasService'
+import { getGrupos, GrupoFazenda } from '../../services/gruposService'
 import { uploadLogo } from '../../services/storageService'
 import { Button, Input, Card } from '../../components/ui'
 
@@ -12,6 +13,9 @@ export function NovaFazenda() {
   const [logoPreview, setLogoPreview] = useState<string>('')
   const [showCredentials, setShowCredentials] = useState(false)
   const [credentials, setCredentials] = useState<{ email: string; senha: string } | null>(null)
+
+  const [grupos, setGrupos] = useState<GrupoFazenda[]>([])
+  const [selectedGrupo, setSelectedGrupo] = useState<string>('')
 
   const [formData, setFormData] = useState({
     acesso_id: '',
@@ -93,6 +97,7 @@ export function NovaFazenda() {
         acesso_confinamento: formData.acesso_confinamento,
         controller_email: formData.controller_email,
         controller_nome: `Controller ${formData.nome}`,
+        grupo_id: selectedGrupo || undefined,
       })
 
       if (result.error) {
@@ -119,6 +124,7 @@ export function NovaFazenda() {
         ativo: formData.ativo,
         controle_acesso_habilitado: false,
         acesso_confinamento: formData.acesso_confinamento,
+        grupo_id: selectedGrupo || undefined,
       })
 
       if (!result) {
@@ -146,6 +152,10 @@ export function NovaFazenda() {
       reader.readAsDataURL(file)
     }
   }
+
+  useEffect(() => {
+    getGrupos().then(setGrupos)
+  }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -270,6 +280,20 @@ export function NovaFazenda() {
             onChange={handleChange}
             placeholder="ID da planilha para integração"
           />
+
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">Grupo de Fazendas</label>
+            <select
+              value={selectedGrupo}
+              onChange={(e) => setSelectedGrupo(e.target.value)}
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-primary"
+            >
+              <option value="">Sem grupo</option>
+              {grupos.filter(g => g.ativo).map((g) => (
+                <option key={g.id} value={g.id}>{g.nome}</option>
+              ))}
+            </select>
+          </div>
 
           <div className="border-t border-gray-200 pt-4 mt-4">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Criação de Usuário Controller</h3>

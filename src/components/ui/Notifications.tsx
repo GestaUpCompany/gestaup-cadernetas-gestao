@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
+import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
 interface Notification {
   id: string
@@ -56,18 +57,12 @@ export function Notifications() {
 
     setLoading(true)
 
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
+    const fazendaId = await getFazendaIdForUser(user.id)
 
-    if (!vinculos || vinculos.length === 0) {
+    if (!fazendaId) {
       setLoading(false)
       return
     }
-
-    const fazendaId = vinculos[0].fazenda_id
 
     const { data, error } = await supabase
       .from('notificacoes')

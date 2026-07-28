@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Card, CardSkeleton } from '../../components/ui'
+import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
 interface HistoricoItem {
   historico_id: string
@@ -72,11 +73,8 @@ export function HistoricoOcupacao() {
     setLoading(true)
 
     // Buscar fazenda vinculada ao usuário
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
+    const _fazendaId = await getFazendaIdForUser(user.id)
+    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
     if (!vinculos || vinculos.length === 0) {
       setHistorico([])

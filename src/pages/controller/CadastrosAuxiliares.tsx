@@ -6,6 +6,7 @@ import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { updateFazenda } from '../../services/fazendasService'
 import { hashPin } from '../../utils/pinHash'
 import { CADERNETAS } from '../../utils/cadernetas'
+import { getFazendaIdForUser } from '../../utils/fazendaContext'
 import * as XLSX from 'xlsx'
 
 interface TabConfig {
@@ -375,11 +376,8 @@ export function CadastrosAuxiliares() {
 
   const getFazendaId = async (): Promise<string | null> => {
     if (!user) return null
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
+    const _fazendaId = await getFazendaIdForUser(user.id)
+    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
     if (!vinculos || vinculos.length === 0) return null
     return vinculos[0].fazenda_id
@@ -696,11 +694,8 @@ export function CadastrosAuxiliares() {
         return
       }
 
-      const { data: vinculos } = await supabase
-        .from('usuario_fazenda')
-        .select('fazenda_id')
-        .eq('usuario_id', user.id)
-        .eq('ativo', true)
+      const _fazendaId = await getFazendaIdForUser(user.id)
+    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
       if (!vinculos || vinculos.length === 0) {
         setImportError('Nenhuma fazenda vinculada ao usuário')
@@ -1045,7 +1040,7 @@ export function CadastrosAuxiliares() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                 {currentTab.fields.filter((field) => !field.showIf || field.showIf(state.formData)).map((field) => (
                   <div key={field.name}>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                       {field.label} {field.required && <span className="text-red-500">*</span>}
                     </label>
                     {field.name === 'setor_id' ? (
@@ -1109,7 +1104,7 @@ export function CadastrosAuxiliares() {
                     {funcionarioRbac.acessa_app && (
                       <div className="space-y-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                          <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                             PIN {state.editingItem?.pin_hash ? '(deixe em branco para manter)' : '*'}
                           </label>
                           <Input

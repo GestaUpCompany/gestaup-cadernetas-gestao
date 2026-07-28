@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton, Select } from '../../components/ui'
+import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
 interface Individuo {
   id: string
@@ -128,14 +129,8 @@ export function Individuos() {
       let fazendaId: string | null = null
 
       if (!isAdmin) {
-        const { data: vinculos } = await supabase
-          .from('usuario_fazenda')
-          .select('fazenda_id')
-          .eq('usuario_id', user.id)
-          .eq('ativo', true)
-          .single()
-
-        fazendaId = vinculos?.fazenda_id || null
+        const _fazendaId = await getFazendaIdForUser(user.id)
+        fazendaId = _fazendaId
         if (!fazendaId || !isMounted) return
       }
 
@@ -216,11 +211,8 @@ export function Individuos() {
     let fazendaId: string | null = null
 
     if (!isAdmin) {
-      const { data: vinculos } = await supabase
-        .from('usuario_fazenda')
-        .select('fazenda_id')
-        .eq('usuario_id', user.id)
-        .eq('ativo', true)
+      const _fazendaId = await getFazendaIdForUser(user.id)
+    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
       if (!vinculos || vinculos.length === 0) return
       fazendaId = vinculos[0].fazenda_id

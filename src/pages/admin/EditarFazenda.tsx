@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getFazendaById, updateFazenda } from '../../services/fazendasService'
+import { getGrupos, GrupoFazenda } from '../../services/gruposService'
 import { uploadLogo, deleteLogo } from '../../services/storageService'
 import { Button, Input, Card } from '../../components/ui'
 
@@ -12,6 +13,9 @@ export function EditarFazenda() {
   const [error, setError] = useState('')
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreview, setLogoPreview] = useState<string>('')
+
+  const [grupos, setGrupos] = useState<GrupoFazenda[]>([])
+  const [selectedGrupo, setSelectedGrupo] = useState<string>('')
 
   const [formData, setFormData] = useState({
     acesso_id: '',
@@ -35,12 +39,16 @@ export function EditarFazenda() {
     loadFazenda()
   }, [id])
 
+  useEffect(() => {
+    getGrupos().then(setGrupos)
+  }, [])
+
   const loadFazenda = async () => {
     if (!id) return
 
     setLoading(true)
     const fazenda = await getFazendaById(id)
-    
+
     if (fazenda) {
       setFormData({
         acesso_id: fazenda.acesso_id,
@@ -54,6 +62,7 @@ export function EditarFazenda() {
         ativo: fazenda.ativo,
         acesso_confinamento: fazenda.acesso_confinamento,
       })
+      setSelectedGrupo(fazenda.grupo_id || '')
       setLogoPreview(fazenda.logo_url || '')
     }
 
@@ -116,6 +125,7 @@ export function EditarFazenda() {
       logo_url: logoUrl || undefined,
       ativo: formData.ativo,
       acesso_confinamento: formData.acesso_confinamento,
+      grupo_id: selectedGrupo || null,
     })
 
     setSaving(false)
@@ -260,6 +270,20 @@ export function EditarFazenda() {
                 placeholder="ID da planilha para integração"
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">Grupo de Fazendas</label>
+            <select
+              value={selectedGrupo}
+              onChange={(e) => setSelectedGrupo(e.target.value)}
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-primary"
+            >
+              <option value="">Sem grupo</option>
+              {grupos.filter(g => g.ativo).map((g) => (
+                <option key={g.id} value={g.id}>{g.nome}</option>
+              ))}
+            </select>
           </div>
 
           {/* Configurações de Acesso */}

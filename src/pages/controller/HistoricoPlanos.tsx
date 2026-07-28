@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
+import { getFazendaIdForUser } from '../../utils/fazendaContext'
 import { Card, CardSkeleton, Button, Modal } from '../../components/ui'
 import * as XLSX from 'xlsx'
 import { gerarRelatorioPlanosPDF } from '../../utils/relatorioPlanosPDF'
@@ -75,11 +76,8 @@ export function HistoricoPlanos() {
 
   const carregarRegistros = async () => {
     if (!user) return
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
+    const _fazendaId = await getFazendaIdForUser(user.id)
+    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
     if (!vinculos || vinculos.length === 0) {
       setLoading(false)
@@ -173,14 +171,14 @@ export function HistoricoPlanos() {
     try {
       let nomeFazenda = 'Fazenda'
       if (user) {
-        const { data: vinculos } = await supabase
-          .from('usuario_fazenda')
-          .select('fazenda_id, fazendas:fazenda_id(nome)')
-          .eq('usuario_id', user.id)
-          .eq('ativo', true)
-          .limit(1)
-        if (vinculos && vinculos.length > 0) {
-          nomeFazenda = (vinculos[0] as any).fazendas?.nome || 'Fazenda'
+        const fazendaId = await getFazendaIdForUser(user.id)
+        if (fazendaId) {
+          const { data: fazenda } = await supabase
+            .from('fazendas')
+            .select('nome')
+            .eq('id', fazendaId)
+            .single()
+          if (fazenda) nomeFazenda = fazenda.nome
         }
       }
       await gerarRelatorioPlanosPDF(planosParaPDF, nomeFazenda, { lote: filtroLote, categoria: filtroCategoria })

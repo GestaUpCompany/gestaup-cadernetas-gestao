@@ -51,6 +51,7 @@ export interface Fazenda {
   ativo: boolean
   controle_acesso_habilitado: boolean
   acesso_confinamento: boolean
+  grupo_id?: string | null
   created_at: string
   updated_at: string
 }
@@ -142,6 +143,7 @@ export interface CreateFazendaWithControllerParams {
   acesso_confinamento: boolean
   controller_email: string
   controller_nome?: string
+  grupo_id?: string
 }
 
 export interface CreateFazendaWithControllerResult {
@@ -168,6 +170,7 @@ export async function createFazendaWithController(
     ativo: params.ativo,
     controle_acesso_habilitado: false,
     acesso_confinamento: params.acesso_confinamento,
+    grupo_id: params.grupo_id,
   })
 
   if (!fazenda) {

@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useFazenda } from '../../hooks/useDashboardQueries'
 import { Header } from './Header'
+import { FarmSwitcher } from './FarmSwitcher'
 import { Breadcrumbs } from '../ui'
 import { KeyboardHelpModal } from '../ui/KeyboardHelpModal'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
@@ -41,6 +42,7 @@ const menuStructure: MenuItem[] = [
       { label: 'Lotes', path: '/controller/lotes' },
       { label: 'Indivíduos', path: '/controller/individuos' },
       { label: 'Cadastros Auxiliares', path: '/controller/cadastros-auxiliares' },
+      { label: 'Faixas de Categorias', path: '/controller/faixas-categorias' },
     ],
   },
   {
@@ -302,6 +304,7 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
               </div>
             </div>
           )}
+          {!isSidebarCollapsed && <FarmSwitcher />}
         </aside>
 
         {/* Mobile Menu */}

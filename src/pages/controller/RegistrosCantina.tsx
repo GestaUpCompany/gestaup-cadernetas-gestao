@@ -5,6 +5,7 @@ import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton } from '../../components/ui'
 import { exportToCSV } from '../../utils/exportCSV'
 import { formatDateTime } from '../../utils/formatDate'
+import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
 interface RegistroCantina {
   id: string
@@ -45,11 +46,8 @@ export function RegistrosCantina() {
   const loadRegistros = async () => {
     if (!user) return
 
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
+    const _fazendaId = await getFazendaIdForUser(user.id)
+    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
     if (!vinculos || vinculos.length === 0) return
 
@@ -125,7 +123,7 @@ export function RegistrosCantina() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <div className="sm:col-span-2">
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Buscar</label>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Buscar</label>
             <Input
               type="text"
               placeholder="Quem cozinhou, quem ajudou, cozinheiras, refeições..."
@@ -135,7 +133,7 @@ export function RegistrosCantina() {
             />
           </div>
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Data Início</label>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data Início</label>
             <Input
               type="date"
               value={dataInicio}
@@ -144,7 +142,7 @@ export function RegistrosCantina() {
             />
           </div>
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Data Fim</label>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data Fim</label>
             <Input
               type="date"
               value={dataFim}
@@ -153,7 +151,7 @@ export function RegistrosCantina() {
             />
           </div>
           <div className="sm:col-span-2">
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">&nbsp;</label>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">&nbsp;</label>
             <Button variant="secondary" onClick={() => {
               setSearchTerm('')
               setDataInicio('')

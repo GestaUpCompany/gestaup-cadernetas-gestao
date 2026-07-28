@@ -5,6 +5,7 @@ import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton, ConfirmModal, MultiSelect } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import * as XLSX from 'xlsx'
+import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
 interface Pasto {
   id: string
@@ -77,11 +78,8 @@ export function Pastos() {
     if (!user) return
     setLoading(true)
 
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
+    const _fazendaId = await getFazendaIdForUser(user.id)
+    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
     if (!vinculos || vinculos.length === 0) {
       setLoading(false)
@@ -202,11 +200,8 @@ export function Pastos() {
     }
 
     // Buscar fazenda vinculada
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
+    const _fazendaId = await getFazendaIdForUser(user.id)
+    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
     if (!vinculos || vinculos.length === 0) {
       setSubmitting(false)
@@ -398,11 +393,8 @@ export function Pastos() {
       }
 
       // Buscar fazenda vinculada
-      const { data: vinculos } = await supabase
-        .from('usuario_fazenda')
-        .select('fazenda_id')
-        .eq('usuario_id', user.id)
-        .eq('ativo', true)
+      const _fazendaId = await getFazendaIdForUser(user.id)
+    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
       if (!vinculos || vinculos.length === 0) {
         setImportError('Nenhuma fazenda vinculada ao usuário')
@@ -742,7 +734,7 @@ export function Pastos() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3">
               <div className="sm:col-span-2 lg:col-span-1">
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                   Nome <span className="text-red-500">*</span>
                 </label>
                 <Input
@@ -755,7 +747,7 @@ export function Pastos() {
                 />
               </div>
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                   Setor
                 </label>
                 <select
@@ -772,7 +764,7 @@ export function Pastos() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                   Sistema de Produção
                 </label>
                 <select
@@ -792,7 +784,7 @@ export function Pastos() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                   Metragem Cocho (m)
                 </label>
                 <Input
@@ -805,7 +797,7 @@ export function Pastos() {
                 />
               </div>
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                   Nível Degradação
                 </label>
                 <select
@@ -825,7 +817,7 @@ export function Pastos() {
 
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 sm:gap-4">
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                   Área Total (ha)
                 </label>
                 <Input
@@ -845,7 +837,7 @@ export function Pastos() {
                 />
               </div>
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                   Área Útil (%)
                 </label>
                 <Input
@@ -865,7 +857,7 @@ export function Pastos() {
                 />
               </div>
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                   Área Útil (ha)
                 </label>
                 <Input
@@ -879,7 +871,7 @@ export function Pastos() {
               </div>
               {editingPasto && editingPasto.modulo_nome && (
                 <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                     Módulo
                   </label>
                   <Input
@@ -891,7 +883,7 @@ export function Pastos() {
                 </div>
               )}
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                   Meta de Ocupação (dias)
                 </label>
                 <Input
@@ -907,7 +899,7 @@ export function Pastos() {
             </div>
 
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                 Espécie <span className="text-red-500">*</span>
               </label>
               <Input
@@ -922,7 +914,7 @@ export function Pastos() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 items-end">
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                   Altura Entrada (cm) <span className="text-red-500">*</span>
                 </label>
                 <Input
@@ -937,7 +929,7 @@ export function Pastos() {
               </div>
 
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                   Altura Saída (cm) <span className="text-red-500">*</span>
                 </label>
                 <Input
@@ -953,7 +945,7 @@ export function Pastos() {
             </div>
 
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                 Fonte de Água Principal
               </label>
               <select

@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input } from '../../components/ui'
 import { GroupedSelect } from '../../components/ui/GroupedSelect'
+import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
 interface LinhaConfinamento {
   id: string
@@ -142,11 +143,8 @@ export function Currais() {
     if (!user) return
     setLoading(true)
 
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
+    const _fazendaId = await getFazendaIdForUser(user.id)
+    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
     if (!vinculos || vinculos.length === 0) {
       setLoading(false)
@@ -271,11 +269,8 @@ export function Currais() {
       return
     }
 
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
+    const _fazendaId = await getFazendaIdForUser(user.id)
+    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
     if (!vinculos || vinculos.length === 0) {
       setSubmittingLinha(false)
@@ -358,11 +353,8 @@ export function Currais() {
       return
     }
 
-    const { data: vinculos } = await supabase
-      .from('usuario_fazenda')
-      .select('fazenda_id')
-      .eq('usuario_id', user.id)
-      .eq('ativo', true)
+    const _fazendaId = await getFazendaIdForUser(user.id)
+    const vinculos = _fazendaId ? [{ fazenda_id: _fazendaId }] : []
 
     if (!vinculos || vinculos.length === 0) {
       setSubmittingCurral(false)
@@ -557,7 +549,7 @@ export function Currais() {
           <form onSubmit={handleLinhaSubmit}>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                   Nome <span className="text-red-500">*</span>
                 </label>
                 <Input
@@ -570,7 +562,7 @@ export function Currais() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Largura (m)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Largura (m)</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -581,7 +573,7 @@ export function Currais() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Comprimento (m)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Comprimento (m)</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -592,7 +584,7 @@ export function Currais() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Metros de cocho (m)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Metros de cocho (m)</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -636,7 +628,7 @@ export function Currais() {
           <form onSubmit={handleCurralSubmit}>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
                   Nome <span className="text-red-500">*</span>
                 </label>
                 <Input
@@ -649,7 +641,7 @@ export function Currais() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Linha</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Linha</label>
                 <select
                   value={curralFormData.linha_id}
                   onChange={(e) => setCurralFormData({ ...curralFormData, linha_id: e.target.value })}
@@ -664,7 +656,7 @@ export function Currais() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Lote</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Lote</label>
                 <select
                   value={curralFormData.lote_id}
                   onChange={(e) => {

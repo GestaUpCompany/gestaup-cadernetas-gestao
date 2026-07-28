@@ -11,6 +11,7 @@ import { FazendasList } from './pages/admin/Fazendas'
 import { NovaFazenda } from './pages/admin/NovaFazenda'
 import { EditarFazenda } from './pages/admin/EditarFazenda'
 import { DetalhesFazenda } from './pages/admin/DetalhesFazenda'
+import { GruposList } from './pages/admin/Grupos'
 import { UsuariosList } from './pages/admin/Usuarios'
 import { NovoUsuario } from './pages/admin/NovoUsuario'
 import { EditarUsuario } from './pages/admin/EditarUsuario'
@@ -80,6 +81,7 @@ import { ProblemasDetalhes } from './pages/controller/ProblemasDetalhes'
 import { HistoricoOcupacao } from './pages/controller/HistoricoOcupacao'
 import { Individuos } from './pages/controller/Individuos'
 import { IndividuoNovo } from './pages/controller/IndividuoNovo'
+import { FaixasCategorias } from './pages/controller/FaixasCategorias'
 
 // Redirecionamento baseado no papel do usuário
 function RoleRedirect() {
@@ -161,6 +163,16 @@ function App() {
             <AdminRoute>
               <AdminLayout>
                 <DetalhesFazenda />
+              </AdminLayout>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/grupos"
+          element={
+            <AdminRoute>
+              <AdminLayout>
+                <GruposList />
               </AdminLayout>
             </AdminRoute>
           }
@@ -868,6 +880,16 @@ function App() {
             <ControllerRoute>
               <ControllerLayout>
                 <IndividuoNovo />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/faixas-categorias"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <FaixasCategorias />
               </ControllerLayout>
             </ControllerRoute>
           }

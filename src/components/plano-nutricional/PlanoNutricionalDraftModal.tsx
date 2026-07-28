@@ -242,7 +242,7 @@ export function PlanoNutricionalDraftModal({
           <form onSubmit={(e) => { e.preventDefault(); handleAddOrUpdate() }} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nome do Plano</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Nome do Plano</label>
                 <Input
                   value={formData.nome}
                   onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
@@ -251,7 +251,7 @@ export function PlanoNutricionalDraftModal({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Formulação *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Formulação *</label>
                 <select
                   value={formData.formulacao_id}
                   onChange={(e) => {
@@ -275,7 +275,7 @@ export function PlanoNutricionalDraftModal({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Período (dias) *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Período (dias) *</label>
                 <Input
                   type="number"
                   value={formData.periodo_dias}
@@ -285,7 +285,7 @@ export function PlanoNutricionalDraftModal({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Peso Meta (kg/cab) *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Peso Meta (kg/cab) *</label>
                 <NumericInput
                   value={formData.peso_meta_kg}
                   onChange={(value) => setFormData({ ...formData, peso_meta_kg: value })}
@@ -295,7 +295,7 @@ export function PlanoNutricionalDraftModal({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">GMD Esperado (kg/cab/dia) *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">GMD Esperado (kg/cab/dia) *</label>
                 <Input
                   type="text"
                   inputMode="decimal"
@@ -315,7 +315,7 @@ export function PlanoNutricionalDraftModal({
               </div>
 
               <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Condição para Migração</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Condição para Migração</label>
                 <div className="flex flex-wrap gap-3">
                   {(['periodo', 'peso', 'ambos'] as const).map((cond) => (
                     <button

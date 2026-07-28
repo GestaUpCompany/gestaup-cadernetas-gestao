@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getFazendas, Fazenda, updateFazenda } from '../../services/fazendasService'
+import { getGrupos, GrupoFazenda } from '../../services/gruposService'
 import { Button, Card } from '../../components/ui'
 
 export function FazendasList() {
   const navigate = useNavigate()
   const [fazendas, setFazendas] = useState<Fazenda[]>([])
+  const [grupos, setGrupos] = useState<GrupoFazenda[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     loadFazendas()
+    getGrupos().then(setGrupos)
   }, [])
 
   const loadFazendas = async () => {
@@ -67,6 +70,11 @@ export function FazendasList() {
                 <div className="flex-1 min-w-0">
                   <h3 className="font-bold text-gray-800 mb-1 text-sm sm:text-base truncate">{fazenda.nome}</h3>
                   <p className="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-2">ID: {fazenda.acesso_id}</p>
+                  {fazenda.grupo_id && (
+                    <p className="text-xs text-blue-600 mb-1">
+                      {grupos.find(g => g.id === fazenda.grupo_id)?.nome || 'Grupo'}
+                    </p>
+                  )}
                   {fazenda.email && (
                     <p className="text-xs sm:text-sm text-gray-600 truncate">{fazenda.email}</p>
                   )}
