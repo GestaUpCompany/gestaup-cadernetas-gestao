@@ -210,7 +210,7 @@ export function PlanoNutricionalModal({
       if (dataFinal <= hoje) return 'Data final deve ser maior que a data atual'
     }
     if (!formData.peso_meta_kg || Number(formData.peso_meta_kg) <= 0) return 'Peso meta deve ser maior que zero'
-    if (pesoAtualCategoria != null && Number(formData.peso_meta_kg) <= pesoAtualCategoria) return `Peso meta deve ser maior que o peso atual de ${pesoAtualCategoria.toFixed(2).replace('.', ',')} kg`
+    if (pesoAtualCategoria != null && Number(formData.peso_meta_kg) < pesoAtualCategoria) return `Peso meta (${Number(formData.peso_meta_kg).toFixed(2).replace('.', ',')} kg) não pode ser menor que o peso atual de ${pesoAtualCategoria.toFixed(2).replace('.', ',')} kg`
     if (!formData.gmd_planejado || Number(formData.gmd_planejado.replace(',', '.')) <= 0) return 'GMD deve ser maior que zero'
     return null
   }
@@ -766,7 +766,7 @@ export function PlanoNutricionalModal({
                         </div>
                       </div>
                       <div className="flex gap-2 flex-shrink-0">
-                        {!plano.data_inicio && (
+                        {!plano.data_fim && (
                           <Button
                             size="sm"
                             variant="secondary"

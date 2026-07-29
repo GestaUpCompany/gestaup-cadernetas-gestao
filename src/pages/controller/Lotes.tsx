@@ -86,6 +86,7 @@ interface Lote {
   modulo_id?: string | null
   modulo_nome?: string | null
   sistema_producao?: string | null
+  destino?: string | null
   meta_intervalo_rodeio_dias?: number | null
   rc_inicial?: number | null
   preco_entrada_reais_kg?: number | null
@@ -143,6 +144,7 @@ export function Lotes() {
     ativo: true,
     pasto_id: '',
     sistema_producao: '',
+    destino: '',
     meta_intervalo_rodeio_dias: '',
     rc_inicial: '',
     preco_entrada_reais_kg: '',
@@ -723,6 +725,7 @@ export function Lotes() {
       .from('lote_categorias')
       .select('*')
       .in('lote_id', loteIds)
+      .eq('ativo', true)
 
     if (categoriasError) {
       console.error('Erro ao buscar categorias:', categoriasError)
@@ -854,6 +857,7 @@ export function Lotes() {
       ativo: formData.ativo,
       pasto_id: formData.pasto_id || null,
       sistema_producao: formData.sistema_producao || null,
+      destino: formData.destino || null,
       meta_intervalo_rodeio_dias: formData.meta_intervalo_rodeio_dias ? parseInt(formData.meta_intervalo_rodeio_dias) : null,
       produtor_rural: formData.produtor_rural || null,
       propriedade_origem: formData.propriedade_origem || null,
@@ -963,11 +967,13 @@ export function Lotes() {
       .single()
     const fazendaId = loteData?.fazenda_id || ''
 
-    // Buscar categorias existentes para preservar IDs e planos
+    // Buscar categorias existentes (apenas ativas) para preservar IDs e planos
+    // Categorias encerradas por recategorização não devem ser tocadas nem deletadas
     const { data: existingCategorias } = await supabase
       .from('lote_categorias')
       .select('id, categoria')
       .eq('lote_id', loteId)
+      .eq('ativo', true)
 
     const existingByName: Record<string, string> = {}
     existingCategorias?.forEach((cat: any) => {
@@ -1153,6 +1159,7 @@ export function Lotes() {
         ativo: true,
         pasto_id: '',
         sistema_producao: '',
+        destino: '',
         meta_intervalo_rodeio_dias: '',
         rc_inicial: '',
         preco_entrada_reais_kg: '',
@@ -1192,18 +1199,75 @@ export function Lotes() {
 
     const fazendaId = lote.fazenda_id
 
-    // Buscar categorias, movimentação, maternidade e morte em paralelo
+    // Buscar categorias, movimentação (registros_movimentacao, unificado), maternidade e morte em paralelo
+    // lote_historico foi migrado para registros_movimentacao (H2 unificação)
+    const loteNomeTrim = lote.nome.trim()
     const [
       categoriasData,
-      movData,
+      movPwaByIdData,
+      movPwaByNomeData,
       matData,
       morData
     ] = await Promise.all([
-      supabase.from('lote_categorias').select('*').eq('lote_id', lote.id),
-      supabase.from('lote_historico').select('*').eq('lote_id', lote.id).order('data_movimentacao', { ascending: false }),
+      supabase.from('lote_categorias').select('*').eq('lote_id', lote.id).eq('ativo', true),
+      // Movimentações filtradas por ID do lote (origem ou destino)
+      supabase.from('registros_movimentacao')
+        .select('*')
+        .eq('fazenda_id', fazendaId)
+        .is('deleted_at', null)
+        .or(`lote_origem_id.eq.${lote.id},lote_destino_id.eq.${lote.id}`)
+        .order('data', { ascending: false }),
+      // Fallback por nome: registros antigos onde lote_origem_id é null mas o texto bate com o nome do lote
+      loteNomeTrim ? supabase.from('registros_movimentacao')
+        .select('*')
+        .eq('fazenda_id', fazendaId)
+        .is('deleted_at', null)
+        .is('lote_origem_id', null)
+        .ilike('lote_origem', loteNomeTrim)
+        .order('data', { ascending: false }) : Promise.resolve({ data: null, error: null }),
       supabase.from('registros_maternidade').select('*').eq('lote_id', lote.id).eq('fazenda_id', fazendaId).is('deleted_at', null).order('data', { ascending: false }),
       supabase.from('registros_morte').select('*').eq('lote_id', lote.id).eq('fazenda_id', fazendaId).is('deleted_at', null).order('data', { ascending: false }),
     ])
+
+    // Normalizar registros_movimentacao para o formato da timeline
+    const movPwaById = (movPwaByIdData.data || []).map((r: any) => ({
+      ...r,
+      type: 'movimentacao',
+      data_movimentacao: r.data,
+      tipo_movimentacao: r.lote_origem_id === lote.id ? 'saida' : 'entrada',
+      quantidade: r.numero_cabecas,
+      peso_kg: r.peso_vivo_atual_kg,
+      observacoes: [
+        r.motivo_movimentacao ? `Motivo: ${r.motivo_movimentacao}` : null,
+        r.subtipo ? `Subtipo: ${r.subtipo}` : null,
+        r.lote_origem_id === lote.id && r.destino ? `Destino: ${r.destino}` : null,
+        r.lote_destino_id === lote.id && r.lote_origem ? `Origem: ${r.lote_origem}` : null,
+        r.responsavel ? `Resp: ${r.responsavel}` : null,
+        r.causa_observacao ? r.causa_observacao : null,
+      ].filter(Boolean).join(' • '),
+    }))
+
+    // Fallback por nome: apenas registros que ainda não foram capturados por ID
+    const idsJaCapturados = new Set(movPwaById.map((r: any) => r.id))
+    const movPwaByNome = (movPwaByNomeData.data || [])
+      .filter((r: any) => !idsJaCapturados.has(r.id))
+      .map((r: any) => ({
+        ...r,
+        type: 'movimentacao',
+        data_movimentacao: r.data,
+        tipo_movimentacao: 'saida',
+        quantidade: r.numero_cabecas,
+        peso_kg: r.peso_vivo_atual_kg,
+        observacoes: [
+          r.motivo_movimentacao ? `Motivo: ${r.motivo_movimentacao}` : null,
+          r.destino ? `Destino: ${r.destino}` : null,
+          r.responsavel ? `Resp: ${r.responsavel}` : null,
+          r.causa_observacao ? r.causa_observacao : null,
+          'Correspondência por nome (sem ID)',
+        ].filter(Boolean).join(' • '),
+      }))
+
+    const movimentacaoCombinada = [...movPwaById, ...movPwaByNome]
 
     const updatedCategorias = categoriasData.data || lote.categorias || []
 
@@ -1250,7 +1314,7 @@ export function Lotes() {
       custo_total_entrada_reais_lote: cat.custo_total_entrada_reais_lote ?? undefined
     }))
 
-    setMovimentacaoData(movData.data || [])
+    setMovimentacaoData(movimentacaoCombinada)
     setMaternidadeData(matData.data || [])
     setMorteData(morData.data || [])
 
@@ -1283,6 +1347,7 @@ export function Lotes() {
       ativo: lote.ativo ?? true,
       pasto_id: lote.pasto_id || '',
       sistema_producao: lote.sistema_producao || '',
+      destino: lote.destino || '',
       meta_intervalo_rodeio_dias: lote.meta_intervalo_rodeio_dias?.toString() || '',
       rc_inicial: lote.rc_inicial?.toString() || '',
       preco_entrada_reais_kg: lote.preco_entrada_reais_kg?.toString() || '',
@@ -1331,6 +1396,7 @@ export function Lotes() {
       ativo: true,
       pasto_id: '',
       sistema_producao: '',
+      destino: '',
       meta_intervalo_rodeio_dias: '',
       rc_inicial: '',
       preco_entrada_reais_kg: '',
@@ -1518,6 +1584,21 @@ export function Lotes() {
                     <option value="RIP">RIP</option>
                     <option value="Sequestro">Sequestro</option>
                     <option value="TIP">TIP</option>
+                  </select>
+                </div>
+                <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+                    Destino <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.destino}
+                    onChange={(e) => setFormData({ ...formData, destino: e.target.value })}
+                    required
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-gray-200 rounded-lg focus:outline-none focus:border-accent"
+                  >
+                    <option value="">Selecione</option>
+                    <option value="corte">Abate</option>
+                    <option value="reprodução">Reprodução</option>
                   </select>
                 </div>
                 <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
@@ -2341,23 +2422,21 @@ export function Lotes() {
                           return new Date(dateB).getTime() - new Date(dateA).getTime()
                         })
                         .map((event) => {
-                          const getEventColor = (type: string) => {
-                            switch(type) {
-                              case 'movimentacao': return 'bg-blue-500 border-blue-500';
-                              case 'maternidade': return 'bg-pink-500 border-pink-500';
-                              case 'morte': return 'bg-red-500 border-red-500';
-                              default: return 'bg-gray-500 border-gray-500';
-                            }
+                          const getEventColor = (event: any) => {
+                            if (event.type === 'maternidade') return 'bg-pink-500 border-pink-500';
+                            if (event.type === 'morte') return 'bg-red-500 border-red-500';
+                            // Movimentação: distinguir saída (laranja) de entrada (verde)
+                            if (event.tipo_movimentacao === 'saida') return 'bg-orange-500 border-orange-500';
+                            if (event.tipo_movimentacao === 'entrada') return 'bg-green-500 border-green-500';
+                            return 'bg-blue-500 border-blue-500';
                           };
 
                           const getEventLabel = (event: any) => {
                             if (event.type === 'movimentacao') {
-                              let movementType = event.tipo_movimentacao || 'Movimentação';
-
-                              // Capitalizar primeira letra
-                              movementType = movementType.charAt(0).toUpperCase() + movementType.slice(1);
-
-                              return { label: movementType, category: event.categoria };
+                              const dir = event.tipo_movimentacao === 'saida' ? 'Saída'
+                                : event.tipo_movimentacao === 'entrada' ? 'Entrada'
+                                : 'Movimentação';
+                              return { label: dir, category: event.categoria };
                             } else if (event.type === 'maternidade') {
                               return { label: 'Nascimento', category: event.categoria };
                             } else if (event.type === 'morte') {
@@ -2367,13 +2446,13 @@ export function Lotes() {
                           };
 
                           const { label, category } = getEventLabel(event);
-                          const colorClass = getEventColor(event.type);
+                          const colorClass = getEventColor(event);
 
                           return (
                             <div key={`${event.type}-${event.id}`} className="relative pl-10">
                               {/* Timeline dot */}
                               <div className={`absolute left-2.5 top-1.5 w-3 h-3 rounded-full ${colorClass.split(' ')[0]} border-2 ${colorClass.split(' ')[1]} bg-white`}></div>
-                              
+
                               {/* Event card */}
                               <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm hover:shadow-md transition-shadow">
                                 <div className="flex justify-between items-start">
@@ -2387,7 +2466,7 @@ export function Lotes() {
                                   </div>
                                   <span className="text-xs text-gray-400">{new Date(event.type === 'movimentacao' ? event.data_movimentacao : event.data).toLocaleDateString('pt-BR')}</span>
                                 </div>
-                                
+
                                 <div className="text-xs text-gray-600 mt-2">
                                   {event.type === 'movimentacao' && (
                                     <>

@@ -6,36 +6,42 @@ interface ModalProps {
   title: string
   children: React.ReactNode
   size?: 'sm' | 'md' | 'lg'
+  contentClassName?: string
 }
 
-export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, size = 'md', contentClassName = '' }: ModalProps) {
   const cancelButtonRef = useRef<HTMLButtonElement>(null)
   const modalRef = useRef<HTMLDivElement>(null)
+  const onCloseRef = useRef(onClose)
   const [touchStartY, setTouchStartY] = useState(0)
+
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
 
   useEffect(() => {
     if (isOpen) {
       // Focar no botão de cancelar quando modal abrir
       cancelButtonRef.current?.focus()
-      
+
       // Adicionar listener para ESC
       const handleEscape = (e: KeyboardEvent) => {
         if (e.key === 'Escape') {
-          onClose()
+          onCloseRef.current()
         }
       }
-      
+
       document.addEventListener('keydown', handleEscape)
-      
+
       // Prevenir scroll do body
       document.body.style.overflow = 'hidden'
-      
+
       return () => {
         document.removeEventListener('keydown', handleEscape)
         document.body.style.overflow = 'unset'
       }
     }
-  }, [isOpen, onClose])
+  }, [isOpen])
 
   // Swipe down gesture para fechar modal em mobile
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -97,7 +103,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
         </div>
 
         {/* Content */}
-        <div className="p-4 sm:p-6 overflow-y-auto flex-1">{children}</div>
+        <div className={`p-4 sm:p-6 overflow-y-auto flex-1 ${contentClassName}`}>{children}</div>
       </div>
     </div>
   )

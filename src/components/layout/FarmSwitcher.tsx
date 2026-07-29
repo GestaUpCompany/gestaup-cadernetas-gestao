@@ -100,17 +100,17 @@ export function FarmSwitcher() {
         return
       }
 
-      // Fazer signOut do usuário atual
-      await supabase.auth.signOut()
-
-      // Fazer signIn com o controller da fazenda de destino
+      // Validar senha tentando signIn SEM deslogar antes.
+      // Se a senha estiver errada, a sessão atual permanece intacta e o erro
+      // fica contido no modal. Se estiver certa, o Supabase substitui a sessão
+      // automaticamente.
       const { error: authError } = await supabase.auth.signInWithPassword({
         email: userData.email,
         password: password,
       })
 
       if (authError) {
-        setError('Senha incorreta')
+        setError('Senha incorreta. Verifique e tente novamente.')
         setSwitching(false)
         return
       }
@@ -139,6 +139,7 @@ export function FarmSwitcher() {
           <div>
             <p className="text-xs text-gray-500">Fazenda atual</p>
             <p className="text-sm font-medium text-gray-800 truncate">{fazenda?.nome || '...'}</p>
+            <p className="text-[10px] text-gray-400 truncate">{fazenda?.acesso_id || ''}</p>
           </div>
           {outrasFazendas.length > 0 && (
             <div>
@@ -153,7 +154,10 @@ export function FarmSwitcher() {
                     <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                     </svg>
-                    <span className="truncate">{f.nome}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="truncate">{f.nome}</div>
+                      <div className="truncate text-[10px] text-gray-400">{f.acesso_id}</div>
+                    </div>
                   </button>
                 ))}
               </div>
@@ -174,6 +178,7 @@ export function FarmSwitcher() {
               Você está prestes a trocar para a fazenda:
             </p>
             <p className="font-bold text-gray-800">{selectedFazenda?.nome}</p>
+            <p className="text-xs text-gray-500">Acesso: {selectedFazenda?.acesso_id}</p>
           </div>
 
           <div>

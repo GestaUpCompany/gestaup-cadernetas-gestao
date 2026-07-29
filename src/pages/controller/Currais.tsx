@@ -219,7 +219,8 @@ export function Currais() {
         supabase
           .from('lote_categorias')
           .select('categoria, quant_atual, peso_vivo_atual_kg_cab, gmd, estrategia_nutricional')
-          .eq('lote_id', loteId),
+          .eq('lote_id', loteId)
+          .eq('ativo', true),
       ])
 
       const categorias: CategoriaInfo[] = (categoriasData.data || []).map((c: any) => ({

@@ -78,7 +78,7 @@ export function ControllerDashboard() {
             </svg>
             <div className="flex-1 min-w-0">
               <h3 className="text-base sm:text-lg font-semibold text-amber-900 mb-1">
-                {formulacoesBackfill.length} formulação{formulacoesBackfill.length > 1 ? 'ões' : ''} com categoria a confirmar
+                {formulacoesBackfill.length} formulaç{formulacoesBackfill.length > 1 ? 'ões' : ''} com categoria a confirmar
               </h3>
               <p className="text-xs sm:text-sm text-amber-800 mb-3">
                 A categoria destas formulações foi inferida automaticamente e precisa ser revisada. Clique para editar e confirmar o valor correto.

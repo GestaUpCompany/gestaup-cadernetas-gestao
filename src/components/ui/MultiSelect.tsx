@@ -33,7 +33,9 @@ export function MultiSelect({
 }: MultiSelectProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
+  const [dropUp, setDropUp] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
 
   // Filter options based on search term (accent-insensitive)
   const filteredOptions = options.filter(
@@ -45,7 +47,17 @@ export function MultiSelect({
   // Get selected options
   const selectedOptions = options.filter((opt) => value.includes(opt.id))
 
-  // Close dropdown when clicking outside
+  // Close dropdown when clicking outside and decide whether to open up or down
+  useEffect(() => {
+    if (isOpen && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect()
+      const spaceBelow = window.innerHeight - rect.bottom
+      const spaceAbove = rect.top
+      const dropdownHeight = 260 // approx max height of dropdown + search
+      setDropUp(spaceBelow < dropdownHeight && spaceAbove > spaceBelow)
+    }
+  }, [isOpen])
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -81,6 +93,7 @@ export function MultiSelect({
       <div className="relative" ref={dropdownRef}>
         {/* Trigger button */}
         <button
+          ref={triggerRef}
           type="button"
           onClick={() => setIsOpen(!isOpen)}
           className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base text-left border-gray-300 border-gray-200 focus:border-accent bg-white ${className}`}
@@ -116,7 +129,7 @@ export function MultiSelect({
 
         {/* Dropdown */}
         {isOpen && (
-          <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-auto">
+          <div className={`absolute z-50 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto ${dropUp ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
             {/* Search input */}
             <div className="p-2 border-b border-gray-100 sticky top-0 bg-white">
               <input

@@ -422,6 +422,7 @@ export function IndividuoNovo() {
           .select('estrategia_nutricional, gmd, peso_vivo_meta_kg_cab')
           .eq('lote_id', form.lote_atual)
           .eq('categoria', form.categoria)
+          .eq('ativo', true)
           .maybeSingle()
 
         setPendingLoteChange({
@@ -518,6 +519,7 @@ export function IndividuoNovo() {
               .select('estrategia_nutricional, gmd, peso_vivo_meta_kg_cab, formulacao_id')
               .eq('lote_id', form.lote_atual)
               .eq('categoria', form.categoria)
+              .eq('ativo', true)
               .maybeSingle()
 
             if (categoriaData) {
@@ -554,14 +556,17 @@ export function IndividuoNovo() {
 
             // Registrar saída do lote/categoria original
             if (loteOriginal && categoriaOriginal) {
-              await supabase.from('lote_historico').insert({
-                lote_id: loteOriginal,
-                tipo_movimentacao: 'saida',
+              await supabase.from('registros_movimentacao').insert({
+                fazenda_id: fazendaId,
+                lote_origem_id: loteOriginal,
+                lote_destino_id: null,
                 categoria: categoriaOriginal,
-                quantidade: 1,
-                data_movimentacao: dataMovimentacao.split('T')[0],
-                peso_kg: form.peso_atual_kg ? Number(String(form.peso_atual_kg).replace(',', '.')) : null,
-                observacoes: `Saída por realocação de ${identificacao}`,
+                numero_cabecas: 1,
+                data: dataMovimentacao.split('T')[0],
+                peso_vivo_atual_kg: form.peso_atual_kg ? Number(String(form.peso_atual_kg).replace(',', '.')) : null,
+                motivo_movimentacao: 'Saída',
+                causa_observacao: `Saída por realocação de ${identificacao}`,
+                individuo_id: editId || null,
               })
 
               // Decrementar quantidade da categoria original
@@ -585,14 +590,17 @@ export function IndividuoNovo() {
 
             // Registrar entrada no lote/categoria atual
             if (form.lote_atual && form.categoria) {
-              await supabase.from('lote_historico').insert({
-                lote_id: form.lote_atual,
-                tipo_movimentacao: 'entrada',
+              await supabase.from('registros_movimentacao').insert({
+                fazenda_id: fazendaId,
+                lote_origem_id: null,
+                lote_destino_id: form.lote_atual,
                 categoria: form.categoria,
-                quantidade: 1,
-                data_movimentacao: dataMovimentacao.split('T')[0],
-                peso_kg: form.peso_atual_kg ? Number(String(form.peso_atual_kg).replace(',', '.')) : null,
-                observacoes: `Entrada por realocação de ${identificacao}`,
+                numero_cabecas: 1,
+                data: dataMovimentacao.split('T')[0],
+                peso_vivo_atual_kg: form.peso_atual_kg ? Number(String(form.peso_atual_kg).replace(',', '.')) : null,
+                motivo_movimentacao: 'Entrada',
+                causa_observacao: `Entrada por realocação de ${identificacao}`,
+                individuo_id: editId || null,
               })
 
               await supabase.rpc('update_quant_atual_with_data', {
@@ -668,6 +676,7 @@ export function IndividuoNovo() {
               .select('estrategia_nutricional, gmd, peso_vivo_meta_kg_cab, formulacao_id')
               .eq('lote_id', form.lote_atual)
               .eq('categoria', form.categoria)
+              .eq('ativo', true)
               .maybeSingle()
 
             // Atualizar indivíduo com dados nutricionais herdados
@@ -694,19 +703,21 @@ export function IndividuoNovo() {
                 .eq('id', data.id)
             }
 
-            // Registrar entrada no histórico do lote
+            // Registrar entrada no histórico do lote (unificado em registros_movimentacao)
             const historicoData = {
-              lote_id: form.lote_atual,
-              tipo_movimentacao: 'entrada',
+              fazenda_id: fazendaId,
+              lote_origem_id: null,
+              lote_destino_id: form.lote_atual,
               categoria: form.categoria,
-              quantidade: 1,
-              data_movimentacao: new Date().toISOString().split('T')[0],
+              numero_cabecas: 1,
+              data: new Date().toISOString().split('T')[0],
               individuo_id: data.id,
-              peso_kg: form.peso_atual_kg ? Number(form.peso_atual_kg) : null,
-              observacoes: `Entrada de indivíduo: ${form.id_brinco || form.id_chip || form.id_manejo || form.id_provisorio_cria || 'Sem identificação'}`
+              peso_vivo_atual_kg: form.peso_atual_kg ? Number(form.peso_atual_kg) : null,
+              motivo_movimentacao: 'Entrada' as const,
+              causa_observacao: `Entrada de indivíduo: ${form.id_brinco || form.id_chip || form.id_manejo || form.id_provisorio_cria || 'Sem identificação'}`
             }
 
-            await supabase.from('lote_historico').insert(historicoData)
+            await supabase.from('registros_movimentacao').insert(historicoData)
 
             // Atualizar quantidade e dados na categoria do lote
             await supabase.rpc('update_quant_atual_with_data', {

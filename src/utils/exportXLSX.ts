@@ -16,6 +16,16 @@ export interface TableExportConfig {
   columns: ColumnConfig[]
 }
 
+export interface SheetConfig {
+  sheetName: string
+  columns: ColumnConfig[]
+}
+
+export interface MultiSheetExportConfig {
+  tableName: string
+  sheets: { data: any[]; config: SheetConfig }[]
+}
+
 // Columns to automatically exclude from all exports
 const EXCLUDED_COLUMNS = new Set([
   'id',
@@ -85,5 +95,47 @@ export function exportToXLSX(data: any[], config: TableExportConfig): void {
   const filename = `${config.tableName}_${timestamp}.xlsx`
 
   // Download file
+  XLSX.writeFile(workbook, filename)
+}
+
+export function exportToXLSXMultiSheet(config: MultiSheetExportConfig): void {
+  const workbook = XLSX.utils.book_new()
+  const usedNames = new Set<string>()
+
+  for (const sheet of config.sheets) {
+    if (!sheet.data || sheet.data.length === 0) continue
+
+    const filteredColumns = sheet.config.columns.filter(
+      col => !EXCLUDED_COLUMNS.has(col.source)
+    )
+
+    const transformedData = sheet.data.map(row => {
+      const transformedRow: any = {}
+      filteredColumns.forEach(col => {
+        const value = row[col.source]
+        transformedRow[col.header] = col.transform
+          ? col.transform(value)
+          : formatValue(value, col.format)
+      })
+      return transformedRow
+    })
+
+    const worksheet = XLSX.utils.json_to_sheet(transformedData)
+
+    // Garante nome único de aba (Excel limita a 31 chars)
+    let name = sheet.config.sheetName.slice(0, 31)
+    let suffix = 1
+    while (usedNames.has(name)) {
+      const base = sheet.config.sheetName.slice(0, 28)
+      name = `${base} (${suffix})`
+      suffix++
+    }
+    usedNames.add(name)
+
+    XLSX.utils.book_append_sheet(workbook, worksheet, name)
+  }
+
+  const timestamp = new Date().toISOString().slice(0, 10)
+  const filename = `${config.tableName}_${timestamp}.xlsx`
   XLSX.writeFile(workbook, filename)
 }

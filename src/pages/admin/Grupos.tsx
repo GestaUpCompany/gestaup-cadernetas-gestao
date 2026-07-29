@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { getGruposWithFazendas, createGrupo, updateGrupo, deleteGrupo, GrupoWithFazendas } from '../../services/gruposService'
-import { Button, Card, Input, Modal, ConfirmModal } from '../../components/ui'
+import { getGruposWithFazendas, createGrupo, updateGrupo, deleteGrupo, setFazendasDoGrupo, GrupoWithFazendas } from '../../services/gruposService'
+import { getFazendas, Fazenda } from '../../services/fazendasService'
+import { Button, Card, Input, Modal, ConfirmModal, MultiSelect } from '../../components/ui'
 
 export function GruposList() {
   const [grupos, setGrupos] = useState<GrupoWithFazendas[]>([])
@@ -8,16 +9,21 @@ export function GruposList() {
 
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [newGrupoName, setNewGrupoName] = useState('')
+  const [newGrupoFazendas, setNewGrupoFazendas] = useState<string[]>([])
   const [creating, setCreating] = useState(false)
 
   const [editingGrupo, setEditingGrupo] = useState<GrupoWithFazendas | null>(null)
   const [editName, setEditName] = useState('')
+  const [editFazendas, setEditFazendas] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
 
   const [deletingGrupo, setDeletingGrupo] = useState<GrupoWithFazendas | null>(null)
 
+  const [fazendas, setFazendas] = useState<Fazenda[]>([])
+
   useEffect(() => {
     loadGrupos()
+    getFazendas().then(setFazendas)
   }, [])
 
   const loadGrupos = async () => {
@@ -31,24 +37,28 @@ export function GruposList() {
     if (!newGrupoName.trim()) return
     setCreating(true)
     const result = await createGrupo(newGrupoName.trim())
-    setCreating(false)
     if (result) {
+      await setFazendasDoGrupo(result.id, newGrupoFazendas)
       setShowCreateModal(false)
       setNewGrupoName('')
+      setNewGrupoFazendas([])
       loadGrupos()
     }
+    setCreating(false)
   }
 
   const handleSaveEdit = async () => {
     if (!editingGrupo || !editName.trim()) return
     setSaving(true)
     const result = await updateGrupo(editingGrupo.id, { nome: editName.trim() })
-    setSaving(false)
     if (result) {
+      await setFazendasDoGrupo(editingGrupo.id, editFazendas)
       setEditingGrupo(null)
       setEditName('')
+      setEditFazendas([])
       loadGrupos()
     }
+    setSaving(false)
   }
 
   const handleToggleAtivo = async (grupo: GrupoWithFazendas) => {
@@ -121,6 +131,7 @@ export function GruposList() {
                   onClick={() => {
                     setEditingGrupo(grupo)
                     setEditName(grupo.nome)
+                    setEditFazendas(grupo.fazendas.map(f => f.id))
                   }}
                   className="flex-1 text-xs sm:text-sm"
                 >
@@ -146,7 +157,7 @@ export function GruposList() {
         </div>
       )}
 
-      <Modal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} title="Novo Grupo" size="sm">
+      <Modal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} title="Novo Grupo" size="md" contentClassName="min-h-[450px]">
         <div className="space-y-4">
           <Input
             label="Nome do Grupo *"
@@ -154,6 +165,13 @@ export function GruposList() {
             onChange={(e) => setNewGrupoName(e.target.value)}
             placeholder="Ex: Grupo Alegria"
             autoFocus
+          />
+          <MultiSelect
+            label="Fazendas do Grupo"
+            options={fazendas.map(f => ({ id: f.id, name: f.nome, subtitle: f.acesso_id }))}
+            value={newGrupoFazendas}
+            onChange={setNewGrupoFazendas}
+            placeholder="Selecione as fazendas..."
           />
           <div className="flex gap-3 justify-end">
             <Button variant="secondary" onClick={() => setShowCreateModal(false)}>Cancelar</Button>
@@ -164,13 +182,20 @@ export function GruposList() {
         </div>
       </Modal>
 
-      <Modal isOpen={!!editingGrupo} onClose={() => setEditingGrupo(null)} title="Editar Grupo" size="sm">
+      <Modal isOpen={!!editingGrupo} onClose={() => setEditingGrupo(null)} title="Editar Grupo" size="md" contentClassName="min-h-[450px]">
         <div className="space-y-4">
           <Input
             label="Nome do Grupo *"
             value={editName}
             onChange={(e) => setEditName(e.target.value)}
             autoFocus
+          />
+          <MultiSelect
+            label="Fazendas do Grupo"
+            options={fazendas.map(f => ({ id: f.id, name: f.nome, subtitle: f.acesso_id }))}
+            value={editFazendas}
+            onChange={setEditFazendas}
+            placeholder="Selecione as fazendas..."
           />
           <div className="flex gap-3 justify-end">
             <Button variant="secondary" onClick={() => setEditingGrupo(null)}>Cancelar</Button>

@@ -1,8 +1,10 @@
 import { Fragment, useEffect, useState, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton, ConfirmModal, Modal } from '../../components/ui'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
+import { exportToXLSXMultiSheet, type ColumnConfig } from '../../utils/exportXLSX'
 
 interface FaixaCategoria {
   id: string
@@ -39,6 +41,122 @@ interface FormulacaoOpcao {
   categoria: string | null
 }
 
+interface SnapshotPlanoNutricional {
+  id?: string
+  nome?: string | null
+  formulacao_id?: string | null
+  peso_inicio_kg_cab?: number | null
+  peso_meta_kg?: number | null
+  gmd_planejado?: number | null
+  ordem?: number | null
+  data_inicio?: string | null
+  data_fim?: string | null
+  ativo?: boolean | null
+}
+
+interface SnapshotLoteCategoria {
+  id?: string
+  categoria?: string | null
+  sexo?: string | null
+  raca?: string | null
+  idade?: number | null
+  quant_atual?: number | null
+  quant_inicial?: number | null
+  peso_vivo_atual_kg_cab?: number | null
+  peso_entrada_kg_cab?: number | null
+  gmd?: number | null
+  rc_atual?: number | null
+  rc_inicial?: number | null
+  rc_final?: number | null
+  formulacao_id?: string | null
+  estrategia_nutricional?: string | null
+  consumo?: number | null
+  consumo_meta_porcentagem_pesovivo?: number | null
+  abate?: number | null
+  morte?: number | null
+  transf_entrada?: number | null
+  transf_saida?: number | null
+  periodo?: number | null
+  data_pesagem?: string | null
+  data_meta_projetada?: string | null
+  dias_restantes_meta?: number | null
+  peso_vivo_meta_kg_cab?: number | null
+  custo_operacional_reais_cab_dia?: number | null
+  preco_custo_cab?: number | null
+  preco_custo_reais_arroba?: number | null
+}
+
+interface SnapshotLote {
+  nome?: string | null
+  n_cabecas?: number | null
+  categorias?: string | null
+  sexo?: string | null
+  raca?: string | null
+  idade_meses?: number | null
+  idade?: number | null
+  sistema_producao?: string | null
+  destino?: string | null
+  peso_vivo_kg?: number | null
+  peso_entrada_kg_cab?: number | null
+  peso_vivo_meta_kg?: number | null
+  gmd?: string | null
+  periodo?: number | null
+  dias_restantes_meta?: number | null
+  data_pesagem?: string | null
+  data_meta?: string | null
+  estrategia_nutricional?: string | null
+  rc_inicial?: number | null
+  preco_kg?: number | null
+  preco_cab?: number | null
+  custo_operacional_reais_cab_dia?: number | null
+  ativo?: boolean | null
+  pasto_id?: string | null
+  produtor_rural?: string | null
+  propriedade_origem?: string | null
+  numero_contrato?: string | null
+  mes_competencia?: string | null
+}
+
+interface SnapshotPerformancePlano {
+  duracao_dias?: number | null
+  ganho_peso_total_kg_cab?: number | null
+  gmd_realizado?: number | null
+  gmd_planejado?: number | null
+  producao_arroba_lote?: number | null
+  mortalidade_percent?: number | null
+  motivo_migracao?: string | null
+  tipo_snapshot?: string | null
+  plano_anterior_id?: string | null
+  plano_posterior_id?: string | null
+}
+
+interface SnapshotMetricasPlano {
+  custo_operacional_total_cab?: number | null
+  custo_total_producao_cab?: number | null
+  progresso_meta_percent?: number | null
+  ganho_arroba_cab?: number | null
+  peso_vivo_medio_lote?: number | null
+  peso_inicial_kg_cab?: number | null
+  rc_inicio?: number | null
+  rc_atual?: number | null
+  quant_inicial?: number | null
+  quant_atual?: number | null
+  morte?: number | null
+  data_pesagem?: string | null
+  data_meta_projetada?: string | null
+  dias_restantes_meta?: number | null
+}
+
+interface SnapshotTransicao {
+  manter_formulacao?: boolean | null
+  nova_formulacao_id?: string | null
+  lote_categoria_origem?: SnapshotLoteCategoria | null
+  lote_origem?: SnapshotLote | null
+  plano_nutricional_origem?: SnapshotPlanoNutricional | null
+  metricas_plano_nutricional?: SnapshotMetricasPlano | null
+  performance_plano_nutricional?: SnapshotPerformancePlano | null
+}
+
 interface TransicaoHistorico {
   id: string
   categoria_origem: string
@@ -46,9 +164,20 @@ interface TransicaoHistorico {
   peso_na_transicao_kg: number | null
   data_transicao: string
   motivo: string
+  snapshot_jsonb?: SnapshotTransicao | null
 }
 
 const SEXO_LABEL: Record<string, string> = { M: 'Machos', F: 'Fêmeas' }
+
+function Campo({ label, valor }: { label: string; valor: unknown }) {
+  const v = valor === null || valor === undefined || valor === '' ? '—' : String(valor)
+  return (
+    <div className="flex gap-1">
+      <span className="text-gray-500">{label}:</span>
+      <span className="font-medium text-gray-800">{v}</span>
+    </div>
+  )
+}
 
 export function FaixasCategorias() {
   const { user } = useAuth()
@@ -64,6 +193,8 @@ export function FaixasCategorias() {
   const [loadingCronologia, setLoadingCronologia] = useState(true)
   const [loteSelecionadoId, setLoteSelecionadoId] = useState<string | null>(null)
   const [transicoes, setTransicoes] = useState<TransicaoHistorico[]>([])
+  const [transicaoExpandidaId, setTransicaoExpandidaId] = useState<string | null>(null)
+  const [formulacoesMap, setFormulacoesMap] = useState<Record<string, string>>({})
 
   // Modal de recategorização
   const [recategorizando, setRecategorizando] = useState<LoteCategoriaCronologia | null>(null)
@@ -75,6 +206,7 @@ export function FaixasCategorias() {
   const [submitting, setSubmitting] = useState(false)
   const [erroRecategorizacao, setErroRecategorizacao] = useState<string | null>(null)
   const [sucessoRecategorizacao, setSucessoRecategorizacao] = useState<string | null>(null)
+  const [toastPlano, setToastPlano] = useState<{ nome: string; meta: string | number | null } | null>(null)
 
   // Modal de confirmação
   const [confirmRecategorizacao, setConfirmRecategorizacao] = useState(false)
@@ -88,6 +220,22 @@ export function FaixasCategorias() {
     }
     loadFazenda()
   }, [user])
+
+  const loadFormulacoesMap = useCallback(async () => {
+    if (!fazendaId) return
+    const { data, error } = await supabase
+      .from('formulacoes')
+      .select('id, nome')
+      .eq('fazenda_id', fazendaId)
+    if (error) {
+      console.error('Erro ao carregar mapa de formulações:', error)
+      setFormulacoesMap({})
+    } else {
+      const map: Record<string, string> = {}
+      ;(data as { id: string; nome: string }[] | null)?.forEach(f => { map[f.id] = f.nome })
+      setFormulacoesMap(map)
+    }
+  }, [fazendaId])
 
   const loadFaixas = useCallback(async () => {
     if (!fazendaId) return
@@ -153,7 +301,7 @@ export function FaixasCategorias() {
     }
     const { data, error } = await supabase
       .from('lote_categorias_transicoes')
-      .select('id, categoria_origem, categoria_destino, peso_na_transicao_kg, data_transicao, motivo')
+      .select('id, categoria_origem, categoria_destino, peso_na_transicao_kg, data_transicao, motivo, snapshot_jsonb')
       .eq('lote_id', loteSelecionadoId)
       .order('data_transicao', { ascending: false })
     if (error) {
@@ -165,12 +313,201 @@ export function FaixasCategorias() {
   }, [fazendaId, loteSelecionadoId])
 
   useEffect(() => { if (fazendaId) loadFaixas() }, [fazendaId, loadFaixas])
+  useEffect(() => { if (fazendaId) loadFormulacoesMap() }, [fazendaId, loadFormulacoesMap])
   useEffect(() => { if (fazendaId) loadCronologia() }, [fazendaId, loadCronologia])
   useEffect(() => { if (fazendaId && loteSelecionadoId) loadTransicoes() }, [fazendaId, loteSelecionadoId, loadTransicoes])
 
+  const exportarTransicoes = () => {
+    if (transicoes.length === 0) return
+    const loteNome = lotesDisponiveis.find(l => l.id === loteSelecionadoId)?.nome || 'lote'
+
+    // Aba 1: Transições (dados da categoria + plano)
+    const rowsTransicoes = transicoes.map(t => {
+      const snap = t.snapshot_jsonb
+      const lc = snap?.lote_categoria_origem
+      const pn = snap?.plano_nutricional_origem
+      return {
+        data_transicao: t.data_transicao,
+        categoria_origem: t.categoria_origem,
+        categoria_destino: t.categoria_destino,
+        peso_na_transicao_kg: t.peso_na_transicao_kg,
+        motivo: t.motivo,
+        sexo: lc?.sexo ?? '',
+        raca: lc?.raca ?? '',
+        idade: lc?.idade ?? '',
+        quant_atual: lc?.quant_atual ?? '',
+        peso_vivo_atual_kg_cab: lc?.peso_vivo_atual_kg_cab ?? '',
+        peso_entrada_kg_cab: lc?.peso_entrada_kg_cab ?? '',
+        gmd: lc?.gmd ?? '',
+        rc_atual: lc?.rc_atual ?? '',
+        rc_inicial: lc?.rc_inicial ?? '',
+        formulacao_nome: lc?.formulacao_id ? (formulacoesMap[lc.formulacao_id] ?? lc.formulacao_id) : '',
+        estrategia_nutricional: lc?.estrategia_nutricional ?? '',
+        consumo_meta_pct_pv: lc?.consumo_meta_porcentagem_pesovivo ?? '',
+        abate: lc?.abate ?? '',
+        morte: lc?.morte ?? '',
+        transf_entrada: lc?.transf_entrada ?? '',
+        transf_saida: lc?.transf_saida ?? '',
+        data_pesagem: lc?.data_pesagem ?? '',
+        data_meta_projetada: lc?.data_meta_projetada ?? '',
+        dias_restantes_meta: lc?.dias_restantes_meta ?? '',
+        peso_vivo_meta_kg_cab: lc?.peso_vivo_meta_kg_cab ?? '',
+        custo_operacional_reais_cab_dia: lc?.custo_operacional_reais_cab_dia ?? '',
+        plano_nutricional: pn?.nome ?? '(sem plano ativo)',
+        plano_formulacao_nome: pn?.formulacao_id ? (formulacoesMap[pn.formulacao_id] ?? pn.formulacao_id) : '',
+        plano_peso_inicio_kg_cab: pn?.peso_inicio_kg_cab ?? '',
+        plano_peso_meta_kg: pn?.peso_meta_kg ?? '',
+        plano_gmd_planejado: pn?.gmd_planejado ?? '',
+        plano_data_inicio: pn?.data_inicio ?? '',
+        plano_data_fim: pn?.data_fim ?? '',
+        // Métricas de performance do plano encerrado (capturadas pelo encerrar_plano_nutricional)
+        plano_duracao_dias: snap?.performance_plano_nutricional?.duracao_dias ?? '',
+        plano_ganho_peso_total_kg_cab: snap?.performance_plano_nutricional?.ganho_peso_total_kg_cab ?? '',
+        plano_gmd_realizado: snap?.performance_plano_nutricional?.gmd_realizado ?? '',
+        plano_mortalidade_percent: snap?.performance_plano_nutricional?.mortalidade_percent ?? '',
+        plano_producao_arroba_lote: snap?.performance_plano_nutricional?.producao_arroba_lote ?? '',
+        // Métricas derivadas calculadas no encerramento
+        metrica_progresso_meta_percent: snap?.metricas_plano_nutricional?.progresso_meta_percent ?? '',
+        metrica_ganho_arroba_cab: snap?.metricas_plano_nutricional?.ganho_arroba_cab ?? '',
+        metrica_custo_operacional_total_cab: snap?.metricas_plano_nutricional?.custo_operacional_total_cab ?? '',
+        metrica_custo_total_producao_cab: snap?.metricas_plano_nutricional?.custo_total_producao_cab ?? '',
+        manter_formulacao: snap?.manter_formulacao ?? '',
+        nova_formulacao_nome: snap?.nova_formulacao_id ? (formulacoesMap[snap.nova_formulacao_id] ?? snap.nova_formulacao_id) : '',
+      }
+    })
+
+    const colunasTransicoes: ColumnConfig[] = [
+      { source: 'data_transicao', header: 'Data', format: 'datetime' },
+      { source: 'categoria_origem', header: 'Categoria origem' },
+      { source: 'categoria_destino', header: 'Categoria destino' },
+      { source: 'peso_na_transicao_kg', header: 'Peso na transição (kg)', format: 'number' },
+      { source: 'motivo', header: 'Motivo' },
+      { source: 'sexo', header: 'Sexo' },
+      { source: 'raca', header: 'Raça' },
+      { source: 'idade', header: 'Idade (meses)', format: 'number' },
+      { source: 'quant_atual', header: 'Cabeças', format: 'number' },
+      { source: 'peso_vivo_atual_kg_cab', header: 'Peso vivo atual (kg)', format: 'number' },
+      { source: 'peso_entrada_kg_cab', header: 'Peso entrada (kg)', format: 'number' },
+      { source: 'gmd', header: 'GMD (kg/dia)', format: 'number' },
+      { source: 'rc_atual', header: 'RC atual', format: 'number' },
+      { source: 'rc_inicial', header: 'RC inicial', format: 'number' },
+      { source: 'formulacao_nome', header: 'Formulação' },
+      { source: 'estrategia_nutricional', header: 'Estratégia nutricional' },
+      { source: 'consumo_meta_pct_pv', header: 'Consumo meta (% PV)', format: 'number' },
+      { source: 'abate', header: 'Abate', format: 'number' },
+      { source: 'morte', header: 'Morte', format: 'number' },
+      { source: 'transf_entrada', header: 'Transferência entrada', format: 'number' },
+      { source: 'transf_saida', header: 'Transferência saída', format: 'number' },
+      { source: 'data_pesagem', header: 'Data pesagem', format: 'date' },
+      { source: 'data_meta_projetada', header: 'Data meta projetada', format: 'date' },
+      { source: 'dias_restantes_meta', header: 'Dias restantes meta', format: 'number' },
+      { source: 'peso_vivo_meta_kg_cab', header: 'Peso vivo meta (kg)', format: 'number' },
+      { source: 'custo_operacional_reais_cab_dia', header: 'Custo operacional (R$/cab/dia)', format: 'number' },
+      { source: 'plano_nutricional', header: 'Plano nutricional' },
+      { source: 'plano_formulacao_nome', header: 'Plano - formulação' },
+      { source: 'plano_peso_inicio_kg_cab', header: 'Plano - peso início (kg)', format: 'number' },
+      { source: 'plano_peso_meta_kg', header: 'Plano - peso meta (kg)', format: 'number' },
+      { source: 'plano_gmd_planejado', header: 'Plano - GMD planejado', format: 'number' },
+      { source: 'plano_data_inicio', header: 'Plano - data início', format: 'date' },
+      { source: 'plano_data_fim', header: 'Plano - data fim', format: 'date' },
+      { source: 'plano_duracao_dias', header: 'Plano - duração (dias)', format: 'number' },
+      { source: 'plano_ganho_peso_total_kg_cab', header: 'Plano - ganho peso total (kg/cab)', format: 'number' },
+      { source: 'plano_gmd_realizado', header: 'Plano - GMD realizado', format: 'number' },
+      { source: 'plano_mortalidade_percent', header: 'Plano - mortalidade (%)', format: 'number' },
+      { source: 'plano_producao_arroba_lote', header: 'Plano - produção (@ lote)', format: 'number' },
+      { source: 'metrica_progresso_meta_percent', header: 'Métrica - progresso meta (%)', format: 'number' },
+      { source: 'metrica_ganho_arroba_cab', header: 'Métrica - ganho arroba (@/cab)', format: 'number' },
+      { source: 'metrica_custo_operacional_total_cab', header: 'Métrica - custo operacional total (R$/cab)', format: 'number' },
+      { source: 'metrica_custo_total_producao_cab', header: 'Métrica - custo total produção (R$/cab)', format: 'number' },
+      { source: 'manter_formulacao', header: 'Manteve formulação', format: 'boolean' },
+      { source: 'nova_formulacao_nome', header: 'Nova formulação' },
+    ]
+
+    // Aba 2: Lote (auditoria) - estado completo do lote no momento de cada transição
+    // Pula transições antigas sem snapshot do lote (criadas antes da RPC ter o snapshot)
+    const rowsLote = transicoes
+      .filter(t => t.snapshot_jsonb?.lote_origem)
+      .map(t => {
+        const lote = t.snapshot_jsonb?.lote_origem
+        return {
+        data_transicao: t.data_transicao,
+        categoria_origem: t.categoria_origem,
+        categoria_destino: t.categoria_destino,
+        lote_nome: lote?.nome ?? '',
+        n_cabecas: lote?.n_cabecas ?? '',
+        categorias: lote?.categorias ?? '',
+        sexo: lote?.sexo ?? '',
+        raca: lote?.raca ?? '',
+        idade_meses: lote?.idade_meses ?? '',
+        idade: lote?.idade ?? '',
+        sistema_producao: lote?.sistema_producao ?? '',
+        destino: lote?.destino ?? '',
+        peso_vivo_kg: lote?.peso_vivo_kg ?? '',
+        peso_entrada_kg_cab: lote?.peso_entrada_kg_cab ?? '',
+        peso_vivo_meta_kg: lote?.peso_vivo_meta_kg ?? '',
+        gmd: lote?.gmd ?? '',
+        periodo: lote?.periodo ?? '',
+        dias_restantes_meta: lote?.dias_restantes_meta ?? '',
+        data_pesagem: lote?.data_pesagem ?? '',
+        data_meta: lote?.data_meta ?? '',
+        estrategia_nutricional: lote?.estrategia_nutricional ?? '',
+        rc_inicial: lote?.rc_inicial ?? '',
+        preco_kg: lote?.preco_kg ?? '',
+        preco_cab: lote?.preco_cab ?? '',
+        custo_operacional_reais_cab_dia: lote?.custo_operacional_reais_cab_dia ?? '',
+        ativo: lote?.ativo ?? '',
+        produtor_rural: lote?.produtor_rural ?? '',
+        propriedade_origem: lote?.propriedade_origem ?? '',
+        numero_contrato: lote?.numero_contrato ?? '',
+        mes_competencia: lote?.mes_competencia ?? '',
+      }
+    })
+
+    const colunasLote: ColumnConfig[] = [
+      { source: 'data_transicao', header: 'Data da transição', format: 'datetime' },
+      { source: 'categoria_origem', header: 'Categoria origem' },
+      { source: 'categoria_destino', header: 'Categoria destino' },
+      { source: 'lote_nome', header: 'Nome do lote' },
+      { source: 'n_cabecas', header: 'Cabeças', format: 'number' },
+      { source: 'categorias', header: 'Categorias' },
+      { source: 'sexo', header: 'Sexo' },
+      { source: 'raca', header: 'Raça' },
+      { source: 'idade_meses', header: 'Idade (meses)', format: 'number' },
+      { source: 'idade', header: 'Idade', format: 'number' },
+      { source: 'sistema_producao', header: 'Sistema de produção' },
+      { source: 'destino', header: 'Destino' },
+      { source: 'peso_vivo_kg', header: 'Peso vivo total (kg)', format: 'number' },
+      { source: 'peso_entrada_kg_cab', header: 'Peso entrada (kg/cab)', format: 'number' },
+      { source: 'peso_vivo_meta_kg', header: 'Peso vivo meta (kg)', format: 'number' },
+      { source: 'gmd', header: 'GMD', format: 'number' },
+      { source: 'periodo', header: 'Período (dias)', format: 'number' },
+      { source: 'dias_restantes_meta', header: 'Dias restantes meta', format: 'number' },
+      { source: 'data_pesagem', header: 'Data pesagem', format: 'date' },
+      { source: 'data_meta', header: 'Data meta', format: 'date' },
+      { source: 'estrategia_nutricional', header: 'Estratégia nutricional' },
+      { source: 'rc_inicial', header: 'RC inicial', format: 'number' },
+      { source: 'preco_kg', header: 'Preço (R$/kg)', format: 'number' },
+      { source: 'preco_cab', header: 'Preço (R$/cab)', format: 'number' },
+      { source: 'custo_operacional_reais_cab_dia', header: 'Custo operacional (R$/cab/dia)', format: 'number' },
+      { source: 'ativo', header: 'Ativo', format: 'boolean' },
+      { source: 'produtor_rural', header: 'Produtor rural' },
+      { source: 'propriedade_origem', header: 'Propriedade origem' },
+      { source: 'numero_contrato', header: 'Número contrato' },
+      { source: 'mes_competencia', header: 'Mês competência' },
+    ]
+
+    exportToXLSXMultiSheet({
+      tableName: `auditoria_${loteNome}`,
+      sheets: [
+        { data: rowsTransicoes, config: { sheetName: 'Transições', columns: colunasTransicoes } },
+        { data: rowsLote, config: { sheetName: 'Lote (auditoria)', columns: colunasLote } },
+      ],
+    })
+  }
+
   const faixasDoSexo = faixas.filter(f => f.sexo === sexoFiltro)
 
-  const handleFaixaChange = (id: string, campo: 'peso_min' | 'peso_max' | 'ordem' | 'cor', valor: string) => {
+  const handleFaixaChange = (id: string, campo: 'peso_min' | 'peso_max' | 'cor', valor: string) => {
     setFaixas(prev => prev.map(f => {
       if (f.id !== id) return f
       if (campo === 'cor') return { ...f, cor: valor }
@@ -189,7 +526,6 @@ export function FaixasCategorias() {
       .update({
         peso_min: faixa.peso_min,
         peso_max: faixa.peso_max,
-        ordem: faixa.ordem,
         cor: faixa.cor,
       })
       .eq('id', id)
@@ -207,12 +543,7 @@ export function FaixasCategorias() {
 
   const categoriasDoLoteSelecionado = lotesCategorias
     .filter(lc => lc.lote_id === loteSelecionadoId)
-    .sort((a, b) => {
-      // Ativas primeiro, depois por data
-      if (a.data_fim === null && b.data_fim !== null) return -1
-      if (a.data_fim !== null && b.data_fim === null) return 1
-      return (a.created_at || '').localeCompare(b.created_at || '')
-    })
+    .sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''))
 
   const categoriaAtiva = categoriasDoLoteSelecionado.find(c => c.data_fim === null && c.ativo)
 
@@ -290,11 +621,28 @@ export function FaixasCategorias() {
     if (error) {
       setErroRecategorizacao(error.message)
     } else {
-      setSucessoRecategorizacao(`Recategorização concluída. Novo ID: ${data}`)
+      // Buscar o plano nutricional recém-criado para o toast
+      let planoInfo: { nome: string; meta: string | number | null } | null = null
+      if (data) {
+        const { data: planoData } = await supabase
+          .from('planos_nutricionais')
+          .select('nome, peso_meta_kg')
+          .eq('lote_categoria_id', data as string)
+          .eq('ativo', true)
+          .limit(1)
+          .maybeSingle()
+        if (planoData) {
+          planoInfo = { nome: planoData.nome, meta: planoData.peso_meta_kg }
+        }
+      }
+      setSucessoRecategorizacao(`Recategorização para "${novaCategoria}" concluída.`)
+      setToastPlano(planoInfo)
       setRecategorizando(null)
       setConfirmRecategorizacao(false)
       loadCronologia()
       loadTransicoes()
+      // Auto-dismiss do toast após 8 segundos
+      setTimeout(() => setToastPlano(null), 8000)
     }
     setSubmitting(false)
   }
@@ -317,6 +665,38 @@ export function FaixasCategorias() {
 
   return (
     <div className="space-y-6 page-transition">
+      {/* Toast pós-recategorização */}
+      {toastPlano && (
+        <div className="fixed top-4 right-4 z-50 max-w-sm bg-white border border-green-300 shadow-lg rounded-lg p-4 animate-fade-in">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 w-5 h-5 rounded-full bg-green-100 flex items-center justify-center mt-0.5">
+              <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-gray-800">{sucessoRecategorizacao}</p>
+              {toastPlano.nome ? (
+                <p className="text-xs text-gray-600 mt-1">
+                  Plano <span className="font-medium text-gray-700">{toastPlano.nome}</span> ativado
+                  {toastPlano.meta != null ? <> com meta de <span className="font-medium text-gray-700">{toastPlano.meta} kg</span></> : null}.
+                  Ajuste em <Link to="/controller/cadernetas/suplementacao" className="text-blue-600 hover:underline font-medium">Suplementação</Link> se necessário.
+                </p>
+              ) : (
+                <p className="text-xs text-gray-600 mt-1">
+                  Nenhum plano nutricional foi criado (categoria sem formulação vinculada).
+                </p>
+              )}
+            </div>
+            <button
+              onClick={() => setToastPlano(null)}
+              className="flex-shrink-0 text-gray-400 hover:text-gray-600"
+              aria-label="Fechar"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div>
         <h2 className="text-2xl font-bold text-gray-800">Faixas de Categorias</h2>
@@ -363,15 +743,12 @@ export function FaixasCategorias() {
                 </tr>
               </thead>
               <tbody>
-                {faixasDoSexo.map(faixa => (
+                {faixasDoSexo.map((faixa, idx) => (
                   <tr key={faixa.id} className="border-b border-gray-100">
                     <td className="py-2 pr-3">
-                      <Input
-                        type="number"
-                        value={faixa.ordem}
-                        onChange={(e) => handleFaixaChange(faixa.id, 'ordem', e.target.value)}
-                        className="w-16 px-2 py-1 text-sm border-gray-200"
-                      />
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 text-gray-500 text-xs font-semibold">
+                        {idx + 1}
+                      </span>
                     </td>
                     <td className="py-2 pr-3 font-medium text-gray-800">
                       <span className="inline-flex items-center gap-2">
@@ -420,7 +797,7 @@ export function FaixasCategorias() {
           </div>
         )}
         <p className="text-xs text-gray-400 mt-3">
-          As faixas são defaults editáveis por fazenda. Mudanças aqui não retroagem lotes já cadastrados.
+          As faixas são valores iniciais editáveis por fazenda. Mudanças aqui não retroagem lotes já cadastrados.
         </p>
       </Card>
 
@@ -448,28 +825,28 @@ export function FaixasCategorias() {
         ) : (
           <div className="space-y-3">
             {/* Linha do tempo visual */}
-            <div className="flex items-center overflow-x-auto pb-2">
+            <div className="flex items-stretch overflow-x-auto pt-3 pl-3 pr-2 pb-2 gap-2">
               {categoriasDoLoteSelecionado.map((cat, idx) => {
                 const ativa = cat.data_fim === null && cat.ativo
                 const faixaCor = faixas.find(f => f.nome.toLowerCase() === cat.categoria.toLowerCase())?.cor
                 return (
-                  <div key={cat.id} className="flex items-center flex-shrink-0">
-                    <div
-                      className={`px-3 py-2 rounded-lg text-xs font-medium border-2 ${ativa ? 'text-white' : 'bg-gray-50 text-gray-500 border-gray-200'}`}
-                      style={ativa ? { backgroundColor: faixaCor || '#3b82f6', borderColor: faixaCor || '#3b82f6' } : {}}
-                      title={ativa ? 'Categoria ativa' : `Encerrada em ${cat.data_fim ? new Date(cat.data_fim).toLocaleDateString('pt-BR') : '?'}`}
+                  <div
+                    key={cat.id}
+                    className={`relative flex-shrink-0 px-3 pt-5 pb-2 rounded-lg text-xs font-medium border-2 ${ativa ? 'text-white' : 'bg-gray-50 text-gray-500 border-gray-200'}`}
+                    style={ativa ? { backgroundColor: faixaCor || '#3b82f6', borderColor: faixaCor || '#3b82f6' } : {}}
+                    title={ativa ? 'Categoria ativa' : `Encerrada em ${cat.data_fim ? new Date(cat.data_fim).toLocaleDateString('pt-BR') : '?'}`}
+                  >
+                    <span
+                      className={`absolute -top-2 -left-2 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center ${ativa ? 'bg-white text-gray-800 border border-gray-300' : 'bg-gray-200 text-gray-600'}`}
+                      aria-label={`Etapa ${idx + 1}`}
                     >
-                      <p className="font-semibold">{cat.categoria}</p>
-                      <p className="text-[10px] opacity-80">
-                        {cat.peso_vivo_atual_kg_cab != null ? `${cat.peso_vivo_atual_kg_cab} kg` : 'sem peso'}
-                        {cat.quant_atual != null && ` • ${cat.quant_atual} cab`}
-                      </p>
-                    </div>
-                    {idx < categoriasDoLoteSelecionado.length - 1 && (
-                      <svg className="w-5 h-5 mx-1 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    )}
+                      {idx + 1}
+                    </span>
+                    <p className="font-semibold">{cat.categoria}</p>
+                    <p className="text-[10px] opacity-80">
+                      {cat.peso_vivo_atual_kg_cab != null ? `${cat.peso_vivo_atual_kg_cab} kg` : 'sem peso'}
+                      {cat.quant_atual != null && ` • ${cat.quant_atual} cab`}
+                    </p>
                   </div>
                 )
               })}
@@ -500,21 +877,89 @@ export function FaixasCategorias() {
             {/* Histórico de transições */}
             {transicoes.length > 0 && (
               <div className="mt-4">
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">Histórico de transições</h4>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-semibold text-gray-700">Histórico de transições</h4>
+                  <Button
+                    variant="secondary"
+                    onClick={exportarTransicoes}
+                    className="text-xs px-3 py-1"
+                  >
+                    Exportar XLSX
+                  </Button>
+                </div>
                 <div className="space-y-2">
-                  {transicoes.map(t => (
-                    <div key={t.id} className="flex items-center text-xs text-gray-600 bg-gray-50 rounded p-2">
-                      <span className="font-medium">{new Date(t.data_transicao).toLocaleDateString('pt-BR')}</span>
-                      <span className="mx-2">→</span>
-                      <span>{t.categoria_origem}</span>
-                      <span className="mx-2">→</span>
-                      <span className="font-medium">{t.categoria_destino}</span>
-                      {t.peso_na_transicao_kg != null && (
-                        <span className="ml-2 text-gray-400">({t.peso_na_transicao_kg} kg)</span>
-                      )}
-                      <span className="ml-auto text-gray-400">{t.motivo}</span>
-                    </div>
-                  ))}
+                  {transicoes.map(t => {
+                    const expandida = transicaoExpandidaId === t.id
+                    const snap = t.snapshot_jsonb
+                    const lc = snap?.lote_categoria_origem
+                    const pn = snap?.plano_nutricional_origem
+                    return (
+                      <div key={t.id} className="bg-gray-50 rounded border border-gray-200">
+                        <button
+                          type="button"
+                          onClick={() => setTransicaoExpandidaId(expandida ? null : t.id)}
+                          className="w-full flex items-center text-xs text-gray-600 p-2 hover:bg-gray-100 transition-colors"
+                        >
+                          <span className="text-gray-400 mr-2">{expandida ? '▼' : '▶'}</span>
+                          <span className="font-medium">{new Date(t.data_transicao).toLocaleDateString('pt-BR')}</span>
+                          <span className="mx-2">→</span>
+                          <span>{t.categoria_origem}</span>
+                          <span className="mx-2">→</span>
+                          <span className="font-medium">{t.categoria_destino}</span>
+                          {t.peso_na_transicao_kg != null && (
+                            <span className="ml-2 text-gray-400">({t.peso_na_transicao_kg} kg)</span>
+                          )}
+                          <span className="ml-auto text-gray-400">{t.motivo}</span>
+                        </button>
+                        {expandida && lc && (
+                          <div className="px-3 pb-3 pt-1 border-t border-gray-200 bg-white rounded-b">
+                            <p className="text-xs font-semibold text-gray-700 mt-2 mb-1">Categoria no momento da transição</p>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 text-xs">
+                              <Campo label="Sexo" valor={lc.sexo} />
+                              <Campo label="Raça" valor={lc.raca} />
+                              <Campo label="Idade (meses)" valor={lc.idade} />
+                              <Campo label="Cabeças" valor={lc.quant_atual} />
+                              <Campo label="Peso vivo atual (kg)" valor={lc.peso_vivo_atual_kg_cab} />
+                              <Campo label="Peso entrada (kg)" valor={lc.peso_entrada_kg_cab} />
+                              <Campo label="GMD (kg/dia)" valor={lc.gmd} />
+                              <Campo label="RC atual" valor={lc.rc_atual} />
+                              <Campo label="RC inicial" valor={lc.rc_inicial} />
+                              <Campo label="Estratégia nutricional" valor={lc.estrategia_nutricional} />
+                              <Campo label="Consumo meta (% PV)" valor={lc.consumo_meta_porcentagem_pesovivo} />
+                              <Campo label="Data pesagem" valor={lc.data_pesagem ? new Date(lc.data_pesagem).toLocaleDateString('pt-BR') : null} />
+                              <Campo label="Data meta projetada" valor={lc.data_meta_projetada ? new Date(lc.data_meta_projetada).toLocaleDateString('pt-BR') : null} />
+                              <Campo label="Dias restantes meta" valor={lc.dias_restantes_meta} />
+                              <Campo label="Peso vivo meta (kg)" valor={lc.peso_vivo_meta_kg_cab} />
+                              <Campo label="Custo operacional (R$/cab/dia)" valor={lc.custo_operacional_reais_cab_dia} />
+                              <Campo label="Abate" valor={lc.abate} />
+                              <Campo label="Morte" valor={lc.morte} />
+                              <Campo label="Transferência entrada" valor={lc.transf_entrada} />
+                              <Campo label="Transferência saída" valor={lc.transf_saida} />
+                            </div>
+                            <p className="text-xs font-semibold text-gray-700 mt-3 mb-1">Plano nutricional ativo</p>
+                            {pn ? (
+                              <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 text-xs">
+                                <Campo label="Nome do plano" valor={pn.nome} />
+                                <Campo label="Formulação" valor={pn.formulacao_id ? (formulacoesMap[pn.formulacao_id] ?? pn.formulacao_id) : null} />
+                                <Campo label="Peso início (kg)" valor={pn.peso_inicio_kg_cab} />
+                                <Campo label="Peso meta (kg)" valor={pn.peso_meta_kg} />
+                                <Campo label="GMD planejado" valor={pn.gmd_planejado} />
+                                <Campo label="Data início" valor={pn.data_inicio ? new Date(pn.data_inicio).toLocaleDateString('pt-BR') : null} />
+                                <Campo label="Data fim" valor={pn.data_fim ? new Date(pn.data_fim).toLocaleDateString('pt-BR') : null} />
+                              </div>
+                            ) : (
+                              <p className="text-xs text-gray-400 italic">Sem plano nutricional ativo no momento da transição.</p>
+                            )}
+                            <p className="text-xs font-semibold text-gray-700 mt-3 mb-1">Decisão de formulação</p>
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                              <Campo label="Manteve formulação" valor={snap?.manter_formulacao === true ? 'Sim' : snap?.manter_formulacao === false ? 'Não' : null} />
+                              <Campo label="Nova formulação" valor={snap?.nova_formulacao_id ? (formulacoesMap[snap.nova_formulacao_id] ?? snap.nova_formulacao_id) : null} />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             )}
@@ -538,19 +983,21 @@ export function FaixasCategorias() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Nova categoria *</label>
-              <input
-                type="text"
-                list="faixas-sugeridas"
+              <select
                 value={novaCategoria}
                 onChange={(e) => setNovaCategoria(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Digite ou selecione a nova categoria"
-              />
-              <datalist id="faixas-sugeridas">
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">Selecione a nova categoria...</option>
                 {faixas
                   .filter(f => f.sexo === (recategorizando.sexo === 'fêmea' || recategorizando.sexo === 'F' ? 'F' : 'M') && f.ativo)
-                  .map(f => <option key={f.id} value={f.nome} />)}
-              </datalist>
+                  .sort((a, b) => a.ordem - b.ordem)
+                  .map(f => (
+                    <option key={f.id} value={f.nome}>
+                      {f.nome} ({f.peso_min}-{f.peso_max} kg)
+                    </option>
+                  ))}
+              </select>
             </div>
 
             {pesoForaDaFaixa && (
@@ -623,12 +1070,6 @@ export function FaixasCategorias() {
               </div>
             )}
 
-            {sucessoRecategorizacao && (
-              <div className="bg-green-50 border border-green-300 rounded-lg p-3 text-sm text-green-700">
-                {sucessoRecategorizacao}
-              </div>
-            )}
-
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="secondary" onClick={() => setRecategorizando(null)} disabled={submitting}>
                 Cancelar
@@ -652,7 +1093,7 @@ export function FaixasCategorias() {
         title="Confirmar recategorização"
         message={
           recategorizando
-            ? `Confirmar a recategorização de "${recategorizando.categoria}" para "${novaCategoria}"? Esta ação encerra a categoria atual, cria uma nova, registra um snapshot para auditoria e não pode ser desfeita.`
+            ? `Confirmar a recategorização de "${recategorizando.categoria}" para "${novaCategoria}"? Esta ação encerra a categoria atual, cria uma nova e registra o histórico para auditoria. Não pode ser desfeita.`
             : ''
         }
         confirmText="Confirmar"

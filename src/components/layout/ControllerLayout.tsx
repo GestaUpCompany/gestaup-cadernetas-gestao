@@ -296,14 +296,6 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
             </nav>
           </div>
           
-          {!isSidebarCollapsed && (
-            <div className="border-t-2 border-gray-200 p-4 mt-auto">
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <p className="text-sm font-medium text-gray-800">{user?.nome}</p>
-                <p className="text-xs text-gray-500 capitalize">{user?.papel}</p>
-              </div>
-            </div>
-          )}
           {!isSidebarCollapsed && <FarmSwitcher />}
         </aside>
 

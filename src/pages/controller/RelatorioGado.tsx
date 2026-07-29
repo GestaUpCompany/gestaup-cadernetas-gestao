@@ -78,6 +78,7 @@ export function RelatorioGado() {
       .from('lote_categorias')
       .select('lote_id, categoria, quant_atual, quant_inicial, peso_vivo_atual_kg_cab, peso_entrada_kg_cab')
       .in('lote_id', loteIds)
+      .eq('ativo', true)
 
     const categoriasPorLote: Record<string, NonNullable<typeof categoriasData>[number][]> = {}
     categoriasData?.forEach(cat => {

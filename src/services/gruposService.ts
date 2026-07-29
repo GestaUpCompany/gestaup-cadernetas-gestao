@@ -101,6 +101,35 @@ export async function getFazendasDoGrupo(grupoId: string): Promise<{ id: string;
   return data || []
 }
 
+export async function setFazendasDoGrupo(grupoId: string, fazendaIds: string[]): Promise<boolean> {
+  // Primeiro, desvincular todas as fazendas que estão neste grupo mas não na lista
+  const { error: unassignError } = await supabase
+    .from('fazendas')
+    .update({ grupo_id: null })
+    .eq('grupo_id', grupoId)
+    .not('id', 'in', `(${fazendaIds.length > 0 ? fazendaIds.map(id => `"${id}"`).join(',') : '00000000-0000-0000-0000-000000000000'})`)
+
+  if (unassignError) {
+    console.error('Erro ao desvincular fazendas do grupo:', unassignError)
+    return false
+  }
+
+  // Depois, vincular as fazendas da lista ao grupo
+  if (fazendaIds.length > 0) {
+    const { error: assignError } = await supabase
+      .from('fazendas')
+      .update({ grupo_id: grupoId })
+      .in('id', fazendaIds)
+
+    if (assignError) {
+      console.error('Erro ao vincular fazendas ao grupo:', assignError)
+      return false
+    }
+  }
+
+  return true
+}
+
 export async function getGruposWithFazendas(): Promise<GrupoWithFazendas[]> {
   const { data, error } = await supabase
     .from('grupos_fazenda')
