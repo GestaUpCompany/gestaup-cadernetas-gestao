@@ -756,13 +756,13 @@ export function Formulacoes() {
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Peso Vivo Médio (kg)</label>
                   <div className="text-lg font-bold text-green-800">
-                    {fmt(parseFloat(formData.peso_vivo_medio || '0'))}
+                    {fmt(parseFloat((formData.peso_vivo_medio || '0').replace(',', '.')))}
                   </div>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">GMD Planejado (kg/Cab/Dia)</label>
                   <div className="text-lg font-bold text-green-800">
-                    {fmt(parseFloat(formData.gmd || '0'), 3)}
+                    {fmt(parseCommaDecimal(formData.gmd || '0'), 3)}
                   </div>
                 </div>
                 <div>
