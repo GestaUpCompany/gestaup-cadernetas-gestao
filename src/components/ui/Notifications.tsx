@@ -64,6 +64,13 @@ export function Notifications() {
       return
     }
 
+    // Gerar notificacoes de recategorizacao proxima antes de carregar
+    // A RPC faz dedup por lote_categoria_id, entao chamar a cada poll e seguro
+    await supabase.rpc('gerar_notificacoes_recategorizacao', {
+      p_fazenda_id: fazendaId,
+      p_usuario_id: user.id,
+    })
+
     const { data, error } = await supabase
       .from('notificacoes')
       .select('*')
