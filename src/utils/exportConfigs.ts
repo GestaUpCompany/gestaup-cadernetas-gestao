@@ -259,7 +259,7 @@ export const ALIMENTACAO_EXPORT_CONFIG: TableExportConfig = {
 }
 
 export const CANTINA_EXPORT_CONFIG: TableExportConfig = {
-  tableName: 'registros_cantina',
+  tableName: 'registros_alimentacao',
   sheetName: 'Cantina',
   columns: [
     { source: 'data', header: 'Data', format: 'datetime' },
@@ -383,23 +383,24 @@ export const SUPLEMENTACAO_EXPORT_CONFIG: TableExportConfig = {
   tableName: 'registros_suplementacao',
   sheetName: 'Suplementação',
   columns: [
-    { source: 'data', header: 'Data', format: 'date' },
+    { source: 'data', header: 'Data Atual', format: 'date' },
+    { source: 'data_anterior', header: 'Data Anterior', format: 'date' },
+    { source: 'intervalo_dias', header: 'Intervalo (dias)', format: 'number' },
     { source: 'tratador', header: 'Tratador' },
     { source: 'pasto', header: 'Pasto' },
     { source: 'lote', header: 'Lote' },
     { source: 'formulacao', header: 'Formulação' },
-    { source: 'gado', header: 'Gado' },
-    { source: 'vaca', header: 'Vaca', format: 'boolean' },
-    { source: 'touro', header: 'Touro', format: 'boolean' },
-    { source: 'bezerro', header: 'Bezerro', format: 'boolean' },
-    { source: 'boi', header: 'Boi', format: 'boolean' },
-    { source: 'garrote', header: 'Garrote', format: 'boolean' },
-    { source: 'novilha', header: 'Novilha', format: 'boolean' },
     { source: 'leitura', header: 'Leitura', format: 'number' },
     { source: 'sacos', header: 'Sacos', format: 'number' },
     { source: 'kg_cocho', header: 'Kg Cocho', format: 'number' },
     { source: 'kg_deposito', header: 'Kg Depósito', format: 'number' },
-    { source: 'creep', header: 'Creep', format: 'number' }
+    { source: 'n_cabecas', header: 'Nº Cabeças', format: 'number' },
+    { source: 'qtd_bezerros', header: 'Qtd Bezerros', format: 'number' },
+    { source: 'peso_vivo_kg', header: 'Peso Vivo (kg)', format: 'number' },
+    { source: 'consumo_medio_geral_kg_mn', header: 'Consumo (Kg MN/cab/dia)', format: 'number' },
+    { source: 'consumo_medio_geral_kg_ms', header: 'Consumo (Kg MS/cab/dia)', format: 'number' },
+    { source: 'consumo_medio_geral_percent_pv', header: 'Consumo (% PV)', format: 'number' },
+    { source: 'custo_medio_reais_cab_dia', header: 'Custo (R$/cab/dia)', format: 'number' }
   ]
 }
 

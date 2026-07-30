@@ -6,6 +6,11 @@ import { Button, Card } from '../../components/ui'
 import { formatDate } from '../../utils/formatDate'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
+interface ChecklistItem {
+  valor: boolean
+  observacao: string
+}
+
 interface RegistroBebedouros {
   id: string
   fazenda_id: string
@@ -19,16 +24,13 @@ interface RegistroBebedouros {
   leitura_bebedouro?: number
   numero_bebedouro?: string
   observacao?: string
-  agua_suficiente?: boolean
-  agua_suficiente_obs?: string
-  vazao_bebedouro_ideal?: boolean
-  vazao_bebedouro_ideal_obs?: string
-  aterro_acesso_bebedouro_ideal?: boolean
-  aterro_acesso_bebedouro_ideal_obs?: string
-  espacamento_bebedouro_ideal?: boolean
-  espacamento_bebedouro_ideal_obs?: string
-  boia_protecao_boas_condicoes?: boolean
-  boia_protecao_boas_condicoes_obs?: string
+  checklist?: {
+    agua_suficiente?: ChecklistItem
+    vazao_bebedouro_ideal?: ChecklistItem
+    aterro_acesso_bebedouro_ideal?: ChecklistItem
+    espacamento_bebedouro_ideal?: ChecklistItem
+    boia_protecao_boas_condicoes?: ChecklistItem
+  }
   sync_status?: string
   created_at: string
   updated_at?: string
@@ -127,17 +129,17 @@ export function BebedourosDetalhes() {
             <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Condições do Bebedouro</h3>
             <div className="bg-gray-50 p-4 rounded-lg space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <p className="text-sm"><span className="font-medium text-gray-700">Água Suficiente:</span> {registro.agua_suficiente ? 'Sim' : 'Não'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Vazão Bebedouro Ideal:</span> {registro.vazao_bebedouro_ideal ? 'Sim' : 'Não'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Aterro Acesso Bebedouro Ideal:</span> {registro.aterro_acesso_bebedouro_ideal ? 'Sim' : 'Não'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Espaçamento Bebedouro Ideal:</span> {registro.espacamento_bebedouro_ideal ? 'Sim' : 'Não'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Boia Proteção Boas Condições:</span> {registro.boia_protecao_boas_condicoes ? 'Sim' : 'Não'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Água Suficiente:</span> {registro.checklist?.agua_suficiente ? (registro.checklist.agua_suficiente.valor ? 'Sim' : 'Não') : '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Vazão Bebedouro Ideal:</span> {registro.checklist?.vazao_bebedouro_ideal ? (registro.checklist.vazao_bebedouro_ideal.valor ? 'Sim' : 'Não') : '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Aterro Acesso Bebedouro Ideal:</span> {registro.checklist?.aterro_acesso_bebedouro_ideal ? (registro.checklist.aterro_acesso_bebedouro_ideal.valor ? 'Sim' : 'Não') : '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Espaçamento Bebedouro Ideal:</span> {registro.checklist?.espacamento_bebedouro_ideal ? (registro.checklist.espacamento_bebedouro_ideal.valor ? 'Sim' : 'Não') : '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Boia Proteção Boas Condições:</span> {registro.checklist?.boia_protecao_boas_condicoes ? (registro.checklist.boia_protecao_boas_condicoes.valor ? 'Sim' : 'Não') : '-'}</p>
               </div>
-              {registro.agua_suficiente_obs && <p className="text-sm"><span className="font-medium text-gray-700">Obs. Água:</span> {registro.agua_suficiente_obs}</p>}
-              {registro.vazao_bebedouro_ideal_obs && <p className="text-sm"><span className="font-medium text-gray-700">Obs. Vazão:</span> {registro.vazao_bebedouro_ideal_obs}</p>}
-              {registro.aterro_acesso_bebedouro_ideal_obs && <p className="text-sm"><span className="font-medium text-gray-700">Obs. Aterro:</span> {registro.aterro_acesso_bebedouro_ideal_obs}</p>}
-              {registro.espacamento_bebedouro_ideal_obs && <p className="text-sm"><span className="font-medium text-gray-700">Obs. Espaçamento:</span> {registro.espacamento_bebedouro_ideal_obs}</p>}
-              {registro.boia_protecao_boas_condicoes_obs && <p className="text-sm"><span className="font-medium text-gray-700">Obs. Boia:</span> {registro.boia_protecao_boas_condicoes_obs}</p>}
+              {registro.checklist?.agua_suficiente?.observacao && <p className="text-sm"><span className="font-medium text-gray-700">Obs. Água:</span> {registro.checklist.agua_suficiente.observacao}</p>}
+              {registro.checklist?.vazao_bebedouro_ideal?.observacao && <p className="text-sm"><span className="font-medium text-gray-700">Obs. Vazão:</span> {registro.checklist.vazao_bebedouro_ideal.observacao}</p>}
+              {registro.checklist?.aterro_acesso_bebedouro_ideal?.observacao && <p className="text-sm"><span className="font-medium text-gray-700">Obs. Aterro:</span> {registro.checklist.aterro_acesso_bebedouro_ideal.observacao}</p>}
+              {registro.checklist?.espacamento_bebedouro_ideal?.observacao && <p className="text-sm"><span className="font-medium text-gray-700">Obs. Espaçamento:</span> {registro.checklist.espacamento_bebedouro_ideal.observacao}</p>}
+              {registro.checklist?.boia_protecao_boas_condicoes?.observacao && <p className="text-sm"><span className="font-medium text-gray-700">Obs. Boia:</span> {registro.checklist.boia_protecao_boas_condicoes.observacao}</p>}
             </div>
           </div>
 

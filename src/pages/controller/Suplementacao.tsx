@@ -17,6 +17,7 @@ interface RegistroSuplementacao {
   tratador?: string
   pasto?: string
   lote?: string
+  lote_id?: string
   formulacao?: string
   gado?: string
   vaca?: boolean
@@ -30,6 +31,13 @@ interface RegistroSuplementacao {
   kg_cocho?: number
   kg_deposito?: number
   creep?: number
+  n_cabecas?: number
+  qtd_bezerros?: number
+  peso_vivo_kg?: number
+  consumo_medio_geral_kg_mn?: number
+  consumo_medio_geral_kg_ms?: number
+  consumo_medio_geral_percent_pv?: number
+  custo_medio_reais_cab_dia?: number
   sync_status?: string
   created_at: string
 }
@@ -118,7 +126,36 @@ export function Suplementacao() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
           <h3 className="text-base sm:text-lg font-semibold text-gray-800">Filtros</h3>
           <Button
-            onClick={() => exportToXLSX(filteredRegistros, SUPLEMENTACAO_EXPORT_CONFIG)}
+            onClick={() => {
+              // Pre-computar data_anterior e intervalo_dias para cada registro
+              // baseado na serie lote_id + formulacao ordenada por data
+              const sorted = [...filteredRegistros].sort((a, b) =>
+                new Date(a.data).getTime() - new Date(b.data).getTime()
+              )
+              const seriesMap = new Map<string, typeof sorted>()
+              for (const reg of sorted) {
+                const key = `${reg.lote_id || ''}|${reg.formulacao || ''}`
+                if (!seriesMap.has(key)) seriesMap.set(key, [])
+                seriesMap.get(key)!.push(reg)
+              }
+              const enriched = sorted.map((reg) => {
+                const key = `${reg.lote_id || ''}|${reg.formulacao || ''}`
+                const series = seriesMap.get(key)!
+                const idx = series.indexOf(reg)
+                const prev = idx > 0 ? series[idx - 1] : null
+                const dataAtual = new Date(reg.data)
+                const dataAnterior = prev ? new Date(prev.data) : null
+                const intervalo = dataAnterior
+                  ? Math.max(Math.round((dataAtual.getTime() - dataAnterior.getTime()) / (1000 * 60 * 60 * 24)), 0)
+                  : null
+                return {
+                  ...reg,
+                  data_anterior: dataAnterior ? dataAnterior.toISOString() : null,
+                  intervalo_dias: intervalo
+                }
+              })
+              exportToXLSX(enriched, SUPLEMENTACAO_EXPORT_CONFIG)
+            }}
             disabled={filteredRegistros.length === 0}
             className="w-full sm:w-auto text-sm"
           >

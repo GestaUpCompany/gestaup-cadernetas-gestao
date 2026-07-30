@@ -1,9 +1,11 @@
-Notificacoes de recategorizacao: RPC gera alertas quando lote atinge 95% do limite da faixa
+Reorganiza lotes da fazenda de testes e implementa exclusividade pasto/curral
 
-- Migration: adiciona dados_jsonb a notificacoes para armazenar lote_categoria_id, percentual, dias_restantes
-- RPC gerar_notificacoes_recategorizacao: encontra lote_categorias ativas com peso >= 95% do limite da faixa, calcula prazo estimado via GMD, insere notificacoes com dedup por lote_categoria_id
-- RPC recategorizar_lote_categoria: soft-deleta notificacoes do lote_categoria_id origem apos recategorizar
-- Notifications.tsx: chama RPC antes de carregar notificacoes no polling de 30s
+- Reorganizacao: 4 lotes removidos de currais, 5 pastos com 1 lote cada, 3 lotes movidos para currais (L4, L7, L8), Curral 4 vazio
+- Trigger DB trg_curral_lote_pasto_exclusivo: ao vincular lote a curral, verifica se lote tem pasto_id
+- Trigger DB trg_lote_pasto_curral_exclusivo: ao atribuir pasto a lote, verifica se lote esta em curral
+- Currais.tsx: lotes em pasto aparecem desabilitados no select com label "(em pasto)", validacao no handleSubmit
+- Lotes.tsx: select de pasto desabilitado quando lote esta em curral, com aviso visual, validacao no handleSubmit
+- Query de lotes agora inclui join com currais para trazer curral_id e curral_nome
 
 Generated with [Devin](https://devin.ai)
 

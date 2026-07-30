@@ -83,6 +83,7 @@ import { Individuos } from './pages/controller/Individuos'
 import { IndividuoNovo } from './pages/controller/IndividuoNovo'
 import { FaixasCategorias } from './pages/controller/FaixasCategorias'
 import { Notificacoes } from './pages/controller/Notificacoes'
+import { LeituraCocho } from './pages/controller/LeituraCocho'
 
 // Redirecionamento baseado no papel do usuário
 function RoleRedirect() {
@@ -419,6 +420,18 @@ function App() {
               <ConfinamentoRoute>
                 <ControllerLayout>
                   <HistoricoDietas />
+                </ControllerLayout>
+              </ConfinamentoRoute>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/leitura-cocho"
+          element={
+            <ControllerRoute>
+              <ConfinamentoRoute>
+                <ControllerLayout>
+                  <LeituraCocho />
                 </ControllerLayout>
               </ConfinamentoRoute>
             </ControllerRoute>

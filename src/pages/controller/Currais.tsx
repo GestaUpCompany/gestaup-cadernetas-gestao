@@ -32,6 +32,7 @@ interface Lote {
   id: string
   nome: string
   n_cabecas?: number | null
+  pasto_id?: string | null
 }
 
 interface CategoriaInfo {
@@ -166,7 +167,7 @@ export function Currais() {
         .eq('fazenda_id', fazendaId)
         .is('deleted_at', null)
         .order('nome', { ascending: true }),
-      supabase.from('lotes').select('id, nome, n_cabecas').eq('fazenda_id', fazendaId).eq('ativo', true).order('nome'),
+      supabase.from('lotes').select('id, nome, n_cabecas, pasto_id').eq('fazenda_id', fazendaId).eq('ativo', true).order('nome'),
       supabase.from('formulacoes').select('id, nome, tipo').eq('fazenda_id', fazendaId).eq('ativo', true).order('nome'),
     ])
 
@@ -352,6 +353,16 @@ export function Currais() {
     if (!user) {
       setSubmittingCurral(false)
       return
+    }
+
+    // Validar: lote com pasto nao pode ser vinculado a curral
+    if (curralFormData.lote_id) {
+      const loteSel = lotes.find(l => l.id === curralFormData.lote_id)
+      if (loteSel?.pasto_id) {
+        alert('Este lote está alocado em um pasto e não pode ser vinculado a um curral simultaneamente. Remova-o do pasto primeiro.')
+        setSubmittingCurral(false)
+        return
+      }
     }
 
     const _fazendaId = await getFazendaIdForUser(user.id)
@@ -669,11 +680,16 @@ export function Currais() {
                 >
                   <option value="">Selecione...</option>
                   {lotes.map((lote) => (
-                    <option key={lote.id} value={lote.id}>
-                      {lote.nome}
+                    <option key={lote.id} value={lote.id} disabled={!!lote.pasto_id}>
+                      {lote.nome}{lote.pasto_id ? ' (em pasto)' : ''}
                     </option>
                   ))}
                 </select>
+                {curralFormData.lote_id && lotes.find(l => l.id === curralFormData.lote_id)?.pasto_id && (
+                  <p className="text-xs text-red-500 mt-1">
+                    Este lote está alocado em um pasto. Remova-o do pasto antes de vincular a um curral.
+                  </p>
+                )}
               </div>
               <div>
                 <div className="flex justify-between items-center mb-1">

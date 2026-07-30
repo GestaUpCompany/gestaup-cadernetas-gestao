@@ -83,6 +83,8 @@ interface Lote {
   ativo: boolean | null
   pasto_id?: string | null
   pasto_nome?: string | null
+  curral_id?: string | null
+  curral_nome?: string | null
   modulo_id?: string | null
   modulo_nome?: string | null
   sistema_producao?: string | null
@@ -707,7 +709,8 @@ export function Lotes() {
       .from('lotes')
       .select(`
         *,
-        pastos (nome)
+        pastos (nome),
+        currais (id, nome)
       `)
       .eq('fazenda_id', fazendaId)
       .is('deleted_at', null)
@@ -732,11 +735,14 @@ export function Lotes() {
     }
 
     // Combinar lotes com suas categorias (apenas ativas)
-    const lotesComCategorias = (lotesData || []).map((lote) => {
+    const lotesComCategorias = (lotesData || []).map((lote: any) => {
       const categorias = (categoriasData || []).filter(cat => cat.lote_id === lote.id)
+      const curral = Array.isArray(lote.currais) ? lote.currais[0] : lote.currais
       return {
         ...lote,
         pasto_nome: lote.pastos?.nome,
+        curral_id: curral?.id || null,
+        curral_nome: curral?.nome || null,
         categorias: categorias
       }
     })
@@ -830,6 +836,13 @@ export function Lotes() {
     }
 
     const fazendaId = vinculos[0].fazenda_id
+
+    // Validar: lote em curral nao pode ter pasto
+    if (formData.pasto_id && editingLote?.curral_id) {
+      alert(`Este lote está vinculado ao curral "${editingLote.curral_nome}" e não pode ser alocado em um pasto simultaneamente. Remova-o do curral primeiro.`)
+      setSubmitting(false)
+      return
+    }
 
     // Validar categorias
     if (formData.categorias.length === 0) {
@@ -1558,13 +1571,19 @@ export function Lotes() {
                     value={formData.pasto_id}
                     onChange={(e) => setFormData({ ...formData, pasto_id: e.target.value })}
                     required
-                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-gray-200 rounded-lg focus:outline-none focus:border-accent"
+                    disabled={!!editingLote?.curral_id}
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-gray-200 rounded-lg focus:outline-none focus:border-accent disabled:bg-gray-100 disabled:cursor-not-allowed"
                   >
                     <option value="">Selecione</option>
                     {pastos.map((pasto) => (
                       <option key={pasto.id} value={pasto.id}>{pasto.nome}</option>
                     ))}
                   </select>
+                  {editingLote?.curral_id && (
+                    <p className="text-xs text-red-500 mt-1">
+                      Este lote está no curral "{editingLote.curral_nome}". Remova-o do curral antes de alocar em um pasto.
+                    </p>
+                  )}
                 </div>
                 <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">

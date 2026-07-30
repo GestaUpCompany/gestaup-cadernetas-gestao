@@ -1,0 +1,29 @@
+{
+  "backup_date": "2026-07-30T19:45:00-04:00",
+  "motivo": "Sobrescrita dos campos consumo_medio_geral_percent_pv, consumo_medio_geral_kg_mn, consumo_medio_geral_kg_ms e custo_medio_reais_cab_dia em 18 registros de suplementacao da Fazenda Guanabara (f8be22c5-12e9-4bda-a813-fae8cb3d47ec), dias 24 e 27/07/2026. Valores originais do Supabase preservados para rollback. Fonte da verdade: planilha 'Suplementação Fazenda Guanabara.xlsx' fornecida pelo usuario.",
+  "fazenda_id": "f8be22c5-12e9-4bda-a813-fae8cb3d47ec",
+  "tabela": "registros_suplementacao",
+  "campos_sobrescritos": ["consumo_medio_geral_percent_pv", "consumo_medio_geral_kg_mn", "consumo_medio_geral_kg_ms", "custo_medio_reais_cab_dia"],
+  "campos_preservados": ["peso_vivo_kg", "n_cabecas", "consumo_medio_30dias_percent_pv", "consumo_medio_30dias_kg_mn", "consumo_medio_30dias_kg_ms"],
+  "total_registros": 18,
+  "registros": [
+    {"id":"8436a63a-2023-4605-a52a-823db83115a6","data":"2026-07-24 16:45:00+00","pasto":"TIP 2","lote":"Lote 6","consumo_medio_geral_percent_pv":"1.670000","consumo_medio_geral_kg_mn":"7.910000","consumo_medio_geral_kg_ms":"7.010000","custo_medio_reais_cab_dia":null},
+    {"id":"0900af40-2242-4ac1-b5c5-418d24d9b9ef","data":"2026-07-24 16:48:00+00","pasto":"TIP 4","lote":"Lote 05","consumo_medio_geral_percent_pv":"2.620000","consumo_medio_geral_kg_mn":"10.330000","consumo_medio_geral_kg_ms":"9.160000","custo_medio_reais_cab_dia":null},
+    {"id":"2b8d3efc-7e3f-4307-b893-5140d5930a2e","data":"2026-07-24 16:50:00+00","pasto":"SAFRINHA 1 C","lote":"Lote 5 Recria","consumo_medio_geral_percent_pv":"0.440000","consumo_medio_geral_kg_mn":"1.720000","consumo_medio_geral_kg_ms":"1.540000","custo_medio_reais_cab_dia":null},
+    {"id":"c014b869-b839-469b-99a2-3659528ffd35","data":"2026-07-24 16:51:00+00","pasto":"Safrinha 3 A","lote":"lote 11","consumo_medio_geral_percent_pv":"0.360000","consumo_medio_geral_kg_mn":"1.460000","consumo_medio_geral_kg_ms":"1.310000","custo_medio_reais_cab_dia":null},
+    {"id":"66915c4d-b177-41ca-867c-2afe4ae7efdd","data":"2026-07-24 16:53:00+00","pasto":"TIP 5","lote":"Lote 2b Recria","consumo_medio_geral_percent_pv":"0.340000","consumo_medio_geral_kg_mn":"1.150000","consumo_medio_geral_kg_ms":"1.030000","custo_medio_reais_cab_dia":null},
+    {"id":"e9d4b95a-2093-47a1-8ada-4da4e1ae6e94","data":"2026-07-24 16:55:00+00","pasto":"R1 D","lote":"Lote 02 Recria","consumo_medio_geral_percent_pv":"0.300000","consumo_medio_geral_kg_mn":"0.920000","consumo_medio_geral_kg_ms":"0.830000","custo_medio_reais_cab_dia":null},
+    {"id":"68014725-6bfd-41e2-bb92-b78ba2582659","data":"2026-07-24 16:57:00+00","pasto":"R6 B","lote":"Lote 10 Recria","consumo_medio_geral_percent_pv":"0.440000","consumo_medio_geral_kg_mn":"1.070000","consumo_medio_geral_kg_ms":"0.980000","custo_medio_reais_cab_dia":null},
+    {"id":"08b903c2-1e44-4b63-bf0b-2dc5840950dc","data":"2026-07-24 16:58:00+00","pasto":"R4 A","lote":"lote 12","consumo_medio_geral_percent_pv":"0.290000","consumo_medio_geral_kg_mn":"0.580000","consumo_medio_geral_kg_ms":"0.530000","custo_medio_reais_cab_dia":null},
+    {"id":"de717ae7-a115-46ff-b9d9-996ab2cf0499","data":"2026-07-24 17:00:00+00","pasto":"R7 A","lote":"vacas cria","consumo_medio_geral_percent_pv":"0.540000","consumo_medio_geral_kg_mn":"2.750000","consumo_medio_geral_kg_ms":"2.500000","custo_medio_reais_cab_dia":null},
+    {"id":"9f0ac06f-4117-4f2a-8adb-22be27000af3","data":"2026-07-28 00:06:00+00","pasto":"TIP 2","lote":"Lote 6","consumo_medio_geral_percent_pv":"1.640000","consumo_medio_geral_kg_mn":"7.780000","consumo_medio_geral_kg_ms":"6.890000","custo_medio_reais_cab_dia":null},
+    {"id":"4481cb4d-642a-412b-96eb-f3b641df98dc","data":"2026-07-28 00:07:00+00","pasto":"TIP 4","lote":"Lote 05","consumo_medio_geral_percent_pv":"2.520000","consumo_medio_geral_kg_mn":"9.940000","consumo_medio_geral_kg_ms":"8.810000","custo_medio_reais_cab_dia":null},
+    {"id":"ff5a1df4-a6ce-456b-8709-7789145a9f0a","data":"2026-07-28 00:08:00+00","pasto":"TIP 5","lote":"Lote 2b Recria","consumo_medio_geral_percent_pv":"0.330000","consumo_medio_geral_kg_mn":"1.120000","consumo_medio_geral_kg_ms":"1.000000","custo_medio_reais_cab_dia":null},
+    {"id":"1ba8e42a-e30c-4a02-9b36-c6aef9929dd9","data":"2026-07-28 00:12:00+00","pasto":"Safrinha 3 A","lote":"lote 11","consumo_medio_geral_percent_pv":"0.340000","consumo_medio_geral_kg_mn":"1.400000","consumo_medio_geral_kg_ms":"1.260000","custo_medio_reais_cab_dia":null},
+    {"id":"f46131c6-748e-4679-b831-7a379194c9cc","data":"2026-07-28 00:13:00+00","pasto":"SAFRINHA 1 C","lote":"Lote 5 Recria","consumo_medio_geral_percent_pv":"0.430000","consumo_medio_geral_kg_mn":"1.680000","consumo_medio_geral_kg_ms":"1.510000","custo_medio_reais_cab_dia":null},
+    {"id":"0d0d011d-c367-4d24-8672-1f5fe19b5ad8","data":"2026-07-28 00:14:00+00","pasto":"R1 D","lote":"Lote 02 Recria","consumo_medio_geral_percent_pv":"0.290000","consumo_medio_geral_kg_mn":"0.900000","consumo_medio_geral_kg_ms":"0.820000","custo_medio_reais_cab_dia":null},
+    {"id":"4a0eb237-b94d-4eaf-b1a5-ed5bd76fd382","data":"2026-07-28 00:15:00+00","pasto":"R6 B","lote":"Lote 10 Recria","consumo_medio_geral_percent_pv":"0.430000","consumo_medio_geral_kg_mn":"1.040000","consumo_medio_geral_kg_ms":"0.940000","custo_medio_reais_cab_dia":null},
+    {"id":"94b57ee3-567a-4a21-acd6-da47c90f55a4","data":"2026-07-28 00:16:00+00","pasto":"R4 A","lote":"lote 12","consumo_medio_geral_percent_pv":"0.290000","consumo_medio_geral_kg_mn":"0.580000","consumo_medio_geral_kg_ms":"0.530000","custo_medio_reais_cab_dia":null},
+    {"id":"f1543c70-32cd-4f28-9621-99158e76ea6b","data":"2026-07-28 00:17:00+00","pasto":"Enfermaria","lote":"farmacia","consumo_medio_geral_percent_pv":"1.370000","consumo_medio_geral_kg_mn":"5.390000","consumo_medio_geral_kg_ms":"4.780000","custo_medio_reais_cab_dia":null}
+  ]
+}

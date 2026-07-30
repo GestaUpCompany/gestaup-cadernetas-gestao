@@ -6,6 +6,18 @@ import { Button, Card } from '../../components/ui'
 import { formatDate } from '../../utils/formatDate'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
+interface ChecklistItem {
+  valor: string
+  observacao: string
+}
+
+interface AplicacaoItem {
+  insumo_aplicado?: string
+  quantidade_total_aplicada?: string
+  area_trabalhada?: string
+  dose_aplicada?: string
+}
+
 interface RegistroOperacoesMaquinas {
   id: string
   fazenda_id: string
@@ -15,19 +27,16 @@ interface RegistroOperacoesMaquinas {
   implemento_utilizado: string
   hora_inicial?: string
   hora_final?: string
-  odometro_inicial: string
-  odometro_final: string
-  total_odometro?: string
+  odometro_horimetro_inicial: string
+  odometro_horimetro_final: string
+  total_odometro_horimetro?: string
   tipo_operacao: string
-  produto_aplicado?: string
-  quantidade_total_aplicada?: string
-  area_trabalhada?: string
-  dose_aplicada?: string
-  meta_diaria_batida?: string
-  meta_diaria_batida_obs?: string
-  algum_imprevisto?: string
-  algum_imprevisto_obs?: string
   observacao?: string
+  checklist?: {
+    meta_diaria_batida?: ChecklistItem
+    algum_imprevisto?: ChecklistItem
+  }
+  aplicacoes?: AplicacaoItem[]
   sync_status?: string
   version?: number
   created_at: string
@@ -127,52 +136,54 @@ export function RegistrosOperacoesMaquinasDetalhes() {
 
           {/* Odômetro */}
           <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Odômetro</h3>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Odômetro/Horímetro</h3>
             <div className="bg-gray-50 p-4 rounded-lg">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <p className="text-sm"><span className="font-medium text-gray-700">Odômetro Inicial:</span> {registro.odometro_inicial}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Odômetro Final:</span> {registro.odometro_final}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Total Odômetro:</span> {registro.total_odometro || '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Inicial:</span> {registro.odometro_horimetro_inicial || '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Final:</span> {registro.odometro_horimetro_final || '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Total:</span> {registro.total_odometro_horimetro || '-'}</p>
               </div>
             </div>
           </div>
 
           {/* Aplicação */}
-          {(registro.produto_aplicado || registro.quantidade_total_aplicada || registro.area_trabalhada || registro.dose_aplicada) && (
+          {registro.aplicacoes && Array.isArray(registro.aplicacoes) && registro.aplicacoes.length > 0 && (
             <div>
               <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Aplicação</h3>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                  <p className="text-sm"><span className="font-medium text-gray-700">Produto Aplicado:</span> {registro.produto_aplicado || '-'}</p>
-                  <p className="text-sm"><span className="font-medium text-gray-700">Quantidade Total Aplicada:</span> {registro.quantidade_total_aplicada || '-'}</p>
-                  <p className="text-sm"><span className="font-medium text-gray-700">Área Trabalhada:</span> {registro.area_trabalhada || '-'}</p>
-                  <p className="text-sm"><span className="font-medium text-gray-700">Dose Aplicada:</span> {registro.dose_aplicada || '-'}</p>
-                </div>
+              <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+                {registro.aplicacoes.map((aplic, idx) => (
+                  <div key={idx} className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                    <p className="text-sm"><span className="font-medium text-gray-700">Insumo Aplicado:</span> {aplic.insumo_aplicado || '-'}</p>
+                    <p className="text-sm"><span className="font-medium text-gray-700">Quantidade Total:</span> {aplic.quantidade_total_aplicada || '-'}</p>
+                    <p className="text-sm"><span className="font-medium text-gray-700">Área Trabalhada:</span> {aplic.area_trabalhada || '-'}</p>
+                    <p className="text-sm"><span className="font-medium text-gray-700">Dose Aplicada:</span> {aplic.dose_aplicada || '-'}</p>
+                  </div>
+                ))}
               </div>
             </div>
           )}
 
           {/* Meta Diária */}
-          {(registro.meta_diaria_batida || registro.meta_diaria_batida_obs) && (
+          {registro.checklist?.meta_diaria_batida && (
             <div>
               <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Meta Diária</h3>
               <div className="bg-gray-50 p-4 rounded-lg">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <p className="text-sm"><span className="font-medium text-gray-700">Meta Diária Batida:</span> {registro.meta_diaria_batida === 'S' ? 'Sim' : registro.meta_diaria_batida === 'N' ? 'Não' : registro.meta_diaria_batida || '-'}</p>
-                  <p className="text-sm"><span className="font-medium text-gray-700">Meta Diária Batida Obs:</span> {registro.meta_diaria_batida_obs || '-'}</p>
+                  <p className="text-sm"><span className="font-medium text-gray-700">Meta Diária Batida:</span> {registro.checklist.meta_diaria_batida.valor === 'S' ? 'Sim' : registro.checklist.meta_diaria_batida.valor === 'N' ? 'Não' : registro.checklist.meta_diaria_batida.valor || '-'}</p>
+                  <p className="text-sm"><span className="font-medium text-gray-700">Obs.:</span> {registro.checklist.meta_diaria_batida.observacao || '-'}</p>
                 </div>
               </div>
             </div>
           )}
 
           {/* Imprevistos */}
-          {(registro.algum_imprevisto || registro.algum_imprevisto_obs) && (
+          {registro.checklist?.algum_imprevisto && (
             <div>
               <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Imprevistos</h3>
               <div className="bg-gray-50 p-4 rounded-lg">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <p className="text-sm"><span className="font-medium text-gray-700">Algun Imprevisto:</span> {registro.algum_imprevisto === 'S' ? 'Sim' : registro.algum_imprevisto === 'N' ? 'Não' : registro.algum_imprevisto || '-'}</p>
-                  <p className="text-sm"><span className="font-medium text-gray-700">Algun Imprevisto Obs:</span> {registro.algum_imprevisto_obs || '-'}</p>
+                  <p className="text-sm"><span className="font-medium text-gray-700">Algum Imprevisto:</span> {registro.checklist.algum_imprevisto.valor === 'S' ? 'Sim' : registro.checklist.algum_imprevisto.valor === 'N' ? 'Não' : registro.checklist.algum_imprevisto.valor || '-'}</p>
+                  <p className="text-sm"><span className="font-medium text-gray-700">Obs.:</span> {registro.checklist.algum_imprevisto.observacao || '-'}</p>
                 </div>
               </div>
             </div>

@@ -6,22 +6,43 @@ import { Button, Card } from '../../components/ui'
 import { formatDate } from '../../utils/formatDate'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
+interface ChecklistItem {
+  valor: string
+  observacao: string
+}
+
 interface RegistroManutencaoMaquinas {
   id: string
   fazenda_id: string
   dispositivo_id?: string
   nome_usuario?: string
   data: string
-  maquina?: string
-  tipo_manutencao?: string
-  descricao?: string
-  responsavel?: string
-  custo?: number
-  status?: string
+  responsavel_checklist?: string
+  operador_motorista?: string
+  veiculo_trator?: string
+  placa?: string
+  odometro_horimetro?: string
   observacao?: string
+  checklist?: Record<string, ChecklistItem>
   sync_status?: string
   created_at: string
   updated_at?: string
+}
+
+const CHECKLIST_LABELS: Record<string, string> = {
+  assentoBom: 'Assento em bom estado',
+  bateriaBoa: 'Bateria em boa condição',
+  freiosBons: 'Freios em bom estado',
+  tapetesBons: 'Tapetes em bom estado',
+  calibrouPneus: 'Calibrou pneus',
+  limpouRadiador: 'Limpou radiador',
+  nivelAguaIdeal: 'Nível de água ideal',
+  vidrosPerfeitos: 'Vidros perfeitos',
+  conferiuEletrica: 'Conferiu parte elétrica',
+  lavagemRealizada: 'Lavagem realizada',
+  maquinaEngraxada: 'Máquina engraxada',
+  conferiuNivelOleo: 'Conferiu nível de óleo',
+  abastecimentoRealizado: 'Abastecimento realizado',
 }
 
 export function ManutencaoMaquinasDetalhes() {
@@ -95,29 +116,32 @@ export function ManutencaoMaquinasDetalhes() {
             <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Informações Gerais</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Data:</span> {formatDate(registro.data)}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Máquina:</span> {registro.maquina || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Veículo/Trator:</span> {registro.veiculo_trator || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Placa:</span> {registro.placa || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Odômetro/Horímetro:</span> {registro.odometro_horimetro || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Operador/Motorista:</span> {registro.operador_motorista || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Responsável Checklist:</span> {registro.responsavel_checklist || '-'}</p>
             </div>
           </div>
 
-          {/* Manutenção */}
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Manutenção</h3>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <p className="text-sm"><span className="font-medium text-gray-700">Tipo Manutenção:</span> {registro.tipo_manutencao || '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Responsável:</span> {registro.responsavel || '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Custo:</span> {registro.custo ? `R$ ${registro.custo.toFixed(2)}` : '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Status:</span> {registro.status || '-'}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Descrição */}
-          {registro.descricao && (
+          {/* Checklist de Manutenção */}
+          {registro.checklist && Object.keys(registro.checklist).length > 0 && (
             <div>
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Descrição</h3>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm"><span className="font-medium text-gray-700">Descrição:</span> {registro.descricao}</p>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Checklist de Manutenção</h3>
+              <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {Object.entries(registro.checklist).map(([key, item]) => (
+                    <div key={key} className="space-y-1">
+                      <p className="text-sm">
+                        <span className="font-medium text-gray-700">{CHECKLIST_LABELS[key] || key}:</span>{' '}
+                        {item.valor === 'S' ? 'Sim' : item.valor === 'N' ? 'Não' : item.valor || '-'}
+                      </p>
+                      {item.observacao && (
+                        <p className="text-sm text-gray-600"><span className="font-medium">Obs.:</span> {item.observacao}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           )}

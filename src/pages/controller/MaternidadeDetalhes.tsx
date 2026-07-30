@@ -8,7 +8,6 @@ import { getFazendaIdForUser } from '../../utils/fazendaContext'
 interface RegistroMaternidade {
   id: string
   fazenda_id: string
-  dispositivo_id?: string
   nome_usuario?: string
   data: string
   pasto?: string

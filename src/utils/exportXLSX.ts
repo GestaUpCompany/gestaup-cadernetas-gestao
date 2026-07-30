@@ -27,6 +27,7 @@ export interface MultiSheetExportConfig {
 }
 
 // Columns to automatically exclude from all exports
+// Matches the old CSV columnsToRemove plus the original XLSX exclusions
 const EXCLUDED_COLUMNS = new Set([
   'id',
   'fazenda_id',
@@ -37,7 +38,13 @@ const EXCLUDED_COLUMNS = new Set([
   'created_at',
   'updated_at',
   'deleted_at',
-  'lote_id'
+  'lote_id',
+  'pasto_id',
+  'espacamento_cocho_cm_cab',
+  'espacamento_cocho_obs',
+  'espacamento_cocho_detalhes',
+  'checklist',
+  'espacamento_cocho_ideal',
 ])
 
 function formatValue(value: any, format?: ColumnFormat): any {
@@ -60,26 +67,98 @@ function formatValue(value: any, format?: ColumnFormat): any {
   }
 }
 
+// Auto-generate header from snake_case key, same as old CSV
+function autoHeader(key: string): string {
+  return key
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
+}
+
+// Format data field the same way the old CSV did: dd/MM/yyyy HH:mm:ss
+function formatDataField(value: any): string {
+  if (!value) return ''
+  const date = new Date(value)
+  const day = String(date.getDate()).padStart(2, '0')
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const year = date.getFullYear()
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  const seconds = String(date.getSeconds()).padStart(2, '0')
+  return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`
+}
+
+// Build the full column list: configured columns + any extra data columns not in config
+// Config columns that don't exist in the data are skipped (avoids phantom empty columns)
+function buildColumnList(data: any[], configColumns: ColumnConfig[]): {
+  configCols: ColumnConfig[]
+  extraKeys: string[]
+} {
+  const configSources = new Set(configColumns.map(c => c.source))
+
+  // Collect all keys that actually exist in the data
+  const dataKeys = new Set<string>()
+  for (const row of data) {
+    if (!row || typeof row !== 'object') continue
+    for (const key of Object.keys(row)) {
+      dataKeys.add(key)
+    }
+  }
+
+  // Keep config columns that exist in data and aren't excluded
+  const filteredConfigCols = configColumns.filter(
+    col => !EXCLUDED_COLUMNS.has(col.source) && dataKeys.has(col.source)
+  )
+
+  // Scan data for keys not in config and not excluded
+  const extraKeys: string[] = []
+  const seen = new Set<string>()
+  for (const row of data) {
+    if (!row || typeof row !== 'object') continue
+    for (const key of Object.keys(row)) {
+      if (EXCLUDED_COLUMNS.has(key) || configSources.has(key) || seen.has(key)) continue
+      seen.add(key)
+      extraKeys.push(key)
+    }
+  }
+
+  return { configCols: filteredConfigCols, extraKeys }
+}
+
 export function exportToXLSX(data: any[], config: TableExportConfig): void {
   if (!data || data.length === 0) {
     console.warn('No data to export')
     return
   }
 
-  // Filter out excluded columns and apply column config
-  const filteredColumns = config.columns.filter(
-    col => !EXCLUDED_COLUMNS.has(col.source)
-  )
+  const { configCols, extraKeys } = buildColumnList(data, config.columns)
 
-  // Transform data according to column config
+  // Transform data: configured columns first, then extra columns
   const transformedData = data.map(row => {
     const transformedRow: any = {}
-    filteredColumns.forEach(col => {
+
+    // Configured columns with their headers, transforms and formats
+    configCols.forEach(col => {
       const value = row[col.source]
       transformedRow[col.header] = col.transform
         ? col.transform(value)
         : formatValue(value, col.format)
     })
+
+    // Extra columns with auto-generated headers (same as old CSV)
+    extraKeys.forEach(key => {
+      const value = row[key]
+      if (key === 'data') {
+        transformedRow[autoHeader(key)] = formatDataField(value)
+      } else if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+        transformedRow[autoHeader(key)] = JSON.stringify(value)
+      } else if (Array.isArray(value)) {
+        transformedRow[autoHeader(key)] = value.join(', ')
+      } else {
+        transformedRow[autoHeader(key)] = value
+      }
+    })
+
     return transformedRow
   })
 
@@ -105,18 +184,31 @@ export function exportToXLSXMultiSheet(config: MultiSheetExportConfig): void {
   for (const sheet of config.sheets) {
     if (!sheet.data || sheet.data.length === 0) continue
 
-    const filteredColumns = sheet.config.columns.filter(
-      col => !EXCLUDED_COLUMNS.has(col.source)
-    )
+    const { configCols, extraKeys } = buildColumnList(sheet.data, sheet.config.columns)
 
     const transformedData = sheet.data.map(row => {
       const transformedRow: any = {}
-      filteredColumns.forEach(col => {
+
+      configCols.forEach(col => {
         const value = row[col.source]
         transformedRow[col.header] = col.transform
           ? col.transform(value)
           : formatValue(value, col.format)
       })
+
+      extraKeys.forEach(key => {
+        const value = row[key]
+        if (key === 'data') {
+          transformedRow[autoHeader(key)] = formatDataField(value)
+        } else if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+          transformedRow[autoHeader(key)] = JSON.stringify(value)
+        } else if (Array.isArray(value)) {
+          transformedRow[autoHeader(key)] = value.join(', ')
+        } else {
+          transformedRow[autoHeader(key)] = value
+        }
+      })
+
       return transformedRow
     })
 
