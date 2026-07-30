@@ -1,0 +1,10 @@
+Notificacoes de recategorizacao: RPC gera alertas quando lote atinge 95% do limite da faixa
+
+- Migration: adiciona dados_jsonb a notificacoes para armazenar lote_categoria_id, percentual, dias_restantes
+- RPC gerar_notificacoes_recategorizacao: encontra lote_categorias ativas com peso >= 95% do limite da faixa, calcula prazo estimado via GMD, insere notificacoes com dedup por lote_categoria_id
+- RPC recategorizar_lote_categoria: soft-deleta notificacoes do lote_categoria_id origem apos recategorizar
+- Notifications.tsx: chama RPC antes de carregar notificacoes no polling de 30s
+
+Generated with [Devin](https://devin.ai)
+
+Co-Authored-By: Devin <158243242+devin-ai-integration[bot]@users.noreply.github.com>
