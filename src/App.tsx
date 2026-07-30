@@ -82,6 +82,7 @@ import { HistoricoOcupacao } from './pages/controller/HistoricoOcupacao'
 import { Individuos } from './pages/controller/Individuos'
 import { IndividuoNovo } from './pages/controller/IndividuoNovo'
 import { FaixasCategorias } from './pages/controller/FaixasCategorias'
+import { Notificacoes } from './pages/controller/Notificacoes'
 
 // Redirecionamento baseado no papel do usuário
 function RoleRedirect() {
@@ -890,6 +891,16 @@ function App() {
             <ControllerRoute>
               <ControllerLayout>
                 <FaixasCategorias />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/notificacoes"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <Notificacoes />
               </ControllerLayout>
             </ControllerRoute>
           }
