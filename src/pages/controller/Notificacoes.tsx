@@ -54,7 +54,7 @@ export function Notificacoes() {
 
   const [config, setConfig] = useState<NotificacaoConfig | null>(null)
   const [loadingConfig, setLoadingConfig] = useState(true)
-  const [threshold, setThreshold] = useState(95)
+  const [percentualAviso, setPercentualAviso] = useState(95)
   const [recategorizacaoAtivo, setRecategorizacaoAtivo] = useState(true)
   const [savingConfig, setSavingConfig] = useState(false)
   const [configSalvo, setConfigSalvo] = useState(false)
@@ -86,7 +86,7 @@ export function Notificacoes() {
       console.error('Erro ao buscar config:', error)
     } else if (data) {
       setConfig(data as NotificacaoConfig)
-      setThreshold(Number((data as NotificacaoConfig).threshold_recategorizacao))
+      setPercentualAviso(Number((data as NotificacaoConfig).threshold_recategorizacao))
       setRecategorizacaoAtivo((data as NotificacaoConfig).recategorizacao_ativo)
     }
     setLoadingConfig(false)
@@ -235,7 +235,7 @@ export function Notificacoes() {
     const { data, error } = await supabase
       .rpc('salvar_notificacoes_config', {
         p_fazenda_id: fazendaId,
-        p_threshold_recategorizacao: threshold,
+        p_threshold_recategorizacao: percentualAviso,
         p_recategorizacao_ativo: recategorizacaoAtivo,
       })
 
@@ -366,19 +366,19 @@ export function Notificacoes() {
               </button>
             </div>
 
-            {/* Threshold slider */}
+            {/* Percentual de aviso slider */}
             <div className={recategorizacaoAtivo ? '' : 'opacity-50 pointer-events-none'}>
               <div className="flex items-center justify-between mb-2">
-                <label className="font-medium text-gray-700">Threshold de alerta</label>
-                <span className="text-lg font-bold text-primary">{threshold}%</span>
+                <label className="font-medium text-gray-700">Percentual de aviso</label>
+                <span className="text-lg font-bold text-primary">{percentualAviso}%</span>
               </div>
               <input
                 type="range"
                 min={50}
                 max={99}
                 step={1}
-                value={threshold}
-                onChange={e => setThreshold(Number(e.target.value))}
+                value={percentualAviso}
+                onChange={e => setPercentualAviso(Number(e.target.value))}
                 className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary"
               />
               <div className="flex justify-between text-xs text-gray-400 mt-1">
@@ -386,8 +386,8 @@ export function Notificacoes() {
                 <span>99%</span>
               </div>
               <p className="text-sm text-gray-500 mt-2">
-                Notificar quando o lote atingir <strong>{threshold}%</strong> do limite superior da faixa de categoria.
-                Ex: com {threshold}%, um lote na categoria "Boi Magro" (limite 450 kg) dispara alerta aos {(450 * threshold / 100).toFixed(0)} kg.
+                Notificar quando o lote atingir <strong>{percentualAviso}%</strong> do limite superior da faixa de categoria.
+                Ex: com {percentualAviso}%, um lote na categoria "Boi Magro" (limite 450 kg) dispara alerta aos {(450 * percentualAviso / 100).toFixed(0)} kg.
               </p>
             </div>
 
@@ -395,7 +395,7 @@ export function Notificacoes() {
             <div className="flex items-center gap-3">
               <Button
                 onClick={handleSalvarConfig}
-                disabled={savingConfig || (config?.threshold_recategorizacao === threshold && config?.recategorizacao_ativo === recategorizacaoAtivo)}
+                disabled={savingConfig || (config?.threshold_recategorizacao === percentualAviso && config?.recategorizacao_ativo === recategorizacaoAtivo)}
                 variant="primary"
               >
                 {savingConfig ? 'Salvando...' : 'Salvar configurações'}
