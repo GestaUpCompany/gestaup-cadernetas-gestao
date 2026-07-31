@@ -490,27 +490,30 @@ export function Lotes() {
       // Após edição manual: não recalcular peso_vivo_atual nem periodo automaticamente
       // O peso foi definido manualmente pelo usuário; o cron somará GMD incrementalmente
       if (updatedCat.data_ajuste_peso) {
-        const dataAjuste = new Date(updatedCat.data_ajuste_peso)
+        const dataAjuste = new Date(updatedCat.data_ajuste_peso + 'T00:00:00')
         const currentDate = new Date()
+        currentDate.setHours(0, 0, 0, 0)
         const diffTime = currentDate.getTime() - dataAjuste.getTime()
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
         updatedCat = { ...updatedCat, periodo: diffDays > 0 ? diffDays : 0 }
       }
     } else if (planoVigente) {
       // Plano vigente ativo: calcular periodo a partir de data_inicio do plano
       // Não recalcular peso_vivo_atual_kg_cab aqui - o cron update_dados_lotes()
       // atualiza server-side diariamente. O frontend deve respeitar o valor do banco.
-      const dataInicio = new Date(planoVigente.data_inicio!)
+      const dataInicio = new Date(planoVigente.data_inicio! + 'T00:00:00')
       const currentDate = new Date()
+      currentDate.setHours(0, 0, 0, 0)
       const diffTime = currentDate.getTime() - dataInicio.getTime()
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
       updatedCat = { ...updatedCat, periodo: diffDays > 0 ? diffDays : 0 }
     } else if (updatedCat.data_pesagem) {
       // Sem plano vigente: comportamento legado com data_pesagem
-      const dataPesagem = new Date(updatedCat.data_pesagem)
+      const dataPesagem = new Date(updatedCat.data_pesagem + 'T00:00:00')
       const currentDate = new Date()
+      currentDate.setHours(0, 0, 0, 0)
       const diffTime = currentDate.getTime() - dataPesagem.getTime()
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
       updatedCat = { ...updatedCat, periodo: diffDays > 0 ? diffDays : 0 }
 
       if (updatedCat.peso_entrada_kg_cab && updatedCat.gmd && updatedCat.periodo) {
