@@ -507,7 +507,7 @@ export function Formulacoes() {
             {/* Basic info */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Nome *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Nome *</label>
                 <Input
                   type="text"
                   value={formData.nome}
@@ -518,7 +518,7 @@ export function Formulacoes() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Tipo</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Tipo</label>
                 <select
                   value={formData.tipo}
                   onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
@@ -534,7 +534,7 @@ export function Formulacoes() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Categoria *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Categoria *</label>
                 {editingFormulacao?.categoria_inferida_automaticamente && (
                   <div className="mb-2 p-3 rounded-lg bg-amber-50 border border-amber-300 text-xs text-amber-900">
                     <p className="font-semibold mb-1">Categoria preenchida automaticamente</p>
@@ -567,7 +567,7 @@ export function Formulacoes() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Descrição</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Descrição</label>
                 <Input
                   type="text"
                   value={formData.descricao}
@@ -581,7 +581,7 @@ export function Formulacoes() {
             {/* Parameters */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Meta Consumo MS (%PV)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Meta Consumo MS (%PV)</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -592,7 +592,7 @@ export function Formulacoes() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Peso Vivo Médio (kg)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Peso Vivo Médio (kg)</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -603,7 +603,7 @@ export function Formulacoes() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">GMD Planejado (kg/Cab/Dia)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">GMD Planejado (kg/Cab/Dia)</label>
                 <Input
                   type="text"
                   inputMode="decimal"
@@ -618,7 +618,7 @@ export function Formulacoes() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Sistema de Produção</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Sistema de Produção</label>
                 <select
                   value={formData.sistema_producao}
                   onChange={(e) => setFormData({ ...formData, sistema_producao: e.target.value })}

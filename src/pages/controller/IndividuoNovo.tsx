@@ -784,7 +784,7 @@ export function IndividuoNovo() {
                 <h4 className="text-sm font-medium text-gray-700 uppercase tracking-wider">Identificação</h4>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
                       Brinco <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -798,7 +798,7 @@ export function IndividuoNovo() {
                     {errors.id_brinco && <p className="text-red-500 text-xs mt-1">{errors.id_brinco}</p>}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Chip</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Chip</label>
                     <input
                       type="text"
                       value={form.id_chip}
@@ -817,7 +817,7 @@ export function IndividuoNovo() {
                 <h4 className="text-sm font-medium text-gray-700 uppercase tracking-wider">Características</h4>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
                       Sexo <span className="text-red-500">*</span>
                     </label>
                     <select
@@ -832,7 +832,7 @@ export function IndividuoNovo() {
                     {errors.sexo && <p className="text-red-500 text-xs mt-1">{errors.sexo}</p>}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
                       Raça <span className="text-red-500">*</span>
                     </label>
                     <select
@@ -855,7 +855,7 @@ export function IndividuoNovo() {
                 <h4 className="text-sm font-medium text-gray-700 uppercase tracking-wider">Classificação</h4>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
                       Categoria <span className="text-red-500">*</span>
                     </label>
                     <select
@@ -871,7 +871,7 @@ export function IndividuoNovo() {
                     {errors.categoria && <p className="text-red-500 text-xs mt-1">{errors.categoria}</p>}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Status</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Status</label>
                     <select
                       value={form.status}
                       onChange={(e) => handleChange('status', e.target.value)}
@@ -905,7 +905,7 @@ export function IndividuoNovo() {
             {/* Identificadores Adicionais */}
             <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Manejo</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Manejo</label>
                 <input
                   type="text"
                   value={form.id_manejo}
@@ -916,7 +916,7 @@ export function IndividuoNovo() {
                 {errors.id_manejo && <p className="text-red-500 text-xs mt-1">{errors.id_manejo}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Provisório (cria)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Provisório (cria)</label>
                 <input
                   type="text"
                   value={form.id_provisorio_cria}
@@ -939,7 +939,7 @@ export function IndividuoNovo() {
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
                   Data de nascimento <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -951,7 +951,7 @@ export function IndividuoNovo() {
                 {errors.data_nascimento && <p className="text-red-500 text-xs mt-1">{errors.data_nascimento}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Peso ao nascer (kg)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Peso ao nascer (kg)</label>
                 <NumericInput
                   value={form.peso_nascimento_kg}
                   onChange={(value) => handleNumericChange('peso_nascimento_kg', value)}
@@ -960,7 +960,7 @@ export function IndividuoNovo() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Origem</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Origem</label>
                 <select
                   value={form.origem}
                   onChange={(e) => handleChange('origem', e.target.value)}
@@ -985,7 +985,7 @@ export function IndividuoNovo() {
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data de entrada</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Data de entrada</label>
                 <input
                   type="date"
                   value={form.data_entrada_fazenda}
@@ -995,7 +995,7 @@ export function IndividuoNovo() {
                 {errors.data_entrada_fazenda && <p className="text-red-500 text-xs mt-1">{errors.data_entrada_fazenda}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">PV entrada (kg)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">PV entrada (kg)</label>
                 <NumericInput
                   value={form.pv_entrada_kg}
                   onChange={(value) => handleNumericChange('pv_entrada_kg', value)}
@@ -1003,7 +1003,7 @@ export function IndividuoNovo() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Preço entrada (R$/kg)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Preço entrada (R$/kg)</label>
                 <NumericInput
                   value={form.preco_entrada_reais_kg}
                   onChange={(value) => handleNumericChange('preco_entrada_reais_kg', value)}
@@ -1011,7 +1011,7 @@ export function IndividuoNovo() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Preço entrada (R$/@)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Preço entrada (R$/@)</label>
                 <NumericInput
                   value={form.preco_entrada_reais_arroba}
                   onChange={(value) => handleNumericChange('preco_entrada_reais_arroba', value)}
@@ -1019,7 +1019,7 @@ export function IndividuoNovo() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Preço entrada (R$/cabeça)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Preço entrada (R$/cabeça)</label>
                 <NumericInput
                   value={form.preco_entrada_reais_cabeca}
                   onChange={(value) => handleNumericChange('preco_entrada_reais_cabeca', value)}
@@ -1027,7 +1027,7 @@ export function IndividuoNovo() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Preço arroba boi gordo</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Preço arroba boi gordo</label>
                 <NumericInput
                   value={form.preco_arroba_boi_gordo}
                   onChange={(value) => handleNumericChange('preco_arroba_boi_gordo', value)}
@@ -1035,7 +1035,7 @@ export function IndividuoNovo() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Ágio/Deságio</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Ágio/Deságio</label>
                 <NumericInput
                   value={form.agio_desagio}
                   onChange={(value) => handleNumericChange('agio_desagio', value)}
@@ -1043,7 +1043,7 @@ export function IndividuoNovo() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Fornecedor</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Fornecedor</label>
                 <select
                   value={form.fornecedor}
                   onChange={(e) => handleChange('fornecedor', e.target.value)}
@@ -1056,7 +1056,7 @@ export function IndividuoNovo() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Propriedade de origem</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Propriedade de origem</label>
                 <input
                   type="text"
                   value={form.propriedade_origem}
@@ -1066,7 +1066,7 @@ export function IndividuoNovo() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Propriedade atual</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Propriedade atual</label>
                 <input
                   type="text"
                   value={form.propriedade_atual}
@@ -1088,7 +1088,7 @@ export function IndividuoNovo() {
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Lote atual</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Lote atual</label>
                 <select
                   value={form.lote_atual}
                   onChange={(e) => handleChange('lote_atual', e.target.value)}
@@ -1101,7 +1101,7 @@ export function IndividuoNovo() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Pasto atual</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Pasto atual</label>
                 <div className="text-sm text-gray-900 min-h-[42px] flex items-center px-3 py-2 border border-gray-300 rounded-lg bg-gray-50">
                   {pastoDoLote || (
                     <span className="text-gray-400 italic">Selecione um lote para exibir o pasto</span>
@@ -1109,7 +1109,7 @@ export function IndividuoNovo() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Setor atual</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Setor atual</label>
                 <select
                   value={form.setor_atual}
                   onChange={(e) => handleChange('setor_atual', e.target.value)}
@@ -1122,7 +1122,7 @@ export function IndividuoNovo() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Pai</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Pai</label>
                 <select
                   value={form.pai}
                   onChange={(e) => handleChange('pai', e.target.value)}
@@ -1135,7 +1135,7 @@ export function IndividuoNovo() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Mãe</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Mãe</label>
                 <select
                   value={form.mae}
                   onChange={(e) => handleChange('mae', e.target.value)}
@@ -1196,7 +1196,7 @@ export function IndividuoNovo() {
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data da desmama</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Data da desmama</label>
                 <input
                   type="date"
                   value={form.data_desmama}
@@ -1206,7 +1206,7 @@ export function IndividuoNovo() {
                 {errors.data_desmama && <p className="text-red-500 text-xs mt-1">{errors.data_desmama}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Peso na desmama (kg)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Peso na desmama (kg)</label>
                 <NumericInput
                   value={form.peso_desmama_kg}
                   onChange={(value) => handleNumericChange('peso_desmama_kg', value)}
@@ -1226,7 +1226,7 @@ export function IndividuoNovo() {
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data de inserção na rastreabilidade</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Data de inserção na rastreabilidade</label>
                 <input
                   type="date"
                   value={form.data_insercao_rastreabilidade}
@@ -1236,7 +1236,7 @@ export function IndividuoNovo() {
                 {errors.data_insercao_rastreabilidade && <p className="text-red-500 text-xs mt-1">{errors.data_insercao_rastreabilidade}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data de liberação SISBOV</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Data de liberação SISBOV</label>
                 <input
                   type="date"
                   value={form.data_liberacao_sisbov}

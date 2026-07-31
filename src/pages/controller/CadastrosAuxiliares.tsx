@@ -1040,7 +1040,7 @@ export function CadastrosAuxiliares() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                 {currentTab.fields.filter((field) => !field.showIf || field.showIf(state.formData)).map((field) => (
                   <div key={field.name}>
-                    <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
                       {field.label} {field.required && <span className="text-red-500">*</span>}
                     </label>
                     {field.name === 'setor_id' ? (
@@ -1104,7 +1104,7 @@ export function CadastrosAuxiliares() {
                     {funcionarioRbac.acessa_app && (
                       <div className="space-y-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
                             PIN {state.editingItem?.pin_hash ? '(deixe em branco para manter)' : '*'}
                           </label>
                           <Input

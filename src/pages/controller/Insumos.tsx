@@ -305,7 +305,7 @@ export function Insumos() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
                   Nome *
                 </label>
                 <Input
@@ -319,7 +319,7 @@ export function Insumos() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
                   Tipo
                 </label>
                 <select
@@ -341,7 +341,7 @@ export function Insumos() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
                   Fornecedor
                 </label>
                 <select
@@ -357,7 +357,7 @@ export function Insumos() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
                   Teor MS (%)
                 </label>
                 <Input
@@ -371,7 +371,7 @@ export function Insumos() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
                   Preço (R$/Ton/MN)
                 </label>
                 <Input

@@ -855,7 +855,7 @@ export function Rotinas() {
           </div>
 
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
               Tipo de regra
             </label>
             <select
@@ -877,7 +877,7 @@ export function Rotinas() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
                 Data de início <span className="text-red-500">*</span>
               </label>
               <Input
@@ -891,7 +891,7 @@ export function Rotinas() {
               )}
             </div>
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
                 Data de fim
               </label>
               <Input
@@ -961,7 +961,7 @@ export function Rotinas() {
       >
         <form onSubmit={handleRotinaSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
               Funcionário <span className="text-red-500">*</span>
             </label>
             <select
@@ -1052,7 +1052,7 @@ export function Rotinas() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
                 Data de início <span className="text-red-500">*</span>
               </label>
               <Input
@@ -1066,7 +1066,7 @@ export function Rotinas() {
               )}
             </div>
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
                 Data de fim
               </label>
               <Input

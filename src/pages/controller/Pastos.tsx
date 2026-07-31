@@ -734,7 +734,7 @@ export function Pastos() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3">
               <div className="sm:col-span-2 lg:col-span-1">
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
                   Nome <span className="text-red-500">*</span>
                 </label>
                 <Input
@@ -747,7 +747,7 @@ export function Pastos() {
                 />
               </div>
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
                   Setor
                 </label>
                 <select
@@ -764,7 +764,7 @@ export function Pastos() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
                   Sistema de Produção
                 </label>
                 <select
@@ -784,7 +784,7 @@ export function Pastos() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
                   Metragem Cocho (m)
                 </label>
                 <Input
@@ -797,7 +797,7 @@ export function Pastos() {
                 />
               </div>
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
                   Nível Degradação
                 </label>
                 <select
@@ -817,7 +817,7 @@ export function Pastos() {
 
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 sm:gap-4">
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
                   Área Total (ha)
                 </label>
                 <Input
@@ -837,7 +837,7 @@ export function Pastos() {
                 />
               </div>
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
                   Área Útil (%)
                 </label>
                 <Input
@@ -857,7 +857,7 @@ export function Pastos() {
                 />
               </div>
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
                   Área Útil (ha)
                 </label>
                 <Input
@@ -871,7 +871,7 @@ export function Pastos() {
               </div>
               {editingPasto && editingPasto.modulo_nome && (
                 <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
                     Módulo
                   </label>
                   <Input
@@ -883,7 +883,7 @@ export function Pastos() {
                 </div>
               )}
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
                   Meta de Ocupação (dias)
                 </label>
                 <Input
@@ -899,7 +899,7 @@ export function Pastos() {
             </div>
 
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
                 Espécie <span className="text-red-500">*</span>
               </label>
               <Input
@@ -914,7 +914,7 @@ export function Pastos() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 items-end">
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
                   Altura Entrada (cm) <span className="text-red-500">*</span>
                 </label>
                 <Input
@@ -929,7 +929,7 @@ export function Pastos() {
               </div>
 
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
                   Altura Saída (cm) <span className="text-red-500">*</span>
                 </label>
                 <Input
@@ -945,7 +945,7 @@ export function Pastos() {
             </div>
 
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
                 Fonte de Água Principal
               </label>
               <select
