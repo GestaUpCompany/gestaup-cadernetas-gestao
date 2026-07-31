@@ -176,6 +176,8 @@ export function Lotes() {
   const [selectedCategoriaForPlanos, setSelectedCategoriaForPlanos] = useState<{ loteCategoriaId?: string; categoria: string } | null>(null)
   const [isPlanoDraftModalOpen, setIsPlanoDraftModalOpen] = useState(false)
   const [selectedDraftCategoriaIndex, setSelectedDraftCategoriaIndex] = useState<number | null>(null)
+  const [autoSaveToast, setAutoSaveToast] = useState<string | null>(null)
+  const [openingPlanos, setOpeningPlanos] = useState(false)
   const [originalPesos, setOriginalPesos] = useState<Record<string, number | undefined>>({})
   const [pesoEditModal, setPesoEditModal] = useState<{
     isOpen: boolean
@@ -823,6 +825,109 @@ export function Lotes() {
       } catch (syncError) {
         console.error(`Erro ao sincronizar nutrição dos indivíduos da categoria ${cat.categoria}:`, syncError)
       }
+    }
+  }
+
+  // Auto-save do lote antes de abrir o modal de planos
+  const abrirPlanosComAutoSave = async (catId: string, catNome: string, catIndex: number) => {
+    // Validações básicas
+    if (!formData.nome?.trim()) {
+      alert('Preencha o nome do lote antes de gerenciar planos.')
+      return
+    }
+    if (formData.categorias.length === 0) {
+      alert('Selecione pelo menos uma categoria antes de gerenciar planos.')
+      return
+    }
+
+    setSubmitting(true)
+    setOpeningPlanos(true)
+    try {
+      // Buscar fazenda vinculada
+      const _fazendaId = await getFazendaIdForUser(user?.id || '')
+      if (!_fazendaId) {
+        alert('Não foi possível determinar a fazenda vinculada.')
+        setSubmitting(false)
+        return
+      }
+
+      const loteData = {
+        fazenda_id: _fazendaId,
+        nome: formData.nome,
+        n_cabecas: formData.numero_cabecas ? parseInt(formData.numero_cabecas) : null,
+        qtd_bezerros: formData.quantidade_bezerros ? parseInt(formData.quantidade_bezerros) : null,
+        ativo: formData.ativo,
+        pasto_id: formData.pasto_id || null,
+        sistema_producao: formData.sistema_producao || null,
+        destino: formData.destino || null,
+        meta_intervalo_rodeio_dias: formData.meta_intervalo_rodeio_dias ? parseInt(formData.meta_intervalo_rodeio_dias) : null,
+        produtor_rural: formData.produtor_rural || null,
+        propriedade_origem: formData.propriedade_origem || null,
+        numero_contrato: formData.numero_contrato || null,
+        mes_competencia: formData.mes_competencia || null,
+        data_liberacao_sisbov: formData.data_liberacao_sisbov || null,
+        periodo_liberacao_sisbov: formData.periodo_liberacao_sisbov || null,
+        data_embarque_prevista: formData.data_embarque_prevista || null,
+      }
+
+      let loteId: string
+      if (editingLote) {
+        const { error: updateError } = await supabase
+          .from('lotes')
+          .update(loteData)
+          .eq('id', editingLote.id)
+        if (updateError) throw updateError
+        loteId = editingLote.id
+      } else {
+        const { data: newLote, error: insertError } = await supabase
+          .from('lotes')
+          .insert(loteData)
+          .select()
+          .single()
+        if (insertError) throw insertError
+        loteId = newLote?.id || ''
+      }
+
+      // Salvar categorias (inclui raça, peso, etc.)
+      const recalculatedCategorias = formData.categorias.map(recalcularCategoria)
+      await salvarCategorias(loteId, recalculatedCategorias)
+
+      // Buscar a categoria pelo índice (após save, todas têm ID)
+      const { data: savedCats } = await supabase
+        .from('lote_categorias')
+        .select('id, categoria')
+        .eq('lote_id', loteId)
+        .eq('ativo', true)
+        .order('created_at', { ascending: true })
+
+      const savedCat = savedCats?.[catIndex]
+      if (savedCat) {
+        setAutoSaveToast('Lote salvo automaticamente. Abrindo planos...')
+        setTimeout(() => setAutoSaveToast(null), 3000)
+        setSelectedCategoriaForPlanos({ loteCategoriaId: savedCat.id, categoria: savedCat.categoria })
+        setIsPlanoModalOpen(true)
+        // Recarregar lotes para refletir o save
+        await loadLotes()
+        if (editingLote) {
+          await handleEdit({ ...editingLote, id: loteId } as any)
+        }
+      } else if (catId) {
+        // Fallback: se não encontrou por índice mas temos o ID original, usar ele
+        setAutoSaveToast('Lote salvo automaticamente. Abrindo planos...')
+        setTimeout(() => setAutoSaveToast(null), 3000)
+        setSelectedCategoriaForPlanos({ loteCategoriaId: catId, categoria: catNome })
+        setIsPlanoModalOpen(true)
+        await loadLotes()
+        if (editingLote) {
+          await handleEdit({ ...editingLote, id: loteId } as any)
+        }
+      }
+    } catch (error: any) {
+      console.error('Erro no auto-save:', error)
+      alert('Não foi possível salvar o lote. Verifique os campos obrigatórios e tente novamente.')
+    } finally {
+      setSubmitting(false)
+      setOpeningPlanos(false)
     }
   }
 
@@ -1934,21 +2039,17 @@ export function Lotes() {
                                     ) : (
                                       <p className="text-sm text-yellow-800">Crie o plano nutricional para esta categoria</p>
                                     )}
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      onClick={() => {
-                                        if (cat.id) {
-                                          setSelectedCategoriaForPlanos({ loteCategoriaId: cat.id, categoria: cat.categoria })
-                                          setIsPlanoModalOpen(true)
-                                        } else {
-                                          setSelectedDraftCategoriaIndex(catIndex)
-                                          setIsPlanoDraftModalOpen(true)
-                                        }
-                                      }}
-                                    >
-                                      {hasPlano ? 'Gerenciar Planos' : 'Criar Plano'}
-                                    </Button>
+                                    <div className="flex flex-col gap-1 items-end">
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        disabled={openingPlanos}
+                                        onClick={() => abrirPlanosComAutoSave(cat.id || '', cat.categoria, catIndex)}
+                                      >
+                                        {openingPlanos ? 'Salvando...' : hasPlano ? 'Gerenciar Planos' : 'Criar Plano'}
+                                      </Button>
+                                      <p className="text-[10px] text-gray-400">Salva o lote automaticamente</p>
+                                    </div>
                                   </div>
                                 </div>
                               )
@@ -2817,6 +2918,24 @@ export function Lotes() {
           cancelText="Cancelar"
           variant="warning"
         />
+      )}
+
+      {autoSaveToast && (
+        <div className="fixed top-4 right-4 z-[80] max-w-sm bg-white border border-green-300 shadow-lg rounded-lg p-4 animate-in fade-in slide-in-from-top duration-300">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 w-5 h-5 rounded-full bg-green-100 flex items-center justify-center mt-0.5">
+              <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+            </div>
+            <p className="text-sm font-semibold text-gray-800">{autoSaveToast}</p>
+            <button
+              onClick={() => setAutoSaveToast(null)}
+              className="flex-shrink-0 text-gray-400 hover:text-gray-600"
+              aria-label="Fechar"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+        </div>
       )}
 
       {selectedCategoriaForPlanos && (
