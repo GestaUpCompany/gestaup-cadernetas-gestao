@@ -16,6 +16,7 @@ interface FaixaCategoria {
   ordem: number
   cor: string | null
   ativo: boolean
+  destino: string | null
 }
 
 interface LoteCategoriaCronologia {
@@ -169,6 +170,9 @@ interface TransicaoHistorico {
 
 const SEXO_LABEL: Record<string, string> = { M: 'Machos', F: 'Fêmeas' }
 
+const capitalizeCategoria = (s: string) =>
+  s.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+
 function Campo({ label, valor }: { label: string; valor: unknown }) {
   const v = valor === null || valor === undefined || valor === '' ? '—' : String(valor)
   return (
@@ -185,8 +189,9 @@ export function FaixasCategorias() {
   const [loadingFazenda, setLoadingFazenda] = useState(true)
   const [faixas, setFaixas] = useState<FaixaCategoria[]>([])
   const [loadingFaixas, setLoadingFaixas] = useState(true)
-  const [savingFaixaId, setSavingFaixaId] = useState<string | null>(null)
+  const [savingAll, setSavingAll] = useState(false)
   const [sexoFiltro, setSexoFiltro] = useState<'M' | 'F'>('M')
+  const [destinoFiltro, setDestinoFiltro] = useState<'corte' | 'reprodução'>('corte')
 
   // Cronologia dos lotes
   const [lotesCategorias, setLotesCategorias] = useState<LoteCategoriaCronologia[]>([])
@@ -505,7 +510,10 @@ export function FaixasCategorias() {
     })
   }
 
-  const faixasDoSexo = faixas.filter(f => f.sexo === sexoFiltro)
+  const faixasDoSexo = faixas.filter(f =>
+    f.sexo === sexoFiltro &&
+    (f.destino === null || f.destino === destinoFiltro)
+  )
 
   const handleFaixaChange = (id: string, campo: 'peso_min' | 'peso_max' | 'cor', valor: string) => {
     setFaixas(prev => prev.map(f => {
@@ -517,28 +525,29 @@ export function FaixasCategorias() {
     }))
   }
 
-  const salvarFaixa = async (id: string) => {
-    const faixa = faixas.find(f => f.id === id)
-    if (!faixa) return
-    setSavingFaixaId(id)
-    const { error } = await supabase
-      .from('faixas_categorias')
-      .update({
-        peso_min: faixa.peso_min,
-        peso_max: faixa.peso_max,
-        cor: faixa.cor,
-      })
-      .eq('id', id)
-    if (error) {
-      console.error('Erro ao salvar faixa:', error)
+  const salvarTodasFaixas = async () => {
+    setSavingAll(true)
+    for (const faixa of faixas) {
+      const { error } = await supabase
+        .from('faixas_categorias')
+        .update({
+          peso_min: faixa.peso_min,
+          peso_max: faixa.peso_max,
+          cor: faixa.cor,
+        })
+        .eq('id', faixa.id)
+      if (error) {
+        console.error(`Erro ao salvar faixa ${faixa.nome}:`, error)
+      }
     }
-    setSavingFaixaId(null)
+    setSavingAll(false)
   }
 
   const lotesDisponiveis = Array.from(new Set(lotesCategorias.map(lc => lc.lote_id)))
     .map(lid => ({
       id: lid,
       nome: lotesCategorias.find(lc => lc.lote_id === lid)?.lote_nome || 'Lote',
+      destino: lotesCategorias.find(lc => lc.lote_id === lid)?.lote_destino ?? null,
     }))
 
   const categoriasDoLoteSelecionado = lotesCategorias
@@ -547,10 +556,12 @@ export function FaixasCategorias() {
 
   const categoriaAtiva = categoriasDoLoteSelecionado.find(c => c.data_fim === null && c.ativo)
 
-  // Sugerir próxima categoria baseado nas faixas e no sexo
-  const sugerirProximaCategoria = (categoriaAtual: string, sexo: string | null): string => {
+  // Sugerir próxima categoria baseado nas faixas, sexo e destino do lote
+  const sugerirProximaCategoria = (categoriaAtual: string, sexo: string | null, destino: string | null): string => {
     const sexoNormalizado = sexo === 'fêmea' || sexo === 'F' ? 'F' : 'M'
-    const faixasSexo = faixas.filter(f => f.sexo === sexoNormalizado && f.ativo).sort((a, b) => a.ordem - b.ordem)
+    const faixasSexo = faixas
+      .filter(f => f.sexo === sexoNormalizado && f.ativo && (f.destino === null || f.destino === destino))
+      .sort((a, b) => a.ordem - b.ordem)
     const idxAtual = faixasSexo.findIndex(f => f.nome.toLowerCase() === categoriaAtual.toLowerCase())
     if (idxAtual >= 0 && idxAtual < faixasSexo.length - 1) {
       return faixasSexo[idxAtual + 1].nome
@@ -560,7 +571,7 @@ export function FaixasCategorias() {
 
   const abrirRecategorizacao = async (loteCategoria: LoteCategoriaCronologia) => {
     setRecategorizando(loteCategoria)
-    const sugerida = sugerirProximaCategoria(loteCategoria.categoria, loteCategoria.sexo)
+    const sugerida = sugerirProximaCategoria(loteCategoria.categoria, loteCategoria.sexo, loteCategoria.lote_destino ?? null)
     setNovaCategoria(sugerida)
     setManterFormulacao(true)
     setFormulacaoSelecionada('')
@@ -709,7 +720,7 @@ export function FaixasCategorias() {
       <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-3">
           <h3 className="text-lg font-semibold text-gray-800">Faixas de Peso por Categoria</h3>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setSexoFiltro('M')}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${sexoFiltro === 'M' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
@@ -722,6 +733,23 @@ export function FaixasCategorias() {
             >
               Fêmeas
             </button>
+            {sexoFiltro === 'M' && (
+              <>
+                <span className="w-px bg-gray-200 mx-1" />
+                <button
+                  onClick={() => setDestinoFiltro('corte')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${destinoFiltro === 'corte' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                >
+                  Abate
+                </button>
+                <button
+                  onClick={() => setDestinoFiltro('reprodução')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${destinoFiltro === 'reprodução' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                >
+                  Reprodução
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -739,7 +767,6 @@ export function FaixasCategorias() {
                   <th className="py-2 pr-3 font-medium">Peso Mín (kg)</th>
                   <th className="py-2 pr-3 font-medium">Peso Máx (kg)</th>
                   <th className="py-2 pr-3 font-medium">Cor</th>
-                  <th className="py-2 pr-3 font-medium">Ação</th>
                 </tr>
               </thead>
               <tbody>
@@ -780,22 +807,20 @@ export function FaixasCategorias() {
                         className="w-10 h-8 rounded border border-gray-200 cursor-pointer"
                       />
                     </td>
-                    <td className="py-2 pr-3">
-                      <Button
-                        variant="secondary"
-                        onClick={() => salvarFaixa(faixa.id)}
-                        disabled={savingFaixaId === faixa.id}
-                        className="text-xs px-3 py-1"
-                      >
-                        {savingFaixaId === faixa.id ? 'Salvando...' : 'Salvar'}
-                      </Button>
-                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
+        <div className="flex justify-end mt-3">
+          <Button
+            onClick={salvarTodasFaixas}
+            disabled={savingAll || faixas.length === 0}
+          >
+            {savingAll ? 'Salvando...' : 'Salvar todas as faixas'}
+          </Button>
+        </div>
         <p className="text-xs text-gray-400 mt-3">
           As faixas são valores iniciais editáveis por fazenda. Mudanças aqui não retroagem lotes já cadastrados.
         </p>
@@ -812,7 +837,7 @@ export function FaixasCategorias() {
               className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary"
             >
               {lotesDisponiveis.map(l => (
-                <option key={l.id} value={l.id}>{l.nome}</option>
+                <option key={l.id} value={l.id}>{l.nome} ({l.destino === 'corte' ? 'Abate' : l.destino === 'reprodução' ? 'Reprodução' : 'Sem destino'})</option>
               ))}
             </select>
           )}
@@ -842,7 +867,7 @@ export function FaixasCategorias() {
                     >
                       {idx + 1}
                     </span>
-                    <p className="font-semibold">{cat.categoria}</p>
+                    <p className="font-semibold">{capitalizeCategoria(cat.categoria)}</p>
                     <p className="text-[10px] opacity-80">
                       {cat.peso_vivo_atual_kg_cab != null ? `${cat.peso_vivo_atual_kg_cab} kg` : 'sem peso'}
                       {cat.quant_atual != null && ` • ${cat.quant_atual} cab`}
@@ -857,11 +882,12 @@ export function FaixasCategorias() {
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-blue-900">Categoria ativa: {categoriaAtiva.categoria}</p>
+                    <p className="text-sm font-semibold text-blue-900">Categoria ativa: {capitalizeCategoria(categoriaAtiva.categoria)}</p>
                     <p className="text-xs text-blue-700 mt-1">
                       Peso atual: {categoriaAtiva.peso_vivo_atual_kg_cab != null ? `${categoriaAtiva.peso_vivo_atual_kg_cab} kg` : 'não informado'}
                       {categoriaAtiva.quant_atual != null && ` • ${categoriaAtiva.quant_atual} cabeças`}
                       {categoriaAtiva.sexo && ` • Sexo: ${categoriaAtiva.sexo}`}
+                      {categoriaAtiva.lote_destino && ` • Destino: ${categoriaAtiva.lote_destino === 'corte' ? 'Abate' : 'Reprodução'}`}
                     </p>
                   </div>
                   <Button
@@ -903,9 +929,9 @@ export function FaixasCategorias() {
                           <span className="text-gray-400 mr-2">{expandida ? '▼' : '▶'}</span>
                           <span className="font-medium">{new Date(t.data_transicao).toLocaleDateString('pt-BR')}</span>
                           <span className="mx-2">→</span>
-                          <span>{t.categoria_origem}</span>
+                          <span>{capitalizeCategoria(t.categoria_origem)}</span>
                           <span className="mx-2">→</span>
-                          <span className="font-medium">{t.categoria_destino}</span>
+                          <span className="font-medium">{capitalizeCategoria(t.categoria_destino)}</span>
                           {t.peso_na_transicao_kg != null && (
                             <span className="ml-2 text-gray-400">({t.peso_na_transicao_kg} kg)</span>
                           )}
@@ -976,9 +1002,12 @@ export function FaixasCategorias() {
         {recategorizando && (
           <div className="space-y-4">
             <div className="bg-gray-50 rounded-lg p-3 text-sm">
-              <p><span className="text-gray-500">Categoria atual:</span> <span className="font-medium">{recategorizando.categoria}</span></p>
+              <p><span className="text-gray-500">Categoria atual:</span> <span className="font-medium">{capitalizeCategoria(recategorizando.categoria)}</span></p>
               <p><span className="text-gray-500">Peso atual:</span> <span className="font-medium">{recategorizando.peso_vivo_atual_kg_cab ?? 'não informado'} kg</span></p>
               <p><span className="text-gray-500">Cabeças:</span> <span className="font-medium">{recategorizando.quant_atual ?? 'não informado'}</span></p>
+              {recategorizando.lote_destino && (
+                <p><span className="text-gray-500">Destino:</span> <span className="font-medium">{recategorizando.lote_destino === 'corte' ? 'Abate' : 'Reprodução'}</span></p>
+              )}
             </div>
 
             <div>
@@ -990,7 +1019,11 @@ export function FaixasCategorias() {
               >
                 <option value="">Selecione a nova categoria...</option>
                 {faixas
-                  .filter(f => f.sexo === (recategorizando.sexo === 'fêmea' || recategorizando.sexo === 'F' ? 'F' : 'M') && f.ativo)
+                  .filter(f =>
+                    f.sexo === (recategorizando.sexo === 'fêmea' || recategorizando.sexo === 'F' ? 'F' : 'M') &&
+                    f.ativo &&
+                    (f.destino === null || f.destino === recategorizando.lote_destino)
+                  )
                   .sort((a, b) => a.ordem - b.ordem)
                   .map(f => (
                     <option key={f.id} value={f.nome}>
@@ -1093,7 +1126,7 @@ export function FaixasCategorias() {
         title="Confirmar recategorização"
         message={
           recategorizando
-            ? `Confirmar a recategorização de "${recategorizando.categoria}" para "${novaCategoria}"? Esta ação encerra a categoria atual, cria uma nova e registra o histórico para auditoria. Não pode ser desfeita.`
+            ? `Confirmar a recategorização de "${capitalizeCategoria(recategorizando.categoria)}" para "${capitalizeCategoria(novaCategoria)}"? Esta ação encerra a categoria atual, cria uma nova e registra o histórico para auditoria. Não pode ser desfeita.`
             : ''
         }
         confirmText="Confirmar"

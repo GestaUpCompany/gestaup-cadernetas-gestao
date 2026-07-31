@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../services/supabaseClient'
@@ -183,23 +183,28 @@ export function Lotes() {
   } | null>(null)
   const [pendingSubmitData, setPendingSubmitData] = useState<{ loteId: string; recalculatedCategorias: LoteCategoria[] } | null>(null)
 
-  const categoriasOpcoes = [
-    'vaca',
-    'touro',
-    'boi gordo',
-    'boi magro',
-    'garrote',
-    'bezerro',
-    'bezerro ao pé',
-    'bezerra',
-    'bezerra ao pé',
-    'novilha',
-    'tropa',
-  ]
+  const categoriasOpcoes = useMemo(() => {
+    const baseCategorias = [
+      'bezerro ao pé',
+      'bezerra ao pé',
+      'bezerro',
+      'bezerra',
+      'garrote',
+      'novilha',
+    ]
+    if (formData.destino === 'reprodução') {
+      return [...baseCategorias, 'tourinho', 'touro', 'vaca', 'tropa']
+    }
+    if (formData.destino === 'corte') {
+      return [...baseCategorias, 'boi magro', 'boi gordo', 'vaca', 'tropa']
+    }
+    return [...baseCategorias, 'boi magro', 'boi gordo', 'tourinho', 'touro', 'vaca', 'tropa']
+  }, [formData.destino])
 
   const categoriaColors: Record<string, string> = {
     'vaca': 'border-blue-500',
     'touro': 'border-red-500',
+    'tourinho': 'border-violet-400',
     'boi gordo': 'border-green-500',
     'boi magro': 'border-yellow-500',
     'garrote': 'border-purple-500',
@@ -214,6 +219,7 @@ export function Lotes() {
   const categoriaBgColors: Record<string, string> = {
     'vaca': 'bg-blue-50',
     'touro': 'bg-red-50',
+    'tourinho': 'bg-violet-50',
     'boi gordo': 'bg-green-50',
     'boi magro': 'bg-yellow-50',
     'garrote': 'bg-purple-50',
@@ -1614,7 +1620,21 @@ export function Lotes() {
                   </label>
                   <select
                     value={formData.destino}
-                    onChange={(e) => setFormData({ ...formData, destino: e.target.value })}
+                    onChange={(e) => {
+                      const novoDestino = e.target.value
+                      const categoriasValidas = novoDestino === 'reprodução'
+                        ? ['bezerro ao pé', 'bezerra ao pé', 'bezerro', 'bezerra', 'garrote', 'novilha', 'tourinho', 'touro', 'vaca', 'tropa']
+                        : novoDestino === 'corte'
+                          ? ['bezerro ao pé', 'bezerra ao pé', 'bezerro', 'bezerra', 'garrote', 'novilha', 'boi magro', 'boi gordo', 'vaca', 'tropa']
+                          : ['bezerro ao pé', 'bezerra ao pé', 'bezerro', 'bezerra', 'garrote', 'novilha', 'boi magro', 'boi gordo', 'tourinho', 'touro', 'vaca', 'tropa']
+                      setFormData({
+                        ...formData,
+                        destino: novoDestino,
+                        categorias: formData.categorias.filter(c =>
+                          categoriasValidas.includes(c.categoria.toLowerCase())
+                        ),
+                      })
+                    }}
                     required
                     className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-gray-200 rounded-lg focus:outline-none focus:border-accent"
                   >

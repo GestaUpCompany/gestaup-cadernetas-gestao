@@ -48,6 +48,7 @@ import { CadastrosAuxiliares } from './pages/controller/CadastrosAuxiliares'
 import { Rotinas } from './pages/controller/Rotinas'
 import { AuditoriaRotinas } from './pages/controller/AuditoriaRotinas'
 import { Currais } from './pages/controller/Currais'
+import { ProgramacaoTratos } from './pages/controller/ProgramacaoTratos'
 import { HistoricoDietas } from './pages/controller/HistoricoDietas'
 import { HistoricoPlanos } from './pages/controller/HistoricoPlanos'
 import { BebedourosCadastro } from './pages/controller/BebedourosCadastro'
@@ -408,6 +409,18 @@ function App() {
               <ConfinamentoRoute>
                 <ControllerLayout>
                   <Currais />
+                </ControllerLayout>
+              </ConfinamentoRoute>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/programacao-tratos"
+          element={
+            <ControllerRoute>
+              <ConfinamentoRoute>
+                <ControllerLayout>
+                  <ProgramacaoTratos />
                 </ControllerLayout>
               </ConfinamentoRoute>
             </ControllerRoute>
