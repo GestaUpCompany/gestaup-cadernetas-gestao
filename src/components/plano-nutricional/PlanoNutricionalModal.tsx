@@ -379,6 +379,119 @@ export function PlanoNutricionalModal({
     })
   }
 
+  const handleIniciarPlanoRetroativo = async (planoId?: string) => {
+    if (planos.length === 0) return
+
+    let planoParaIniciar: PlanoNutricional | undefined
+    if (planoId) {
+      planoParaIniciar = planos.find((p) => p.id === planoId)
+    } else {
+      planoParaIniciar = [...planos]
+        .sort((a, b) => a.ordem - b.ordem)
+        .find((p) => !p.data_fim)
+    }
+
+    if (!planoParaIniciar) {
+      setMessage('Nenhum plano disponível para iniciar.')
+      return
+    }
+
+    // Buscar data_pesagem e peso_entrada_kg_cab da categoria
+    const { data: catData } = await supabase
+      .from('lote_categorias')
+      .select('data_pesagem, peso_entrada_kg_cab, rc_atual')
+      .eq('id', loteCategoriaId)
+      .single()
+
+    if (!catData?.data_pesagem) {
+      setMessage('Data de entrada (pesagem) não cadastrada para esta categoria. Cadastre a data de entrada no formulário do lote antes de iniciar o plano retroativo.')
+      return
+    }
+
+    if (!catData?.peso_entrada_kg_cab) {
+      setMessage('Peso de entrada não cadastrado para esta categoria. Cadastre o peso de entrada no formulário do lote antes de iniciar o plano retroativo.')
+      return
+    }
+
+    const dataPesagem = catData.data_pesagem as string
+    const pesoEntrada = catData.peso_entrada_kg_cab as number
+
+    // Determinar GMD: plano > formulação
+    const formulacao = formulacoes.find((f) => f.id === planoParaIniciar.formulacao_id)
+    const gmd = planoParaIniciar.gmd_planejado != null
+      ? planoParaIniciar.gmd_planejado
+      : formulacao?.gmd ?? null
+
+    if (!gmd || gmd <= 0) {
+      setMessage('GMD não definida para este plano. Defina o GMD planejado no plano ou na formulação antes de iniciar retroativo.')
+      return
+    }
+
+    // Calcular peso projetado
+    const dataPesagemDate = new Date(dataPesagem + 'T00:00:00')
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const diffDays = Math.ceil((today.getTime() - dataPesagemDate.getTime()) / (1000 * 60 * 60 * 24))
+    const pesoProjetado = pesoEntrada + (gmd * Math.max(diffDays, 0))
+
+    const dataPesagemBR = dataPesagemDate.toLocaleDateString('pt-BR')
+    const pesoEntradoBR = pesoEntrada.toFixed(2).replace('.', ',')
+    const pesoProjetadoBR = pesoProjetado.toFixed(2).replace('.', ',')
+    const diffDiasTexto = diffDays > 0 ? `${diffDays} dias` : 'hoje'
+
+    setConfirmModal({
+      isOpen: true,
+      title: 'Iniciar Plano Retroativo',
+      message: `O plano "${planoParaIniciar.nome}" será iniciado com data de ${dataPesagemBR} (data de entrada).\n\nO peso atual será recalculado retroativamente:\n• Peso de entrada: ${pesoEntradoBR} kg\n• GMD: ${gmd.toFixed(3).replace('.', ',')} kg/dia\n• Período: ${diffDiasTexto}\n• Novo peso atual: ${pesoProjetadoBR} kg\n\nO peso atual será sobrescrito com o valor projetado. Confirmar?`,
+      variant: 'warning',
+      onConfirm: async () => {
+        try {
+          // 1. Atualizar plano nutricional
+          const { error: planoError } = await supabase
+            .from('planos_nutricionais')
+            .update({
+              ativo: true,
+              data_inicio: dataPesagem,
+              data_fim: null,
+              peso_inicio_kg_cab: pesoEntrada,
+              rc_inicio: catData?.rc_atual ?? null,
+            })
+            .eq('id', planoParaIniciar!.id)
+          if (planoError) throw planoError
+
+          // 2. Atualizar lote_categorias: formulação, GMD, meta, limpar data_ajuste_peso, sobrescrever peso atual
+          const { error: catError } = await supabase
+            .from('lote_categorias')
+            .update({
+              formulacao_id: planoParaIniciar!.formulacao_id,
+              periodo: planoParaIniciar!.periodo_dias,
+              peso_vivo_meta_kg_cab: planoParaIniciar!.peso_meta_kg,
+              estrategia_nutricional: planoParaIniciar!.nome,
+              gmd: gmd.toFixed(3).replace('.', ','),
+              consumo_meta_porcentagem_pesovivo: formulacao?.meta_consumo_ms_percent_pv ?? null,
+              data_ajuste_peso: null,
+              peso_vivo_atual_kg_cab: pesoProjetado,
+            })
+            .eq('id', loteCategoriaId)
+          if (catError) throw catError
+
+          // 3. Criar snapshot de entrada
+          await supabase.rpc('criar_snapshot_entrada', {
+            p_plano_id: planoParaIniciar!.id,
+            p_lote_categoria_id: loteCategoriaId,
+            p_motivo: 'inicio_retroativo',
+          })
+
+          await loadData()
+          onPlanChanged?.()
+        } catch (error) {
+          console.error('Erro ao iniciar plano retroativo:', error)
+          setMessage('Erro ao iniciar plano retroativo. Tente novamente.')
+        }
+      },
+    })
+  }
+
   const executarMigracao = async (planoDestinoId?: string) => {
     try {
       const { error } = await supabase.rpc('migrar_plano_nutricional', {
@@ -613,16 +726,30 @@ export function PlanoNutricionalModal({
                   </p>
                 </div>
                 {planosDisponiveis.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {planosDisponiveis.map((plano) => (
-                      <Button
-                        key={plano.id}
-                        size="sm"
-                        onClick={() => handleIniciarPlano(plano.id)}
-                      >
-                        Iniciar "{plano.nome}"
-                      </Button>
-                    ))}
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap gap-2">
+                      {planosDisponiveis.map((plano) => (
+                        <Button
+                          key={plano.id}
+                          size="sm"
+                          onClick={() => handleIniciarPlano(plano.id)}
+                        >
+                          Iniciar "{plano.nome}"
+                        </Button>
+                      ))}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {planosDisponiveis.map((plano) => (
+                        <Button
+                          key={plano.id}
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleIniciarPlanoRetroativo(plano.id)}
+                        >
+                          Iniciar Retroativo "{plano.nome}"
+                        </Button>
+                      ))}
+                    </div>
                   </div>
                 )}
                 {planosEncerrados.length > 0 && (
@@ -820,7 +947,7 @@ export function PlanoNutricionalModal({
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Nome do Plano
                   </label>
                   <Input
@@ -836,7 +963,7 @@ export function PlanoNutricionalModal({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Formulação *
                   </label>
                   <select
@@ -914,7 +1041,7 @@ export function PlanoNutricionalModal({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Peso Meta (kg/cab) *
                   </label>
                   <NumericInput
@@ -942,8 +1069,8 @@ export function PlanoNutricionalModal({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">
-                    GMD Esperado (kg/cab/dia) *
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    GMD (kg/cab/dia) *
                   </label>
                   <Input
                     type="text"
@@ -957,9 +1084,9 @@ export function PlanoNutricionalModal({
                     required
                     className="border-gray-200 focus:border-accent"
                   />
-                  {selectedFormulacao?.gmd != null && !formData.gmd_planejado && (
+                  {selectedFormulacao?.gmd != null && (
                     <p className="text-xs text-gray-500 mt-1">
-                      GMD da formulação: {selectedFormulacao.gmd.toFixed(3).replace('.', ',')} kg/cab/dia
+                      GMD da formulação: {selectedFormulacao.gmd.toFixed(3).replace('.', ',')} kg/cab/dia (referência)
                     </p>
                   )}
                 </div>
@@ -1035,7 +1162,9 @@ export function PlanoNutricionalModal({
                     <div>
                       <span className="text-gray-600">GMD:</span>
                       <p className="font-medium text-gray-900">
-                        {selectedFormulacao.gmd?.toFixed(3).replace('.', ',') || '—'} kg/cab/dia
+                        {formData.gmd_planejado
+                          ? `${formData.gmd_planejado} kg/cab/dia`
+                          : '0,000 kg/cab/dia'}
                       </p>
                     </div>
                     <div>

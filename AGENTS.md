@@ -173,4 +173,31 @@ Threshold fixo de 95% no código da RPC. Se diferentes fazendas precisarem de th
 Disparador: quando mencionar notificações de recategorização, alertas de recategorização, sino de notificações, ou `gerar_notificacoes_recategorizacao`, ler esta seção.
 
 
+### Fuso horário Mato Grosso (UTC-4) vs Supabase (UTC) — adicionado em 2026-07-31
+
+**Diagnóstico confirmado:**
+- Mato Grosso (Cuiabá) está em UTC-4 fixo (America/Cuiaba), sem horário de verão desde 2019.
+- Supabase roda em UTC. Colunas `data` são `timestamptz`, armazenadas em UTC.
+- Registros feitos no PWA a partir das 20h horário de Cuiabá ficam com `data` no dia seguinte em UTC. Ex: registro às 20:17 de 27/07 → armazenado como `2026-07-28 00:17:00+00`. Qualquer `data::date` em UTC retorna 28/07 em vez de 27/07.
+
+**Fluxo atual do PWA (Caderneta-Digital-Gesta-Up):**
+1. `SuplementacaoPage.tsx:128` — `data: todayBR()` gera `"27/07/2026"` via `new Date().getDate()` (fuso do dispositivo).
+2. `api.ts:58-61` — concatena hora atual no fuso da fazenda: `"27/07/2026 20:17"`.
+3. `syncService.ts:399` — `brWithTimeToIso("27/07/2026 20:17")` converte para `"2026-07-27T20:17:00-04:00"` (com offset America/Cuiaba).
+4. PostgreSQL recebe com offset -04:00, armazena como UTC: `2026-07-28 00:17:00+00`.
+5. Extrações `data::date`, `DATE(data)`, `EXTRACT(DAY FROM data)` operam em UTC → retornam 28/07 (errado).
+
+**Correção proposta (não implementada):**
+- Mudar `brWithTimeToIso` em `formatDate.ts:97` para não enviar o offset: retornar `"2026-07-27T20:17:00"` (sem sufixo) em vez de `"2026-07-27T20:17:00-04:00"`. O PostgreSQL interpreta como UTC e armazena `2026-07-27T20:17:00+00`. Aí `data::date` retorna 27/07 e a hora aparece como 20:17, que é o que o peão viu.
+- `brWithTimeToIso` é usado em 20 lugares no `syncService.ts` (todas as cadernetas). A mudança afeta todas as tabelas uniformemente.
+- `todayBR()` (`formatDate.ts:1-7`) também deveria usar `getDateTimePartsInTimezone(new Date(), farmTimezone)` em vez de `new Date().getDate()`, para independência do fuso do dispositivo.
+- `supabaseService.ts:1371` (soft-delete `deleted_at`) usa `new Date().toISOString()` mas não tem extração de date, não precisa mudar.
+- Passivo exige migration: `UPDATE <tabela> SET data = data AT TIME ZONE 'America/Cuiaba'` para reinterpretar cada timestamp no fuso da fazenda. Aplicar a todas as tabelas com coluna `data timestamptz`.
+
+**Impacto em cálculos:**
+- `recalcular_metricas_suplementacao` usa `data::date` para intervalo entre registros. Sem correção, registro das 21h de segunda e outro das 06h de terça aparecem como 2 dias em vez de 1.
+- Cron `update_dados_lotes` também usa datas para projeção de peso.
+
+Disparador: quando mencionar fuso horário, timezone, UTC, Cuiabá, Mato Grosso, data adiantada, registro no dia errado, ou for corrigir o passivo de datas, ler esta seção.
+
 ATENÇÃO: QUALQUER TESTE A SER FEITO EM UMA FAZENDA, FAÇA SOMENTE NA FAZENDA DE ID d649c65e-16ab-4b77-a84b-df937aa41cc3
