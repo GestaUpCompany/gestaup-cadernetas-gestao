@@ -100,32 +100,35 @@ export function PlanoNutricionalModal({
     setLoading(true)
 
     try {
-      // Buscar planos nutricionais
+      // Buscar lote_id da categoria atual
+      const { data: categoriaData } = await supabase
+        .from('lote_categorias')
+        .select('lote_id, peso_vivo_atual_kg_cab')
+        .eq('id', loteCategoriaId)
+        .single()
+
+      setPesoAtualCategoria(categoriaData?.peso_vivo_atual_kg_cab ?? null)
+
+      // Buscar todos os IDs de categorias do mesmo lote (ativas e encerradas)
+      const { data: todasCategorias } = await supabase
+        .from('lote_categorias')
+        .select('id')
+        .eq('lote_id', categoriaData?.lote_id)
+
+      const todosCategoriaIds = (todasCategorias || []).map(c => c.id)
+
+      // Buscar planos nutricionais de todas as categorias do lote
       const { data: planosData, error: planosError } = await supabase
         .from('planos_nutricionais')
         .select('*')
-        .eq('lote_categoria_id', loteCategoriaId)
+        .in('lote_categoria_id', todosCategoriaIds.length > 0 ? todosCategoriaIds : [loteCategoriaId])
         .order('ordem', { ascending: true })
 
       if (planosError) throw planosError
 
-      // Buscar peso atual da categoria para comparação
-      const { data: categoriaPesoData } = await supabase
-        .from('lote_categorias')
-        .select('peso_vivo_atual_kg_cab')
-        .eq('id', loteCategoriaId)
-        .single()
-      setPesoAtualCategoria(categoriaPesoData?.peso_vivo_atual_kg_cab ?? null)
-
       // Se não temos fazendaId, buscar via lote_categorias -> lotes
       let fId = fazendaId
       if (!fId) {
-        const { data: categoriaData } = await supabase
-          .from('lote_categorias')
-          .select('lote_id')
-          .eq('id', loteCategoriaId)
-          .single()
-
         const { data: loteData } = await supabase
           .from('lotes')
           .select('fazenda_id')
@@ -755,16 +758,24 @@ export function PlanoNutricionalModal({
                 {planosEncerrados.length > 0 && (
                   <div className="pt-2 border-t border-yellow-200">
                     <p className="text-xs text-yellow-700 mb-2">Planos encerrados (podem ser reativados):</p>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="space-y-2">
                       {planosEncerrados.map((plano) => (
-                        <Button
-                          key={plano.id}
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => handleIniciarPlano(plano.id)}
-                        >
-                          Reativar "{plano.nome}"
-                        </Button>
+                        <div key={plano.id} className="flex flex-wrap items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => handleIniciarPlano(plano.id)}
+                          >
+                            Reativar "{plano.nome}"
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => handleEdit(plano)}
+                          >
+                            Editar
+                          </Button>
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -1191,7 +1202,7 @@ export function PlanoNutricionalModal({
 
               {formulacoes.length === 0 && (
                 <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
-                  Não há formulações cadastradas para esta categoria. Cadastre uma formulação primeiro.
+                  Não há formulações cadastradas para esta fazenda. Cadastre uma formulação primeiro.
                 </div>
               )}
 

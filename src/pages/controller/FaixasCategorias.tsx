@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState, useCallback } from 'react'
-import { Link } from 'react-router-dom'
+
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton, ConfirmModal, Modal } from '../../components/ui'
@@ -211,7 +211,6 @@ export function FaixasCategorias() {
   const [submitting, setSubmitting] = useState(false)
   const [erroRecategorizacao, setErroRecategorizacao] = useState<string | null>(null)
   const [sucessoRecategorizacao, setSucessoRecategorizacao] = useState<string | null>(null)
-  const [toastPlano, setToastPlano] = useState<{ nome: string; meta: string | number | null } | null>(null)
 
   // Modal de confirmação
   const [confirmRecategorizacao, setConfirmRecategorizacao] = useState(false)
@@ -292,12 +291,9 @@ export function FaixasCategorias() {
         lote_destino: loteMap.get(c.lote_id)?.destino ?? null,
       }))
       setLotesCategorias(enriquecidas)
-      if (loteIds.length > 0 && !loteSelecionadoId) {
-        setLoteSelecionadoId(loteIds[0])
-      }
     }
     setLoadingCronologia(false)
-  }, [fazendaId, loteSelecionadoId])
+  }, [fazendaId])
 
   const loadTransicoes = useCallback(async () => {
     if (!fazendaId || !loteSelecionadoId) {
@@ -324,7 +320,7 @@ export function FaixasCategorias() {
 
   const exportarTransicoes = () => {
     if (transicoes.length === 0) return
-    const loteNome = lotesDisponiveis.find(l => l.id === loteSelecionadoId)?.nome || 'lote'
+    const loteNome = lotesDisponiveis.find(l => l.id === loteEfetivoId)?.nome || 'lote'
 
     // Aba 1: Transições (dados da categoria + plano)
     const rowsTransicoes = transicoes.map(t => {
@@ -544,14 +540,38 @@ export function FaixasCategorias() {
   }
 
   const lotesDisponiveis = Array.from(new Set(lotesCategorias.map(lc => lc.lote_id)))
+    .filter(lid => {
+      const cat = lotesCategorias.find(lc => lc.lote_id === lid && lc.data_fim === null && lc.ativo)
+      if (!cat || cat.peso_vivo_atual_kg_cab == null) return false
+      const sexoNorm = cat.sexo === 'fêmea' || cat.sexo === 'F' ? 'F' : 'M'
+      const faixa = faixas.find(f =>
+        f.ativo &&
+        f.sexo === sexoNorm &&
+        f.nome.toLowerCase() === cat.categoria.toLowerCase() &&
+        (f.destino === null || f.destino === cat.lote_destino)
+      )
+      if (!faixa) return false
+      return cat.peso_vivo_atual_kg_cab < faixa.peso_min || cat.peso_vivo_atual_kg_cab > faixa.peso_max
+    })
     .map(lid => ({
       id: lid,
       nome: lotesCategorias.find(lc => lc.lote_id === lid)?.lote_nome || 'Lote',
       destino: lotesCategorias.find(lc => lc.lote_id === lid)?.lote_destino ?? null,
     }))
 
+  // Garantir que o lote selecionado está na lista de pendentes
+  const loteSelecionadoValido = lotesDisponiveis.some(l => l.id === loteSelecionadoId)
+  const loteEfetivoId = loteSelecionadoValido ? loteSelecionadoId : lotesDisponiveis[0]?.id ?? null
+
+  // Sincronizar lote selecionado com o primeiro lote pendente quando necessário
+  useEffect(() => {
+    if (lotesCategorias.length > 0 && !loteSelecionadoValido && lotesDisponiveis.length > 0) {
+      setLoteSelecionadoId(lotesDisponiveis[0].id)
+    }
+  }, [lotesCategorias, loteSelecionadoValido, lotesDisponiveis])
+
   const categoriasDoLoteSelecionado = lotesCategorias
-    .filter(lc => lc.lote_id === loteSelecionadoId)
+    .filter(lc => lc.lote_id === loteEfetivoId)
     .sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''))
 
   const categoriaAtiva = categoriasDoLoteSelecionado.find(c => c.data_fim === null && c.ativo)
@@ -621,7 +641,7 @@ export function FaixasCategorias() {
     }
     setSubmitting(true)
     setErroRecategorizacao(null)
-    const { data, error } = await supabase.rpc('recategorizar_lote_categoria', {
+    const { error } = await supabase.rpc('recategorizar_lote_categoria', {
       p_lote_categoria_origem_id: recategorizando.id,
       p_categoria_destino: novaCategoria,
       p_manter_formulacao: manterFormulacao,
@@ -632,28 +652,11 @@ export function FaixasCategorias() {
     if (error) {
       setErroRecategorizacao(error.message)
     } else {
-      // Buscar o plano nutricional recém-criado para o toast
-      let planoInfo: { nome: string; meta: string | number | null } | null = null
-      if (data) {
-        const { data: planoData } = await supabase
-          .from('planos_nutricionais')
-          .select('nome, peso_meta_kg')
-          .eq('lote_categoria_id', data as string)
-          .eq('ativo', true)
-          .limit(1)
-          .maybeSingle()
-        if (planoData) {
-          planoInfo = { nome: planoData.nome, meta: planoData.peso_meta_kg }
-        }
-      }
-      setSucessoRecategorizacao(`Recategorização para "${novaCategoria}" concluída.`)
-      setToastPlano(planoInfo)
+      setSucessoRecategorizacao(`Recategorização para "${novaCategoria}" concluída. Plano nutricional não iniciado: inicie manualmente quando desejar.`)
       setRecategorizando(null)
       setConfirmRecategorizacao(false)
       loadCronologia()
       loadTransicoes()
-      // Auto-dismiss do toast após 8 segundos
-      setTimeout(() => setToastPlano(null), 8000)
     }
     setSubmitting(false)
   }
@@ -677,7 +680,7 @@ export function FaixasCategorias() {
   return (
     <div className="space-y-6 page-transition">
       {/* Toast pós-recategorização */}
-      {toastPlano && (
+      {sucessoRecategorizacao && (
         <div className="fixed top-4 right-4 z-50 max-w-sm bg-white border border-green-300 shadow-lg rounded-lg p-4 animate-fade-in">
           <div className="flex items-start gap-3">
             <div className="flex-shrink-0 w-5 h-5 rounded-full bg-green-100 flex items-center justify-center mt-0.5">
@@ -685,22 +688,9 @@ export function FaixasCategorias() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-gray-800">{sucessoRecategorizacao}</p>
-              {toastPlano.nome ? (
-                <p className="text-xs text-gray-600 mt-1">
-                  Plano <span className="font-medium text-gray-700">{toastPlano.nome}</span> ativado
-                  {toastPlano.meta != null ? <> com meta de <span className="font-medium text-gray-700">{toastPlano.meta} kg</span></> : null}.
-                  Ajuste em <Link to="/controller/cadernetas/suplementacao" className="text-blue-600 hover:underline font-medium">Suplementação</Link> se necessário.
-                </p>
-              ) : (
-                <p className="text-xs text-gray-600 mt-1">
-                  Nenhum plano nutricional foi criado (categoria sem formulação vinculada).
-                </p>
-              )}
             </div>
             <button
-              onClick={() => setToastPlano(null)}
-              className="flex-shrink-0 text-gray-400 hover:text-gray-600"
-              aria-label="Fechar"
+              onClick={() => setSucessoRecategorizacao(null)}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
@@ -832,7 +822,7 @@ export function FaixasCategorias() {
           <h3 className="text-lg font-semibold text-gray-800">Cronologia dos Lotes</h3>
           {lotesDisponiveis.length > 0 && (
             <select
-              value={loteSelecionadoId || ''}
+              value={loteEfetivoId || ''}
               onChange={(e) => setLoteSelecionadoId(e.target.value)}
               className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary"
             >
@@ -845,6 +835,8 @@ export function FaixasCategorias() {
 
         {loadingCronologia ? (
           <CardSkeleton />
+        ) : lotesDisponiveis.length === 0 ? (
+          <p className="text-gray-500 text-sm py-6 text-center">Nenhum lote com recategorização pendente. Todos os pesos estão dentro das faixas de suas categorias.</p>
         ) : categoriasDoLoteSelecionado.length === 0 ? (
           <p className="text-gray-500 text-sm py-6 text-center">Nenhuma categoria cadastrada para este lote.</p>
         ) : (
