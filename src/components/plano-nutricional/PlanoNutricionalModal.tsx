@@ -7,7 +7,7 @@ interface Formulacao {
   nome: string
   tipo?: string | null
   gmd?: number | null
-  meta_consumo_ms_percent_pv?: number | null
+  consumo_ms_percent_pv?: number | null
   categoria?: string | null
 }
 
@@ -143,7 +143,7 @@ export function PlanoNutricionalModal({
       if (fId) {
         const { data: formulacoesData, error: formError } = await supabase
           .from('formulacoes')
-          .select('id, nome, tipo, gmd, meta_consumo_ms_percent_pv, categoria')
+          .select('id, nome, tipo, gmd, consumo_ms_percent_pv, categoria')
           .eq('fazenda_id', fId)
           .eq('ativo', true)
           .order('nome', { ascending: true })
@@ -361,7 +361,7 @@ export function PlanoNutricionalModal({
               peso_vivo_meta_kg_cab: primeiroPlano.peso_meta_kg,
               estrategia_nutricional: primeiroPlano.nome,
               gmd: primeiroPlano.gmd_planejado != null ? primeiroPlano.gmd_planejado.toFixed(3).replace('.', ',') : (formulacao?.gmd ? formulacao.gmd.toFixed(3).replace('.', ',') : null),
-              consumo_meta_porcentagem_pesovivo: formulacao?.meta_consumo_ms_percent_pv ?? null,
+              consumo_meta_porcentagem_pesovivo: formulacao?.consumo_ms_percent_pv ?? null,
             })
             .eq('id', loteCategoriaId)
 
@@ -471,7 +471,7 @@ export function PlanoNutricionalModal({
               peso_vivo_meta_kg_cab: planoParaIniciar!.peso_meta_kg,
               estrategia_nutricional: planoParaIniciar!.nome,
               gmd: gmd.toFixed(3).replace('.', ','),
-              consumo_meta_porcentagem_pesovivo: formulacao?.meta_consumo_ms_percent_pv ?? null,
+              consumo_meta_porcentagem_pesovivo: formulacao?.consumo_ms_percent_pv ?? null,
               data_ajuste_peso: null,
               peso_vivo_atual_kg_cab: pesoProjetado,
             })
@@ -1187,7 +1187,7 @@ export function PlanoNutricionalModal({
                     <div>
                       <span className="text-gray-600">Consumo MS (%PV):</span>
                       <p className="font-medium text-gray-900">
-                        {selectedFormulacao.meta_consumo_ms_percent_pv?.toFixed(2).replace('.', ',') || '—'}%
+                        {selectedFormulacao.consumo_ms_percent_pv?.toFixed(2).replace('.', ',') || '—'}%
                       </p>
                     </div>
                     <div>

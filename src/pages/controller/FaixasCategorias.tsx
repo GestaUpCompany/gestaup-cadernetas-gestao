@@ -199,7 +199,7 @@ export function FaixasCategorias() {
   const [loteSelecionadoId, setLoteSelecionadoId] = useState<string | null>(null)
   const [transicoes, setTransicoes] = useState<TransicaoHistorico[]>([])
   const [transicaoExpandidaId, setTransicaoExpandidaId] = useState<string | null>(null)
-  const [formulacoesMap, setFormulacoesMap] = useState<Record<string, string>>({})
+  const [formulacoesMap, setFormulacoesMap] = useState<Record<string, { nome: string; consumo_ms_percent_pv: number | null }>>({})
 
   // Modal de recategorização
   const [recategorizando, setRecategorizando] = useState<LoteCategoriaCronologia | null>(null)
@@ -229,14 +229,16 @@ export function FaixasCategorias() {
     if (!fazendaId) return
     const { data, error } = await supabase
       .from('formulacoes')
-      .select('id, nome')
+      .select('id, nome, consumo_ms_percent_pv')
       .eq('fazenda_id', fazendaId)
     if (error) {
       console.error('Erro ao carregar mapa de formulações:', error)
       setFormulacoesMap({})
     } else {
-      const map: Record<string, string> = {}
-      ;(data as { id: string; nome: string }[] | null)?.forEach(f => { map[f.id] = f.nome })
+      const map: Record<string, { nome: string; consumo_ms_percent_pv: number | null }> = {}
+      ;(data as { id: string; nome: string; consumo_ms_percent_pv: number | null }[] | null)?.forEach(f => {
+        map[f.id] = { nome: f.nome, consumo_ms_percent_pv: f.consumo_ms_percent_pv }
+      })
       setFormulacoesMap(map)
     }
   }, [fazendaId])
@@ -342,9 +344,9 @@ export function FaixasCategorias() {
         gmd: lc?.gmd ?? '',
         rc_atual: lc?.rc_atual ?? '',
         rc_inicial: lc?.rc_inicial ?? '',
-        formulacao_nome: lc?.formulacao_id ? (formulacoesMap[lc.formulacao_id] ?? lc.formulacao_id) : '',
+        formulacao_nome: lc?.formulacao_id ? (formulacoesMap[lc.formulacao_id]?.nome ?? lc.formulacao_id) : '',
         estrategia_nutricional: lc?.estrategia_nutricional ?? '',
-        consumo_meta_pct_pv: lc?.consumo_meta_porcentagem_pesovivo ?? '',
+        consumo_meta_pct_pv: lc?.formulacao_id ? (formulacoesMap[lc.formulacao_id]?.consumo_ms_percent_pv ?? '') : '',
         abate: lc?.abate ?? '',
         morte: lc?.morte ?? '',
         transf_entrada: lc?.transf_entrada ?? '',
@@ -355,7 +357,7 @@ export function FaixasCategorias() {
         peso_vivo_meta_kg_cab: lc?.peso_vivo_meta_kg_cab ?? '',
         custo_operacional_reais_cab_dia: lc?.custo_operacional_reais_cab_dia ?? '',
         plano_nutricional: pn?.nome ?? '(sem plano ativo)',
-        plano_formulacao_nome: pn?.formulacao_id ? (formulacoesMap[pn.formulacao_id] ?? pn.formulacao_id) : '',
+        plano_formulacao_nome: pn?.formulacao_id ? (formulacoesMap[pn.formulacao_id]?.nome ?? pn.formulacao_id) : '',
         plano_peso_inicio_kg_cab: pn?.peso_inicio_kg_cab ?? '',
         plano_peso_meta_kg: pn?.peso_meta_kg ?? '',
         plano_gmd_planejado: pn?.gmd_planejado ?? '',
@@ -373,7 +375,7 @@ export function FaixasCategorias() {
         metrica_custo_operacional_total_cab: snap?.metricas_plano_nutricional?.custo_operacional_total_cab ?? '',
         metrica_custo_total_producao_cab: snap?.metricas_plano_nutricional?.custo_total_producao_cab ?? '',
         manter_formulacao: snap?.manter_formulacao ?? '',
-        nova_formulacao_nome: snap?.nova_formulacao_id ? (formulacoesMap[snap.nova_formulacao_id] ?? snap.nova_formulacao_id) : '',
+        nova_formulacao_nome: snap?.nova_formulacao_id ? (formulacoesMap[snap.nova_formulacao_id]?.nome ?? snap.nova_formulacao_id) : '',
       }
     })
 
@@ -943,7 +945,7 @@ export function FaixasCategorias() {
                               <Campo label="RC atual" valor={lc.rc_atual} />
                               <Campo label="RC inicial" valor={lc.rc_inicial} />
                               <Campo label="Estratégia nutricional" valor={lc.estrategia_nutricional} />
-                              <Campo label="Consumo meta (% PV)" valor={lc.consumo_meta_porcentagem_pesovivo} />
+                              <Campo label="Consumo MS (% PV)" valor={lc.formulacao_id ? (formulacoesMap[lc.formulacao_id]?.consumo_ms_percent_pv ?? null) : null} />
                               <Campo label="Data pesagem" valor={lc.data_pesagem ? new Date(lc.data_pesagem).toLocaleDateString('pt-BR') : null} />
                               <Campo label="Data meta projetada" valor={lc.data_meta_projetada ? new Date(lc.data_meta_projetada).toLocaleDateString('pt-BR') : null} />
                               <Campo label="Dias restantes meta" valor={lc.dias_restantes_meta} />
@@ -958,7 +960,7 @@ export function FaixasCategorias() {
                             {pn ? (
                               <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 text-xs">
                                 <Campo label="Nome do plano" valor={pn.nome} />
-                                <Campo label="Formulação" valor={pn.formulacao_id ? (formulacoesMap[pn.formulacao_id] ?? pn.formulacao_id) : null} />
+                                <Campo label="Formulação" valor={pn.formulacao_id ? (formulacoesMap[pn.formulacao_id]?.nome ?? pn.formulacao_id) : null} />
                                 <Campo label="Peso início (kg)" valor={pn.peso_inicio_kg_cab} />
                                 <Campo label="Peso meta (kg)" valor={pn.peso_meta_kg} />
                                 <Campo label="GMD planejado" valor={pn.gmd_planejado} />
@@ -971,7 +973,7 @@ export function FaixasCategorias() {
                             <p className="text-xs font-semibold text-gray-700 mt-3 mb-1">Decisão de formulação</p>
                             <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                               <Campo label="Manteve formulação" valor={snap?.manter_formulacao === true ? 'Sim' : snap?.manter_formulacao === false ? 'Não' : null} />
-                              <Campo label="Nova formulação" valor={snap?.nova_formulacao_id ? (formulacoesMap[snap.nova_formulacao_id] ?? snap.nova_formulacao_id) : null} />
+                              <Campo label="Nova formulação" valor={snap?.nova_formulacao_id ? (formulacoesMap[snap.nova_formulacao_id]?.nome ?? snap.nova_formulacao_id) : null} />
                             </div>
                           </div>
                         )}

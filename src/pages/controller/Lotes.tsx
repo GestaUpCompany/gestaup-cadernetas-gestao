@@ -256,7 +256,7 @@ export function Lotes() {
       const [pastosData, racasData, formulacoesData] = await Promise.all([
         supabase.from('pastos').select('id, nome').eq('fazenda_id', fazendaId).eq('ativo', true),
         supabase.from('racas').select('id, nome').eq('fazenda_id', fazendaId).eq('ativo', true).order('nome'),
-        supabase.from('formulacoes').select('id, nome, tipo, categoria, meta_consumo_ms_percent_pv, gmd').eq('fazenda_id', fazendaId).eq('ativo', true).order('nome'),
+        supabase.from('formulacoes').select('id, nome, tipo, categoria, consumo_ms_percent_pv, gmd').eq('fazenda_id', fazendaId).eq('ativo', true).order('nome'),
       ])
 
       if (pastosData.data) setPastos(pastosData.data)
@@ -269,7 +269,7 @@ export function Lotes() {
             name: item.nome,
             category: item.tipo || 'Formulações',
             categoria: item.categoria || undefined,
-            consumo_meta: item.meta_consumo_ms_percent_pv != null ? Number(item.meta_consumo_ms_percent_pv) : undefined,
+            consumo_meta: item.consumo_ms_percent_pv != null ? Number(item.consumo_ms_percent_pv) : undefined,
             gmd: item.gmd != null ? Number(item.gmd) : undefined,
           }))
         )
@@ -2016,7 +2016,7 @@ export function Lotes() {
                               const formulacao = cat.formulacao_id ? nutritionalOptions.find(opt => opt.id === cat.formulacao_id) : null
                               const titulo = formulacao?.name || (cat.planos_cadastrados?.find(p => p.ativo)?.nome) || 'Plano Nutricional'
                               const gmdValor = cat.gmd ? Number(cat.gmd.replace(',', '.')) : (formulacao?.gmd ?? null)
-                              const consumoValor = cat.consumo_meta_porcentagem_pesovivo !== undefined && cat.consumo_meta_porcentagem_pesovivo !== null ? cat.consumo_meta_porcentagem_pesovivo : (formulacao?.consumo_meta ?? null)
+                              const consumoValor = formulacao?.consumo_meta ?? null
                               const planosCount = cat.planos_cadastrados?.filter(p => !p.data_fim).length || cat.planos_rascunho?.length || 0
                               const hasVigente = cat.planos_cadastrados?.some(p => p.ativo) || !!cat.formulacao_id
                               const planoVigenteData = cat.planos_cadastrados?.find(p => p.ativo)?.data_inicio || null
@@ -2971,7 +2971,7 @@ export function Lotes() {
             nome: opt.name,
             categoria: opt.categoria,
             gmd: opt.gmd,
-            meta_consumo_ms_percent_pv: opt.consumo_meta,
+            consumo_ms_percent_pv: opt.consumo_meta,
           }))}
           planos={formData.categorias[selectedDraftCategoriaIndex]?.planos_rascunho || []}
           onSave={(planos) => {

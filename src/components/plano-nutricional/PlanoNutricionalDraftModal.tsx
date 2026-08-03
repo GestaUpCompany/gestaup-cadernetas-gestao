@@ -6,7 +6,7 @@ interface Formulacao {
   nome: string
   tipo?: string | null
   gmd?: number | null
-  meta_consumo_ms_percent_pv?: number | null
+  consumo_ms_percent_pv?: number | null
   categoria?: string | null
 }
 
@@ -339,7 +339,7 @@ export function PlanoNutricionalDraftModal({
               <div className="text-xs text-gray-600 flex flex-wrap gap-3">
                 <span>GMD da formulação: {selectedFormulacao.gmd?.toFixed(3).replace('.', ',') || '—'} kg/cab/dia</span>
                 <span>
-                  Consumo MS: {selectedFormulacao.meta_consumo_ms_percent_pv?.toFixed(2).replace('.', ',') || '—'}% PV
+                  Consumo MS: {selectedFormulacao.consumo_ms_percent_pv?.toFixed(2).replace('.', ',') || '—'}% PV
                 </span>
               </div>
             )}

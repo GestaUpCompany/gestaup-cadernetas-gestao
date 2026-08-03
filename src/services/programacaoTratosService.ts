@@ -18,9 +18,28 @@ export interface ProgramacaoPercentual {
   horario_sugerido: string | null
 }
 
+export interface ProgramacaoCurral {
+  id: string
+  programacao_id: string
+  curral_id: string
+  lote_id: string | null
+  kg_mn_dia: number
+  n_cabecas_snapshot: number | null
+  peso_vivo_medio_snapshot: number | null
+}
+
+export interface CurralComKg {
+  curral_id: string
+  curral_nome: string
+  lote_id: string | null
+  lote_nome: string | null
+  kg_mn_dia: string
+}
+
 export interface ProgramacaoCompleta {
   programacao: ProgramacaoTratos | null
   percentuais: ProgramacaoPercentual[]
+  currais: ProgramacaoCurral[]
 }
 
 /**
@@ -41,11 +60,11 @@ export async function getProgramacaoTratos(
 
   if (progError) {
     console.error('Erro ao buscar programação de tratos:', progError)
-    return { programacao: null, percentuais: [] }
+    return { programacao: null, percentuais: [], currais: [] }
   }
 
   if (!prog) {
-    return { programacao: null, percentuais: [] }
+    return { programacao: null, percentuais: [], currais: [] }
   }
 
   const { data: percentuais, error: percError } = await supabase
@@ -58,9 +77,19 @@ export async function getProgramacaoTratos(
     console.error('Erro ao buscar percentuais:', percError)
   }
 
+  const { data: currais, error: curraisError } = await supabase
+    .from('programacao_tratos_currais')
+    .select('*')
+    .eq('programacao_id', prog.id)
+
+  if (curraisError) {
+    console.error('Erro ao buscar currais da programação:', curraisError)
+  }
+
   return {
     programacao: prog as ProgramacaoTratos,
     percentuais: (percentuais || []) as ProgramacaoPercentual[],
+    currais: (currais || []) as ProgramacaoCurral[],
   }
 }
 
@@ -79,9 +108,32 @@ export async function getTiposExistentes(fazendaId: string): Promise<TipoProgram
 }
 
 /**
+ * Carrega os currais ativos da fazenda com nome e lote associado.
+ */
+export async function getCurraisFazenda(
+  fazendaId: string
+): Promise<{ id: string; nome: string; lote_id: string | null; lote_nome: string | null }[]> {
+  const { data, error } = await supabase
+    .from('currais')
+    .select('id, nome, lote_id, lotes(nome)')
+    .eq('fazenda_id', fazendaId)
+    .is('deleted_at', null)
+    .eq('ativo', true)
+    .order('nome', { ascending: true })
+
+  if (error || !data) return []
+  return data.map((c: any) => ({
+    id: c.id as string,
+    nome: c.nome as string,
+    lote_id: (c.lote_id as string | null) ?? null,
+    lote_nome: (c.lotes?.nome as string | null) ?? null,
+  }))
+}
+
+/**
  * Salva a programação de tratos de um tipo específico.
  * Se já existe uma programação ativa para o tipo, atualiza; senão, cria nova.
- * Percentuais são reescritos (delete + insert) a cada salvamento.
+ * Percentuais e currais são reescritos (delete + insert) a cada salvamento.
  */
 export async function saveProgramacaoTratos(
   fazendaId: string,
@@ -89,6 +141,7 @@ export async function saveProgramacaoTratos(
   config: {
     quantidade_tratos: number
     percentuais: { ordem_trato: number; percentual: number; horario_sugerido: string | null }[]
+    currais: { curral_id: string; lote_id: string | null; kg_mn_dia: number }[]
   }
 ): Promise<{ success: boolean; error: string | null }> {
   // Busca programação existente do tipo
@@ -118,6 +171,8 @@ export async function saveProgramacaoTratos(
 
     // Limpa percentuais antigos
     await supabase.from('programacao_tratos_percentuais').delete().eq('programacao_id', programacaoId)
+    // Limpa currais antigos
+    await supabase.from('programacao_tratos_currais').delete().eq('programacao_id', programacaoId)
   } else {
     const { data: newProg, error: insertError } = await supabase
       .from('programacao_tratos')
@@ -151,6 +206,24 @@ export async function saveProgramacaoTratos(
 
     if (percError) {
       return { success: false, error: percError.message }
+    }
+  }
+
+  // Insere currais com kg MN do dia 1
+  if (config.currais.length > 0) {
+    const { error: curraisError } = await supabase
+      .from('programacao_tratos_currais')
+      .insert(
+        config.currais.map((c) => ({
+          programacao_id: programacaoId,
+          curral_id: c.curral_id,
+          lote_id: c.lote_id,
+          kg_mn_dia: c.kg_mn_dia,
+        }))
+      )
+
+    if (curraisError) {
+      return { success: false, error: curraisError.message }
     }
   }
 

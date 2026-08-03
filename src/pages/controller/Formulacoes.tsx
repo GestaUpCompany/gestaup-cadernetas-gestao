@@ -23,7 +23,7 @@ interface Dieta {
   tipo?: string
   categoria?: string
   insumos?: DietaInsumoCalc[]
-  meta_consumo_ms_percent_pv?: number
+  consumo_ms_percent_pv?: number
   peso_vivo_medio?: number
   gmd?: number
   sistema_producao?: string
@@ -127,7 +127,7 @@ export function Formulacoes() {
     descricao: '',
     tipo: '',
     categoria: '',
-    meta_consumo_ms_percent_pv: '0.30',
+    consumo_ms_percent_pv: '0.30',
     peso_vivo_medio: '435.00',
     gmd: '0,000',
     sistema_producao: '',
@@ -193,7 +193,7 @@ export function Formulacoes() {
 
   // Calculate all derived fields
   const calcularFormulacao = (items: DietaInsumoCalc[]): DietaInsumoCalc[] => {
-    const metaPV = parseFloat(formData.meta_consumo_ms_percent_pv) || 0
+    const metaPV = parseFloat(formData.consumo_ms_percent_pv) || 0
     const pesoVivo = parseFloat(formData.peso_vivo_medio) || 0
     const consumoMSTotal = pesoVivo * (metaPV / 100)
 
@@ -231,7 +231,7 @@ export function Formulacoes() {
 
   const recalculated = useMemo(
     () => calcularFormulacao(selectedInsumos),
-    [selectedInsumos, formData.meta_consumo_ms_percent_pv, formData.peso_vivo_medio]
+    [selectedInsumos, formData.consumo_ms_percent_pv, formData.peso_vivo_medio]
   )
 
   // Compute totals from exact (unrounded) values
@@ -297,7 +297,7 @@ export function Formulacoes() {
     }
 
     const fazendaId = vinculos[0].fazenda_id
-    const metaPV = parseFloat(parseFloat(formData.meta_consumo_ms_percent_pv || '0').toFixed(2))
+    const metaPV = parseFloat(parseFloat(formData.consumo_ms_percent_pv || '0').toFixed(2))
     const pesoVivo = parseFloat(parseFloat(formData.peso_vivo_medio || '0').toFixed(2))
     const gmd = parseFloat(parseCommaDecimal(formData.gmd || '0').toFixed(3))
 
@@ -307,7 +307,7 @@ export function Formulacoes() {
       descricao: formData.descricao || null,
       tipo: formData.tipo || null,
       categoria: formData.categoria || null,
-      meta_consumo_ms_percent_pv: metaPV,
+      consumo_ms_percent_pv: metaPV,
       peso_vivo_medio: pesoVivo,
       gmd: gmd || null,
       sistema_producao: formData.sistema_producao || null,
@@ -344,7 +344,7 @@ export function Formulacoes() {
         descricao: '',
         tipo: '',
         categoria: '',
-        meta_consumo_ms_percent_pv: '0.30',
+        consumo_ms_percent_pv: '0.30',
         peso_vivo_medio: '435.00',
         gmd: '0,000',
         sistema_producao: '',
@@ -365,7 +365,7 @@ export function Formulacoes() {
       descricao: dieta.descricao || '',
       tipo: dieta.tipo || '',
       categoria: dieta.categoria || '',
-      meta_consumo_ms_percent_pv: dieta.meta_consumo_ms_percent_pv?.toFixed(2) || '0.30',
+      consumo_ms_percent_pv: dieta.consumo_ms_percent_pv?.toFixed(2) || '0.30',
       peso_vivo_medio: dieta.peso_vivo_medio?.toFixed(2) || '435.00',
       gmd: dieta.gmd?.toFixed(3).replace('.', ',') || '0,000',
       sistema_producao: dieta.sistema_producao || '',
@@ -394,7 +394,7 @@ export function Formulacoes() {
       descricao: '',
       tipo: '',
       categoria: '',
-      meta_consumo_ms_percent_pv: '0.30',
+      consumo_ms_percent_pv: '0.30',
       peso_vivo_medio: '435.00',
       gmd: '0,000',
       sistema_producao: '',
@@ -585,8 +585,8 @@ export function Formulacoes() {
                 <Input
                   type="number"
                   step="0.01"
-                  value={formData.meta_consumo_ms_percent_pv}
-                  onChange={(e) => setFormData({ ...formData, meta_consumo_ms_percent_pv: e.target.value })}
+                  value={formData.consumo_ms_percent_pv}
+                  onChange={(e) => setFormData({ ...formData, consumo_ms_percent_pv: e.target.value })}
                   placeholder="Ex: 0.30"
                   className="border-gray-200 focus:border-accent"
                 />
@@ -750,7 +750,7 @@ export function Formulacoes() {
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Meta Consumo MS (%PV)</label>
                   <div className="text-lg font-bold text-green-800">
-                    {fmt(parseFloat(formData.meta_consumo_ms_percent_pv || '0'))}%
+                    {fmt(parseFloat(formData.consumo_ms_percent_pv || '0'))}%
                   </div>
                 </div>
                 <div>
@@ -824,8 +824,8 @@ export function Formulacoes() {
                 onClick={() => handleEdit(dieta)}
               >
                 <div className="space-y-1 mb-4 text-sm text-gray-600">
-                  {dieta.meta_consumo_ms_percent_pv != null && (
-                    <p><span className="font-medium">Meta MS (%PV):</span> {fmt(dieta.meta_consumo_ms_percent_pv)}%</p>
+                  {dieta.consumo_ms_percent_pv != null && (
+                    <p><span className="font-medium">Meta MS (%PV):</span> {fmt(dieta.consumo_ms_percent_pv)}%</p>
                   )}
                   {dieta.peso_vivo_medio != null && (
                     <p><span className="font-medium">PV Médio:</span> {fmt(dieta.peso_vivo_medio)} kg</p>

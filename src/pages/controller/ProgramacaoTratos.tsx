@@ -4,6 +4,7 @@ import { Button, Card, CardSkeleton, Input } from '../../components/ui'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 import {
   TipoProgramacao,
+  getCurraisFazenda,
   getProgramacaoTratos,
   getTiposExistentes,
   saveProgramacaoTratos,
@@ -13,6 +14,14 @@ interface PercentualTrato {
   ordem_trato: number
   percentual: string
   horario_sugerido: string
+}
+
+interface CurralComKg {
+  curral_id: string
+  curral_nome: string
+  lote_id: string | null
+  lote_nome: string | null
+  kg_mn_dia: string
 }
 
 const DISTRIBUICAO_PADRAO_4: Record<number, string> = { 1: '30', 2: '20', 3: '20', 4: '30' }
@@ -40,6 +49,7 @@ export function ProgramacaoTratos() {
   const [configs, setConfigs] = useState<Record<string, {
     quantidadeTratos: string
     percentuais: PercentualTrato[]
+    currais: CurralComKg[]
   }>>({})
 
   const loadFazenda = useCallback(async () => {
@@ -58,17 +68,33 @@ export function ProgramacaoTratos() {
     setLoading(true)
     setErro(null)
 
-    const [tiposExistentes, progEngorda, progSequestro] = await Promise.all([
+    const [tiposExistentes, progEngorda, progSequestro, curraisFazenda] = await Promise.all([
       getTiposExistentes(fazendaId),
       getProgramacaoTratos(fazendaId, 'engorda'),
       getProgramacaoTratos(fazendaId, 'sequestro'),
+      getCurraisFazenda(fazendaId),
     ])
 
     setTiposAtivos(tiposExistentes.length > 0 ? tiposExistentes : ['engorda'])
 
-    const newConfigs: Record<string, { quantidadeTratos: string; percentuais: PercentualTrato[] }> = {}
+    const newConfigs: Record<string, { quantidadeTratos: string; percentuais: PercentualTrato[]; currais: CurralComKg[] }> = {}
 
     for (const [tipo, prog] of [['engorda', progEngorda], ['sequestro', progSequestro]] as const) {
+      // Mapa de kg MN salvos por curral
+      const kgPorCurral: Record<string, string> = {}
+      for (const c of prog.currais || []) {
+        kgPorCurral[c.curral_id] = String(c.kg_mn_dia)
+      }
+
+      // Lista de currais da fazenda, mesclando com valores salvos
+      const currais: CurralComKg[] = curraisFazenda.map((c) => ({
+        curral_id: c.id,
+        curral_nome: c.nome,
+        lote_id: c.lote_id,
+        lote_nome: c.lote_nome,
+        kg_mn_dia: kgPorCurral[c.id] ?? '',
+      }))
+
       if (prog.programacao) {
         newConfigs[tipo] = {
           quantidadeTratos: String(prog.programacao.quantidade_tratos),
@@ -77,11 +103,13 @@ export function ProgramacaoTratos() {
             percentual: String(p.percentual),
             horario_sugerido: p.horario_sugerido || '',
           })),
+          currais,
         }
       } else {
         newConfigs[tipo] = {
           quantidadeTratos: '4',
           percentuais: distribuirPercentuais(4),
+          currais,
         }
       }
     }
@@ -110,13 +138,18 @@ export function ProgramacaoTratos() {
     }))
   }
 
-  const configAtual = configs[tipoSelecionado] || { quantidadeTratos: '4', percentuais: distribuirPercentuais(4) }
+  const configAtual = configs[tipoSelecionado] || {
+    quantidadeTratos: '4',
+    percentuais: distribuirPercentuais(4),
+    currais: [],
+  }
 
   const handleQuantidadeTratosChange = (value: string) => {
     const n = parseInt(value) || 0
     setConfigs((prev) => ({
       ...prev,
       [tipoSelecionado]: {
+        ...prev[tipoSelecionado],
         quantidadeTratos: value,
         percentuais: n > 0 ? distribuirPercentuais(n) : [],
       },
@@ -130,6 +163,18 @@ export function ProgramacaoTratos() {
         ...prev[tipoSelecionado],
         percentuais: (prev[tipoSelecionado]?.percentuais || []).map((p) =>
           p.ordem_trato === ordem ? { ...p, [campo]: value } : p
+        ),
+      },
+    }))
+  }
+
+  const handleCurralKgChange = (curralId: string, value: string) => {
+    setConfigs((prev) => ({
+      ...prev,
+      [tipoSelecionado]: {
+        ...prev[tipoSelecionado],
+        currais: (prev[tipoSelecionado]?.currais || []).map((c) =>
+          c.curral_id === curralId ? { ...c, kg_mn_dia: value } : c
         ),
       },
     }))
@@ -168,6 +213,13 @@ export function ProgramacaoTratos() {
         percentual: parseFloat(p.percentual) || 0,
         horario_sugerido: p.horario_sugerido || null,
       })),
+      currais: (configAtual.currais || [])
+        .filter((c) => c.kg_mn_dia !== '' && parseFloat(c.kg_mn_dia) > 0)
+        .map((c) => ({
+          curral_id: c.curral_id,
+          lote_id: c.lote_id,
+          kg_mn_dia: parseFloat(c.kg_mn_dia) || 0,
+        })),
     })
 
     if (result.success) {
@@ -332,6 +384,63 @@ export function ProgramacaoTratos() {
                 </tfoot>
               </table>
             </div>
+          </div>
+
+          {/* Tabela de kg MN por curral (Dia 1) */}
+          <div className="mt-6">
+            <h3 className="text-sm font-semibold text-gray-700 mb-1">
+              Quantidade total de MN (kg) por curral, Dia 1
+            </h3>
+            <p className="text-xs text-gray-500 mb-3">
+              Informe o total diário de matéria natural (kg) que será trato em cada curral no primeiro dia.
+              O aplicativo usará esses valores como previsão inicial, ajustada depois pelas leituras de cocho.
+            </p>
+            {(configAtual.currais || []).length === 0 ? (
+              <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-500 text-center">
+                Nenhum curral ativo cadastrado para esta fazenda.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left border border-gray-200 rounded-lg">
+                  <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
+                    <tr>
+                      <th className="px-4 py-2">Curral</th>
+                      <th className="px-4 py-2">Lote</th>
+                      <th className="px-4 py-2">Total MN Dia 1 (kg)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {(configAtual.currais || []).map((c) => (
+                      <tr key={c.curral_id}>
+                        <td className="px-4 py-2 font-medium text-gray-800">{c.curral_nome}</td>
+                        <td className="px-4 py-2 text-gray-600">{c.lote_nome || <span className="text-gray-400 italic">Sem lote</span>}</td>
+                        <td className="px-4 py-2">
+                          <Input
+                            type="number"
+                            min={0}
+                            step="0.1"
+                            value={c.kg_mn_dia}
+                            onChange={(e) => handleCurralKgChange(c.curral_id, e.target.value)}
+                            placeholder="0"
+                            className="w-28 border-gray-200 focus:border-accent"
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot className="bg-gray-50 font-medium">
+                    <tr>
+                      <td className="px-4 py-2 text-gray-700" colSpan={2}>Total geral</td>
+                      <td className="px-4 py-2">
+                        <span className="text-gray-800">
+                          {(configAtual.currais || []).reduce((sum, c) => sum + (parseFloat(c.kg_mn_dia) || 0), 0).toFixed(1)} kg
+                        </span>
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            )}
           </div>
 
           {/* Botão salvar */}
