@@ -4,7 +4,7 @@ import Chart from 'chart.js/auto'
 export interface DadoRelatorioConsumo {
   data: string
   data_label: string
-  kg_cocho: number
+  trato_kg_cab_dia: number
   consumo_percent_pv: number
   leitura_cocho: number | null
   custo_reais_cab_dia: number | null
@@ -139,8 +139,8 @@ async function renderizarGraficoConsumo(dados: DadoRelatorioConsumo[], width: nu
           } as any,
         },
         {
-          label: 'Trato (kg)',
-          data: dados.map((d) => d.kg_cocho),
+          label: 'Trato (kg/cab/dia)',
+          data: dados.map((d) => d.trato_kg_cab_dia),
           backgroundColor: blueBar,
           borderRadius: 4,
           borderSkipped: false,
@@ -216,7 +216,7 @@ async function renderizarGraficoConsumo(dados: DadoRelatorioConsumo[], width: nu
           position: 'left',
           title: {
             display: true,
-            text: 'Trato (kg)',
+            text: 'Trato (kg/cab/dia)',
             color: darkText,
             font: { size: 20, weight: 'bold' },
           },
@@ -229,7 +229,7 @@ async function renderizarGraficoConsumo(dados: DadoRelatorioConsumo[], width: nu
             drawBorder: false,
           },
           beginAtZero: true,
-          suggestedMax: Math.max(...dados.map((d) => d.kg_cocho)) * 1.15,
+          suggestedMax: Math.max(...dados.map((d) => d.trato_kg_cab_dia)) * 1.15,
         },
         y1: {
           position: 'right',
@@ -273,7 +273,7 @@ async function renderizarGraficoConsumo(dados: DadoRelatorioConsumo[], width: nu
         ctx.font = 'bold 16px Inter, sans-serif'
         ctx.fillStyle = darkText
         tratoMeta.data.forEach((bar: any, j: number) => {
-          const value = Number(tratoDataset.data[j]).toFixed(0)
+          const value = Number(tratoDataset.data[j]).toFixed(2)
           ctx.fillText(value, bar.x, bar.y - 14)
         })
 

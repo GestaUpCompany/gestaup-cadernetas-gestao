@@ -247,19 +247,36 @@ export function Suplementacao() {
           }
         }
 
-        const dados: DadoRelatorioConsumo[] = dadosRegistro.map((r) => {
-          const d = new Date(r.data)
+        const calcularDiasEntre = (dataMaior: string, dataMenor: string): number => {
+          const d1 = new Date(dataMaior)
+          const d2 = new Date(dataMenor)
+          const utc1 = Date.UTC(d1.getUTCFullYear(), d1.getUTCMonth(), d1.getUTCDate())
+          const utc2 = Date.UTC(d2.getUTCFullYear(), d2.getUTCMonth(), d2.getUTCDate())
+          const diff = Math.round((utc1 - utc2) / (1000 * 60 * 60 * 24))
+          return Math.max(1, diff)
+        }
+
+        const dados: DadoRelatorioConsumo[] = []
+        for (let i = 1; i < dadosRegistro.length; i++) {
+          const atual = dadosRegistro[i]
+          const anterior = dadosRegistro[i - 1]
+          const dias = calcularDiasEntre(atual.data, anterior.data)
+          const animaisElegiveis = Math.max(1, (anterior.n_cabecas || 0) - (anterior.qtd_bezerros || 0))
+          const tratoKgCabDia = (anterior.kg_cocho || 0) / dias / animaisElegiveis
+
+          const d = new Date(atual.data)
           const dia = d.getUTCDate().toString().padStart(2, '0')
           const mes = String(d.getUTCMonth() + 1).padStart(2, '0')
-          return {
-            data: r.data,
+
+          dados.push({
+            data: atual.data,
             data_label: `${dia}/${mes}`,
-            kg_cocho: r.kg_cocho || 0,
-            consumo_percent_pv: r.consumo_medio_geral_percent_pv || 0,
-            leitura_cocho: r.leitura != null ? Number(r.leitura) : null,
-            custo_reais_cab_dia: r.custo_medio_reais_cab_dia ?? null,
-          }
-        })
+            trato_kg_cab_dia: tratoKgCabDia,
+            consumo_percent_pv: anterior.consumo_medio_geral_percent_pv || 0,
+            leitura_cocho: anterior.leitura != null ? Number(anterior.leitura) : null,
+            custo_reais_cab_dia: anterior.custo_medio_reais_cab_dia ?? null,
+          })
+        }
 
         lotesRelatorio.push({ info, dados })
       }

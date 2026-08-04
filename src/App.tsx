@@ -85,6 +85,7 @@ import { IndividuoNovo } from './pages/controller/IndividuoNovo'
 import { FaixasCategorias } from './pages/controller/FaixasCategorias'
 import { Notificacoes } from './pages/controller/Notificacoes'
 import { LeituraCocho } from './pages/controller/LeituraCocho'
+import { AssistenteIA } from './pages/controller/AssistenteIA'
 
 // Redirecionamento baseado no papel do usuário
 function RoleRedirect() {
@@ -927,6 +928,16 @@ function App() {
             <ControllerRoute>
               <ControllerLayout>
                 <Notificacoes />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/assistente-ia"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <AssistenteIA />
               </ControllerLayout>
             </ControllerRoute>
           }
