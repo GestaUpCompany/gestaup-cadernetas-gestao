@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, Select } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton } from '../../components/ui'
 import { exportToXLSX } from '../../utils/exportXLSX'
 import { SUPLEMENTACAO_EXPORT_CONFIG } from '../../utils/exportConfigs'
 import { formatDate } from '../../utils/formatDate'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
-import { gerarRelatorioConsumoPDF, DadoRelatorioConsumo, InfoLote } from '../../utils/relatorioConsumoPDF'
+import { gerarRelatorioConsumoPDF, DadoRelatorioConsumo, InfoLote, LoteRelatorio } from '../../utils/relatorioConsumoPDF'
 
 interface RegistroSuplementacao {
   id: string
@@ -48,7 +48,7 @@ export function Suplementacao() {
   const navigate = useNavigate()
   const [registros, setRegistros] = useState<RegistroSuplementacao[]>([])
   const [lotes, setLotes] = useState<{ id: string; nome: string }[]>([])
-  const [loteSelecionado, setLoteSelecionado] = useState<string>('')
+  const [lotesSelecionados, setLotesSelecionados] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [gerandoPDF, setGerandoPDF] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
@@ -56,6 +56,10 @@ export function Suplementacao() {
   const [dataFim, setDataFim] = useState('')
   const [dateSortOrder, setDateSortOrder] = useState<'asc' | 'desc'>('desc')
   const [erroExportacao, setErroExportacao] = useState<string | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [previewFileName, setPreviewFileName] = useState<string>('relatorio.pdf')
+  const [loteDropdownOpen, setLoteDropdownOpen] = useState(false)
+  const loteDropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     loadRegistros()
@@ -64,7 +68,17 @@ export function Suplementacao() {
 
   useEffect(() => {
     setErroExportacao(null)
-  }, [loteSelecionado, dataInicio, dataFim])
+  }, [lotesSelecionados, dataInicio, dataFim])
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (loteDropdownRef.current && !loteDropdownRef.current.contains(e.target as Node)) {
+        setLoteDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const loadLotes = async () => {
     if (!user) return
@@ -115,7 +129,7 @@ export function Suplementacao() {
   }
 
   const filteredRegistros = registros.filter((registro) => {
-    const matchesLote = !loteSelecionado || registro.lote_id === loteSelecionado
+    const matchesLote = lotesSelecionados.length === 0 || lotesSelecionados.includes(registro.lote_id || '')
 
     const matchesSearch =
       !searchTerm ||
@@ -139,31 +153,17 @@ export function Suplementacao() {
 
   const handleExportarRelatorio = async () => {
     setErroExportacao(null)
-    if (!loteSelecionado || !dataInicio || !dataFim) {
+    if (lotesSelecionados.length === 0 || !dataInicio || !dataFim) {
       setErroExportacao('Selecione os filtros antes')
-      return
-    }
-
-    const dataInicioDate = new Date(dataInicio)
-    const dataFimDate = new Date(dataFim + 'T23:59:59')
-
-    const dadosRegistro = filteredRegistros
-      .filter((r) => {
-        const d = new Date(r.data)
-        return d >= dataInicioDate && d <= dataFimDate && r.lote_id === loteSelecionado
-      })
-      .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime())
-
-    if (dadosRegistro.length === 0) {
-      alert('Nenhum registro de suplementação encontrado para o lote e período selecionados.')
       return
     }
 
     setGerandoPDF(true)
 
     try {
-      const lote = lotes.find((l) => l.id === loteSelecionado)
-      const fazendaId = dadosRegistro[0].fazenda_id
+      const dataInicioDate = new Date(dataInicio)
+      const dataFimDate = new Date(dataFim + 'T23:59:59')
+      const fazendaId = registros[0]?.fazenda_id
 
       const { data: fazendaData } = await supabase
         .from('fazendas')
@@ -171,94 +171,108 @@ export function Suplementacao() {
         .eq('id', fazendaId)
         .maybeSingle()
 
-      const info: InfoLote = {
-        lote_id: loteSelecionado,
-        lote_nome: lote?.nome || '—',
-        fazenda_id: fazendaId,
-        fazenda_nome: fazendaData?.nome,
-        fazenda_logo_url: fazendaData?.logo_url,
-        peso_entrada_kg: null,
-        peso_atual_kg: null,
-        dias: null,
-        data_prevista_final: null,
-        n_cabecas_atual: null,
-        raca: null,
-        categoria: null,
-        dieta: null,
-        data_inicio_plano: null,
-      }
+      const lotesRelatorio: LoteRelatorio[] = []
 
-      // Carregar lote_categoria ativa para o lote
-      const { data: loteCatData, error: loteCatError } = await supabase
-        .from('lote_categorias')
-        .select('id, peso_entrada_kg_cab, peso_vivo_atual_kg_cab, data_meta_projetada, quant_atual, raca, categoria, formulacao_id, data_pesagem')
-        .eq('lote_id', loteSelecionado)
-        .eq('ativo', true)
-        .order('created_at', { ascending: false })
-        .limit(1)
+      for (const loteId of lotesSelecionados) {
+        const lote = lotes.find((l) => l.id === loteId)
+        const dadosRegistro = filteredRegistros
+          .filter((r) => {
+            const d = new Date(r.data)
+            return d >= dataInicioDate && d <= dataFimDate && r.lote_id === loteId
+          })
+          .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime())
 
-      if (loteCatError) {
-        console.error('Erro ao carregar lote_categoria:', loteCatError)
-      } else if (loteCatData && loteCatData.length > 0) {
-        const lc = loteCatData[0]
-        info.peso_entrada_kg = lc.peso_entrada_kg_cab
-        info.peso_atual_kg = lc.peso_vivo_atual_kg_cab
-        info.data_prevista_final = lc.data_meta_projetada
-        info.n_cabecas_atual = lc.quant_atual
-        info.raca = lc.raca
-        info.categoria = lc.categoria
+        if (dadosRegistro.length === 0) continue
 
-        if (lc.formulacao_id) {
-          const { data: formulacaoData } = await supabase
-            .from('formulacoes')
-            .select('nome')
-            .eq('id', lc.formulacao_id)
+        const info: InfoLote = {
+          lote_id: loteId,
+          lote_nome: lote?.nome || '—',
+          fazenda_id: fazendaId,
+          fazenda_nome: fazendaData?.nome,
+          fazenda_logo_url: fazendaData?.logo_url,
+          peso_entrada_kg: null,
+          peso_atual_kg: null,
+          dias: null,
+          data_prevista_final: null,
+          n_cabecas_atual: null,
+          raca: null,
+          categoria: null,
+          dieta: null,
+          data_inicio_plano: null,
+        }
+
+        const { data: loteCatData } = await supabase
+          .from('lote_categorias')
+          .select('id, peso_entrada_kg_cab, peso_vivo_atual_kg_cab, data_meta_projetada, quant_atual, raca, categoria, formulacao_id, data_pesagem')
+          .eq('lote_id', loteId)
+          .eq('ativo', true)
+          .order('created_at', { ascending: false })
+          .limit(1)
+
+        if (loteCatData && loteCatData.length > 0) {
+          const lc = loteCatData[0]
+          info.peso_entrada_kg = lc.peso_entrada_kg_cab
+          info.peso_atual_kg = lc.peso_vivo_atual_kg_cab
+          info.data_prevista_final = lc.data_meta_projetada
+          info.n_cabecas_atual = lc.quant_atual
+          info.raca = lc.raca
+          info.categoria = lc.categoria
+
+          if (lc.formulacao_id) {
+            const { data: formulacaoData } = await supabase
+              .from('formulacoes')
+              .select('nome')
+              .eq('id', lc.formulacao_id)
+              .maybeSingle()
+            if (formulacaoData) {
+              info.dieta = formulacaoData.nome
+            }
+          }
+
+          const { data: planoData } = await supabase
+            .from('planos_nutricionais')
+            .select('data_inicio')
+            .eq('fazenda_id', fazendaId)
+            .eq('lote_categoria_id', lc.id)
+            .eq('ativo', true)
             .maybeSingle()
-          if (formulacaoData) {
-            info.dieta = formulacaoData.nome
+
+          if (planoData && planoData.data_inicio) {
+            info.data_inicio_plano = planoData.data_inicio
+            const inicio = new Date(planoData.data_inicio)
+            const hoje = new Date()
+            const inicioData = Date.UTC(inicio.getUTCFullYear(), inicio.getUTCMonth(), inicio.getUTCDate())
+            const hojeData = Date.UTC(hoje.getFullYear(), hoje.getMonth(), hoje.getDate())
+            info.dias = Math.max(0, Math.round((hojeData - inicioData) / (1000 * 60 * 60 * 24)))
           }
         }
+
+        const dados: DadoRelatorioConsumo[] = dadosRegistro.map((r) => {
+          const d = new Date(r.data)
+          const dia = d.getUTCDate().toString().padStart(2, '0')
+          const mes = String(d.getUTCMonth() + 1).padStart(2, '0')
+          return {
+            data: r.data,
+            data_label: `${dia}/${mes}`,
+            kg_cocho: r.kg_cocho || 0,
+            consumo_percent_pv: r.consumo_medio_geral_percent_pv || 0,
+            leitura_cocho: r.leitura != null ? Number(r.leitura) : null,
+            custo_reais_cab_dia: r.custo_medio_reais_cab_dia ?? null,
+          }
+        })
+
+        lotesRelatorio.push({ info, dados })
       }
 
-      // Carregar plano ativo para calcular dias desde o início
-      const { data: planoData, error: planoError } = await supabase
-        .from('planos_nutricionais')
-        .select('data_inicio')
-        .eq('fazenda_id', fazendaId)
-        .eq('lote_categoria_id', loteCatData?.[0]?.id)
-        .eq('ativo', true)
-        .maybeSingle()
-
-      if (planoError) {
-        console.error('Erro ao carregar plano:', planoError)
-      } else if (planoData && planoData.data_inicio) {
-        info.data_inicio_plano = planoData.data_inicio
-        const inicio = new Date(planoData.data_inicio)
-        const hoje = new Date()
-        const inicioData = Date.UTC(inicio.getUTCFullYear(), inicio.getUTCMonth(), inicio.getUTCDate())
-        const hojeData = Date.UTC(hoje.getFullYear(), hoje.getMonth(), hoje.getDate())
-        info.dias = Math.max(0, Math.round((hojeData - inicioData) / (1000 * 60 * 60 * 24)))
+      if (lotesRelatorio.length === 0) {
+        alert('Nenhum registro de suplementação encontrado para os lotes e período selecionados.')
+        return
       }
-
-      const dados: DadoRelatorioConsumo[] = dadosRegistro.map((r) => {
-        const d = new Date(r.data)
-        const dia = d.getUTCDate().toString().padStart(2, '0')
-        const mes = String(d.getUTCMonth() + 1).padStart(2, '0')
-        return {
-          data: r.data,
-          data_label: `${dia}/${mes}`,
-          kg_cocho: r.kg_cocho || 0,
-          consumo_percent_pv: r.consumo_medio_geral_percent_pv || 0,
-          leitura_cocho: r.leitura != null ? Number(r.leitura) : null,
-          custo_reais_cab_dia: r.custo_medio_reais_cab_dia ?? null,
-        }
-      })
 
       const blob = await gerarRelatorioConsumoPDF({
         dataInicio,
         dataFim,
-        info,
-        dados,
+        lotes: lotesRelatorio,
       })
 
       const formatarData = (dataStr: string) => {
@@ -269,27 +283,36 @@ export function Suplementacao() {
         return `${dia}/${mes}/${ano}`
       }
 
-      const nomeFazenda = info.fazenda_nome || 'Fazenda'
+      const nomeFazenda = fazendaData?.nome || 'Fazenda'
       const dataInicioFmt = formatarData(dataInicio)
       const dataFimFmt = formatarData(dataFim)
       const fileName = `Gesta'Up - Relatório de Consumo ${nomeFazenda} | ${dataInicioFmt} a ${dataFimFmt}.pdf`
 
+      if (previewUrl) URL.revokeObjectURL(previewUrl)
       const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = fileName
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-
-      // Abre também em nova aba para preview
-      window.open(url, '_blank')
+      setPreviewUrl(url)
+      setPreviewFileName(fileName)
     } catch (err: any) {
       console.error('Erro ao gerar relatório:', err)
       alert('Erro ao gerar relatório: ' + (err.message || 'Tente novamente.'))
     } finally {
       setGerandoPDF(false)
     }
+  }
+
+  const handleDownloadPreview = () => {
+    if (!previewUrl) return
+    const link = document.createElement('a')
+    link.href = previewUrl
+    link.download = previewFileName
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  const handleClosePreview = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
+    setPreviewUrl(null)
   }
 
   if (loading) {
@@ -355,7 +378,7 @@ export function Suplementacao() {
               disabled={gerandoPDF}
               className="w-full sm:w-auto text-sm"
             >
-              {gerandoPDF ? 'Gerando...' : 'Exportar Relatório de Consumo'}
+              {gerandoPDF ? 'Gerando...' : 'Gerar PDF'}
             </Button>
             {erroExportacao && (
               <p className="text-sm text-red-600 mt-2">{erroExportacao}</p>
@@ -364,18 +387,61 @@ export function Suplementacao() {
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-          <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Lote</label>
-            <Select
-              value={loteSelecionado}
-              onChange={setLoteSelecionado}
-              options={[
-                { value: '', label: 'Selecione o lote' },
-                ...lotes.map((l) => ({ value: l.id, label: l.nome })),
-              ]}
-              placeholder="Selecione o lote"
-              className={`text-sm ${erroExportacao && !loteSelecionado ? 'border-red-500' : ''}`}
-            />
+          <div ref={loteDropdownRef} className="relative">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Lotes</label>
+            <button
+              type="button"
+              onClick={() => setLoteDropdownOpen(!loteDropdownOpen)}
+              className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base text-left bg-white flex items-center justify-between ${erroExportacao && lotesSelecionados.length === 0 ? 'border-red-500' : 'border-gray-300'}`}
+            >
+              <span className={lotesSelecionados.length === 0 ? 'text-gray-400' : 'text-gray-900'}>
+                {lotesSelecionados.length === 0
+                  ? 'Selecione os lotes'
+                  : lotesSelecionados.length === 1
+                    ? lotes.find((l) => l.id === lotesSelecionados[0])?.nome || '1 lote'
+                    : `${lotesSelecionados.length} lotes selecionados`}
+              </span>
+              <svg className={`w-4 h-4 text-gray-400 transition-transform ${loteDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {loteDropdownOpen && (
+              <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-xl max-h-60 overflow-auto">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (lotesSelecionados.length === lotes.length) {
+                      setLotesSelecionados([])
+                    } else {
+                      setLotesSelecionados(lotes.map((l) => l.id))
+                    }
+                  }}
+                  className="w-full px-3 py-2 text-left text-sm font-medium text-primary hover:bg-primary/10 border-b border-gray-100"
+                >
+                  {lotesSelecionados.length === lotes.length ? 'Desmarcar todos' : 'Selecionar todos'}
+                </button>
+                {lotes.map((l) => (
+                  <label
+                    key={l.id}
+                    className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={lotesSelecionados.includes(l.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setLotesSelecionados([...lotesSelecionados, l.id])
+                        } else {
+                          setLotesSelecionados(lotesSelecionados.filter((id) => id !== l.id))
+                        }
+                      }}
+                      className="w-4 h-4 rounded text-primary focus:ring-primary"
+                    />
+                    <span className="text-gray-700">{l.nome}</span>
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
           <div className="sm:col-span-2 md:col-span-3">
             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Buscar</label>
@@ -411,7 +477,7 @@ export function Suplementacao() {
               setSearchTerm('')
               setDataInicio('')
               setDataFim('')
-              setLoteSelecionado('')
+              setLotesSelecionados([])
             }} className="w-full sm:w-auto text-sm">
               Limpar Filtros
             </Button>
@@ -559,6 +625,31 @@ export function Suplementacao() {
             </table>
           </Card>
         </>
+      )}
+
+      {previewUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center p-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-800">Pré-visualização do Relatório</h3>
+              <div className="flex gap-2">
+                <Button onClick={handleDownloadPreview} className="text-sm">
+                  Baixar PDF
+                </Button>
+                <Button variant="secondary" onClick={handleClosePreview} className="text-sm">
+                  Fechar
+                </Button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-hidden p-2">
+              <iframe
+                src={previewUrl}
+                title="Pré-visualização do PDF"
+                className="w-full h-full border-0 rounded-lg"
+              />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
