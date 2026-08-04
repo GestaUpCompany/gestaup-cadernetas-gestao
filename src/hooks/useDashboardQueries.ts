@@ -103,14 +103,14 @@ export function useDashboardStats(userId: string | undefined) {
         { count: movimentacaoHoje },
         { count: morteHoje },
       ] = await Promise.all([
-        supabase.from('registros_maternidade').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).gte('data', `${todayStr}T00:00:00Z`).lt('data', `${tomorrowStr}T00:00:00Z`),
-        supabase.from('registros_enfermaria').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).gte('data', `${todayStr}T00:00:00Z`).lt('data', `${tomorrowStr}T00:00:00Z`),
-        supabase.from('registros_pastagens').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).gte('data', `${todayStr}T00:00:00Z`).lt('data', `${tomorrowStr}T00:00:00Z`),
-        supabase.from('registros_rodeio').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).gte('data', `${todayStr}T00:00:00Z`).lt('data', `${tomorrowStr}T00:00:00Z`),
-        supabase.from('registros_suplementacao').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).gte('data', `${todayStr}T00:00:00Z`).lt('data', `${tomorrowStr}T00:00:00Z`),
-        supabase.from('registros_bebedouros').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).gte('data', `${todayStr}T00:00:00Z`).lt('data', `${tomorrowStr}T00:00:00Z`),
-        supabase.from('registros_movimentacao').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).gte('data', `${todayStr}T00:00:00Z`).lt('data', `${tomorrowStr}T00:00:00Z`),
-        supabase.from('registros_morte').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).gte('data', `${todayStr}T00:00:00Z`).lt('data', `${tomorrowStr}T00:00:00Z`),
+        supabase.from('registros_maternidade').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).is('deleted_at', null).gte('data', `${todayStr}T00:00:00Z`).lt('data', `${tomorrowStr}T00:00:00Z`),
+        supabase.from('registros_enfermaria').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).is('deleted_at', null).gte('data', `${todayStr}T00:00:00Z`).lt('data', `${tomorrowStr}T00:00:00Z`),
+        supabase.from('registros_pastagens').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).is('deleted_at', null).gte('data', `${todayStr}T00:00:00Z`).lt('data', `${tomorrowStr}T00:00:00Z`),
+        supabase.from('registros_rodeio').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).is('deleted_at', null).gte('data', `${todayStr}T00:00:00Z`).lt('data', `${tomorrowStr}T00:00:00Z`),
+        supabase.from('registros_suplementacao').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).is('deleted_at', null).gte('data', `${todayStr}T00:00:00Z`).lt('data', `${tomorrowStr}T00:00:00Z`),
+        supabase.from('registros_bebedouros').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).is('deleted_at', null).gte('data', `${todayStr}T00:00:00Z`).lt('data', `${tomorrowStr}T00:00:00Z`),
+        supabase.from('registros_movimentacao').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).is('deleted_at', null).gte('data', `${todayStr}T00:00:00Z`).lt('data', `${tomorrowStr}T00:00:00Z`),
+        supabase.from('registros_morte').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).is('deleted_at', null).gte('data', `${todayStr}T00:00:00Z`).lt('data', `${tomorrowStr}T00:00:00Z`),
       ])
 
       return {
