@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, Select } from '../../components/ui'
 import { exportToXLSX } from '../../utils/exportXLSX'
 import { SUPLEMENTACAO_EXPORT_CONFIG } from '../../utils/exportConfigs'
 import { formatDate } from '../../utils/formatDate'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
+import { gerarRelatorioConsumoPDF, DadoRelatorioConsumo, InfoLote } from '../../utils/relatorioConsumoPDF'
 
 interface RegistroSuplementacao {
   id: string
@@ -46,15 +47,43 @@ export function Suplementacao() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [registros, setRegistros] = useState<RegistroSuplementacao[]>([])
+  const [lotes, setLotes] = useState<{ id: string; nome: string }[]>([])
+  const [loteSelecionado, setLoteSelecionado] = useState<string>('')
   const [loading, setLoading] = useState(true)
+  const [gerandoPDF, setGerandoPDF] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [dataInicio, setDataInicio] = useState('')
   const [dataFim, setDataFim] = useState('')
   const [dateSortOrder, setDateSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [erroExportacao, setErroExportacao] = useState<string | null>(null)
 
   useEffect(() => {
     loadRegistros()
+    loadLotes()
   }, [user])
+
+  useEffect(() => {
+    setErroExportacao(null)
+  }, [loteSelecionado, dataInicio, dataFim])
+
+  const loadLotes = async () => {
+    if (!user) return
+    const _fazendaId = await getFazendaIdForUser(user.id)
+    if (!_fazendaId) return
+
+    const { data, error } = await supabase
+      .from('lotes')
+      .select('id, nome')
+      .eq('fazenda_id', _fazendaId)
+      .eq('ativo', true)
+      .order('nome', { ascending: true })
+
+    if (error) {
+      console.error('Erro ao carregar lotes:', error)
+    } else {
+      setLotes(data || [])
+    }
+  }
 
   const loadRegistros = async () => {
     if (!user) return
@@ -86,7 +115,10 @@ export function Suplementacao() {
   }
 
   const filteredRegistros = registros.filter((registro) => {
+    const matchesLote = !loteSelecionado || registro.lote_id === loteSelecionado
+
     const matchesSearch =
+      !searchTerm ||
       (registro.tratador && registro.tratador.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.lote && registro.lote.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.pasto && registro.pasto.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -98,12 +130,167 @@ export function Suplementacao() {
     const matchesDataInicio = !dataInicio || new Date(registro.data) >= new Date(dataInicio)
     const matchesDataFim = !dataFim || new Date(registro.data) <= new Date(dataFim + 'T23:59:59')
 
-    return matchesSearch && matchesDataInicio && matchesDataFim
+    return matchesLote && matchesSearch && matchesDataInicio && matchesDataFim
   }).sort((a, b) => {
     const dateA = new Date(a.data)
     const dateB = new Date(b.data)
     return dateSortOrder === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime()
   })
+
+  const handleExportarRelatorio = async () => {
+    setErroExportacao(null)
+    if (!loteSelecionado || !dataInicio || !dataFim) {
+      setErroExportacao('Selecione os filtros antes')
+      return
+    }
+
+    const dataInicioDate = new Date(dataInicio)
+    const dataFimDate = new Date(dataFim + 'T23:59:59')
+
+    const dadosRegistro = filteredRegistros
+      .filter((r) => {
+        const d = new Date(r.data)
+        return d >= dataInicioDate && d <= dataFimDate && r.lote_id === loteSelecionado
+      })
+      .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime())
+
+    if (dadosRegistro.length === 0) {
+      alert('Nenhum registro de suplementação encontrado para o lote e período selecionados.')
+      return
+    }
+
+    setGerandoPDF(true)
+
+    try {
+      const lote = lotes.find((l) => l.id === loteSelecionado)
+      const fazendaId = dadosRegistro[0].fazenda_id
+
+      const { data: fazendaData } = await supabase
+        .from('fazendas')
+        .select('nome, logo_url')
+        .eq('id', fazendaId)
+        .maybeSingle()
+
+      const info: InfoLote = {
+        lote_id: loteSelecionado,
+        lote_nome: lote?.nome || '—',
+        fazenda_id: fazendaId,
+        fazenda_nome: fazendaData?.nome,
+        fazenda_logo_url: fazendaData?.logo_url,
+        peso_entrada_kg: null,
+        peso_atual_kg: null,
+        dias: null,
+        data_prevista_final: null,
+        n_cabecas_atual: null,
+        raca: null,
+        categoria: null,
+        dieta: null,
+        data_inicio_plano: null,
+      }
+
+      // Carregar lote_categoria ativa para o lote
+      const { data: loteCatData, error: loteCatError } = await supabase
+        .from('lote_categorias')
+        .select('id, peso_entrada_kg_cab, peso_vivo_atual_kg_cab, data_meta_projetada, quant_atual, raca, categoria, formulacao_id, data_pesagem')
+        .eq('lote_id', loteSelecionado)
+        .eq('ativo', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+
+      if (loteCatError) {
+        console.error('Erro ao carregar lote_categoria:', loteCatError)
+      } else if (loteCatData && loteCatData.length > 0) {
+        const lc = loteCatData[0]
+        info.peso_entrada_kg = lc.peso_entrada_kg_cab
+        info.peso_atual_kg = lc.peso_vivo_atual_kg_cab
+        info.data_prevista_final = lc.data_meta_projetada
+        info.n_cabecas_atual = lc.quant_atual
+        info.raca = lc.raca
+        info.categoria = lc.categoria
+
+        if (lc.formulacao_id) {
+          const { data: formulacaoData } = await supabase
+            .from('formulacoes')
+            .select('nome')
+            .eq('id', lc.formulacao_id)
+            .maybeSingle()
+          if (formulacaoData) {
+            info.dieta = formulacaoData.nome
+          }
+        }
+      }
+
+      // Carregar plano ativo para calcular dias desde o início
+      const { data: planoData, error: planoError } = await supabase
+        .from('planos_nutricionais')
+        .select('data_inicio')
+        .eq('fazenda_id', fazendaId)
+        .eq('lote_categoria_id', loteCatData?.[0]?.id)
+        .eq('ativo', true)
+        .maybeSingle()
+
+      if (planoError) {
+        console.error('Erro ao carregar plano:', planoError)
+      } else if (planoData && planoData.data_inicio) {
+        info.data_inicio_plano = planoData.data_inicio
+        const inicio = new Date(planoData.data_inicio)
+        const hoje = new Date()
+        const inicioData = Date.UTC(inicio.getUTCFullYear(), inicio.getUTCMonth(), inicio.getUTCDate())
+        const hojeData = Date.UTC(hoje.getFullYear(), hoje.getMonth(), hoje.getDate())
+        info.dias = Math.max(0, Math.round((hojeData - inicioData) / (1000 * 60 * 60 * 24)))
+      }
+
+      const dados: DadoRelatorioConsumo[] = dadosRegistro.map((r) => {
+        const d = new Date(r.data)
+        const dia = d.getUTCDate().toString().padStart(2, '0')
+        const mes = String(d.getUTCMonth() + 1).padStart(2, '0')
+        return {
+          data: r.data,
+          data_label: `${dia}/${mes}`,
+          kg_cocho: r.kg_cocho || 0,
+          consumo_percent_pv: r.consumo_medio_geral_percent_pv || 0,
+          leitura_cocho: r.leitura != null ? Number(r.leitura) : null,
+          custo_reais_cab_dia: r.custo_medio_reais_cab_dia ?? null,
+        }
+      })
+
+      const blob = await gerarRelatorioConsumoPDF({
+        dataInicio,
+        dataFim,
+        info,
+        dados,
+      })
+
+      const formatarData = (dataStr: string) => {
+        const d = new Date(dataStr)
+        const dia = d.getUTCDate().toString().padStart(2, '0')
+        const mes = String(d.getUTCMonth() + 1).padStart(2, '0')
+        const ano = d.getUTCFullYear()
+        return `${dia}/${mes}/${ano}`
+      }
+
+      const nomeFazenda = info.fazenda_nome || 'Fazenda'
+      const dataInicioFmt = formatarData(dataInicio)
+      const dataFimFmt = formatarData(dataFim)
+      const fileName = `Gesta'Up - Relatório de Consumo ${nomeFazenda} | ${dataInicioFmt} a ${dataFimFmt}.pdf`
+
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = fileName
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      // Abre também em nova aba para preview
+      window.open(url, '_blank')
+    } catch (err: any) {
+      console.error('Erro ao gerar relatório:', err)
+      alert('Erro ao gerar relatório: ' + (err.message || 'Tente novamente.'))
+    } finally {
+      setGerandoPDF(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -125,8 +312,9 @@ export function Suplementacao() {
       <Card className="bg-white p-4 sm:p-6" disableHover>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
           <h3 className="text-base sm:text-lg font-semibold text-gray-800">Filtros</h3>
-          <Button
-            onClick={() => {
+          <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4 w-full sm:w-auto">
+            <Button
+              onClick={() => {
               // Pre-computar data_anterior e intervalo_dias para cada registro
               // baseado na serie lote_id + formulacao ordenada por data
               const sorted = [...filteredRegistros].sort((a, b) =>
@@ -161,10 +349,36 @@ export function Suplementacao() {
           >
             Exportar XLSX
           </Button>
+          <div className="flex flex-col items-start">
+            <Button
+              onClick={handleExportarRelatorio}
+              disabled={gerandoPDF}
+              className="w-full sm:w-auto text-sm"
+            >
+              {gerandoPDF ? 'Gerando...' : 'Exportar Relatório de Consumo'}
+            </Button>
+            {erroExportacao && (
+              <p className="text-sm text-red-600 mt-2">{erroExportacao}</p>
+            )}
+          </div>
+          </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Lote</label>
+            <Select
+              value={loteSelecionado}
+              onChange={setLoteSelecionado}
+              options={[
+                { value: '', label: 'Selecione o lote' },
+                ...lotes.map((l) => ({ value: l.id, label: l.nome })),
+              ]}
+              placeholder="Selecione o lote"
+              className={`text-sm ${erroExportacao && !loteSelecionado ? 'border-red-500' : ''}`}
+            />
+          </div>
           <div className="sm:col-span-2">
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Buscar</label>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Buscar</label>
             <Input
               type="text"
               placeholder="Tratador, produto, lote, pasto, sacos, kg cocho, kg depósito..."
@@ -174,29 +388,30 @@ export function Suplementacao() {
             />
           </div>
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data Início</label>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Data Início</label>
             <Input
               type="date"
               value={dataInicio}
               onChange={(e) => setDataInicio(e.target.value)}
-              className="text-sm"
+              className={`text-sm ${erroExportacao && !dataInicio ? 'border-red-500 focus:border-red-500' : ''}`}
             />
           </div>
           <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">Data Fim</label>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Data Fim</label>
             <Input
               type="date"
               value={dataFim}
               onChange={(e) => setDataFim(e.target.value)}
-              className="text-sm"
+              className={`text-sm ${erroExportacao && !dataFim ? 'border-red-500 focus:border-red-500' : ''}`}
             />
           </div>
           <div className="sm:col-span-2">
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 min-h-[2.5rem] leading-tight line-clamp-2">&nbsp;</label>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">&nbsp;</label>
             <Button variant="secondary" onClick={() => {
               setSearchTerm('')
               setDataInicio('')
               setDataFim('')
+              setLoteSelecionado('')
             }} className="w-full sm:w-auto text-sm">
               Limpar Filtros
             </Button>

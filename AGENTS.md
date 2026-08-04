@@ -152,6 +152,55 @@ Correções aplicadas:
 3. **H2: Unificação em `registros_movimentacao`**: os 7 registros de `lote_historico` foram migrados para `registros_movimentacao` preservando IDs. `IndividuoNovo.tsx` agora escreve em `registros_movimentacao` em vez de `lote_historico` (3 pontos: saída por realocação, entrada por realocação, entrada de novo indivíduo). `lote_historico` não é mais escrita pelo painel, mas é mantida no banco por segurança.
 4. **H6: UI distingue saída (laranja) de entrada (verde)**: a timeline do `Lotes.tsx` usa cores diferentes para saída e entrada, e mostra badge "(PWA)" ou "(painel)" conforme `individuo_id` está presente.
 5. **Trigger `update_quant_atual_movimentacao` corrigido**: referenciava colunas renomeadas na migration da cronologia (`peso_entrada` → `peso_entrada_kg_cab`, `peso_vivo_kg` → `peso_vivo_atual_kg_cab`, `peso_vivo_meta_kg` → `peso_vivo_meta_kg_cab`, e removidas `data_meta`, `preco_animal_kg`, `preco_animal_cab`, `custo_operacional`). Também adicionado filtro `ativo = true` nas queries de `lote_categorias`.
+
+### Notificações via WhatsApp — análise e plano (adicionado em 2026-08-04, não implementado)
+
+**Estado:** análise completa, branch `feature/notificacoes-whatsapp` criada, nada implementado. Retomar quando o usuário autorizar.
+
+**Decisões pendentes (perguntar antes de implementar):**
+1. Credenciais Twilio: placeholder em Supabase secrets (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_NUMBER) para configurar depois, ou o usuário já tem conta ativa.
+2. Templates Twilio: cadastrar template genérico `gestaup_alerta` com corpo `{{1}}` (carrega texto completo), ou enviar sem template (só funciona em sandbox ou janela de 24h).
+3. Posicionamento no menu: transformar "Notificações" em grupo com subitens ("Notificações" + "WhatsApp"), ou criar item standalone "WhatsApp" separado.
+
+**Provedor escolhido:** Twilio (decisão do usuário, custo não é problema). Justificativa: baixo risco de longo prazo, abstrai mudanças de policy do Meta, SDK maduro, fallback para SMS, multi-tenancy via subaccounts.
+
+**Notificações fixas identificadas (baseadas em dados existentes no banco):**
+- Pasto excedeu tempo de ocupação: `lote_pasto_historico.meta_intervalo_ocupacao_dias` vs `data_hora_entrada` (já tem notif in-app via cron `verificar_ocupacoes_acima_meta` às 6h).
+- Módulo excedeu tempo de ocupação: `lote_modulo_historico` (mesma função acima).
+- Bebedouro atrasado para limpeza: `bebedouros.meta_intervalo_limpeza` vs `data_ultima_limpeza` (sem notif in-app ainda). **Caso de uso principal: perda de 3 vacas por sede porque peões esqueceram de olhar bebedouro.**
+- Plano nutricional vencendo: `planos_nutricionais.periodo_dias` vs `data_inicio` (sem notif in-app).
+- Lote atingiu peso meta (próximo abate): `lote_categorias.peso_vivo_meta_kg_cab` vs `peso_vivo_atual_kg_cab` (sem notif in-app).
+- Recategorização pendente: threshold em `notificacoes_config` (já tem notif in-app).
+
+**Notificações personalizadas (lembretes criados pelo usuário):**
+- Texto livre, recorrência (único/diário/semanal/mensal), dias da semana específicos.
+- Exemplos: "Limpar bebedouros" a cada 3 dias ou seg/qua/sex; "Vacinar lote X" em data específica; "Reposição de mineral" semanal.
+
+**Arquitetura proposta:**
+- Tabela `whatsapp_contatos` (fazenda_id, nome, telefone, ativo) — números de telefone de cada usuário/peão por fazenda.
+- Tabela `whatsapp_lembretes` (fazenda_id, titulo, mensagem, recorrencia, dias_semana, data_hora, ativo, proximo_envio) — lembretes personalizados.
+- Tabela `whatsapp_inscricoes` (contato_id, tipo_alerta, ativo) — qual contato recebe qual tipo de alerta.
+- Tabela `whatsapp_fila` (fazenda_id, contato_id, mensagem, variaveis jsonb, status, agendado_para, tentativas, enviado_em) — fila de envio.
+- Edge Function `enviar-whatsapp` (Deno): lê fila pendente, chama Twilio API, atualiza status.
+- pg_cron job: a cada 5 min, verifica condições de alerta fixo + lembretes com `proximo_envio <= now()`, insere na fila.
+- Integração com notificações in-app existentes: quando `gerar_notificacao_ocupacao` cria notif in-app, verifica inscrições WhatsApp ativas e duplica para fila WhatsApp.
+
+**Infraestrutura existente aproveitável:**
+- pg_cron já ativo com 5 jobs (incluindo `verificar_ocupacoes_acima_meta` às 6h).
+- Tabela `notificacoes` e função `gerar_notificacao_ocupacao` já funcionam para in-app.
+- `usuarios.telefone` existe mas a maioria está NULL; nova tabela `whatsapp_contatos` permite cadastrar peões que não são usuários do sistema.
+- Sem diretório `supabase/functions` ainda; criar para a Edge Function.
+
+**Dados da fazenda de teste que validam a necessidade:**
+- Bebedouro 1: 68 dias sem limpeza (meta: 3 dias). Bebedouro 4: 85 dias sem limpeza (meta: 3 dias).
+- Pasto "Lavoura 1": 41 dias ocupado (meta: 3 dias).
+- 3 usuários na fazenda, apenas 1 com telefone preenchido.
+
+Disparador: quando o usuário mencionar "WhatsApp", "notificações WhatsApp", "lembretes WhatsApp", "alertas WhatsApp", ou retomar a implementação, ler esta seção antes de começar.
+
+### Renomeação de meta_consumo_ms_percent_pv para consumo_ms_percent_pv (adicionado em 2026-08-04)
+
+Migration `20260803100000_renomear_meta_consumo_ms_percent_pv.sql` aplicada. A coluna `meta_consumo_ms_percent_pv` em `formulacoes` foi renomeada para `consumo_ms_percent_pv` (a coluna nova já existia no banco mas estava NULL; copiamos os dados da antiga e dropamos a antiga). A RPC `migrar_plano_nutricional` foi atualizada para usar `f.consumo_ms_percent_pv`. Todos os 4 arquivos frontend que referenciavam o nome antigo foram atualizados: `Lotes.tsx`, `Formulacoes.tsx`, `PlanoNutricionalModal.tsx`, `PlanoNutricionalDraftModal.tsx`. O `FaixasCategorias.tsx` foi atualizado para consultar o consumo da formulação via `formulacoesMap` em vez de ler do campo stale `lote_categorias.consumo_meta_porcentagem_pesovivo`. O card do plano nutricional em `Lotes.tsx` agora lê o consumo diretamente da formulação (`formulacao?.consumo_meta`), ignorando o campo da lote_categoria. Testado na fazenda de testes: RPCs `migrar_plano_nutricional`, `encerrar_plano_nutricional`, `recategorizar_lote_categoria` todas funcionando com o novo nome da coluna.
 6. **H3: Texto livre sem ID (registros antigos)**: 5 registros em `lote_origem` com `lote_origem_id = null` não têm backfill viável (0% de match exato). Aceito como perda histórica. O app atual usa `SearchableModal` que restringe à lista de lotes cadastrados, impedindo novos casos.
 7. **H4: Lotes inativados referenciados**: 8 registros apontam para lotes inativados. A query por ID funciona mesmo para lotes inativos (JOIN por ID não depende de `ativo = true`). Não requer correção.
 
