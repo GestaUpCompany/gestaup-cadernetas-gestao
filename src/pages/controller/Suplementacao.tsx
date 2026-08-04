@@ -377,7 +377,7 @@ export function Suplementacao() {
               className={`text-sm ${erroExportacao && !loteSelecionado ? 'border-red-500' : ''}`}
             />
           </div>
-          <div className="sm:col-span-2">
+          <div className="sm:col-span-2 md:col-span-3">
             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Buscar</label>
             <Input
               type="text"
