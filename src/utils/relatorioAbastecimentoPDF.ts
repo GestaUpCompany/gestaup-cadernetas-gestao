@@ -708,7 +708,7 @@ export async function gerarPDFRelatorioAbastecimento(dados: DadosPDFRelatorioAba
   let finalY = renderTabelaDetalhamento(ctx, dados.detalhesPorMaquina, dados.totalLitros, dados.totalRegistros, tabelaY, margin)
 
   // Tabela 2: Detalhamento operacional (colunas 6-9)
-  const tabela2Y = finalY + 10
+  const tabela2Y = finalY + 18
   const tabela2HEstimada = 20 + dados.detalhesPorMaquina.length * 7
 
   if (tabela2Y + tabela2HEstimada > pageH - 15) {
