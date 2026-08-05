@@ -1243,20 +1243,34 @@ export function Lotes() {
       }
     }
 
-    // Remover categorias que não estão mais no formulário (e seus planos, via cascade)
+    // Encerrar categorias que não estão mais no formulário (soft-delete)
+    // Soft-delete preserva snapshots de planos e auditoria de transições,
+    // evitando violação de FK NO ACTION em planos_nutricionais_snapshots.
     if (existingCategorias && existingCategorias.length > 0) {
-      const idsToDelete = existingCategorias
+      const idsToEncerrar = existingCategorias
         .filter((cat: any) => !savedCategoryIds.includes(cat.id))
         .map((cat: any) => cat.id)
 
-      if (idsToDelete.length > 0) {
-        const { error: deleteError } = await supabase
-          .from('lote_categorias')
-          .delete()
-          .in('id', idsToDelete)
+      if (idsToEncerrar.length > 0) {
+        // 1. Encerrar planos nutricionais ativos das categorias removidas
+        const { error: planoEncerrarError } = await supabase
+          .from('planos_nutricionais')
+          .update({ ativo: false, data_fim: new Date().toISOString() })
+          .in('lote_categoria_id', idsToEncerrar)
+          .eq('ativo', true)
 
-        if (deleteError) {
-          console.error('Erro ao remover categorias antigas:', deleteError)
+        if (planoEncerrarError) {
+          console.error('Erro ao encerrar planos das categorias removidas:', planoEncerrarError)
+        }
+
+        // 2. Soft-delete das categorias (ativo=false + data_fim=now)
+        const { error: softDeleteError } = await supabase
+          .from('lote_categorias')
+          .update({ ativo: false, data_fim: new Date().toISOString() })
+          .in('id', idsToEncerrar)
+
+        if (softDeleteError) {
+          console.error('Erro ao encerrar categorias antigas:', softDeleteError)
         }
       }
     }

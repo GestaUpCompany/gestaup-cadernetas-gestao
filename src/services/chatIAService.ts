@@ -5,7 +5,7 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 export interface ChatResposta {
   resposta: string
   funcoes_chamadas: string[]
-  tokens: { input: number; output: number }
+  tokens: { input: number; output: number; cached: number }
 }
 
 export async function enviarPerguntaIA(pergunta: string): Promise<ChatResposta> {

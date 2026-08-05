@@ -10,7 +10,7 @@ interface Mensagem {
   tipo: 'usuario' | 'ia' | 'erro'
   texto: string
   funcoes?: string[]
-  tokens?: { input: number; output: number }
+  tokens?: { input: number; output: number; cached: number }
   timestamp: Date
 }
 
@@ -191,7 +191,7 @@ export function AssistenteIA() {
                 )}
                 {msg.tokens && (
                   <p className={`text-xs mt-1 ${msg.tipo === 'usuario' ? 'text-white/60' : 'text-gray-400'}`}>
-                    {msg.tokens.input + msg.tokens.output} tokens
+                    {msg.tokens.input + msg.tokens.output} tokens{msg.tokens.cached > 0 ? ` · ${msg.tokens.cached} cached` : ''}
                   </p>
                 )}
               </div>

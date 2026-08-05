@@ -109,19 +109,11 @@ export function PlanoNutricionalModal({
 
       setPesoAtualCategoria(categoriaData?.peso_vivo_atual_kg_cab ?? null)
 
-      // Buscar todos os IDs de categorias do mesmo lote (ativas e encerradas)
-      const { data: todasCategorias } = await supabase
-        .from('lote_categorias')
-        .select('id')
-        .eq('lote_id', categoriaData?.lote_id)
-
-      const todosCategoriaIds = (todasCategorias || []).map(c => c.id)
-
-      // Buscar planos nutricionais de todas as categorias do lote
+      // Buscar planos nutricionais apenas da categoria atual (não do lote inteiro)
       const { data: planosData, error: planosError } = await supabase
         .from('planos_nutricionais')
         .select('*')
-        .in('lote_categoria_id', todosCategoriaIds.length > 0 ? todosCategoriaIds : [loteCategoriaId])
+        .eq('lote_categoria_id', loteCategoriaId)
         .order('ordem', { ascending: true })
 
       if (planosError) throw planosError
@@ -247,6 +239,11 @@ export function PlanoNutricionalModal({
       console.log('[handleSubmit] Plano vigente - loteCategoriaId:', loteCategoriaId, 'pesoMeta:', pesoMeta, 'periodo:', periodo)
     }
 
+    if (editingPlano && editingPlano.lote_categoria_id !== loteCategoriaId) {
+      setMessage('Este plano pertence a outra categoria e não pode ser editado aqui.')
+      return
+    }
+
     if (!fazendaId) {
       setMessage('Não foi possível identificar a fazenda. Feche e reabra o modal.')
       return
@@ -311,6 +308,10 @@ export function PlanoNutricionalModal({
   }
 
   const handleDelete = async (plano: PlanoNutricional) => {
+    if (plano.lote_categoria_id !== loteCategoriaId) {
+      setMessage('Este plano pertence a outra categoria e não pode ser excluído aqui.')
+      return
+    }
     setConfirmModal({
       isOpen: true,
       title: 'Excluir Plano',
@@ -343,6 +344,11 @@ export function PlanoNutricionalModal({
 
     if (!planoParaIniciar) {
       setMessage('Nenhum plano disponível para iniciar.')
+      return
+    }
+
+    if (planoParaIniciar.lote_categoria_id !== loteCategoriaId) {
+      setMessage('Este plano pertence a outra categoria e não pode ser iniciado aqui.')
       return
     }
 
@@ -420,6 +426,11 @@ export function PlanoNutricionalModal({
 
     if (!planoParaIniciar) {
       setMessage('Nenhum plano disponível para iniciar.')
+      return
+    }
+
+    if (planoParaIniciar.lote_categoria_id !== loteCategoriaId) {
+      setMessage('Este plano pertence a outra categoria e não pode ser iniciado aqui.')
       return
     }
 
@@ -586,6 +597,11 @@ export function PlanoNutricionalModal({
     const planoVigente = planos.find((p) => p.ativo)
     if (!planoVigente) {
       setMessage('Não há plano vigente')
+      return
+    }
+
+    if (planoDestino.lote_categoria_id !== loteCategoriaId) {
+      setMessage('O plano de destino pertence a outra categoria.')
       return
     }
 

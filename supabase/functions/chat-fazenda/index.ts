@@ -557,10 +557,9 @@ async function executeFunction(call: ToolCall): Promise<FunctionResult> {
 // ---------------------------------------------------------------------------
 // Interação com Gemini.
 // ---------------------------------------------------------------------------
-function buildSystemContext(fazendaNome: string): string {
+function buildSystemContext(): string {
   return [
     "Você é um assistente de análise de dados para uma fazenda de gado (pecuária).",
-    `A fazenda em contexto é "${fazendaNome}".`,
     "Responda sempre em português do Brasil, de forma direta e objetiva.",
     "Use as funções disponíveis para buscar dados reais. NUNCA invente números.",
     "Se uma função retornar count=0 ou mensagem de 'não há dados', diga claramente que não há dados para o período/lote informado.",
@@ -575,7 +574,7 @@ async function callGemini(
   apiKey: string,
   systemContext: string,
   contents: Array<Record<string, unknown>>,
-): Promise<{ text?: string; toolCalls?: ToolCall[]; modelContent?: Record<string, unknown>; usage?: { promptTokens: number; candidatesTokens: number } }> {
+): Promise<{ text?: string; toolCalls?: ToolCall[]; modelContent?: Record<string, unknown>; usage?: { promptTokens: number; candidatesTokens: number; cachedTokens: number } }> {
   // Incluir systemInstruction separadamente (formato Gemini 3.x).
   const body = {
     systemInstruction: { parts: [{ text: systemContext }] },
@@ -621,7 +620,11 @@ async function callGemini(
     toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
     modelContent: modelContent,
     usage: usage
-      ? { promptTokens: usage.promptTokenCount || 0, candidatesTokens: usage.candidatesTokenCount || 0 }
+      ? {
+          promptTokens: usage.promptTokenCount || 0,
+          candidatesTokens: usage.candidatesTokenCount || 0,
+          cachedTokens: usage.cachedContentTokenCount || 0,
+        }
       : undefined,
   };
 }
@@ -641,6 +644,7 @@ async function insertLog(
     modelo: string;
     tokens_input: number;
     tokens_output: number;
+    tokens_cached: number;
     erro?: string;
   },
 ): Promise<void> {
@@ -662,6 +666,7 @@ async function insertLog(
         modelo: log.modelo,
         tokens_input: log.tokens_input,
         tokens_output: log.tokens_output,
+        tokens_cached: log.tokens_cached,
         erro: log.erro || null,
       }),
     });
@@ -748,24 +753,31 @@ Deno.serve(async (req: Request) => {
     const fazendaRows = await fazendaRes.json() as { nome: string }[];
     const fazendaNome = fazendaRows?.[0]?.nome || "Fazenda";
 
-    // 5. Interação com Gemini (até 3 rodadas de function calling).
-    const systemContext = buildSystemContext(fazendaNome);
+    // 5. Interação com Gemini (até 5 rodadas de function calling).
+    // System context é idêntico para todas as fazendas, maximizando implicit caching.
+    // O nome da fazenda vai na primeira mensagem do usuário.
+    const systemContext = buildSystemContext();
     const funcoesChamadas: Array<{ name: string; args: unknown; result?: unknown }> = [];
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
+    let totalCachedTokens = 0;
     let respostaFinal = "";
     let erroMsg: string | undefined;
 
     // Gemini 3.x: manter histórico completo de contents.
+    // O nome da fazenda vai na primeira mensagem do usuário (não no systemInstruction)
+    // para que o systemInstruction + tools sejam idênticos entre fazendas,
+    // maximizando a taxa de implicit cache hit.
     const contents: Array<Record<string, unknown>> = [
-      { role: "user", parts: [{ text: pergunta }] },
+      { role: "user", parts: [{ text: `[Contexto: fazenda "${fazendaNome}"]\n\n${pergunta}` }] },
     ];
 
     for (let round = 0; round < 5; round++) {
       const geminiResult = await callGemini(geminiApiKey, systemContext, contents);
       totalInputTokens += geminiResult.usage?.promptTokens || 0;
       totalOutputTokens += geminiResult.usage?.candidatesTokens || 0;
-      console.log(`[chat-fazenda] round ${round}: text=${geminiResult.text ? "yes" : "no"}, toolCalls=${geminiResult.toolCalls?.length || 0}, tokens=${geminiResult.usage?.candidatesTokens || 0}`);
+      totalCachedTokens += geminiResult.usage?.cachedTokens || 0;
+      console.log(`[chat-fazenda] round ${round}: text=${geminiResult.text ? "yes" : "no"}, toolCalls=${geminiResult.toolCalls?.length || 0}, in=${geminiResult.usage?.promptTokens || 0}, out=${geminiResult.usage?.candidatesTokens || 0}, cached=${geminiResult.usage?.cachedTokens || 0}`);
 
       if (geminiResult.toolCalls && geminiResult.toolCalls.length > 0) {
         // Adicionar resposta do modelo ao histórico (preserva thought signatures).
@@ -814,6 +826,7 @@ Deno.serve(async (req: Request) => {
       modelo: GEMINI_MODEL,
       tokens_input: totalInputTokens,
       tokens_output: totalOutputTokens,
+      tokens_cached: totalCachedTokens,
       erro: erroMsg,
     });
 
@@ -821,7 +834,7 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({
       resposta: respostaFinal,
       funcoes_chamadas: funcoesChamadas.map(f => f.name),
-      tokens: { input: totalInputTokens, output: totalOutputTokens },
+      tokens: { input: totalInputTokens, output: totalOutputTokens, cached: totalCachedTokens },
     }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

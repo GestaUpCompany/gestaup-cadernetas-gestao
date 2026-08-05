@@ -87,6 +87,8 @@ import { Notificacoes } from './pages/controller/Notificacoes'
 import { LeituraCocho } from './pages/controller/LeituraCocho'
 import { AcompanhamentoTratos } from './pages/controller/AcompanhamentoTratos'
 import { AssistenteIA } from './pages/controller/AssistenteIA'
+import { Relatorios } from './pages/controller/Relatorios'
+import { RelatorioPublico } from './pages/public/RelatorioPublico'
 
 // Redirecionamento baseado no papel do usuário
 function RoleRedirect() {
@@ -120,7 +122,10 @@ function App() {
     <Router>
       <Routes>
         <Route path="/login" element={<Login />} />
-        
+
+        {/* Rota pública de relatório (sem auth) */}
+        <Route path="/r/:token" element={<RelatorioPublico />} />
+
         {/* Rotas Admin */}
         <Route
           path="/admin/dashboard"
@@ -951,6 +956,16 @@ function App() {
             <ControllerRoute>
               <ControllerLayout>
                 <AssistenteIA />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/relatorios"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <Relatorios />
               </ControllerLayout>
             </ControllerRoute>
           }
