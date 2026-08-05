@@ -17,7 +17,6 @@ interface RegistroEnfermaria {
   lote?: string
   pasto?: string
   categoria?: string
-  tratamento?: string
   tratamento_outros?: string
   tratamento_obs?: string
   diagnosticos?: Record<string, any>
@@ -135,7 +134,7 @@ export function EnfermariaDetalhes() {
           <div>
             <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Tratamento</h3>
             <div className="bg-gray-50 p-4 rounded-lg space-y-3">
-              <p className="text-sm"><span className="font-medium text-gray-700">Tratamento:</span> {registro.tratamento || '-'}</p>
+              <p className="text-sm"><span className="font-medium text-gray-700">Tratamento:</span> {registro.tratamento_outros || '-'}</p>
               {registro.tratamento_outros && <p className="text-sm"><span className="font-medium text-gray-700">Tratamento Outros:</span> {registro.tratamento_outros}</p>}
               {registro.tratamento_obs && <p className="text-sm"><span className="font-medium text-gray-700">Observação:</span> {registro.tratamento_obs}</p>}
             </div>

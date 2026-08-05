@@ -113,6 +113,7 @@ export function ModulosPastos() {
       .select('id, nome, area_util_ha, especie, modulo_id')
       .eq('fazenda_id', fazendaId)
       .eq('ativo', true)
+      .is('deleted_at', null)
 
     // Se estiver editando um módulo, mostrar pastos órfãos OU pastos deste módulo
     // Se estiver criando novo módulo, mostrar apenas pastos órfãos

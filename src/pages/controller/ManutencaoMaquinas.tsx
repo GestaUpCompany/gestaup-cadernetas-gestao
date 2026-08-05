@@ -14,12 +14,12 @@ interface RegistroManutencaoMaquinas {
   dispositivo_id?: string
   nome_usuario?: string
   data: string
-  maquina?: string
-  tipo_manutencao?: string
-  descricao?: string
-  responsavel?: string
-  custo?: number
-  status?: string
+  responsavel_checklist?: string
+  operador_motorista?: string
+  veiculo_trator?: string
+  placa?: string
+  odometro_horimetro?: string
+  checklist?: Record<string, { valor: string; observacao: string }>
   observacao?: string
   sync_status?: string
   created_at: string
@@ -70,11 +70,10 @@ export function ManutencaoMaquinas() {
 
   const filteredRegistros = registros.filter((registro) => {
     const matchesSearch =
-      (registro.maquina && registro.maquina.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.tipo_manutencao && registro.tipo_manutencao.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.responsavel && registro.responsavel.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.descricao && registro.descricao.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.status && registro.status.toLowerCase().includes(searchTerm.toLowerCase()))
+      (registro.veiculo_trator && registro.veiculo_trator.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.operador_motorista && registro.operador_motorista.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.responsavel_checklist && registro.responsavel_checklist.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.placa && registro.placa.toLowerCase().includes(searchTerm.toLowerCase()))
 
     const matchesDataInicio = !dataInicio || registro.data >= dataInicio
     const matchesDataFim = !dataFim || registro.data <= dataFim
@@ -189,20 +188,20 @@ export function ManutencaoMaquinas() {
                 </div>
                 <div className="space-y-2 text-xs sm:text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Máquina:</span>
-                    <span className="text-gray-800 font-medium">{registro.maquina || '-'}</span>
+                    <span className="text-gray-500">Máquina/Veículo:</span>
+                    <span className="text-gray-800 font-medium">{registro.veiculo_trator || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Tipo Manutenção:</span>
-                    <span className="text-gray-800 font-medium">{registro.tipo_manutencao || '-'}</span>
+                    <span className="text-gray-500">Operador:</span>
+                    <span className="text-gray-800 font-medium">{registro.operador_motorista || '-'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Responsável:</span>
-                    <span className="text-gray-800 font-medium">{registro.responsavel || '-'}</span>
+                    <span className="text-gray-800 font-medium">{registro.responsavel_checklist || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Status:</span>
-                    <span className="text-gray-800 font-medium">{registro.status || '-'}</span>
+                    <span className="text-gray-500">Placa:</span>
+                    <span className="text-gray-800 font-medium">{registro.placa || '-'}</span>
                   </div>
                   {registro.observacao && (
                     <div className="flex justify-between">
@@ -226,11 +225,10 @@ export function ManutencaoMaquinas() {
                   >
                     Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
                   </th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Máquina</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo Manutenção</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Máquina/Veículo</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Operador</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Responsável</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Custo</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Placa</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Observação</th>
                 </tr>
               </thead>
@@ -245,19 +243,16 @@ export function ManutencaoMaquinas() {
                       {formatDate(registro.data)}
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
-                      {registro.maquina || '-'}
+                      {registro.veiculo_trator || '-'}
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
-                      {registro.tipo_manutencao || '-'}
+                      {registro.operador_motorista || '-'}
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
-                      {registro.responsavel || '-'}
+                      {registro.responsavel_checklist || '-'}
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
-                      {registro.custo ? `R$ ${registro.custo.toFixed(2)}` : '-'}
-                    </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
-                      {registro.status || '-'}
+                      {registro.placa || '-'}
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                       {registro.observacao || '-'}

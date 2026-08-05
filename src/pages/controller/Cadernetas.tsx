@@ -1,9 +1,15 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Card } from '../../components/ui'
+import { Card, Button } from '../../components/ui'
 import { CADERNETA_IMAGES, CADERNETA_TITLES, CADERNETA_DESCRIPTIONS } from '../../types/images'
+import { useAuth } from '../../contexts/AuthContext'
+import { getFazendaIdForUser } from '../../utils/fazendaContext'
+import { exportAllCadernetas } from '../../utils/exportAllCadernetas'
 
 export function Cadernetas() {
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const [exporting, setExporting] = useState(false)
 
   const cadernetas = [
     {
@@ -104,9 +110,36 @@ export function Cadernetas() {
     },
   ]
 
+  const handleExportAll = async () => {
+    if (!user || exporting) return
+    setExporting(true)
+    try {
+      const fazendaId = await getFazendaIdForUser(user.id)
+      if (!fazendaId) {
+        alert('Fazenda não encontrada para o usuário.')
+        return
+      }
+      await exportAllCadernetas(fazendaId)
+    } catch (err: any) {
+      console.error('Erro ao exportar todas as cadernetas:', err)
+      alert(err?.message || 'Erro ao exportar cadernetas.')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-800">Cadernetas</h2>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <h2 className="text-2xl font-bold text-gray-800">Cadernetas</h2>
+        <Button
+          variant="primary"
+          onClick={handleExportAll}
+          disabled={exporting}
+        >
+          {exporting ? 'Exportando...' : 'Exportar todas (XLSX)'}
+        </Button>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {cadernetas.map((caderneta) => (

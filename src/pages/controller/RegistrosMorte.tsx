@@ -21,24 +21,14 @@ interface RegistroMorte {
   idade?: string
   peso_vivo?: number
   causa_morte?: string
-  secrecao_orificios: boolean
-  secrecao_orificios_obs?: string
-  sintomas_pneumonia: boolean
-  sintomas_pneumonia_obs?: string
-  inchaco: boolean
-  inchaco_obs?: string
-  incoordenacao_tremores: boolean
-  incoordenacao_tremores_obs?: string
-  apatia_fraqueza: boolean
-  apatia_fraqueza_obs?: string
-  presenca_sangue: boolean
-  presenca_sangue_obs?: string
-  desordens_digestivas: boolean
-  desordens_digestivas_obs?: string
   brinco?: string
   chip?: string
   categoria?: string
   categoria_outros?: string
+  escore?: number
+  nutricao_atual?: string
+  nutricao_anterior?: string
+  diagnosticos?: Record<string, { valor: string; observacao: string }>
   sync_status?: string
   version?: number
   created_at: string

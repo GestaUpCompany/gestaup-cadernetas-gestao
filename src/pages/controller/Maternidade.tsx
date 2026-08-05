@@ -27,6 +27,9 @@ interface RegistroMaternidade {
   id_chip_mae?: string
   id_provisorio_cria?: string
   individuo_id_cria?: string
+  id_manejo_mae?: string
+  individuo_mae?: { id_brinco: string | null; id_manejo: string | null } | null
+  individuo_cria?: { id_brinco: string | null; id_manejo: string | null } | null
   sync_status?: string
   created_at: string
 }
@@ -57,7 +60,7 @@ export function Maternidade() {
 
     const { data, error } = await supabase
       .from('registros_maternidade')
-      .select('*')
+      .select('*, individuo_mae:individuos!individuo_id_mae(id_brinco, id_manejo), individuo_cria:individuos!individuo_id_cria(id_brinco, id_manejo)')
       .eq('fazenda_id', fazendaId)
       .is('deleted_at', null)
       .order('data', { ascending: false })

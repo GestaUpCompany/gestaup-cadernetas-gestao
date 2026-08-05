@@ -25,7 +25,9 @@ interface RegistroAlimentacao {
   quantidade_marmitas?: number
   preco_unitario?: number
   destinatario?: string
-  itens?: any[]
+  quantidade_outros?: string
+  unidade_outros?: string
+  itens?: any
   observacao?: string
   nome_usuario?: string
   sync_status?: string

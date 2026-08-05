@@ -409,6 +409,7 @@ export function Pastos() {
         .from('pastos')
         .select('nome')
         .eq('fazenda_id', fazendaId)
+        .is('deleted_at', null)
 
       const existingNames = new Set(existingPastos?.map(p => p.nome.toLowerCase()) || [])
 

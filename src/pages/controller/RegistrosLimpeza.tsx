@@ -18,7 +18,7 @@ interface RegistroLimpeza {
   local?: string
   hora_inicio?: string
   hora_final?: string
-  limpeza_realizada?: any[]
+  limpeza_realizada?: any
   observacao?: string
   nome_usuario?: string
   sync_status?: string

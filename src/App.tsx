@@ -85,6 +85,7 @@ import { IndividuoNovo } from './pages/controller/IndividuoNovo'
 import { FaixasCategorias } from './pages/controller/FaixasCategorias'
 import { Notificacoes } from './pages/controller/Notificacoes'
 import { LeituraCocho } from './pages/controller/LeituraCocho'
+import { AcompanhamentoTratos } from './pages/controller/AcompanhamentoTratos'
 import { AssistenteIA } from './pages/controller/AssistenteIA'
 
 // Redirecionamento baseado no papel do usuário
@@ -422,6 +423,18 @@ function App() {
               <ConfinamentoRoute>
                 <ControllerLayout>
                   <ProgramacaoTratos />
+                </ControllerLayout>
+              </ConfinamentoRoute>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/acompanhamento-tratos"
+          element={
+            <ControllerRoute>
+              <ConfinamentoRoute>
+                <ControllerLayout>
+                  <AcompanhamentoTratos />
                 </ControllerLayout>
               </ConfinamentoRoute>
             </ControllerRoute>

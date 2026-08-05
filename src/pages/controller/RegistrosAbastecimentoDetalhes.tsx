@@ -13,14 +13,14 @@ interface RegistroAbastecimento {
   data: string
   quem_abasteceu: string
   operador_motorista: string
-  veiculo_trator: string
+  maquina_veiculo: string
   placa: string
-  hidrometro_inicial: number
-  hidrometro_final: number
   total_abastecido: number
+  total_bomba?: number
   combustivel: string
-  odometro: string
+  odometro_horimetro: string
   tipo_operacao: string
+  tipo_operacao_outros?: string
   observacao?: string
   sync_status?: string
   version?: number
@@ -112,7 +112,7 @@ export function RegistrosAbastecimentoDetalhes() {
             <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Veículo</h3>
             <div className="bg-gray-50 p-4 rounded-lg">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <p className="text-sm"><span className="font-medium text-gray-700">Veículo/Trator:</span> {registro.veiculo_trator}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Máquina/Veículo:</span> {registro.maquina_veiculo}</p>
                 <p className="text-sm"><span className="font-medium text-gray-700">Placa:</span> {registro.placa}</p>
                 <p className="text-sm"><span className="font-medium text-gray-700">Combustível:</span> {registro.combustivel}</p>
               </div>
@@ -124,10 +124,9 @@ export function RegistrosAbastecimentoDetalhes() {
             <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Medições</h3>
             <div className="bg-gray-50 p-4 rounded-lg">
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                <p className="text-sm"><span className="font-medium text-gray-700">Hidrômetro Inicial:</span> {registro.hidrometro_inicial}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Hidrômetro Final:</span> {registro.hidrometro_final}</p>
                 <p className="text-sm"><span className="font-medium text-gray-700">Total Abastecido:</span> {registro.total_abastecido} L</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Odômetro:</span> {registro.odometro}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Total Bomba:</span> {registro.total_bomba || '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Odômetro/Horímetro:</span> {registro.odometro_horimetro}</p>
               </div>
             </div>
           </div>

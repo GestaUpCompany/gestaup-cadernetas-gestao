@@ -19,24 +19,13 @@ interface RegistroEnfermaria {
   brinco?: string
   chip?: string
   categoria?: string
-  tratamento?: string
+  sexo?: string
+  raca?: string
+  idade?: string
   tratamento_outros?: string
-  problema_casco?: boolean
-  problema_casco_obs?: string
-  sintomas_pneumonia?: boolean
-  sintomas_pneumonia_obs?: string
-  picado_cobra?: boolean
-  picado_cobra_obs?: string
-  incoordenacao_tremores?: boolean
-  incoordenacao_tremores_obs?: string
-  febre_alta?: boolean
-  febre_alta_obs?: string
-  presenca_sangue?: boolean
-  presenca_sangue_obs?: string
-  fraturas?: boolean
-  fraturas_obs?: string
-  desordens_digestivas?: boolean
-  desordens_digestivas_obs?: string
+  tratamento_obs?: string
+  diagnosticos?: Record<string, { valor: string; observacao?: string }>
+  medicamentos?: Array<{ tipo: string; nomeComercial: string; doseAplicada: string }>
   sync_status?: string
   created_at: string
 }
@@ -91,8 +80,8 @@ export function Enfermaria() {
       (registro.lote && registro.lote.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.pasto && registro.pasto.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.categoria && registro.categoria.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.tratamento && registro.tratamento.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.tratamento_outros && registro.tratamento_outros.toLowerCase().includes(searchTerm.toLowerCase()))
+      (registro.tratamento_outros && registro.tratamento_outros.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.tratamento_obs && registro.tratamento_obs.toLowerCase().includes(searchTerm.toLowerCase()))
 
     const matchesDataInicio = !dataInicio || new Date(registro.data) >= new Date(dataInicio)
     const matchesDataFim = !dataFim || new Date(registro.data) <= new Date(dataFim + 'T23:59:59')
@@ -224,7 +213,7 @@ export function Enfermaria() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Tratamento:</span>
-                    <span className="text-gray-800 font-medium truncate max-w-[150px]">{registro.tratamento || '-'}</span>
+                    <span className="text-gray-800 font-medium truncate max-w-[150px]">{registro.tratamento_outros || '-'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Lote:</span>
@@ -278,7 +267,7 @@ export function Enfermaria() {
                       {registro.categoria || '-'}
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
-                      {registro.tratamento || '-'}
+                      {registro.tratamento_outros || '-'}
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                       {registro.lote || '-'}

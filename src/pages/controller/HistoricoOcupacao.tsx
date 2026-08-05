@@ -86,8 +86,8 @@ export function HistoricoOcupacao() {
 
     // Buscar lotes, pastos e módulos da fazenda para os filtros
     const [lotesData, pastosData, modulosData] = await Promise.all([
-      supabase.from('lotes').select('id, nome').eq('fazenda_id', fazendaId).order('nome'),
-      supabase.from('pastos').select('id, nome').eq('fazenda_id', fazendaId).order('nome'),
+      supabase.from('lotes').select('id, nome').eq('fazenda_id', fazendaId).is('deleted_at', null).order('nome'),
+      supabase.from('pastos').select('id, nome').eq('fazenda_id', fazendaId).is('deleted_at', null).order('nome'),
       supabase.from('modulos_pastos').select('id, nome').eq('fazenda_id', fazendaId).order('nome'),
     ])
 

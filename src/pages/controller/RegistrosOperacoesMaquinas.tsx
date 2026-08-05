@@ -17,18 +17,12 @@ interface RegistroOperacoesMaquinas {
   implemento_utilizado: string
   hora_inicial?: string
   hora_final?: string
-  odometro_inicial: string
-  odometro_final: string
-  total_odometro?: string
+  odometro_horimetro_inicial?: string
+  odometro_horimetro_final?: string
+  total_odometro_horimetro?: string
   tipo_operacao: string
-  produto_aplicado?: string
-  quantidade_total_aplicada?: string
-  area_trabalhada?: string
-  dose_aplicada?: string
-  meta_diaria_batida?: string
-  meta_diaria_batida_obs?: string
-  algum_imprevisto?: string
-  algum_imprevisto_obs?: string
+  checklist?: Record<string, { valor: string; observacao: string }>
+  aplicacoes?: Array<{ insumo_aplicado: string; quantidade_total_aplicada: string; area_trabalhada: string; dose_aplicada: string }>
   observacao?: string
   sync_status?: string
   version?: number
@@ -85,7 +79,6 @@ export function RegistrosOperacoesMaquinas() {
       (registro.veiculo_trator && registro.veiculo_trator.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.implemento_utilizado && registro.implemento_utilizado.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.tipo_operacao && registro.tipo_operacao.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.produto_aplicado && registro.produto_aplicado.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.observacao && registro.observacao.toLowerCase().includes(searchTerm.toLowerCase()))
 
     const matchesDataInicio = !dataInicio || registro.data >= dataInicio
@@ -204,12 +197,8 @@ export function RegistrosOperacoesMaquinas() {
                     <span className="text-gray-800 font-medium">{registro.tipo_operacao || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Produto Aplicado:</span>
-                    <span className="text-gray-800 font-medium">{registro.produto_aplicado || '-'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Área Trabalhada:</span>
-                    <span className="text-gray-800 font-medium">{registro.area_trabalhada || '-'}</span>
+                    <span className="text-gray-500">Aplicações:</span>
+                    <span className="text-gray-800 font-medium truncate max-w-[150px]">{registro.aplicacoes?.map((a) => a.insumo_aplicado).join(', ') || '-'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Observação:</span>
@@ -229,8 +218,7 @@ export function RegistrosOperacoesMaquinas() {
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Veículo/Trator</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Implemento</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo Operação</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produto Aplicado</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Área Trabalhada</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aplicações</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Observação</th>
                 </tr>
               </thead>
@@ -254,10 +242,7 @@ export function RegistrosOperacoesMaquinas() {
                       {registro.tipo_operacao}
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
-                      {registro.produto_aplicado || '-'}
-                    </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
-                      {registro.area_trabalhada || '-'}
+                      {registro.aplicacoes?.map((a) => a.insumo_aplicado).join(', ') || '-'}
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                       {registro.observacao ? registro.observacao.substring(0, 50) + (registro.observacao.length > 50 ? '...' : '') : '-'}

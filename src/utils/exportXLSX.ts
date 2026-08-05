@@ -45,6 +45,16 @@ const EXCLUDED_COLUMNS = new Set([
   'espacamento_cocho_detalhes',
   'checklist',
   'espacamento_cocho_ideal',
+  'pasto_saida_id',
+  'pasto_entrada_id',
+  'parto_vinculo_id',
+  'lote_origem_id',
+  'lote_destino_id',
+  'individuo_id',
+  'individuo_id_mae',
+  'individuo_id_cria',
+  'maquina_veiculo_id',
+  'qtd_bezerros',
 ])
 
 function formatValue(value: any, format?: ColumnFormat): any {
@@ -105,9 +115,11 @@ function buildColumnList(data: any[], configColumns: ColumnConfig[]): {
     }
   }
 
-  // Keep config columns that exist in data and aren't excluded
+  // Keep config columns that exist in data.
+  // Config columns bypass EXCLUDED_COLUMNS so explicitly-configured fields
+  // (e.g. checklist in Bebedouros) always pass through.
   const filteredConfigCols = configColumns.filter(
-    col => !EXCLUDED_COLUMNS.has(col.source) && dataKeys.has(col.source)
+    col => dataKeys.has(col.source)
   )
 
   // Scan data for keys not in config and not excluded

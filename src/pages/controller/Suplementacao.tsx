@@ -28,7 +28,6 @@ interface RegistroSuplementacao {
   garrote?: boolean
   novilha?: boolean
   leitura?: number
-  sacos?: number
   kg_cocho?: number
   kg_deposito?: number
   creep?: number
@@ -137,7 +136,6 @@ export function Suplementacao() {
       (registro.lote && registro.lote.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.pasto && registro.pasto.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.formulacao && registro.formulacao.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.sacos && registro.sacos.toString().includes(searchTerm.toLowerCase())) ||
       (registro.kg_cocho && registro.kg_cocho.toString().includes(searchTerm.toLowerCase())) ||
       (registro.kg_deposito && registro.kg_deposito.toString().includes(searchTerm.toLowerCase()))
 
@@ -464,7 +462,7 @@ export function Suplementacao() {
             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Buscar</label>
             <Input
               type="text"
-              placeholder="Tratador, produto, lote, pasto, sacos, kg cocho, kg depósito..."
+              placeholder="Tratador, produto, lote, pasto, kg cocho, kg depósito..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="text-sm"
@@ -557,10 +555,6 @@ export function Suplementacao() {
                     <span className="text-gray-800 font-medium">{registro.pasto || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Sacos:</span>
-                    <span className="text-gray-800 font-medium">{registro.sacos || 0}</span>
-                  </div>
-                  <div className="flex justify-between">
                     <span className="text-gray-500">KG Cocho:</span>
                     <span className="text-gray-800 font-medium">{registro.kg_cocho || 0}</span>
                   </div>
@@ -588,7 +582,6 @@ export function Suplementacao() {
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Formulação</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lote</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pasto</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sacos</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">KG Cocho</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">KG Depósito</th>
                 </tr>
@@ -625,9 +618,6 @@ export function Suplementacao() {
                       </td>
                       <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                         {registro.pasto || '-'}
-                      </td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
-                        {registro.sacos || 0}
                       </td>
                       <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                         {registro.kg_cocho || 0}

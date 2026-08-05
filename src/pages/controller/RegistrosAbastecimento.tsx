@@ -15,14 +15,14 @@ interface RegistroAbastecimento {
   data: string
   quem_abasteceu: string
   operador_motorista: string
-  veiculo_trator: string
+  maquina_veiculo: string
   placa: string
-  hidrometro_inicial: number
-  hidrometro_final: number
   total_abastecido: number
+  total_bomba?: number
   combustivel: string
-  odometro: string
+  odometro_horimetro: string
   tipo_operacao: string
+  tipo_operacao_outros?: string
   observacao?: string
   sync_status?: string
   version?: number
@@ -79,7 +79,7 @@ export function RegistrosAbastecimento() {
     const matchesSearch =
       (registro.quem_abasteceu && registro.quem_abasteceu.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.operador_motorista && registro.operador_motorista.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.veiculo_trator && registro.veiculo_trator.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.maquina_veiculo && registro.maquina_veiculo.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.placa && registro.placa.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.total_abastecido && registro.total_abastecido.toString().includes(searchTerm.toLowerCase())) ||
       (registro.combustivel && registro.combustivel.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -210,8 +210,8 @@ export function RegistrosAbastecimento() {
                     <span className="text-gray-800 font-medium">{registro.operador_motorista || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Veículo/Trator:</span>
-                    <span className="text-gray-800 font-medium">{registro.veiculo_trator || '-'}</span>
+                    <span className="text-gray-500">Máquina/Veículo:</span>
+                    <span className="text-gray-800 font-medium">{registro.maquina_veiculo || '-'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Placa:</span>
@@ -243,7 +243,7 @@ export function RegistrosAbastecimento() {
                   </th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quem Abasteceu</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Operador/Motorista</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Veículo/Trator</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Máquina/Veículo</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Placa</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Abastecido</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Combustível</th>
@@ -266,7 +266,7 @@ export function RegistrosAbastecimento() {
                       {registro.operador_motorista || '-'}
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
-                      {registro.veiculo_trator || '-'}
+                      {registro.maquina_veiculo || '-'}
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                       {registro.placa || '-'}

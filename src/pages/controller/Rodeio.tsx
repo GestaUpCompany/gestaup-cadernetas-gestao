@@ -42,7 +42,6 @@ interface RegistroRodeio {
   animais_tratados?: number
   escore_fezes?: number
   equipe?: number
-  procedimentos?: string[]
   sync_status?: string
   created_at: string
 }

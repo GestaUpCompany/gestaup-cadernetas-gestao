@@ -68,6 +68,7 @@ const menuStructure: MenuItem[] = [
     items: [
       { label: 'Currais', path: '/controller/currais' },
       { label: 'Programação de Tratos', path: '/controller/programacao-tratos' },
+      { label: 'Acompanhamento de Tratos', path: '/controller/acompanhamento-tratos' },
       { label: 'Histórico de Dietas', path: '/controller/historico-dietas' },
       { label: 'Leitura de Cocho', path: '/controller/leitura-cocho' },
     ],

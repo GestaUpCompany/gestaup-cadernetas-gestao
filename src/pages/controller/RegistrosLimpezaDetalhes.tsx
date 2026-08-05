@@ -16,7 +16,7 @@ interface RegistroLimpeza {
   local?: string
   hora_inicio?: string
   hora_final?: string
-  limpeza_realizada?: any[]
+  limpeza_realizada?: any
   observacao?: string
   nome_usuario?: string
   sync_status?: string
@@ -116,15 +116,35 @@ export function RegistrosLimpezaDetalhes() {
           </div>
 
           {/* Limpeza Realizada */}
-          {registro.limpeza_realizada && registro.limpeza_realizada.length > 0 && (
+          {registro.limpeza_realizada && (
             <div>
               <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Limpeza Realizada</h3>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm font-medium text-gray-700">
-                  {registro.limpeza_realizada.map((item: string) => 
-                    item.charAt(0).toUpperCase() + item.slice(1)
-                  ).join(', ')}
-                </p>
+              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                {(() => {
+                  const val = registro.limpeza_realizada
+                  if (Array.isArray(val)) {
+                    return <p className="text-sm font-medium text-gray-700">{val.map((item: string) => item.charAt(0).toUpperCase() + item.slice(1)).join(', ')}</p>
+                  }
+                  if (val && typeof val === 'object') {
+                    const lista = val.limpezaRealizada || val.tarefasRealizadas || []
+                    const detalhes = val.tarefas
+                    return (
+                      <>
+                        {Array.isArray(lista) && lista.length > 0 && (
+                          <p className="text-sm font-medium text-gray-700">{lista.map((item: string) => item.charAt(0).toUpperCase() + item.slice(1)).join(', ')}</p>
+                        )}
+                        {detalhes && typeof detalhes === 'object' && Object.keys(detalhes).length > 0 && (
+                          <div className="border-t pt-2 mt-2 space-y-1">
+                            {Object.entries(detalhes).map(([k, v]) => (
+                              <p key={k} className="text-sm text-gray-600"><span className="font-medium capitalize">{k.replace(/_/g, ' ')}:</span> {String(v)}</p>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    )
+                  }
+                  return <p className="text-sm text-gray-700">{String(val)}</p>
+                })()}
               </div>
             </div>
           )}

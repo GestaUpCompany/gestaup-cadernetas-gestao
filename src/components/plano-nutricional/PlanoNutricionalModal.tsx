@@ -214,7 +214,7 @@ export function PlanoNutricionalModal({
     }
     if (!formData.peso_meta_kg || Number(formData.peso_meta_kg) <= 0) return 'Peso meta deve ser maior que zero'
     if (pesoAtualCategoria != null && Number(formData.peso_meta_kg) < pesoAtualCategoria) return `Peso meta (${Number(formData.peso_meta_kg).toFixed(2).replace('.', ',')} kg) não pode ser menor que o peso atual de ${pesoAtualCategoria.toFixed(2).replace('.', ',')} kg`
-    if (!formData.gmd_planejado || Number(formData.gmd_planejado.replace(',', '.')) <= 0) return 'GMD deve ser maior que zero'
+    if (!editingPlano?.ativo && (!formData.gmd_planejado || Number(formData.gmd_planejado.replace(',', '.')) <= 0)) return 'GMD deve ser maior que zero'
     return null
   }
 
@@ -236,7 +236,16 @@ export function PlanoNutricionalModal({
       periodo = Math.ceil((dataFinal.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24))
     }
     const pesoMeta = parseFloat(formData.peso_meta_kg.replace(',', '.'))
-    const gmdValue = parseFloat(formData.gmd_planejado.replace(',', '.'))
+    // Em plano vigente, apenas periodo_dias e peso_meta_kg podem ser alterados.
+    // Os demais campos preservam os valores originais do plano.
+    const isVigente = !!editingPlano?.ativo
+    const gmdValue = isVigente
+      ? (editingPlano!.gmd_planejado ?? null)
+      : parseFloat(formData.gmd_planejado.replace(',', '.'))
+
+    if (isVigente) {
+      console.log('[handleSubmit] Plano vigente - loteCategoriaId:', loteCategoriaId, 'pesoMeta:', pesoMeta, 'periodo:', periodo)
+    }
 
     if (!fazendaId) {
       setMessage('Não foi possível identificar a fazenda. Feche e reabra o modal.')
@@ -246,13 +255,13 @@ export function PlanoNutricionalModal({
     const data = {
       lote_categoria_id: loteCategoriaId,
       fazenda_id: fazendaId,
-      nome: formData.nome.trim(),
-      formulacao_id: formData.formulacao_id,
+      nome: isVigente ? editingPlano!.nome : formData.nome.trim(),
+      formulacao_id: isVigente ? editingPlano!.formulacao_id : formData.formulacao_id,
       periodo_dias: periodo,
       peso_meta_kg: pesoMeta,
       gmd_planejado: gmdValue,
-      condicao_migracao: formData.condicao_migracao,
-      migracao_automatica: formData.migracao_automatica,
+      condicao_migracao: isVigente ? editingPlano!.condicao_migracao : formData.condicao_migracao,
+      migracao_automatica: isVigente ? editingPlano!.migracao_automatica : formData.migracao_automatica,
     }
 
     try {
@@ -262,6 +271,21 @@ export function PlanoNutricionalModal({
           .update(data)
           .eq('id', editingPlano.id)
         if (error) throw error
+
+        // Se o plano editado está vigente, replicar apenas periodo e peso_meta
+        // para lote_categorias (únicos campos editáveis em plano vigente)
+        if (isVigente) {
+          const { error: catError } = await supabase
+            .from('lote_categorias')
+            .update({
+              periodo: periodo,
+              peso_vivo_meta_kg_cab: pesoMeta,
+            })
+            .eq('id', loteCategoriaId)
+          if (catError) {
+            console.error('Erro ao replicar para lote_categorias:', catError)
+          }
+        }
       } else {
         const maxOrdem = planos.length > 0 ? Math.max(...planos.map(p => p.ordem)) : -1
         const ordem = maxOrdem + 1
@@ -960,7 +984,18 @@ export function PlanoNutricionalModal({
               <span className="text-xs text-gray-400">
                 {editingPlano ? 'Altere os dados e salve' : 'Preencha os dados e adicione à sequência'}
               </span>
+              {editingPlano?.ativo && (
+                <span className="ml-auto px-2 py-0.5 bg-green-100 text-green-800 text-xs font-medium rounded">
+                  Plano vigente
+                </span>
+              )}
             </div>
+            {editingPlano?.ativo && (
+              <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                Você está editando um plano vigente. Apenas a <strong>duração</strong> e o <strong>peso meta</strong> podem ser alterados.
+                Os demais campos (nome, formulação, GMD, condição de migração) ficam bloqueados para preservar a integridade do plano em execução.
+              </div>
+            )}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -970,12 +1005,14 @@ export function PlanoNutricionalModal({
                   <Input
                     type="text"
                     value={formData.nome}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      if (editingPlano?.ativo) return
                       setFormData({ ...formData, nome: e.target.value })
-                    }
+                    }}
                     placeholder="Ex: Engorda Inicial"
                     required
-                    className="border-gray-200 focus:border-accent"
+                    disabled={!!editingPlano?.ativo}
+                    className={`border-gray-200 focus:border-accent ${editingPlano?.ativo ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
                   />
                 </div>
 
@@ -985,9 +1022,13 @@ export function PlanoNutricionalModal({
                   </label>
                   <select
                     value={formData.formulacao_id}
-                    onChange={(e) => handleFormulacaoChange(e.target.value)}
+                    onChange={(e) => {
+                      if (editingPlano?.ativo) return
+                      handleFormulacaoChange(e.target.value)
+                    }}
                     required
-                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base border-gray-200 focus:border-accent bg-white"
+                    disabled={!!editingPlano?.ativo}
+                    className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base border-gray-200 focus:border-accent bg-white ${editingPlano?.ativo ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
                   >
                     <option value="">Selecione uma formulação...</option>
                     {formulacoes.map((f) => (
@@ -1087,20 +1128,27 @@ export function PlanoNutricionalModal({
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    GMD (kg/cab/dia) *
+                    GMD (kg/cab/dia) {editingPlano?.ativo ? '' : '*'}
                   </label>
                   <Input
                     type="text"
                     inputMode="decimal"
                     value={formData.gmd_planejado}
                     onChange={(e) => {
+                      if (editingPlano?.ativo) return
                       const value = e.target.value.replace('.', ',')
                       setFormData({ ...formData, gmd_planejado: value })
                     }}
                     placeholder="Ex: 0,300"
-                    required
-                    className="border-gray-200 focus:border-accent"
+                    required={!editingPlano?.ativo}
+                    disabled={!!editingPlano?.ativo}
+                    className={`border-gray-200 focus:border-accent ${editingPlano?.ativo ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
                   />
+                  {editingPlano?.ativo && (
+                    <p className="text-xs text-amber-600 mt-1">
+                      O GMD não pode ser alterado em um plano vigente.
+                    </p>
+                  )}
                   {selectedFormulacao?.gmd != null && (
                     <p className="text-xs text-gray-500 mt-1">
                       GMD da formulação: {selectedFormulacao.gmd.toFixed(3).replace('.', ',')} kg/cab/dia (referência)
@@ -1110,7 +1158,7 @@ export function PlanoNutricionalModal({
               </div>
 
               {formData.migracao_automatica && (
-              <div>
+              <div className={editingPlano?.ativo ? 'opacity-50 pointer-events-none' : ''}>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   {editingPlano && isUltimoPlano(editingPlano.id)
                     ? 'Condição para Encerramento Automático'
@@ -1137,7 +1185,7 @@ export function PlanoNutricionalModal({
               </div>
               )}
 
-              <div>
+              <div className={editingPlano?.ativo ? 'opacity-50 pointer-events-none' : ''}>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Migração Automática
                 </label>

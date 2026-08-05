@@ -12,13 +12,23 @@ interface RegistroProblemas {
   dispositivo_id?: string
   nome_usuario?: string
   data: string
-  tipo_problema?: string
-  descricao?: string
+  setor?: string
   local?: string
-  responsavel?: string
-  status?: string
+  descricao_problema?: string
+  causa_identificada?: boolean
+  causa_identificada_obs?: string
+  acao_corretiva_realizada?: boolean
+  acao_corretiva_realizada_obs?: string
+  tipo_ocorrencia?: string
+  tipo_ocorrencia_obs?: string
+  causa_raiz_identificada?: boolean
+  causa_raiz_identificada_obs?: string
+  gravidade_impacto?: string
+  gravidade_impacto_obs?: string
+  tipo_problema?: string
+  tipo_problema_obs?: string
   prioridade?: string
-  observacao?: string
+  setor_resolve?: string
   sync_status?: string
   created_at: string
   updated_at?: string
@@ -95,7 +105,9 @@ export function ProblemasDetalhes() {
             <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Informações Gerais</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Data:</span> {formatDate(registro.data)}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Setor:</span> {registro.setor || '-'}</p>
               <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Local:</span> {registro.local || '-'}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Prioridade:</span> {registro.prioridade || '-'}</p>
             </div>
           </div>
 
@@ -104,29 +116,33 @@ export function ProblemasDetalhes() {
             <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Problema</h3>
             <div className="bg-gray-50 p-4 rounded-lg">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <p className="text-sm"><span className="font-medium text-gray-700">Tipo Problema:</span> {registro.tipo_problema || '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Responsável:</span> {registro.responsavel || '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Prioridade:</span> {registro.prioridade || '-'}</p>
-                <p className="text-sm"><span className="font-medium text-gray-700">Status:</span> {registro.status || '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Tipo Problema:</span> {registro.tipo_problema || '-'}{registro.tipo_problema_obs ? ` (${registro.tipo_problema_obs})` : ''}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Tipo Ocorrência:</span> {registro.tipo_ocorrencia || '-'}{registro.tipo_ocorrencia_obs ? ` (${registro.tipo_ocorrencia_obs})` : ''}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Gravidade do Impacto:</span> {registro.gravidade_impacto || '-'}{registro.gravidade_impacto_obs ? ` (${registro.gravidade_impacto_obs})` : ''}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Setor Resolve:</span> {registro.setor_resolve || '-'}</p>
               </div>
             </div>
           </div>
 
           {/* Descrição */}
-          {registro.descricao && (
+          {registro.descricao_problema && (
             <div>
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Descrição</h3>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Descrição do Problema</h3>
               <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm"><span className="font-medium text-gray-700">Descrição:</span> {registro.descricao}</p>
+                <p className="text-sm">{registro.descricao_problema}</p>
               </div>
             </div>
           )}
 
-          {/* Observações */}
+          {/* Análise */}
           <div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Observações</h3>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Análise e Ação</h3>
             <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-sm"><span className="font-medium text-gray-700">Observação:</span> {registro.observacao || '-'}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <p className="text-sm"><span className="font-medium text-gray-700">Causa Identificada:</span> {registro.causa_identificada ? 'Sim' : 'Não'}{registro.causa_identificada_obs ? ` - ${registro.causa_identificada_obs}` : ''}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Causa Raiz Identificada:</span> {registro.causa_raiz_identificada ? 'Sim' : 'Não'}{registro.causa_raiz_identificada_obs ? ` - ${registro.causa_raiz_identificada_obs}` : ''}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Ação Corretiva Realizada:</span> {registro.acao_corretiva_realizada ? 'Sim' : 'Não'}{registro.acao_corretiva_realizada_obs ? ` - ${registro.acao_corretiva_realizada_obs}` : ''}</p>
+              </div>
             </div>
           </div>
         </div>

@@ -17,8 +17,6 @@ interface RegistroBebedouros {
   responsavel?: string
   pasto?: string
   lote?: string
-  gado?: string
-  categoria?: string
   leitura_bebedouro?: number
   numero_bebedouro?: string
   observacao?: string

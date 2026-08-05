@@ -13,6 +13,7 @@ interface RegistroCantina {
   fazenda_id: string
   dispositivo_id?: string
   data: string
+  modo?: string
   numero_cozinheiras?: number
   quem_cozinhou?: string
   quem_ajudou?: string
@@ -20,7 +21,13 @@ interface RegistroCantina {
   numero_lanches?: number
   numero_refeicoes_almoco?: number
   numero_refeicoes_jantar?: number
-  itens?: any[]
+  fornecedor?: string
+  quantidade_marmitas?: number
+  preco_unitario?: number
+  destinatario?: string
+  quantidade_outros?: string
+  unidade_outros?: string
+  itens?: any
   observacao?: string
   nome_usuario?: string
   sync_status?: string

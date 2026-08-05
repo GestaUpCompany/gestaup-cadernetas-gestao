@@ -108,6 +108,7 @@ export function Insumos() {
       .select('id, nome')
       .eq('fazenda_id', fazendaId)
       .eq('ativo', true)
+      .is('deleted_at', null)
       .order('nome')
 
     setFornecedores(data as FornecedorOption[] || [])

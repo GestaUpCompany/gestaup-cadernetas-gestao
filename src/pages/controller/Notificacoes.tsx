@@ -29,6 +29,7 @@ interface NotificacaoConfig {
   id: string
   threshold_recategorizacao: number
   recategorizacao_ativo: boolean
+  tratos_ativo: boolean
 }
 
 type FiltroTipo = 'todos' | 'info' | 'warning' | 'error' | 'success'
@@ -56,6 +57,7 @@ export function Notificacoes() {
   const [loadingConfig, setLoadingConfig] = useState(true)
   const [percentualAviso, setPercentualAviso] = useState(95)
   const [recategorizacaoAtivo, setRecategorizacaoAtivo] = useState(true)
+  const [tratosAtivo, setTratosAtivo] = useState(true)
   const [savingConfig, setSavingConfig] = useState(false)
   const [configSalvo, setConfigSalvo] = useState(false)
 
@@ -88,6 +90,7 @@ export function Notificacoes() {
       setConfig(data as NotificacaoConfig)
       setPercentualAviso(Number((data as NotificacaoConfig).threshold_recategorizacao))
       setRecategorizacaoAtivo((data as NotificacaoConfig).recategorizacao_ativo)
+      setTratosAtivo((data as NotificacaoConfig).tratos_ativo ?? true)
     }
     setLoadingConfig(false)
   }, [fazendaId])
@@ -237,6 +240,7 @@ export function Notificacoes() {
         p_fazenda_id: fazendaId,
         p_threshold_recategorizacao: percentualAviso,
         p_recategorizacao_ativo: recategorizacaoAtivo,
+        p_tratos_ativo: tratosAtivo,
       })
 
     if (error) {
@@ -342,7 +346,7 @@ export function Notificacoes() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
-          <h2 className="text-lg font-semibold text-gray-800">Configurações de Recategorização</h2>
+          <h2 className="text-lg font-semibold text-gray-800">Configurações de Notificações</h2>
         </div>
 
         {loadingConfig ? (
@@ -352,50 +356,68 @@ export function Notificacoes() {
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Toggle on/off */}
+            {/* Toggle lembrete de tratos */}
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="font-medium text-gray-700">Notificações de recategorização</p>
-                <p className="text-sm text-gray-500">Ativa ou desativa alertas de lotes próximos do limite da faixa</p>
+                <p className="font-medium text-gray-700">Lembrete diário de tratos</p>
+                <p className="text-sm text-gray-500">Envia notificação no fim da tarde com os horários dos tratos do dia seguinte</p>
               </div>
               <button
-                onClick={() => setRecategorizacaoAtivo(!recategorizacaoAtivo)}
-                className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors shrink-0 ${recategorizacaoAtivo ? 'bg-green-500' : 'bg-gray-300'}`}
+                onClick={() => setTratosAtivo(!tratosAtivo)}
+                className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors shrink-0 ${tratosAtivo ? 'bg-green-500' : 'bg-gray-300'}`}
               >
-                <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${recategorizacaoAtivo ? 'translate-x-6' : 'translate-x-1'}`} />
+                <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${tratosAtivo ? 'translate-x-6' : 'translate-x-1'}`} />
               </button>
             </div>
 
-            {/* Percentual de aviso slider */}
-            <div className={recategorizacaoAtivo ? '' : 'opacity-50 pointer-events-none'}>
-              <div className="flex items-center justify-between mb-2">
-                <label className="font-medium text-gray-700">Percentual de aviso</label>
-                <span className="text-lg font-bold text-primary">{percentualAviso}%</span>
+            <div className="border-t border-gray-100 pt-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-3">Recategorização de lotes</p>
+
+              {/* Toggle on/off */}
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="font-medium text-gray-700">Notificações de recategorização</p>
+                  <p className="text-sm text-gray-500">Ativa ou desativa alertas de lotes próximos do limite da faixa</p>
+                </div>
+                <button
+                  onClick={() => setRecategorizacaoAtivo(!recategorizacaoAtivo)}
+                  className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors shrink-0 ${recategorizacaoAtivo ? 'bg-green-500' : 'bg-gray-300'}`}
+                >
+                  <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${recategorizacaoAtivo ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
               </div>
-              <input
-                type="range"
-                min={50}
-                max={99}
-                step={1}
-                value={percentualAviso}
-                onChange={e => setPercentualAviso(Number(e.target.value))}
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary"
-              />
-              <div className="flex justify-between text-xs text-gray-400 mt-1">
-                <span>50%</span>
-                <span>99%</span>
+
+              {/* Percentual de aviso slider */}
+              <div className={`mt-4 ${recategorizacaoAtivo ? '' : 'opacity-50 pointer-events-none'}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="font-medium text-gray-700">Percentual de aviso</label>
+                  <span className="text-lg font-bold text-primary">{percentualAviso}%</span>
+                </div>
+                <input
+                  type="range"
+                  min={50}
+                  max={99}
+                  step={1}
+                  value={percentualAviso}
+                  onChange={e => setPercentualAviso(Number(e.target.value))}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary"
+                />
+                <div className="flex justify-between text-xs text-gray-400 mt-1">
+                  <span>50%</span>
+                  <span>99%</span>
+                </div>
+                <p className="text-sm text-gray-500 mt-2">
+                  Notificar quando o lote atingir <strong>{percentualAviso}%</strong> do limite superior da faixa de categoria.
+                  Ex: com {percentualAviso}%, um lote na categoria "Boi Magro" (limite 450 kg) dispara alerta aos {(450 * percentualAviso / 100).toFixed(0)} kg.
+                </p>
               </div>
-              <p className="text-sm text-gray-500 mt-2">
-                Notificar quando o lote atingir <strong>{percentualAviso}%</strong> do limite superior da faixa de categoria.
-                Ex: com {percentualAviso}%, um lote na categoria "Boi Magro" (limite 450 kg) dispara alerta aos {(450 * percentualAviso / 100).toFixed(0)} kg.
-              </p>
             </div>
 
             {/* Botão salvar */}
             <div className="flex items-center gap-3">
               <Button
                 onClick={handleSalvarConfig}
-                disabled={savingConfig || (config?.threshold_recategorizacao === percentualAviso && config?.recategorizacao_ativo === recategorizacaoAtivo)}
+                disabled={savingConfig || (config?.threshold_recategorizacao === percentualAviso && config?.recategorizacao_ativo === recategorizacaoAtivo && (config?.tratos_ativo ?? true) === tratosAtivo)}
                 variant="primary"
               >
                 {savingConfig ? 'Salvando...' : 'Salvar configurações'}

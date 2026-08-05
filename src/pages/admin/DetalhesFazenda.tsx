@@ -44,11 +44,13 @@ export function DetalhesFazenda() {
       .from('pastos')
       .select('*', { count: 'exact', head: true })
       .eq('fazenda_id', id)
+      .is('deleted_at', null)
 
     const { count: lotesCount } = await supabase
       .from('lotes')
       .select('*', { count: 'exact', head: true })
       .eq('fazenda_id', id)
+      .is('deleted_at', null)
 
     const { count: funcionariosCount } = await supabase
       .from('funcionarios')

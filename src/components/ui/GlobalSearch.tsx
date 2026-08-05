@@ -88,6 +88,7 @@ export function GlobalSearch() {
         .from('pastos')
         .select('id, nome')
         .eq('fazenda_id', fazendaId)
+        .is('deleted_at', null)
         .ilike('nome', `%${searchTerm}%`)
         .limit(5)
 

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../services/supabaseClient'
 import { getFazendaIdForUser } from '../utils/fazendaContext'
+import { formatDateTime, getTodayBoundsInTimezone } from '../utils/formatDate'
 
 async function getFazendaId(userId: string): Promise<string | null> {
   return getFazendaIdForUser(userId)
@@ -57,8 +58,8 @@ export function useDashboardStats(userId: string | undefined) {
         { count: manutencaoMaquinasCount },
         { count: problemasCount },
       ] = await Promise.all([
-        supabase.from('pastos').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('ativo', true),
-        supabase.from('lotes').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('ativo', true),
+        supabase.from('pastos').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('ativo', true).is('deleted_at', null),
+        supabase.from('lotes').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('ativo', true).is('deleted_at', null),
         supabase.from('funcionarios').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('ativo', true),
         supabase.from('insumos').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('ativo', true),
         supabase.from('pluviometros').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).eq('ativo', true),
@@ -81,17 +82,7 @@ export function useDashboardStats(userId: string | undefined) {
         supabase.from('registros_problemas').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).is('deleted_at', null),
       ])
 
-      const today = new Date()
-      const year = today.getFullYear()
-      const month = String(today.getMonth() + 1).padStart(2, '0')
-      const day = String(today.getDate()).padStart(2, '0')
-      const todayStr = `${year}-${month}-${day}`
-      const tomorrow = new Date(today)
-      tomorrow.setDate(tomorrow.getDate() + 1)
-      const tomorrowYear = tomorrow.getFullYear()
-      const tomorrowMonth = String(tomorrow.getMonth() + 1).padStart(2, '0')
-      const tomorrowDay = String(tomorrow.getDate()).padStart(2, '0')
-      const tomorrowStr = `${tomorrowYear}-${tomorrowMonth}-${tomorrowDay}`
+      const { start: todayStart, end: todayEnd } = getTodayBoundsInTimezone()
 
       const [
         { count: maternidadeHoje },
@@ -103,14 +94,14 @@ export function useDashboardStats(userId: string | undefined) {
         { count: movimentacaoHoje },
         { count: morteHoje },
       ] = await Promise.all([
-        supabase.from('registros_maternidade').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).is('deleted_at', null).gte('data', `${todayStr}T00:00:00Z`).lt('data', `${tomorrowStr}T00:00:00Z`),
-        supabase.from('registros_enfermaria').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).is('deleted_at', null).gte('data', `${todayStr}T00:00:00Z`).lt('data', `${tomorrowStr}T00:00:00Z`),
-        supabase.from('registros_pastagens').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).is('deleted_at', null).gte('data', `${todayStr}T00:00:00Z`).lt('data', `${tomorrowStr}T00:00:00Z`),
-        supabase.from('registros_rodeio').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).is('deleted_at', null).gte('data', `${todayStr}T00:00:00Z`).lt('data', `${tomorrowStr}T00:00:00Z`),
-        supabase.from('registros_suplementacao').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).is('deleted_at', null).gte('data', `${todayStr}T00:00:00Z`).lt('data', `${tomorrowStr}T00:00:00Z`),
-        supabase.from('registros_bebedouros').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).is('deleted_at', null).gte('data', `${todayStr}T00:00:00Z`).lt('data', `${tomorrowStr}T00:00:00Z`),
-        supabase.from('registros_movimentacao').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).is('deleted_at', null).gte('data', `${todayStr}T00:00:00Z`).lt('data', `${tomorrowStr}T00:00:00Z`),
-        supabase.from('registros_morte').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).is('deleted_at', null).gte('data', `${todayStr}T00:00:00Z`).lt('data', `${tomorrowStr}T00:00:00Z`),
+        supabase.from('registros_maternidade').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).is('deleted_at', null).gte('data', todayStart).lt('data', todayEnd),
+        supabase.from('registros_enfermaria').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).is('deleted_at', null).gte('data', todayStart).lt('data', todayEnd),
+        supabase.from('registros_pastagens').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).is('deleted_at', null).gte('data', todayStart).lt('data', todayEnd),
+        supabase.from('registros_rodeio').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).is('deleted_at', null).gte('data', todayStart).lt('data', todayEnd),
+        supabase.from('registros_suplementacao').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).is('deleted_at', null).gte('data', todayStart).lt('data', todayEnd),
+        supabase.from('registros_bebedouros').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).is('deleted_at', null).gte('data', todayStart).lt('data', todayEnd),
+        supabase.from('registros_movimentacao').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).is('deleted_at', null).gte('data', todayStart).lt('data', todayEnd),
+        supabase.from('registros_morte').select('*', { count: 'exact', head: true }).eq('fazenda_id', fazendaId).is('deleted_at', null).gte('data', todayStart).lt('data', todayEnd),
       ])
 
       return {
@@ -243,8 +234,8 @@ export function useRecentActivities(userId: string | undefined) {
       if (!fazendaId) return []
 
       const [{ data: lotesAtivos }, { data: pastosAtivos }] = await Promise.all([
-        supabase.from('lotes').select('id').eq('fazenda_id', fazendaId).eq('ativo', true),
-        supabase.from('pastos').select('id').eq('fazenda_id', fazendaId).eq('ativo', true),
+        supabase.from('lotes').select('id').eq('fazenda_id', fazendaId).eq('ativo', true).is('deleted_at', null),
+        supabase.from('pastos').select('id').eq('fazenda_id', fazendaId).eq('ativo', true).is('deleted_at', null),
       ])
       const loteIds = new Set(lotesAtivos?.map(l => l.id) || [])
       const pastoIds = new Set(pastosAtivos?.map(p => p.id) || [])
@@ -261,21 +252,6 @@ export function useRecentActivities(userId: string | undefined) {
       const maternidadeAtiva = maternidadeData?.find(ativo)
       const enfermariaAtiva = enfermariaData?.find(ativo)
       const rodeioAtivo = rodeioData?.find(ativo)
-
-      const formatDateTime = (isoString: string): string => {
-        const d = new Date(isoString)
-        if (isNaN(d.getTime())) return isoString
-        const day = String(d.getDate()).padStart(2, '0')
-        const month = String(d.getMonth() + 1).padStart(2, '0')
-        const year = d.getFullYear()
-        const hours = String(d.getHours()).padStart(2, '0')
-        const minutes = String(d.getMinutes()).padStart(2, '0')
-        const hasTime = hours !== '00' || minutes !== '00' || isoString.includes('T')
-        if (hasTime && (hours !== '00' || minutes !== '00')) {
-          return `${day}/${month}/${year} ${hours}:${minutes}`
-        }
-        return `${day}/${month}/${year}`
-      }
 
       const activities = []
 

@@ -15,22 +15,19 @@ interface RegistroMovimentacao {
   nome_usuario?: string
   data: string
   lote_origem?: string
-  lote_destino?: string
+  destino?: string
   numero_cabecas?: number
   peso_vivo_atual_kg?: number
-  vaca?: boolean
-  touro?: boolean
-  boi_gordo?: boolean
-  boi_magro?: boolean
-  garrote?: boolean
-  bezerro?: boolean
-  novilha?: boolean
-  tropa?: boolean
-  outros?: boolean
   motivo_movimentacao?: string
-  brinco_chip?: string
   causa_observacao?: string
-  causa_morte?: string
+  brinco?: string
+  chip?: string
+  categoria?: string
+  responsavel?: string
+  subtipo?: string
+  lote_origem_nome?: { nome: string } | null
+  lote_destino_nome?: { nome: string } | null
+  individuo?: { id_brinco: string | null } | null
   sync_status?: string
   created_at: string
 }
@@ -61,7 +58,7 @@ export function Movimentacao() {
 
     let query = supabase
       .from('registros_movimentacao')
-      .select('*')
+      .select('*, lote_origem_nome:lotes!lote_origem_id(nome), lote_destino_nome:lotes!lote_destino_id(nome), individuo:individuos!individuo_id(id_brinco)')
       .eq('fazenda_id', fazendaId)
       .is('deleted_at', null)
       .order('data', { ascending: false })
@@ -81,10 +78,12 @@ export function Movimentacao() {
   const filteredRegistros = registros.filter((registro) => {
     const matchesSearch =
       (registro.lote_origem && registro.lote_origem.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.lote_destino && registro.lote_destino.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.brinco_chip && registro.brinco_chip.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.destino && registro.destino.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.brinco && registro.brinco.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.chip && registro.chip.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.categoria && registro.categoria.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.responsavel && registro.responsavel.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.motivo_movimentacao && registro.motivo_movimentacao.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.causa_morte && registro.causa_morte.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.numero_cabecas && registro.numero_cabecas.toString().includes(searchTerm.toLowerCase())) ||
       (registro.peso_vivo_atual_kg && registro.peso_vivo_atual_kg.toString().includes(searchTerm.toLowerCase()))
 
@@ -181,17 +180,6 @@ export function Movimentacao() {
           {/* Mobile Card View */}
           <div className="sm:hidden space-y-3">
             {filteredRegistros.map((registro) => {
-              const categorias = []
-              if (registro.vaca) categorias.push('Vaca')
-              if (registro.touro) categorias.push('Touro')
-              if (registro.boi_gordo) categorias.push('Boi Gordo')
-              if (registro.boi_magro) categorias.push('Boi Magro')
-              if (registro.garrote) categorias.push('Garrote')
-              if (registro.bezerro) categorias.push('Bezerro')
-              if (registro.novilha) categorias.push('Novilha')
-              if (registro.tropa) categorias.push('Tropa')
-              if (registro.outros) categorias.push('Outros')
-
               return (
                 <Card
                   key={registro.id}
@@ -222,7 +210,7 @@ export function Movimentacao() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-500">Lote Destino:</span>
-                      <span className="text-gray-800 font-medium">{registro.lote_destino || '-'}</span>
+                      <span className="text-gray-800 font-medium">{registro.destino || '-'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-500">Nº Cabeças:</span>
@@ -236,15 +224,9 @@ export function Movimentacao() {
                       <span className="text-gray-500">Motivo:</span>
                       <span className="text-gray-800 font-medium truncate max-w-[150px]">{registro.motivo_movimentacao || '-'}</span>
                     </div>
-                    {registro.causa_morte && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Causa Morte:</span>
-                        <span className="text-gray-800 font-medium truncate max-w-[150px]">{registro.causa_morte}</span>
-                      </div>
-                    )}
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Categorias:</span>
-                      <span className="text-gray-800 font-medium truncate max-w-[150px]">{categorias.length > 0 ? categorias.join(', ') : '-'}</span>
+                      <span className="text-gray-500">Categoria:</span>
+                      <span className="text-gray-800 font-medium truncate max-w-[150px]">{registro.categoria || '-'}</span>
                     </div>
                   </div>
                 </Card>
@@ -268,23 +250,11 @@ export function Movimentacao() {
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nº Cabeças</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Peso Médio (kg)</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Motivo</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Causa Morte</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categorias</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoria</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredRegistros.map((registro) => {
-                  const categorias = []
-                  if (registro.vaca) categorias.push('Vaca')
-                  if (registro.touro) categorias.push('Touro')
-                  if (registro.boi_gordo) categorias.push('Boi Gordo')
-                  if (registro.boi_magro) categorias.push('Boi Magro')
-                  if (registro.garrote) categorias.push('Garrote')
-                  if (registro.bezerro) categorias.push('Bezerro')
-                  if (registro.novilha) categorias.push('Novilha')
-                  if (registro.tropa) categorias.push('Tropa')
-                  if (registro.outros) categorias.push('Outros')
-
                   return (
                     <tr
                       key={registro.id}
@@ -298,7 +268,7 @@ export function Movimentacao() {
                         {registro.lote_origem || '-'}
                       </td>
                       <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
-                        {registro.lote_destino || '-'}
+                        {registro.destino || '-'}
                       </td>
                       <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                         {registro.numero_cabecas || '-'}
@@ -310,10 +280,7 @@ export function Movimentacao() {
                         {registro.motivo_movimentacao || '-'}
                       </td>
                       <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
-                        {registro.causa_morte || '-'}
-                      </td>
-                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
-                        {categorias.length > 0 ? categorias.join(', ') : '-'}
+                        {registro.categoria || '-'}
                       </td>
                     </tr>
                   )

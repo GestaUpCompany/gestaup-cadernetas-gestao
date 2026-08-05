@@ -7,6 +7,7 @@ import { PlanoNutricionalModal } from '../../components/plano-nutricional/PlanoN
 import { PlanoNutricionalDraftModal, PlanoRascunho } from '../../components/plano-nutricional/PlanoNutricionalDraftModal'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
+import { exportToXLSXMultiSheet, type ColumnConfig } from '../../utils/exportXLSX'
 
 interface LoteCategoria {
   id?: string
@@ -254,8 +255,8 @@ export function Lotes() {
       const fazendaId = vinculos[0].fazenda_id
 
       const [pastosData, racasData, formulacoesData] = await Promise.all([
-        supabase.from('pastos').select('id, nome').eq('fazenda_id', fazendaId).eq('ativo', true),
-        supabase.from('racas').select('id, nome').eq('fazenda_id', fazendaId).eq('ativo', true).order('nome'),
+        supabase.from('pastos').select('id, nome').eq('fazenda_id', fazendaId).eq('ativo', true).is('deleted_at', null),
+        supabase.from('racas').select('id, nome').eq('fazenda_id', fazendaId).eq('ativo', true).is('deleted_at', null).order('nome'),
         supabase.from('formulacoes').select('id, nome, tipo, categoria, consumo_ms_percent_pv, gmd').eq('fazenda_id', fazendaId).eq('ativo', true).order('nome'),
       ])
 
@@ -1589,6 +1590,278 @@ export function Lotes() {
 
   useKeyboardShortcuts(shortcuts)
 
+  const LOTES_EXPORT_COLUMNS: ColumnConfig[] = [
+    { source: 'nome', header: 'Nome' },
+    { source: 'n_cabecas', header: 'Cabeças', format: 'number' },
+    { source: 'ativo', header: 'Ativo', format: 'boolean' },
+    { source: 'pasto_nome', header: 'Pasto' },
+    { source: 'curral_nome', header: 'Curral' },
+    { source: 'modulo_nome', header: 'Módulo' },
+    { source: 'sistema_producao', header: 'Sistema de produção' },
+    { source: 'destino', header: 'Destino' },
+    { source: 'raca', header: 'Raça' },
+    { source: 'sexo', header: 'Sexo' },
+    { source: 'idade', header: 'Idade (meses)', format: 'number' },
+    { source: 'peso_vivo_kg', header: 'Peso vivo total (kg)', format: 'number' },
+    { source: 'peso_vivo_meta_kg', header: 'Peso vivo meta (kg)', format: 'number' },
+    { source: 'data_meta', header: 'Data meta', format: 'date' },
+    { source: 'dias_restantes_meta', header: 'Dias restantes meta', format: 'number' },
+    { source: 'quant_inicial', header: 'Quant. inicial (cab)', format: 'number' },
+    { source: 'data_pesagem', header: 'Data pesagem', format: 'date' },
+    { source: 'peso_entrada_kg_cab', header: 'Peso entrada (kg/cab)', format: 'number' },
+    { source: 'gmd', header: 'GMD', format: 'number' },
+    { source: 'periodo', header: 'Período (dias)', format: 'number' },
+    { source: 'qtd_bezerros', header: 'Qtd. bezerros', format: 'number' },
+    { source: 'meta_intervalo_rodeio_dias', header: 'Meta intervalo rodeio (dias)', format: 'number' },
+    { source: 'rc_inicial', header: 'RC inicial (%)', format: 'number' },
+    { source: 'estrategia_nutricional', header: 'Estratégia nutricional' },
+    { source: 'preco_kg', header: 'Preço (R$/kg)', format: 'number' },
+    { source: 'preco_cab', header: 'Preço (R$/cab)', format: 'number' },
+    { source: 'custo_operacional_reais_cab_dia', header: 'Custo operacional (R$/cab/dia)', format: 'number' },
+    { source: 'produtor_rural', header: 'Produtor rural' },
+    { source: 'propriedade_origem', header: 'Propriedade origem' },
+    { source: 'numero_contrato', header: 'Número contrato' },
+    { source: 'mes_competencia', header: 'Mês competência' },
+    { source: 'data_liberacao_sisbov', header: 'Data liberação SisBov', format: 'date' },
+    { source: 'periodo_liberacao_sisbov', header: 'Período liberação SisBov' },
+    { source: 'data_embarque_prevista', header: 'Data embarque prevista', format: 'date' },
+  ]
+
+  const CATEGORIAS_EXPORT_COLUMNS: ColumnConfig[] = [
+    { source: 'lote_nome', header: 'Lote' },
+    { source: 'categoria', header: 'Categoria' },
+    { source: 'ativo', header: 'Ativo', format: 'boolean' },
+    { source: 'quant_inicial', header: 'Quant. inicial (cab)', format: 'number' },
+    { source: 'quant_atual', header: 'Quant. atual (cab)', format: 'number' },
+    { source: 'data_pesagem', header: 'Data pesagem', format: 'date' },
+    { source: 'data_ajuste_peso', header: 'Data ajuste peso', format: 'date' },
+    { source: 'peso_entrada_kg_cab', header: 'Peso entrada (kg/cab)', format: 'number' },
+    { source: 'peso_entrada_arrobas', header: 'Peso entrada (@/cab)', format: 'number' },
+    { source: 'gmd', header: 'GMD (categoria)', format: 'number' },
+    { source: 'periodo', header: 'Período (dias)', format: 'number' },
+    { source: 'rc_inicial', header: 'RC inicial (%)', format: 'number' },
+    { source: 'rc_final', header: 'RC final (%)', format: 'number' },
+    { source: 'rc_atual', header: 'RC atual (%)', format: 'number' },
+    { source: 'peso_vivo_atual_kg_cab', header: 'Peso vivo atual (kg/cab)', format: 'number' },
+    { source: 'peso_vivo_atual_arroba_cab', header: 'Peso vivo atual (@/cab)', format: 'number' },
+    { source: 'peso_vivo_meta_kg_cab', header: 'Peso vivo meta (kg/cab)', format: 'number' },
+    { source: 'peso_venda_meta_arroba', header: 'Peso venda meta (@)', format: 'number' },
+    { source: 'producao_atual_arroba_cab', header: 'Produção atual (@/cab)', format: 'number' },
+    { source: 'producao_projetada_arroba_cab', header: 'Produção projetada (@/cab)', format: 'number' },
+    { source: 'venda_total_arroba_lote_categoria', header: 'Venda total (@/lote/cat)', format: 'number' },
+    { source: 'dias_restantes_meta', header: 'Dias restantes meta', format: 'number' },
+    { source: 'data_meta_projetada', header: 'Data meta projetada', format: 'date' },
+    { source: 'estrategia_nutricional', header: 'Estratégia nutricional' },
+    { source: 'raca', header: 'Raça' },
+    { source: 'sexo', header: 'Sexo' },
+    { source: 'idade', header: 'Idade (meses)', format: 'number' },
+    { source: 'preco_entrada_reais_kg', header: 'Preço entrada (R$/kg)', format: 'number' },
+    { source: 'preco_entrada_reais_arroba', header: 'Preço entrada (R$/@)', format: 'number' },
+    { source: 'preco_entrada_reais_cab', header: 'Preço entrada (R$/cab)', format: 'number' },
+    { source: 'agio_percent', header: 'Ágio (%)', format: 'number' },
+    { source: 'custo_operacional_reais_cab_dia', header: 'Custo operacional (R$/cab/dia)', format: 'number' },
+    { source: 'margem_lucro_percent', header: 'Margem lucro (%)', format: 'number' },
+    { source: 'preco_custo_reais_arroba', header: 'Preço custo (R$/@)', format: 'number' },
+    { source: 'preco_custo_cab', header: 'Preço custo (R$/cab)', format: 'number' },
+    { source: 'preco_venda_projetado_reais_arroba', header: 'Preço venda projetado (R$/@)', format: 'number' },
+    { source: 'preco_venda_sugerido_cab', header: 'Preço venda sugerido (R$/cab)', format: 'number' },
+    { source: 'faturamento_projetado_reais_lote_categoria', header: 'Faturamento projetado (R$/lote/cat)', format: 'number' },
+    { source: 'morte', header: 'Morte', format: 'number' },
+    { source: 'consumo', header: 'Consumo', format: 'number' },
+    { source: 'abate', header: 'Abate', format: 'number' },
+    { source: 'transf_entrada', header: 'Transf. entrada', format: 'number' },
+    { source: 'transf_saida', header: 'Transf. saída', format: 'number' },
+    { source: 'qtd_bezerros', header: 'Qtd. bezerros', format: 'number' },
+    { source: 'consumo_meta_porcentagem_pesovivo', header: 'Consumo meta (% PV)', format: 'number' },
+    { source: 'custo_frete_reais_cab', header: 'Custo frete (R$/cab)', format: 'number' },
+    { source: 'custo_comissao_reais_cab', header: 'Custo comissão (R$/cab)', format: 'number' },
+    { source: 'custo_sanidade_reais_cab', header: 'Custo sanidade (R$/cab)', format: 'number' },
+    { source: 'custo_identificacao_rastreabilidade_reais_cab', header: 'Custo identif. rastreabilidade (R$/cab)', format: 'number' },
+    { source: 'custo_total_entrada_reais_cab', header: 'Custo total entrada (R$/cab)', format: 'number' },
+    { source: 'custo_total_entrada_reais_lote', header: 'Custo total entrada (R$/lote)', format: 'number' },
+    // Plano vigente
+    { source: 'formulacao_nome', header: 'Formulação (plano vigente)' },
+    { source: 'gmd_planejado', header: 'GMD planejado (plano vigente)', format: 'number' },
+    { source: 'periodo_meta_dias', header: 'Período meta (dias)', format: 'number' },
+    { source: 'periodo_decorrido_dias', header: 'Período decorrido (dias)', format: 'number' },
+    { source: 'peso_meta_kg', header: 'Peso meta (kg)', format: 'number' },
+  ]
+
+  const handleExportAllLotes = async () => {
+    const lotesVisiveis = lotes.filter((lote) =>
+      (showInactive || lote.ativo) &&
+      lote.nome.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    if (lotesVisiveis.length === 0) return
+
+    // Coletar todos os categoriaIds dos lotes visíveis
+    const todosCategoriaIds: string[] = []
+    for (const lote of lotesVisiveis) {
+      for (const cat of (lote.categorias || [])) {
+        if (cat.id) todosCategoriaIds.push(cat.id)
+      }
+    }
+
+    // Buscar planos vigentes (ativo=true) com campos completos
+    let planosData: any[] = []
+    if (todosCategoriaIds.length > 0) {
+      const { data, error } = await supabase
+        .from('planos_nutricionais')
+        .select('id, lote_categoria_id, formulacao_id, periodo_dias, peso_meta_kg, gmd_planejado, data_inicio, ativo')
+        .in('lote_categoria_id', todosCategoriaIds)
+        .eq('ativo', true)
+      if (error) {
+        console.error('Erro ao buscar planos nutricionais para export:', error)
+      }
+      planosData = data || []
+    }
+
+    // Indexar planos por lote_categoria_id (vigente = ativo true; pega o primeiro)
+    const planoVigentePorCategoria: Record<string, any> = {}
+    for (const p of planosData) {
+      if (!planoVigentePorCategoria[p.lote_categoria_id]) {
+        planoVigentePorCategoria[p.lote_categoria_id] = p
+      }
+    }
+
+    const hoje = new Date()
+    hoje.setHours(0, 0, 0, 0)
+
+    // Aba "Lotes": 1 linha por lote com todos os campos do cadastro
+    const rowsLotes = lotesVisiveis.map((lote: any) => ({
+      nome: lote.nome,
+      n_cabecas: lote.n_cabecas ?? null,
+      ativo: lote.ativo,
+      pasto_nome: lote.pasto_nome ?? null,
+      curral_nome: lote.curral_nome ?? null,
+      modulo_nome: lote.modulo_nome ?? null,
+      sistema_producao: lote.sistema_producao ?? null,
+      destino: lote.destino ?? null,
+      raca: lote.raca ?? null,
+      sexo: lote.sexo ?? null,
+      idade: lote.idade ?? null,
+      peso_vivo_kg: lote.peso_vivo_kg ?? null,
+      peso_vivo_meta_kg: lote.peso_vivo_meta_kg ?? null,
+      data_meta: lote.data_meta ?? null,
+      dias_restantes_meta: lote.dias_restantes_meta ?? null,
+      quant_inicial: lote.quant_inicial ?? null,
+      data_pesagem: lote.data_pesagem ?? null,
+      peso_entrada_kg_cab: lote.peso_entrada_kg_cab ?? null,
+      gmd: lote.gmd ? Number(String(lote.gmd).replace(',', '.')) : null,
+      periodo: lote.periodo ?? null,
+      qtd_bezerros: lote.qtd_bezerros ?? null,
+      meta_intervalo_rodeio_dias: lote.meta_intervalo_rodeio_dias ?? null,
+      rc_inicial: lote.rc_inicial ?? null,
+      estrategia_nutricional: lote.estrategia_nutricional ?? null,
+      preco_kg: lote.preco_kg ?? null,
+      preco_cab: lote.preco_cab ?? null,
+      custo_operacional_reais_cab_dia: lote.custo_operacional_reais_cab_dia ?? null,
+      produtor_rural: lote.produtor_rural ?? null,
+      propriedade_origem: lote.propriedade_origem ?? null,
+      numero_contrato: lote.numero_contrato ?? null,
+      mes_competencia: lote.mes_competencia ?? null,
+      data_liberacao_sisbov: lote.data_liberacao_sisbov ?? null,
+      periodo_liberacao_sisbov: lote.periodo_liberacao_sisbov ?? null,
+      data_embarque_prevista: lote.data_embarque_prevista ?? null,
+    }))
+
+    // Aba "Categorias": 1 linha por categoria com todos os campos + lote_nome + plano vigente
+    const rowsCategorias: any[] = []
+    for (const lote of lotesVisiveis) {
+      for (const cat of (lote.categorias || [])) {
+        const plano = cat.id ? planoVigentePorCategoria[cat.id] : null
+        let formulacaoNome: string | null = null
+        let gmdPlanejado: number | null = null
+        let periodoMetaDias: number | null = null
+        let periodoDecorridoDias: number | null = null
+        let pesoMetaKg: number | null = null
+        if (plano) {
+          const formulacao = plano.formulacao_id
+            ? nutritionalOptions.find(opt => opt.id === plano.formulacao_id)
+            : null
+          formulacaoNome = formulacao?.name ?? null
+          gmdPlanejado = plano.gmd_planejado != null
+            ? Number(plano.gmd_planejado)
+            : (formulacao?.gmd != null ? Number(formulacao.gmd) : null)
+          periodoMetaDias = plano.periodo_dias != null ? Number(plano.periodo_dias) : null
+          pesoMetaKg = plano.peso_meta_kg != null ? Number(plano.peso_meta_kg) : null
+          if (plano.data_inicio) {
+            const inicio = new Date(plano.data_inicio + 'T00:00:00')
+            inicio.setHours(0, 0, 0, 0)
+            const diffMs = hoje.getTime() - inicio.getTime()
+            periodoDecorridoDias = Math.max(Math.round(diffMs / (1000 * 60 * 60 * 24)), 0)
+          }
+        }
+        rowsCategorias.push({
+          lote_nome: lote.nome,
+          categoria: cat.categoria,
+          ativo: cat.ativo,
+          quant_inicial: cat.quant_inicial ?? null,
+          quant_atual: cat.quant_atual ?? null,
+          data_pesagem: cat.data_pesagem ?? null,
+          data_ajuste_peso: cat.data_ajuste_peso ?? null,
+          peso_entrada_kg_cab: cat.peso_entrada_kg_cab ?? null,
+          peso_entrada_arrobas: cat.peso_entrada_arrobas ?? null,
+          gmd: cat.gmd ? Number(String(cat.gmd).replace(',', '.')) : null,
+          periodo: cat.periodo ?? null,
+          rc_inicial: cat.rc_inicial ?? null,
+          rc_final: cat.rc_final ?? null,
+          rc_atual: cat.rc_atual ?? null,
+          peso_vivo_atual_kg_cab: cat.peso_vivo_atual_kg_cab ?? null,
+          peso_vivo_atual_arroba_cab: cat.peso_vivo_atual_arroba_cab ?? null,
+          peso_vivo_meta_kg_cab: cat.peso_vivo_meta_kg_cab ?? null,
+          peso_venda_meta_arroba: cat.peso_venda_meta_arroba ?? null,
+          producao_atual_arroba_cab: cat.producao_atual_arroba_cab ?? null,
+          producao_projetada_arroba_cab: cat.producao_projetada_arroba_cab ?? null,
+          venda_total_arroba_lote_categoria: cat.venda_total_arroba_lote_categoria ?? null,
+          dias_restantes_meta: cat.dias_restantes_meta ?? null,
+          data_meta_projetada: cat.data_meta_projetada ?? null,
+          estrategia_nutricional: cat.estrategia_nutricional ?? null,
+          raca: cat.raca ?? null,
+          sexo: cat.sexo ?? null,
+          idade: cat.idade ?? null,
+          preco_entrada_reais_kg: cat.preco_entrada_reais_kg ?? null,
+          preco_entrada_reais_arroba: cat.preco_entrada_reais_arroba ?? null,
+          preco_entrada_reais_cab: cat.preco_entrada_reais_cab ?? null,
+          agio_percent: cat.agio_percent ?? null,
+          custo_operacional_reais_cab_dia: cat.custo_operacional_reais_cab_dia ?? null,
+          margem_lucro_percent: cat.margem_lucro_percent ?? null,
+          preco_custo_reais_arroba: cat.preco_custo_reais_arroba ?? null,
+          preco_custo_cab: cat.preco_custo_cab ?? null,
+          preco_venda_projetado_reais_arroba: cat.preco_venda_projetado_reais_arroba ?? null,
+          preco_venda_sugerido_cab: cat.preco_venda_sugerido_cab ?? null,
+          faturamento_projetado_reais_lote_categoria: cat.faturamento_projetado_reais_lote_categoria ?? null,
+          morte: cat.morte ?? null,
+          consumo: cat.consumo ?? null,
+          abate: cat.abate ?? null,
+          transf_entrada: cat.transf_entrada ?? null,
+          transf_saida: cat.transf_saida ?? null,
+          qtd_bezerros: cat.qtd_bezerros ?? null,
+          consumo_meta_porcentagem_pesovivo: cat.consumo_meta_porcentagem_pesovivo ?? null,
+          custo_frete_reais_cab: cat.custo_frete_reais_cab ?? null,
+          custo_comissao_reais_cab: cat.custo_comissao_reais_cab ?? null,
+          custo_sanidade_reais_cab: cat.custo_sanidade_reais_cab ?? null,
+          custo_identificacao_rastreabilidade_reais_cab: cat.custo_identificacao_rastreabilidade_reais_cab ?? null,
+          custo_total_entrada_reais_cab: cat.custo_total_entrada_reais_cab ?? null,
+          custo_total_entrada_reais_lote: cat.custo_total_entrada_reais_lote ?? null,
+          formulacao_nome: formulacaoNome,
+          gmd_planejado: gmdPlanejado,
+          periodo_meta_dias: periodoMetaDias,
+          periodo_decorrido_dias: periodoDecorridoDias,
+          peso_meta_kg: pesoMetaKg,
+        })
+      }
+    }
+
+    exportToXLSXMultiSheet({
+      tableName: 'estado_lotes',
+      sheets: [
+        { data: rowsLotes, config: { sheetName: 'Lotes', columns: LOTES_EXPORT_COLUMNS } },
+        { data: rowsCategorias, config: { sheetName: 'Categorias', columns: CATEGORIAS_EXPORT_COLUMNS } },
+      ],
+    })
+  }
+
   if (loading) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -1621,6 +1894,13 @@ export function Lotes() {
               setMaternidadeData([])
               setMorteData([])
             }} className="h-10">Novo Lote</Button>
+            <Button
+              onClick={handleExportAllLotes}
+              disabled={lotes.length === 0}
+              className="h-10"
+            >
+              Exportar Tudo
+            </Button>
           </div>
         </div>
       )}
@@ -2945,6 +3225,9 @@ export function Lotes() {
             setIsPlanoModalOpen(false)
             setSelectedCategoriaForPlanos(null)
             loadLotes()
+            if (editingLote) {
+              handleEdit(editingLote)
+            }
           }}
           loteCategoriaId={selectedCategoriaForPlanos.loteCategoriaId || ''}
           categoria={selectedCategoriaForPlanos.categoria}

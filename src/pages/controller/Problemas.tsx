@@ -14,13 +14,23 @@ interface RegistroProblemas {
   dispositivo_id?: string
   nome_usuario?: string
   data: string
-  tipo_problema?: string
-  descricao?: string
+  setor?: string
   local?: string
-  responsavel?: string
-  status?: string
+  descricao_problema?: string
+  causa_identificada?: boolean
+  causa_identificada_obs?: string
+  acao_corretiva_realizada?: boolean
+  acao_corretiva_realizada_obs?: string
+  tipo_ocorrencia?: string
+  tipo_ocorrencia_obs?: string
+  causa_raiz_identificada?: boolean
+  causa_raiz_identificada_obs?: string
+  gravidade_impacto?: string
+  gravidade_impacto_obs?: string
+  tipo_problema?: string
+  tipo_problema_obs?: string
   prioridade?: string
-  observacao?: string
+  setor_resolve?: string
   sync_status?: string
   created_at: string
 }
@@ -72,9 +82,10 @@ export function Problemas() {
     const matchesSearch =
       (registro.tipo_problema && registro.tipo_problema.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.local && registro.local.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.responsavel && registro.responsavel.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.descricao && registro.descricao.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.status && registro.status.toLowerCase().includes(searchTerm.toLowerCase()))
+      (registro.setor && registro.setor.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.descricao_problema && registro.descricao_problema.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.gravidade_impacto && registro.gravidade_impacto.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.prioridade && registro.prioridade.toLowerCase().includes(searchTerm.toLowerCase()))
 
     const matchesDataInicio = !dataInicio || registro.data >= dataInicio
     const matchesDataFim = !dataFim || registro.data <= dataFim
@@ -193,27 +204,25 @@ export function Problemas() {
                     <span className="text-gray-800 font-medium">{registro.tipo_problema || '-'}</span>
                   </div>
                   <div className="flex justify-between">
+                    <span className="text-gray-500">Setor:</span>
+                    <span className="text-gray-800 font-medium">{registro.setor || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
                     <span className="text-gray-500">Local:</span>
                     <span className="text-gray-800 font-medium">{registro.local || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Responsável:</span>
-                    <span className="text-gray-800 font-medium">{registro.responsavel || '-'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Status:</span>
-                    <span className="text-gray-800 font-medium">{registro.status || '-'}</span>
+                    <span className="text-gray-500">Gravidade:</span>
+                    <span className="text-gray-800 font-medium">{registro.gravidade_impacto || '-'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Prioridade:</span>
                     <span className="text-gray-800 font-medium">{registro.prioridade || '-'}</span>
                   </div>
-                  {registro.observacao && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Observação:</span>
-                      <span className="text-gray-800 font-medium truncate max-w-[150px]">{registro.observacao}</span>
-                    </div>
-                  )}
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Descrição:</span>
+                    <span className="text-gray-800 font-medium truncate max-w-[150px]">{registro.descricao_problema || '-'}</span>
+                  </div>
                 </div>
               </Card>
             ))}
@@ -231,11 +240,11 @@ export function Problemas() {
                     Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
                   </th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo Problema</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Setor</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Local</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Responsável</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gravidade</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prioridade</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Observação</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descrição</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -252,19 +261,19 @@ export function Problemas() {
                       {registro.tipo_problema || '-'}
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                      {registro.setor || '-'}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                       {registro.local || '-'}
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
-                      {registro.responsavel || '-'}
+                      {registro.gravidade_impacto || '-'}
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                       {registro.prioridade || '-'}
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
-                      {registro.status || '-'}
-                    </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
-                      {registro.observacao || '-'}
+                      {registro.descricao_problema || '-'}
                     </td>
                   </tr>
                 ))}
