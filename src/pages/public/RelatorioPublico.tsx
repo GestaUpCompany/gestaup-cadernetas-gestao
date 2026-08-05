@@ -450,11 +450,11 @@ export function RelatorioPublico() {
   if (loading && !dados) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#F5F5F5' }}>
-        <div className="text-center">
-          <div className="bg-white rounded-xl p-4 inline-block shadow-sm mb-3">
-            <img src={logoManejus} alt="Manejus 360" className="h-12 mx-auto" />
+        <div className="text-center flex flex-col items-center">
+          <div className="bg-white rounded-xl p-4 shadow-sm mb-3">
+            <img src={logoManejus} alt="Manejus 360" className="h-12" />
           </div>
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 mb-3" style={{ borderColor: GREEN_DARK }}></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 mb-3" style={{ borderColor: GREEN_DARK }}></div>
           <p className="text-gray-600">Carregando relatório...</p>
         </div>
       </div>

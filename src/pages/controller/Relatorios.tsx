@@ -28,20 +28,6 @@ const RELATORIOS_DISPONIVEIS: RelatorioDisponivel[] = [
     descricao: 'Consumo de combustível por máquina/veículo, tipo de combustível e operação.',
     icone: '⛽',
   },
-  {
-    tipo: 'gado',
-    titulo: 'Gado',
-    descricao: 'Relatório geral do rebanho com gráficos de distribuição.',
-    icone: '🐄',
-    rotaPdf: '/controller/relatorios/gado',
-  },
-  {
-    tipo: 'saude',
-    titulo: 'Saúde',
-    descricao: 'Relatório sanitário com tratamentos e ocorrências.',
-    icone: '💊',
-    rotaPdf: '/controller/relatorios/saude',
-  },
 ]
 
 export function Relatorios() {
@@ -204,34 +190,54 @@ export function Relatorios() {
       <div>
         <h2 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Relatórios disponíveis</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {RELATORIOS_DISPONIVEIS.map((rel) => (
-            <div
-              key={rel.tipo}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="text-3xl">{rel.icone}</div>
+          {RELATORIOS_DISPONIVEIS.map((rel) => {
+            const linkAtivo = linksAtivos.find((l) => l.tipo === rel.tipo && l.ativo)
+            return (
+              <div
+                key={rel.tipo}
+                className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow max-w-sm"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="text-3xl">{rel.icone}</div>
+                  {linkAtivo && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
+                      <span className="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+                      Link ativo
+                    </span>
+                  )}
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-1">{rel.titulo}</h3>
+                <p className="text-sm text-gray-600 mb-4">{rel.descricao}</p>
+                <div className="flex flex-col gap-2">
+                  {rel.rotaPdf && (
+                    <button
+                      onClick={() => navigate(rel.rotaPdf!)}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      Abrir relatório PDF
+                    </button>
+                  )}
+                  {linkAtivo ? (
+                    <a
+                      href={`${window.location.origin}/r/${linkAtivo.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full rounded-lg bg-green-700 px-3 py-2 text-sm font-medium text-white hover:bg-green-800 transition-colors text-center"
+                    >
+                      Abrir link público
+                    </a>
+                  ) : (
+                    <button
+                      onClick={() => abrirModalGerarLink(rel)}
+                      className="w-full rounded-lg bg-green-700 px-3 py-2 text-sm font-medium text-white hover:bg-green-800 transition-colors"
+                    >
+                      Gerar link público
+                    </button>
+                  )}
+                </div>
               </div>
-              <h3 className="font-semibold text-gray-900 mb-1">{rel.titulo}</h3>
-              <p className="text-sm text-gray-600 mb-4">{rel.descricao}</p>
-              <div className="flex flex-col gap-2">
-                {rel.rotaPdf && (
-                  <button
-                    onClick={() => navigate(rel.rotaPdf!)}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    Abrir relatório PDF
-                  </button>
-                )}
-                <button
-                  onClick={() => abrirModalGerarLink(rel)}
-                  className="w-full rounded-lg bg-green-700 px-3 py-2 text-sm font-medium text-white hover:bg-green-800 transition-colors"
-                >
-                  Gerar link público
-                </button>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
 
