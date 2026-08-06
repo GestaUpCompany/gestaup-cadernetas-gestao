@@ -31,7 +31,7 @@ const RELATORIOS_DISPONIVEIS: RelatorioDisponivel[] = [
   {
     tipo: 'consumo',
     titulo: 'Consumo',
-    descricao: 'Trato (kg/cab/dia), consumo %PV, leitura de cocho e custo por lote e período.',
+    descricao: 'CMS (kg/cab/dia), consumo %PV, leitura de cocho e custo por lote e período.',
     icone: '🌿',
   },
 ]
@@ -205,13 +205,13 @@ export function Relatorios() {
       {/* Relatórios disponíveis */}
       <div>
         <h2 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Relatórios disponíveis</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {RELATORIOS_DISPONIVEIS.map((rel) => {
             const linkAtivo = linksAtivos.find((l) => l.tipo === rel.tipo && l.ativo)
             return (
               <div
                 key={rel.tipo}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow max-w-sm"
+                className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow flex flex-col"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="text-3xl">{rel.icone}</div>
@@ -223,7 +223,7 @@ export function Relatorios() {
                   )}
                 </div>
                 <h3 className="font-semibold text-gray-900 mb-1">{rel.titulo}</h3>
-                <p className="text-sm text-gray-600 mb-4">{rel.descricao}</p>
+                <p className="text-sm text-gray-600 mb-4 flex-1">{rel.descricao}</p>
                 <div className="flex flex-col gap-2">
                   {rel.rotaPdf && (
                     <button
