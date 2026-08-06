@@ -122,6 +122,12 @@ export async function fetchRealPorLoteDia(
   dataInicio: string,
   dataFim: string
 ): Promise<RegistroTratoDia[]> {
+  // A coluna data é timestamptz, então .lte('data', '2026-08-05') exclui registros
+  // após meia-noite desse dia. Somar 1 dia ao filtro final e usar .lt para incluir o dia inteiro.
+  const dataFimNext = new Date(dataFim + 'T00:00:00')
+  dataFimNext.setDate(dataFimNext.getDate() + 1)
+  const dataFimExclusive = dataFimNext.toISOString().substring(0, 10)
+
   const { data, error } = await supabase
     .from('registros_oferta_trato')
     .select(`
@@ -139,7 +145,7 @@ export async function fetchRealPorLoteDia(
     .eq('fazenda_id', fazendaId)
     .is('deleted_at', null)
     .gte('data', dataInicio)
-    .lte('data', dataFim)
+    .lt('data', dataFimExclusive)
     .order('data', { ascending: true })
 
   if (error || !data) return []
@@ -148,7 +154,9 @@ export async function fetchRealPorLoteDia(
   const mapa: Record<string, RegistroTratoDia> = {}
 
   for (const r of data) {
-    const dataDia = r.data as string // já é date (YYYY-MM-DD)
+    // A coluna data é timestamptz; normalizar para YYYY-MM-DD para casar com o lookup
+    const dataRaw = r.data as string
+    const dataDia = dataRaw.includes('T') ? dataRaw.substring(0, 10) : dataRaw.substring(0, 10)
     const loteId = r.lote_id || '_sem_lote'
     const chave = `${loteId}|${dataDia}`
 

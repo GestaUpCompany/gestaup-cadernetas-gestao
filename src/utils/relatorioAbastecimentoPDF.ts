@@ -94,6 +94,13 @@ function formatarData(d: string): string {
   return d
 }
 
+function formatarDataCurta(d: string): string {
+  if (!d) return '—'
+  const parts = d.split('-')
+  if (parts.length === 3) return `${parts[2]}/${parts[1]}`
+  return d
+}
+
 function formatarInteiro(valor: number | null | undefined): string {
   if (valor === null || valor === undefined || isNaN(valor)) return '—'
   return Math.round(valor).toLocaleString('pt-BR')
@@ -306,12 +313,25 @@ function renderHeader(ctx: RenderContext, titulo: string) {
 
 // === Pill de período ===
 
-function renderPeriodo(ctx: RenderContext, filtros: FiltrosAtivos) {
+function renderPeriodo(ctx: RenderContext, filtros: FiltrosAtivos, detalhes: DetalheMaquinaPDF[]) {
   const { doc } = ctx
   const hasData = filtros.dataInicio || filtros.dataFim
   const dataInicioFmt = filtros.dataInicio ? formatarData(filtros.dataInicio) : 'Início'
   const dataFimFmt = filtros.dataFim ? formatarData(filtros.dataFim) : 'Hoje'
-  const periodoText = hasData ? `${dataInicioFmt}  a  ${dataFimFmt}` : 'Todo o período'
+  const periodoText = hasData
+    ? `${dataInicioFmt}  a  ${dataFimFmt}`
+    : (() => {
+        const primeira = detalhes
+          .map((d) => d.primeiraData)
+          .filter(Boolean)
+          .sort()[0]
+        const hoje = new Date()
+        const hojeStr = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`
+        if (primeira) {
+          return `${formatarDataCurta(primeira)}  a  ${formatarDataCurta(hojeStr)}`
+        }
+        return 'Todo o período'
+      })()
 
   doc.setFontSize(8)
   doc.setFont('helvetica', 'bold')
@@ -674,8 +694,11 @@ export async function gerarPDFRelatorioAbastecimento(dados: DadosPDFRelatorioAba
   setFillColor(doc, LIGHT_BG)
   doc.rect(0, 0, pageW, pageH, 'F')
 
-  renderHeader(ctx, dados.titulo)
-  renderPeriodo(ctx, dados.filtros)
+  const dataGeracaoFmt = new Date().toLocaleDateString('pt-BR')
+  const tituloPDF = `${dados.titulo} - ${dataGeracaoFmt}`
+
+  renderHeader(ctx, tituloPDF)
+  renderPeriodo(ctx, dados.filtros, dados.detalhesPorMaquina)
   const { chartX, chartW } = renderKPIsEFiltros(ctx, dados)
 
   // Gráfico principal: Litros por Máquina (ocupa largura total ao lado dos KPIs)
@@ -700,7 +723,7 @@ export async function gerarPDFRelatorioAbastecimento(dados: DadosPDFRelatorioAba
     doc.addPage()
     setFillColor(doc, LIGHT_BG)
     doc.rect(0, 0, pageW, pageH, 'F')
-    renderHeader(ctx, dados.titulo)
+    renderHeader(ctx, tituloPDF)
     tabelaY = 40
   }
 
@@ -715,7 +738,7 @@ export async function gerarPDFRelatorioAbastecimento(dados: DadosPDFRelatorioAba
     doc.addPage()
     setFillColor(doc, LIGHT_BG)
     doc.rect(0, 0, pageW, pageH, 'F')
-    renderHeader(ctx, dados.titulo)
+    renderHeader(ctx, tituloPDF)
     finalY = 40
   }
 
@@ -737,6 +760,6 @@ export async function gerarPDFRelatorioAbastecimento(dados: DadosPDFRelatorioAba
     doc.text(`Página ${i} de ${numPaginas}`, pageW - margin, pageH - 5, { align: 'right' })
   }
 
-  const nomeArquivo = `relatorio-abastecimento-${dados.titulo.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')}-${new Date().toISOString().split('T')[0]}.pdf`
+  const nomeArquivo = `${tituloPDF.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')}.pdf`
   doc.save(nomeArquivo)
 }

@@ -28,12 +28,19 @@ const RELATORIOS_DISPONIVEIS: RelatorioDisponivel[] = [
     descricao: 'Consumo de combustível por máquina/veículo, tipo de combustível e operação.',
     icone: '⛽',
   },
+  {
+    tipo: 'consumo',
+    titulo: 'Consumo',
+    descricao: 'Trato (kg/cab/dia), consumo %PV, leitura de cocho e custo por lote e período.',
+    icone: '🌿',
+  },
 ]
 
 export function Relatorios() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [fazendaId, setFazendaId] = useState<string | null>(null)
+  const [fazendaNome, setFazendaNome] = useState<string | null>(null)
   const [linksAtivos, setLinksAtivos] = useState<RelatorioPublico[]>([])
   const [loading, setLoading] = useState(true)
   const [modalAberto, setModalAberto] = useState(false)
@@ -53,6 +60,12 @@ export function Relatorios() {
     const fid = await getFazendaIdForUser(user.id)
     setFazendaId(fid)
     if (fid) {
+      const { data: fazendaData } = await supabase
+        .from('fazendas')
+        .select('nome')
+        .eq('id', fid)
+        .maybeSingle()
+      setFazendaNome(fazendaData?.nome ?? null)
       await carregarLinks(fid)
     }
     setLoading(false)
@@ -74,7 +87,10 @@ export function Relatorios() {
 
   const abrirModalGerarLink = (rel: RelatorioDisponivel) => {
     setRelatorioSelecionado(rel)
-    setTituloLink(rel.titulo)
+    const tituloPadrao = fazendaNome
+      ? `Relatório de ${rel.titulo} - ${fazendaNome}`
+      : `Relatório de ${rel.titulo}`
+    setTituloLink(tituloPadrao)
     setLinkGerado(null)
     setCopiado(false)
     setModalAberto(true)

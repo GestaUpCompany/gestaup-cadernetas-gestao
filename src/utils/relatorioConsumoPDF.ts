@@ -449,7 +449,7 @@ function renderKPIsAndPills(ctx: RenderContext, info: InfoLote, dados: DadoRelat
   // KPIs laterais (coluna esquerda)
   const kpiX = 6
   const kpiW = 36
-  const kpiH = 17
+  const kpiH = 19
   const kpiGap = 3.5
   let kpiY = 48
 
@@ -480,18 +480,18 @@ function renderKPIsAndPills(ctx: RenderContext, info: InfoLote, dados: DadoRelat
     doc.setFontSize(11)
     setTextColor(doc, white)
     doc.setFont('helvetica', 'bold')
-    doc.text(k.value, kpiX + kpiW / 2, kpiY + 7, { align: 'center' })
+    doc.text(k.value, kpiX + kpiW / 2, kpiY + 7.5, { align: 'center' })
     doc.setFontSize(9)
     setTextColor(doc, white)
     doc.setFont('helvetica', 'normal')
-    doc.text(k.label, kpiX + kpiW / 2, kpiY + 13, { align: 'center' })
+    doc.text(k.label, kpiX + kpiW / 2, kpiY + 15, { align: 'center' })
     kpiY += kpiH + kpiGap
   })
 
   // Pills superiores
   const pillY = 48
   const pillX = kpiX + kpiW + 10
-  const pillH = 17
+  const pillH = 19
   const pillGap = 7
   const pills = [
     { label: 'Nº Cab. Atual', value: formatarInteiro(info.n_cabecas_atual) },
@@ -508,8 +508,8 @@ function renderKPIsAndPills(ctx: RenderContext, info: InfoLote, dados: DadoRelat
   const chartX = pillX
   const chartW = pageW - chartX - 8
 
-  const totalPillsWidth = pillWidth * pills.length + pillGap * (pills.length - 1)
-  let pillXAtual = chartX + (chartW - totalPillsWidth) / 2
+  // Pills alinhadas à esquerda (mesmo x do gráfico)
+  let pillXAtual = chartX
 
   pills.forEach((p) => {
     setFillColor(doc, shadowColor)
@@ -519,11 +519,11 @@ function renderKPIsAndPills(ctx: RenderContext, info: InfoLote, dados: DadoRelat
     doc.setFontSize(11)
     setTextColor(doc, white)
     doc.setFont('helvetica', 'bold')
-    doc.text(p.value, pillXAtual + pillWidth / 2, pillY + 7, { align: 'center' })
+    doc.text(p.value, pillXAtual + pillWidth / 2, pillY + 7.5, { align: 'center' })
     doc.setFontSize(9)
     setTextColor(doc, white)
     doc.setFont('helvetica', 'normal')
-    doc.text(p.label, pillXAtual + pillWidth / 2, pillY + 13, { align: 'center' })
+    doc.text(p.label, pillXAtual + pillWidth / 2, pillY + 15, { align: 'center' })
     pillXAtual += pillWidth + pillGap
   })
 
@@ -642,15 +642,15 @@ export async function gerarRelatorioConsumoPDF(params: ParametrosRelatorioConsum
         // Página principal: período + KPIs + pills + gráfico
         renderPeriodo(ctx, dataInicio, dataFim)
         const { chartX, chartW } = renderKPIsAndPills(ctx, lote.info, lote.dados)
-        const chartY = 68
-        const chartH = pageH - chartY - 4
+        const chartY = 72
+        const chartH = pageH - chartY - 8
         await renderChartOnPage(ctx, chunk, chartX, chartW, chartY, chartH)
       } else {
         // Página de continuação: header + gráfico ocupando mais espaço
         const chartX = 8
         const chartW = pageW - 16
         const chartY = 34
-        const chartH = pageH - chartY - 4
+        const chartH = pageH - chartY - 8
         await renderChartOnPage(ctx, chunk, chartX, chartW, chartY, chartH)
       }
     }

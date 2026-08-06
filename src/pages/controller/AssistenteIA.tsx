@@ -17,10 +17,12 @@ interface Mensagem {
 const FAZENDA_TESTE_ID = 'd649c65e-16ab-4b77-a84b-df937aa41cc3'
 
 const SUGESTOES_PERGUNTAS = [
-  'Qual foi a média de trato em kg do lote Boi Magro nos últimos 30 dias?',
-  'Qual o peso médio atual de todos os lotes ativos?',
-  'Quantas mortes tivemos nos últimos 90 dias e quais as principais causas?',
-  'Quais foram as movimentações dos últimos 30 dias?',
+  'Como está o plano nutricional do Boi Magro? Qual a GMD realizada vs planejada?',
+  'Quais pastos estão ocupados e qual a taxa de lotação de cada um?',
+  'Quanto choveu na fazenda nos últimos 30 dias por pluviômetro?',
+  'Qual a margem de lucro projetada e o custo por arroba de cada lote ativo?',
+  'Quantos bezerros nasceram nos últimos 3 meses e qual o peso médio das crias?',
+  'Quais bebedouros precisam de limpeza e há quanto tempo não são limpos?',
 ]
 
 export function AssistenteIA() {
@@ -125,7 +127,7 @@ export function AssistenteIA() {
               </div>
               <h3 className="text-lg font-semibold text-gray-700 mb-2">Faça sua pergunta</h3>
               <p className="text-sm text-gray-500 mb-6 max-w-md">
-                Posso analisar dados de suplementação, peso dos lotes, mortalidade e movimentações.
+                Posso analisar planos nutricionais, pastos, clima, estoque, tratamentos, financeiro, maternidade, bebedouros e muito mais.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 w-full max-w-2xl">
                 {SUGESTOES_PERGUNTAS.map((sugestao) => (

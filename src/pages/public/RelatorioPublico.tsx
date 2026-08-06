@@ -4,6 +4,7 @@ import { supabase } from '../../services/supabaseClient'
 import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts'
 import logoManejus from '/images/manejus360.png'
 import { gerarPDFRelatorioAbastecimento } from '../../utils/relatorioAbastecimentoPDF'
+import { RelatorioConsumoPublico } from './RelatorioConsumoPublico'
 
 const CHART_NO_FOCUS_CSS = `
 .recharts-surface {
@@ -153,6 +154,13 @@ export function RelatorioPublico() {
         fazenda_nome: fazendaData?.nome,
         fazenda_logo_url: fazendaData?.logo_url,
       })
+
+      // Se for relatório de consumo, o componente filho busca seus próprios dados
+      if (relData.tipo === 'consumo') {
+        setError(null)
+        setLoading(false)
+        return
+      }
 
       const { data: rpcData, error: rpcError } = await supabase
         .rpc('get_dados_relatorio_abastecimento', {
@@ -473,6 +481,11 @@ export function RelatorioPublico() {
         </div>
       </div>
     )
+  }
+
+  // Switch por tipo de relatório
+  if (relatorioInfo?.tipo === 'consumo') {
+    return <RelatorioConsumoPublico token={token!} relatorioInfo={relatorioInfo} />
   }
 
   // Componente de popover multi-select

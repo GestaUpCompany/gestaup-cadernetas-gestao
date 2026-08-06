@@ -7,7 +7,6 @@ import { exportToXLSX } from '../../utils/exportXLSX'
 import { SUPLEMENTACAO_EXPORT_CONFIG } from '../../utils/exportConfigs'
 import { formatDate } from '../../utils/formatDate'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
-import { gerarRelatorioConsumoPDF, DadoRelatorioConsumo, InfoLote, LoteRelatorio } from '../../utils/relatorioConsumoPDF'
 
 interface RegistroSuplementacao {
   id: string
@@ -49,14 +48,10 @@ export function Suplementacao() {
   const [lotes, setLotes] = useState<{ id: string; nome: string }[]>([])
   const [lotesSelecionados, setLotesSelecionados] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
-  const [gerandoPDF, setGerandoPDF] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [dataInicio, setDataInicio] = useState('')
   const [dataFim, setDataFim] = useState('')
   const [dateSortOrder, setDateSortOrder] = useState<'asc' | 'desc'>('desc')
-  const [erroExportacao, setErroExportacao] = useState<string | null>(null)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [previewFileName, setPreviewFileName] = useState<string>('relatorio.pdf')
   const [loteDropdownOpen, setLoteDropdownOpen] = useState(false)
   const loteDropdownRef = useRef<HTMLDivElement>(null)
 
@@ -64,10 +59,6 @@ export function Suplementacao() {
     loadRegistros()
     loadLotes()
   }, [user])
-
-  useEffect(() => {
-    setErroExportacao(null)
-  }, [lotesSelecionados, dataInicio, dataFim])
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -149,187 +140,6 @@ export function Suplementacao() {
     return dateSortOrder === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime()
   })
 
-  const handleExportarRelatorio = async () => {
-    setErroExportacao(null)
-    if (lotesSelecionados.length === 0 || !dataInicio || !dataFim) {
-      setErroExportacao('Selecione os filtros antes')
-      return
-    }
-
-    setGerandoPDF(true)
-
-    try {
-      const dataInicioDate = new Date(dataInicio)
-      const dataFimDate = new Date(dataFim + 'T23:59:59')
-      const fazendaId = registros[0]?.fazenda_id
-
-      const { data: fazendaData } = await supabase
-        .from('fazendas')
-        .select('nome, logo_url')
-        .eq('id', fazendaId)
-        .maybeSingle()
-
-      const lotesRelatorio: LoteRelatorio[] = []
-
-      for (const loteId of lotesSelecionados) {
-        const lote = lotes.find((l) => l.id === loteId)
-        const dadosRegistro = filteredRegistros
-          .filter((r) => {
-            const d = new Date(r.data)
-            return d >= dataInicioDate && d <= dataFimDate && r.lote_id === loteId
-          })
-          .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime())
-
-        if (dadosRegistro.length === 0) continue
-
-        const info: InfoLote = {
-          lote_id: loteId,
-          lote_nome: lote?.nome || '—',
-          fazenda_id: fazendaId,
-          fazenda_nome: fazendaData?.nome,
-          fazenda_logo_url: fazendaData?.logo_url,
-          peso_entrada_kg: null,
-          peso_atual_kg: null,
-          dias: null,
-          data_prevista_final: null,
-          n_cabecas_atual: null,
-          raca: null,
-          categoria: null,
-          dieta: null,
-          data_inicio_plano: null,
-        }
-
-        const { data: loteCatData } = await supabase
-          .from('lote_categorias')
-          .select('id, peso_entrada_kg_cab, peso_vivo_atual_kg_cab, data_meta_projetada, quant_atual, raca, categoria, formulacao_id, data_pesagem')
-          .eq('lote_id', loteId)
-          .eq('ativo', true)
-          .order('created_at', { ascending: false })
-          .limit(1)
-
-        if (loteCatData && loteCatData.length > 0) {
-          const lc = loteCatData[0]
-          info.peso_entrada_kg = lc.peso_entrada_kg_cab
-          info.peso_atual_kg = lc.peso_vivo_atual_kg_cab
-          info.data_prevista_final = lc.data_meta_projetada
-          info.n_cabecas_atual = lc.quant_atual
-          info.raca = lc.raca
-          info.categoria = lc.categoria
-
-          if (lc.formulacao_id) {
-            const { data: formulacaoData } = await supabase
-              .from('formulacoes')
-              .select('nome')
-              .eq('id', lc.formulacao_id)
-              .maybeSingle()
-            if (formulacaoData) {
-              info.dieta = formulacaoData.nome
-            }
-          }
-
-          const { data: planoData } = await supabase
-            .from('planos_nutricionais')
-            .select('data_inicio')
-            .eq('fazenda_id', fazendaId)
-            .eq('lote_categoria_id', lc.id)
-            .eq('ativo', true)
-            .maybeSingle()
-
-          if (planoData && planoData.data_inicio) {
-            info.data_inicio_plano = planoData.data_inicio
-            const inicio = new Date(planoData.data_inicio)
-            const hoje = new Date()
-            const inicioData = Date.UTC(inicio.getUTCFullYear(), inicio.getUTCMonth(), inicio.getUTCDate())
-            const hojeData = Date.UTC(hoje.getFullYear(), hoje.getMonth(), hoje.getDate())
-            info.dias = Math.max(0, Math.round((hojeData - inicioData) / (1000 * 60 * 60 * 24)))
-          }
-        }
-
-        const calcularDiasEntre = (dataMaior: string, dataMenor: string): number => {
-          const d1 = new Date(dataMaior)
-          const d2 = new Date(dataMenor)
-          const utc1 = Date.UTC(d1.getUTCFullYear(), d1.getUTCMonth(), d1.getUTCDate())
-          const utc2 = Date.UTC(d2.getUTCFullYear(), d2.getUTCMonth(), d2.getUTCDate())
-          const diff = Math.round((utc1 - utc2) / (1000 * 60 * 60 * 24))
-          return Math.max(1, diff)
-        }
-
-        const dados: DadoRelatorioConsumo[] = []
-        for (let i = 1; i < dadosRegistro.length; i++) {
-          const atual = dadosRegistro[i]
-          const anterior = dadosRegistro[i - 1]
-          const dias = calcularDiasEntre(atual.data, anterior.data)
-          const animaisElegiveis = Math.max(1, (anterior.n_cabecas || 0) - (anterior.qtd_bezerros || 0))
-          const tratoKgCabDia = (anterior.kg_cocho || 0) / dias / animaisElegiveis
-
-          const d = new Date(atual.data)
-          const dia = d.getUTCDate().toString().padStart(2, '0')
-          const mes = String(d.getUTCMonth() + 1).padStart(2, '0')
-
-          dados.push({
-            data: atual.data,
-            data_label: `${dia}/${mes}`,
-            trato_kg_cab_dia: tratoKgCabDia,
-            consumo_percent_pv: anterior.consumo_medio_geral_percent_pv || 0,
-            leitura_cocho: anterior.leitura != null ? Number(anterior.leitura) : null,
-            custo_reais_cab_dia: anterior.custo_medio_reais_cab_dia ?? null,
-          })
-        }
-
-        lotesRelatorio.push({ info, dados })
-      }
-
-      if (lotesRelatorio.length === 0) {
-        alert('Nenhum registro de suplementação encontrado para os lotes e período selecionados.')
-        return
-      }
-
-      const blob = await gerarRelatorioConsumoPDF({
-        dataInicio,
-        dataFim,
-        lotes: lotesRelatorio,
-      })
-
-      const formatarData = (dataStr: string) => {
-        const d = new Date(dataStr)
-        const dia = d.getUTCDate().toString().padStart(2, '0')
-        const mes = String(d.getUTCMonth() + 1).padStart(2, '0')
-        const ano = d.getUTCFullYear()
-        return `${dia}/${mes}/${ano}`
-      }
-
-      const nomeFazenda = fazendaData?.nome || 'Fazenda'
-      const dataInicioFmt = formatarData(dataInicio)
-      const dataFimFmt = formatarData(dataFim)
-      const fileName = `Gesta'Up - Relatório de Consumo ${nomeFazenda} | ${dataInicioFmt} a ${dataFimFmt}.pdf`
-
-      if (previewUrl) URL.revokeObjectURL(previewUrl)
-      const url = URL.createObjectURL(blob)
-      setPreviewUrl(url)
-      setPreviewFileName(fileName)
-    } catch (err: any) {
-      console.error('Erro ao gerar relatório:', err)
-      alert('Erro ao gerar relatório: ' + (err.message || 'Tente novamente.'))
-    } finally {
-      setGerandoPDF(false)
-    }
-  }
-
-  const handleDownloadPreview = () => {
-    if (!previewUrl) return
-    const link = document.createElement('a')
-    link.href = previewUrl
-    link.download = previewFileName
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
-
-  const handleClosePreview = () => {
-    if (previewUrl) URL.revokeObjectURL(previewUrl)
-    setPreviewUrl(null)
-  }
-
   if (loading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -387,18 +197,6 @@ export function Suplementacao() {
           >
             Exportar XLSX
           </Button>
-          <div className="flex flex-col items-start">
-            <Button
-              onClick={handleExportarRelatorio}
-              disabled={gerandoPDF}
-              className="w-full sm:w-auto text-sm"
-            >
-              {gerandoPDF ? 'Gerando...' : 'Gerar PDF'}
-            </Button>
-            {erroExportacao && (
-              <p className="text-sm text-red-600 mt-2">{erroExportacao}</p>
-            )}
-          </div>
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
@@ -407,7 +205,7 @@ export function Suplementacao() {
             <button
               type="button"
               onClick={() => setLoteDropdownOpen(!loteDropdownOpen)}
-              className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base text-left bg-white flex items-center justify-between ${erroExportacao && lotesSelecionados.length === 0 ? 'border-red-500' : 'border-gray-300'}`}
+              className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base text-left bg-white flex items-center justify-between border-gray-300`}
             >
               <span className={lotesSelecionados.length === 0 ? 'text-gray-400' : 'text-gray-900'}>
                 {lotesSelecionados.length === 0
@@ -474,7 +272,7 @@ export function Suplementacao() {
               type="date"
               value={dataInicio}
               onChange={(e) => setDataInicio(e.target.value)}
-              className={`text-sm ${erroExportacao && !dataInicio ? 'border-red-500 focus:border-red-500' : ''}`}
+              className="text-sm"
             />
           </div>
           <div>
@@ -483,7 +281,7 @@ export function Suplementacao() {
               type="date"
               value={dataFim}
               onChange={(e) => setDataFim(e.target.value)}
-              className={`text-sm ${erroExportacao && !dataFim ? 'border-red-500 focus:border-red-500' : ''}`}
+              className="text-sm"
             />
           </div>
           <div className="sm:col-span-2">
@@ -634,30 +432,6 @@ export function Suplementacao() {
         </>
       )}
 
-      {previewUrl && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col">
-            <div className="flex justify-between items-center p-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800">Pré-visualização do Relatório</h3>
-              <div className="flex gap-2">
-                <Button onClick={handleDownloadPreview} className="text-sm">
-                  Baixar PDF
-                </Button>
-                <Button variant="secondary" onClick={handleClosePreview} className="text-sm">
-                  Fechar
-                </Button>
-              </div>
-            </div>
-            <div className="flex-1 overflow-hidden p-2">
-              <iframe
-                src={previewUrl}
-                title="Pré-visualização do PDF"
-                className="w-full h-full border-0 rounded-lg"
-              />
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
