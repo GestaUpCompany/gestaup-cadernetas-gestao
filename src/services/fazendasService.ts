@@ -138,7 +138,6 @@ export interface CreateFazendaWithControllerParams {
   telefone?: string
   email?: string
   logo_url?: string
-  planilha_id?: string
   ativo: boolean
   acesso_confinamento: boolean
   controller_email: string
@@ -166,7 +165,6 @@ export async function createFazendaWithController(
     telefone: params.telefone,
     email: params.email,
     logo_url: params.logo_url,
-    planilha_id: params.planilha_id,
     ativo: params.ativo,
     controle_acesso_habilitado: false,
     acesso_confinamento: params.acesso_confinamento,

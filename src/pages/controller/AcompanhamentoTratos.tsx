@@ -9,8 +9,12 @@ import {
   fetchRealPorLoteDia,
   cruzarPlanejadoReal,
   calcularResumoPorLote,
+  fetchHorariosTratos,
+  calcularResumoHorarios,
   type LinhaDesvio,
   type ResumoLote,
+  type LinhaHorario,
+  type ResumoHorario,
 } from '../../services/acompanhamentoTratosService'
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -27,6 +31,7 @@ const CORES_STATUS = {
   alerta: { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200', dot: 'bg-yellow-500' },
   critico: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
   sem_execucao: { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200', dot: 'bg-gray-400' },
+  sem_horario: { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200', dot: 'bg-gray-400' },
 }
 
 function statusLabel(status: string): string {
@@ -50,6 +55,16 @@ function formatPct(v: number | null | undefined): string {
   return `${sinal}${v.toFixed(1)}%`
 }
 
+function formatDesvioMin(v: number | null | undefined): string {
+  if (v == null) return '—'
+  const sinal = v > 0 ? '+' : ''
+  const abs = Math.abs(v)
+  if (abs < 60) return `${sinal}${v} min`
+  const h = Math.floor(abs / 60)
+  const m = abs % 60
+  return `${sinal}${v < 0 ? '-' : ''}${h}h${m > 0 ? ` ${m}min` : ''}`
+}
+
 export function AcompanhamentoTratos() {
   const { user } = useAuth()
   const [fazendaId, setFazendaId] = useState<string | null>(null)
@@ -70,6 +85,8 @@ export function AcompanhamentoTratos() {
   // Dados
   const [linhas, setLinhas] = useState<LinhaDesvio[]>([])
   const [resumos, setResumos] = useState<ResumoLote[]>([])
+  const [linhasHorario, setLinhasHorario] = useState<LinhaHorario[]>([])
+  const [resumoHorario, setResumoHorario] = useState<ResumoHorario | null>(null)
 
   // Ordenação da tabela
   const [sortField, setSortField] = useState<'data' | 'lote_nome' | 'planejado_kg' | 'real_kg' | 'desvio_pct'>('data')
@@ -108,16 +125,20 @@ export function AcompanhamentoTratos() {
     if (!fazendaId || !dataInicio || !dataFim) return
     setLoading(true)
 
-    const [planejado, real] = await Promise.all([
+    const [planejado, real, horarios] = await Promise.all([
       fetchPlanejadoPorLote(fazendaId),
       fetchRealPorLoteDia(fazendaId, dataInicio, dataFim),
+      fetchHorariosTratos(fazendaId, dataInicio, dataFim, lotesSelecionados),
     ])
 
     const cruzado = cruzarPlanejadoReal(planejado, real, dataInicio, dataFim, lotesSelecionados)
     const resumo = calcularResumoPorLote(cruzado, dataInicio, dataFim)
+    const resumoHor = calcularResumoHorarios(horarios)
 
     setLinhas(cruzado)
     setResumos(resumo)
+    setLinhasHorario(horarios)
+    setResumoHorario(resumoHor)
     setLoading(false)
   }, [fazendaId, dataInicio, dataFim, lotesSelecionados])
 
@@ -428,6 +449,115 @@ export function AcompanhamentoTratos() {
               )}
             </Card>
           </div>
+
+          {/* Acompanhamento de Horários */}
+          {resumoHorario && resumoHorario.tratos_com_horario > 0 && (
+            <>
+              <div className="border-t border-gray-200 pt-4">
+                <h3 className="text-lg font-semibold text-gray-800">Pontualidade dos Tratos</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Compara o horário real de cada trato com o horário sugerido na programação.
+                  Desvio positivo significa atraso, negativo significa adiantamento.
+                </p>
+              </div>
+
+              {/* Cards de métricas de pontualidade */}
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+                <Card className="p-4" disableHover>
+                  <p className="text-xs text-gray-500 font-medium">Tratos no horário</p>
+                  <p className="text-xl font-bold text-green-600 mt-1">{resumoHorario.tratos_no_horario}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">desvio até 15 min</p>
+                </Card>
+                <Card className="p-4" disableHover>
+                  <p className="text-xs text-gray-500 font-medium">Atraso leve</p>
+                  <p className="text-xl font-bold text-yellow-600 mt-1">{resumoHorario.tratos_atraso_leve}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">15 a 30 min</p>
+                </Card>
+                <Card className="p-4" disableHover>
+                  <p className="text-xs text-gray-500 font-medium">Atraso grave</p>
+                  <p className="text-xl font-bold text-red-600 mt-1">{resumoHorario.tratos_atraso_grave}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">mais de 30 min</p>
+                </Card>
+                <Card className="p-4" disableHover>
+                  <p className="text-xs text-gray-500 font-medium">Desvio médio</p>
+                  <p className={`text-xl font-bold mt-1 ${
+                    resumoHorario.desvio_medio_min != null && Math.abs(resumoHorario.desvio_medio_min) > 30
+                      ? 'text-red-600'
+                      : resumoHorario.desvio_medio_min != null && Math.abs(resumoHorario.desvio_medio_min) > 15
+                      ? 'text-yellow-600'
+                      : 'text-green-600'
+                  }`}>
+                    {formatDesvioMin(resumoHorario.desvio_medio_min)}
+                  </p>
+                </Card>
+                <Card className="p-4" disableHover>
+                  <p className="text-xs text-gray-500 font-medium">Pior desvio</p>
+                  <p className={`text-xl font-bold mt-1 ${
+                    resumoHorario.pior_desvio_min != null && Math.abs(resumoHorario.pior_desvio_min) > 30
+                      ? 'text-red-600'
+                      : resumoHorario.pior_desvio_min != null && Math.abs(resumoHorario.pior_desvio_min) > 15
+                      ? 'text-yellow-600'
+                      : 'text-green-600'
+                  }`}>
+                    {formatDesvioMin(resumoHorario.pior_desvio_min)}
+                  </p>
+                </Card>
+              </div>
+
+              {/* Tabela detalhada de horários */}
+              <Card className="p-4" disableHover>
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                  Detalhamento por trato ({linhasHorario.length} registros)
+                </h3>
+                <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
+                  <table className="min-w-full divide-y divide-gray-200 sticky-header">
+                    <thead className="bg-gray-50 sticky top-0 z-10">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Lote</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Curral</th>
+                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Trato</th>
+                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Horário sugerido</th>
+                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Horário real</th>
+                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Desvio</th>
+                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-100">
+                      {linhasHorario.map((l, idx) => {
+                        const cor = CORES_STATUS[l.status] || CORES_STATUS.sem_execucao
+                        return (
+                          <tr key={`${l.lote_id}-${l.data}-${l.ordem_trato}-${idx}`} className="hover:bg-gray-50">
+                            <td className="px-3 py-2 text-sm text-gray-700 whitespace-nowrap">{formatDate(l.data)}</td>
+                            <td className="px-3 py-2 text-sm font-medium text-gray-800">{l.lote_nome}</td>
+                            <td className="px-3 py-2 text-sm text-gray-600">{l.curral_nome || '—'}</td>
+                            <td className="px-3 py-2 text-sm text-center text-gray-600">#{l.ordem_trato}</td>
+                            <td className="px-3 py-2 text-sm text-center text-gray-700 font-mono">{l.horario_sugerido || '—'}</td>
+                            <td className="px-3 py-2 text-sm text-center text-gray-700 font-mono">{l.horario_real || '—'}</td>
+                            <td className={`px-3 py-2 text-sm text-right font-medium ${
+                              l.desvio_min != null && Math.abs(l.desvio_min) > 30
+                                ? 'text-red-600'
+                                : l.desvio_min != null && Math.abs(l.desvio_min) > 15
+                                ? 'text-yellow-600'
+                                : 'text-green-600'
+                            }`}>
+                              {formatDesvioMin(l.desvio_min)}
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${cor.bg} ${cor.text} ${cor.border} border`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${cor.dot}`} />
+                                {l.status === 'sem_horario' ? 'Sem horário' : statusLabel(l.status)}
+                              </span>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </>
+          )}
 
           {/* Resumo por lote */}
           <Card className="p-4" disableHover>

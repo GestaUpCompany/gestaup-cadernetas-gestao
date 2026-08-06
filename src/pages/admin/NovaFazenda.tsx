@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { createFazenda, createFazendaWithController } from '../../services/fazendasService'
+import { createFazendaWithController } from '../../services/fazendasService'
 import { getGrupos, GrupoFazenda } from '../../services/gruposService'
 import { uploadLogo } from '../../services/storageService'
 import { Button, Input, Card } from '../../components/ui'
@@ -24,7 +24,6 @@ export function NovaFazenda() {
     endereco: '',
     telefone: '',
     email: '',
-    planilha_id: '',
     ativo: true,
     acesso_confinamento: false,
     controller_email: '',
@@ -52,7 +51,7 @@ export function NovaFazenda() {
       newErrors.nome = 'Nome é obrigatório'
     }
 
-    if (formData.criar_usuario_controller && !formData.controller_email.trim()) {
+    if (!formData.criar_usuario_controller && !formData.controller_email.trim()) {
       newErrors.controller_email = 'Email do controller é obrigatório'
     }
 
@@ -81,60 +80,35 @@ export function NovaFazenda() {
       }
     }
 
-    let result
-    if (formData.criar_usuario_controller) {
-      // Criar fazenda com usuário controller
-      result = await createFazendaWithController({
-        acesso_id: formData.acesso_id,
-        nome: formData.nome,
-        cnpj: formData.cnpj || undefined,
-        endereco: formData.endereco || undefined,
-        telefone: formData.telefone || undefined,
-        email: formData.email || undefined,
-        planilha_id: formData.planilha_id || undefined,
-        logo_url: logoUrl || undefined,
-        ativo: formData.ativo,
-        acesso_confinamento: formData.acesso_confinamento,
-        controller_email: formData.controller_email,
-        controller_nome: `Controller ${formData.nome}`,
-        grupo_id: selectedGrupo || undefined,
-      })
+    // Determinar email do controller: auto-gerado ou manual
+    const controllerEmail = formData.criar_usuario_controller
+      ? `controller@${formData.acesso_id}.com`
+      : formData.controller_email
 
-      if (result.error) {
-        setError(result.error)
-        setLoading(false)
-        return
-      }
+    const result = await createFazendaWithController({
+      acesso_id: formData.acesso_id,
+      nome: formData.nome,
+      cnpj: formData.cnpj || undefined,
+      endereco: formData.endereco || undefined,
+      telefone: formData.telefone || undefined,
+      email: formData.email || undefined,
+      logo_url: logoUrl || undefined,
+      ativo: formData.ativo,
+      acesso_confinamento: formData.acesso_confinamento,
+      controller_email: controllerEmail,
+      controller_nome: `Controller ${formData.nome}`,
+      grupo_id: selectedGrupo || undefined,
+    })
 
-      if (result.controller) {
-        setCredentials(result.controller)
-        setShowCredentials(true)
-      }
-    } else {
-      // Criar apenas fazenda (sem usuário controller)
-      result = await createFazenda({
-        acesso_id: formData.acesso_id,
-        nome: formData.nome,
-        cnpj: formData.cnpj || undefined,
-        endereco: formData.endereco || undefined,
-        telefone: formData.telefone || undefined,
-        email: formData.email || undefined,
-        planilha_id: formData.planilha_id || undefined,
-        logo_url: logoUrl || undefined,
-        ativo: formData.ativo,
-        controle_acesso_habilitado: false,
-        acesso_confinamento: formData.acesso_confinamento,
-        grupo_id: selectedGrupo || undefined,
-      })
+    if (result.error) {
+      setError(result.error)
+      setLoading(false)
+      return
+    }
 
-      if (!result) {
-        setError('Erro ao criar fazenda. Tente novamente.')
-        setLoading(false)
-        return
-      }
-
-      // Se não criou usuário controller, redireciona para lista
-      navigate('/admin/fazendas')
+    if (result.controller) {
+      setCredentials(result.controller)
+      setShowCredentials(true)
     }
 
     setLoading(false)
@@ -179,7 +153,7 @@ export function NovaFazenda() {
   }
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-4xl">
       <div className="mb-6">
         <Button variant="secondary" onClick={() => navigate('/admin/fazendas')}>
           Voltar
@@ -195,19 +169,19 @@ export function NovaFazenda() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Upload de Logo */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">Logo</label>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Identidade Visual */}
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-gray-800">Identidade Visual</h3>
             <div className="flex items-center gap-4">
               {logoPreview ? (
                 <img
                   src={logoPreview}
                   alt="Preview"
-                  className="w-20 h-20 object-cover rounded-lg border-2 border-gray-300"
+                  className="w-24 h-24 object-cover rounded-lg border-2 border-gray-300"
                 />
               ) : (
-                <div className="w-20 h-20 bg-gray-200 rounded-lg border-2 border-gray-300 flex items-center justify-center">
+                <div className="w-24 h-24 bg-gray-200 rounded-lg border-2 border-gray-300 flex items-center justify-center">
                   <span className="text-gray-400 text-sm">Sem logo</span>
                 </div>
               )}
@@ -215,154 +189,170 @@ export function NovaFazenda() {
                 type="file"
                 accept="image/*"
                 onChange={handleLogoChange}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/80"
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/80"
               />
             </div>
           </div>
 
-          <Input
-            label="ID de Acesso *"
-            name="acesso_id"
-            value={formData.acesso_id}
-            onChange={handleChange}
-            placeholder="Ex: FAZ001"
-            error={errors.acesso_id}
-            required
-          />
-
-          <Input
-            label="Nome da Fazenda *"
-            name="nome"
-            value={formData.nome}
-            onChange={handleChange}
-            placeholder="Ex: Fazenda Santa Maria"
-            error={errors.nome}
-            required
-          />
-
-          <Input
-            label="CNPJ"
-            name="cnpj"
-            value={formData.cnpj}
-            onChange={handleChange}
-            placeholder="00.000.000/0000-00"
-          />
-
-          <Input
-            label="Endereço"
-            name="endereco"
-            value={formData.endereco}
-            onChange={handleChange}
-            placeholder="Rua, número, cidade, estado"
-          />
-
-          <Input
-            label="Telefone"
-            name="telefone"
-            value={formData.telefone}
-            onChange={handleChange}
-            placeholder="(00) 00000-0000"
-          />
-
-          <Input
-            label="Email"
-            name="email"
-            type="email"
-            value={formData.email}
-            onChange={handleChange}
-            placeholder="email@exemplo.com"
-          />
-
-          <Input
-            label="ID da Planilha (Google Sheets)"
-            name="planilha_id"
-            value={formData.planilha_id}
-            onChange={handleChange}
-            placeholder="ID da planilha para integração"
-          />
-
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">Grupo de Fazendas</label>
-            <select
-              value={selectedGrupo}
-              onChange={(e) => setSelectedGrupo(e.target.value)}
-              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-primary"
-            >
-              <option value="">Sem grupo</option>
-              {grupos.filter(g => g.ativo).map((g) => (
-                <option key={g.id} value={g.id}>{g.nome}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="border-t border-gray-200 pt-4 mt-4">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Criação de Usuário Controller</h3>
-            
-            <div className="flex items-center gap-2 mb-4">
-              <input
-                type="checkbox"
-                id="criar_usuario_controller"
-                checked={formData.criar_usuario_controller}
-                onChange={(e) => setFormData(prev => ({ ...prev, criar_usuario_controller: e.target.checked }))}
-                className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
-              />
-              <label htmlFor="criar_usuario_controller" className="text-sm text-gray-700">
-                Criar usuário controller automaticamente
-              </label>
-            </div>
-
-            {formData.criar_usuario_controller && (
+          {/* Dados Principais */}
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-gray-800">Dados Principais</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
-                label="Email do Controller *"
-                name="controller_email"
-                type="email"
-                value={formData.controller_email}
+                label="ID de Acesso *"
+                name="acesso_id"
+                value={formData.acesso_id}
                 onChange={handleChange}
-                placeholder="email@controller.com"
-                error={errors.controller_email}
+                placeholder="Ex: FAZ001"
+                error={errors.acesso_id}
                 required
               />
-            )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="ativo"
-              checked={formData.ativo}
-              onChange={(e) => setFormData(prev => ({ ...prev, ativo: e.target.checked }))}
-              className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+              <Input
+                label="Nome da Fazenda *"
+                name="nome"
+                value={formData.nome}
+                onChange={handleChange}
+                placeholder="Ex: Fazenda Santa Maria"
+                error={errors.nome}
+                required
+              />
+              <Input
+                label="CNPJ"
+                name="cnpj"
+                value={formData.cnpj}
+                onChange={handleChange}
+                placeholder="00.000.000/0000-00"
+              />
+              <Input
+                label="Telefone"
+                name="telefone"
+                value={formData.telefone}
+                onChange={handleChange}
+                placeholder="(00) 00000-0000"
+              />
+            </div>
+            <Input
+              label="Endereço"
+              name="endereco"
+              value={formData.endereco}
+              onChange={handleChange}
+              placeholder="Rua, número, cidade, estado"
             />
-            <label htmlFor="ativo" className="text-sm text-gray-700">
-              Fazenda ativa
-            </label>
           </div>
 
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="acesso_confinamento"
-              checked={formData.acesso_confinamento}
-              onChange={(e) => setFormData(prev => ({ ...prev, acesso_confinamento: e.target.checked }))}
-              className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
-            />
-            <label htmlFor="acesso_confinamento" className="text-sm text-gray-700">
-              Acesso ao Confinamento
-            </label>
+          {/* Contato e Grupo */}
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-gray-800">Contato e Grupo</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="Email"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="email@exemplo.com"
+              />
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Grupo de Fazendas</label>
+                <select
+                  value={selectedGrupo}
+                  onChange={(e) => setSelectedGrupo(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-primary"
+                >
+                  <option value="">Sem grupo</option>
+                  {grupos.filter(g => g.ativo).map((g) => (
+                    <option key={g.id} value={g.id}>{g.nome}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
           </div>
 
-          <div className="flex gap-4 pt-4">
-            <Button type="submit" disabled={loading} className="flex-1">
-              {loading ? 'Salvando...' : 'Criar Fazenda'}
-            </Button>
+          {/* Criação de Usuário Controller */}
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-gray-800">Criação de Usuário Controller</h3>
+            <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  id="criar_usuario_controller"
+                  checked={formData.criar_usuario_controller}
+                  onChange={(e) => setFormData(prev => ({ ...prev, criar_usuario_controller: e.target.checked }))}
+                  className="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary"
+                />
+                <div>
+                  <span className="block text-sm font-medium text-gray-800">Gerar email automaticamente</span>
+                  <span className="block text-xs text-gray-500">Usa controller@&lt;id de acesso&gt;.com com senha &lt;id de acesso&gt;2026</span>
+                </div>
+              </label>
+
+              {formData.criar_usuario_controller ? (
+                <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-1">
+                  <p className="text-xs text-gray-500">Email do controller (gerado automaticamente):</p>
+                  <p className="font-mono text-sm font-semibold text-gray-800">
+                    {formData.acesso_id ? `controller@${formData.acesso_id}.com` : 'controller@<id de acesso>.com'}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-2">Senha: <span className="font-mono font-semibold text-gray-700">{formData.acesso_id ? `${formData.acesso_id}2026` : '<id de acesso>2026'}</span></p>
+                </div>
+              ) : (
+                <Input
+                  label="Email do Controller *"
+                  name="controller_email"
+                  type="email"
+                  value={formData.controller_email}
+                  onChange={handleChange}
+                  placeholder="email@controller.com"
+                  error={errors.controller_email}
+                  required
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Configurações de Acesso */}
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-gray-800">Configurações de Acesso</h3>
+            <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  id="ativo"
+                  checked={formData.ativo}
+                  onChange={(e) => setFormData(prev => ({ ...prev, ativo: e.target.checked }))}
+                  className="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary"
+                />
+                <div>
+                  <span className="block text-sm font-medium text-gray-800">Fazenda ativa</span>
+                  <span className="block text-xs text-gray-500">Permite acesso aos controllers</span>
+                </div>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  id="acesso_confinamento"
+                  checked={formData.acesso_confinamento}
+                  onChange={(e) => setFormData(prev => ({ ...prev, acesso_confinamento: e.target.checked }))}
+                  className="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary"
+                />
+                <div>
+                  <span className="block text-sm font-medium text-gray-800">Acesso ao Confinamento</span>
+                  <span className="block text-xs text-gray-500">Exibe o menu e telas de confinamento no controller</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
             <Button
               type="button"
               variant="secondary"
               onClick={() => navigate('/admin/fazendas')}
               disabled={loading}
-              className="flex-1"
             >
               Cancelar
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? 'Salvando...' : 'Criar Fazenda'}
             </Button>
           </div>
         </form>

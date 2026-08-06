@@ -1,0 +1,17 @@
+{
+  "backup_date": "2026-08-06T18:00:00-03:00",
+  "motivo": "Correcao do peso_vivo_kg em 5 registros do lote Farmacia, fazenda Guanabara (f8be22c5-12e9-4bda-a813-fae8cb3d47ec). O PWA gravava o peso projetado pelo cron no momento do created_at (sincronizacao), nao na data do registro. Valores originais preservados para rollback.",
+  "fazenda_id": "f8be22c5-12e9-4bda-a813-fae8cb3d47ec",
+  "fazenda_nome": "Guanabara",
+  "lote": "Farmacia",
+  "tabela": "registros_suplementacao",
+  "campo_sobrescrito": "peso_vivo_kg",
+  "total_registros": 5,
+  "registros": [
+    {"id":"f1543c70-32cd-4f28-9621-99158e76ea6b","data":"2026-07-28 00:17:00+00","peso_vivo_kg_original":"350.00","peso_vivo_kg_correto":"454.00","n_cabecas":12},
+    {"id":"44ef15bf-a886-4962-891e-03b2ac11db34","data":"2026-07-29 22:12:00+00","peso_vivo_kg_original":"458.40","peso_vivo_kg_correto":"454.80","n_cabecas":15},
+    {"id":"aab32203-ece7-44a4-a2a4-3792f1edda6d","data":"2026-07-31 22:07:00+00","peso_vivo_kg_original":"456.40","peso_vivo_kg_correto":"456.40","n_cabecas":15},
+    {"id":"80010f3e-f7c6-46fa-8a9e-b599f5897232","data":"2026-08-03 22:00:00+00","peso_vivo_kg_original":"458.80","peso_vivo_kg_correto":"458.80","n_cabecas":15},
+    {"id":"e63538a5-542d-4a16-bd39-c4d4fb5fed66","data":"2026-08-05 11:42:00+00","peso_vivo_kg_original":"461.20","peso_vivo_kg_correto":"460.40","n_cabecas":15}
+  ]
+}

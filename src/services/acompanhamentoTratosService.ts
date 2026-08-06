@@ -405,3 +405,214 @@ export function calcularResumoPorLote(
 
   return Object.values(mapa).sort((a, b) => a.lote_nome.localeCompare(b.lote_nome))
 }
+
+// ---------------------------------------------------------------------------
+// Acompanhamento de horários
+// ---------------------------------------------------------------------------
+
+export interface LinhaHorario {
+  data: string // YYYY-MM-DD
+  lote_id: string
+  lote_nome: string
+  curral_nome: string | null
+  ordem_trato: number
+  horario_sugerido: string | null // HH:MM
+  horario_real: string | null // HH:MM (timezone da fazenda)
+  desvio_min: number | null // minutos de desvio (positivo = atraso, negativo = adianto)
+  status: 'ok' | 'alerta' | 'critico' | 'sem_horario'
+}
+
+export interface ResumoHorario {
+  total_tratos: number
+  tratos_com_horario: number
+  tratos_no_horario: number // desvio até 15 min
+  tratos_atraso_leve: number // 15-30 min
+  tratos_atraso_grave: number // > 30 min
+  desvio_medio_min: number | null
+  pior_desvio_min: number | null
+}
+
+const TOLERANCIA_OK_MIN = 15
+const TOLERANCIA_ALERTA_MIN = 30
+
+function classificarDesvioHorario(desvioMin: number | null): LinhaHorario['status'] {
+  if (desvioMin == null) return 'sem_horario'
+  const abs = Math.abs(desvioMin)
+  if (abs <= TOLERANCIA_OK_MIN) return 'ok'
+  if (abs <= TOLERANCIA_ALERTA_MIN) return 'alerta'
+  return 'critico'
+}
+
+/**
+ * Busca registros de oferta de trato com horário sugerido, para análise de pontualidade.
+ * Compara o horário real do registro (convertido para o timezone da fazenda) com o
+ * horario_sugerido da programação_tratos_percentuais.
+ *
+ * Registros com data exatamente à meia-noite (00:00:00) são descartados, pois indicam
+ * registros antigos ou importados sem timestamp preciso.
+ */
+export async function fetchHorariosTratos(
+  fazendaId: string,
+  dataInicio: string,
+  dataFim: string,
+  lotesFiltro: string[] = []
+): Promise<LinhaHorario[]> {
+  const dataFimNext = new Date(dataFim + 'T00:00:00')
+  dataFimNext.setDate(dataFimNext.getDate() + 1)
+  const dataFimExclusive = dataFimNext.toISOString().substring(0, 10)
+
+  let query = supabase
+    .from('registros_oferta_trato')
+    .select(`
+      data,
+      ordem_trato,
+      lote_id,
+      curral_id,
+      programacao_id,
+      lotes (nome),
+      currais (nome)
+    `)
+    .eq('fazenda_id', fazendaId)
+    .is('deleted_at', null)
+    .gte('data', dataInicio)
+    .lt('data', dataFimExclusive)
+    .order('data', { ascending: false })
+
+  if (lotesFiltro.length > 0) {
+    query = query.in('lote_id', lotesFiltro)
+  }
+
+  const { data: registros, error } = await query
+  if (error || !registros || registros.length === 0) return []
+
+  // Buscar timezone da fazenda
+  const { data: fazenda } = await supabase
+    .from('fazendas')
+    .select('timezone')
+    .eq('id', fazendaId)
+    .single()
+
+  const timezone = fazenda?.timezone || 'America/Cuiaba'
+
+  // Coletar programacao_ids únicos para buscar horarios sugeridos
+  const programacaoIds = [...new Set(
+    registros
+      .map((r: any) => r.programacao_id)
+      .filter((id: any) => id != null)
+  )]
+
+  // Buscar horários sugeridos
+  let horariosMapa: Record<string, string | null> = {} // chave: "programacao_id|ordem_trato" -> horario
+  if (programacaoIds.length > 0) {
+    const { data: percentuais } = await supabase
+      .from('programacao_tratos_percentuais')
+      .select('programacao_id, ordem_trato, horario_sugerido')
+      .in('programacao_id', programacaoIds)
+
+    if (percentuais) {
+      for (const p of percentuais) {
+        horariosMapa[`${p.programacao_id}|${p.ordem_trato}`] = p.horario_sugerido || null
+      }
+    }
+  }
+
+  const linhas: LinhaHorario[] = []
+
+  for (const r of registros as any[]) {
+    const dataRaw = r.data as string
+    // Descartar registros sem timestamp preciso (meia-noite exata)
+    const horaUtc = dataRaw.substring(11, 19)
+    if (horaUtc === '00:00:00') continue
+
+    const loteId = r.lote_id
+    if (!loteId) continue
+
+    const loteNome = (r.lotes as any)?.nome ?? '—'
+    const curralNome = (r.currais as any)?.nome ?? null
+    const ordemTrato = r.ordem_trato
+
+    // Horário sugerido
+    const horarioSugerido = r.programacao_id
+      ? horariosMapa[`${r.programacao_id}|${ordemTrato}`] ?? null
+      : null
+
+    // Converter data UTC para horário local da fazenda
+    // Usamos Intl.DateTimeFormat para respeitar o timezone
+    const dataObj = new Date(dataRaw)
+    const dataLocalStr = new Intl.DateTimeFormat('pt-BR', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(dataObj)
+
+    // Parse do formato pt-BR: "dd/MM/yyyy, HH:mm"
+    const match = dataLocalStr.match(/(\d{2})\/(\d{2})\/(\d{4}), (\d{2}):(\d{2})/)
+    if (!match) continue
+
+    const [, dia, mes, ano, horaLocal, minLocal] = match
+    const dataDia = `${ano}-${mes}-${dia}`
+    const horarioReal = `${horaLocal}:${minLocal}`
+
+    // Calcular desvio em minutos
+    let desvioMin: number | null = null
+    if (horarioSugerido) {
+      const [hSug, mSug] = horarioSugerido.substring(0, 5).split(':').map(Number)
+      const [hReal, mReal] = horarioReal.split(':').map(Number)
+      const minutosSugerido = hSug * 60 + mSug
+      const minutosReal = hReal * 60 + mReal
+      desvioMin = minutosReal - minutosSugerido
+    }
+
+    linhas.push({
+      data: dataDia,
+      lote_id: loteId,
+      lote_nome: loteNome,
+      curral_nome: curralNome,
+      ordem_trato: ordemTrato,
+      horario_sugerido: horarioSugerido ? horarioSugerido.substring(0, 5) : null,
+      horario_real: horarioReal,
+      desvio_min: desvioMin,
+      status: classificarDesvioHorario(desvioMin),
+    })
+  }
+
+  return linhas
+}
+
+/**
+ * Calcula métricas resumidas de pontualidade a partir das linhas de horário.
+ */
+export function calcularResumoHorarios(linhas: LinhaHorario[]): ResumoHorario {
+  const tratosComHorario = linhas.filter((l) => l.desvio_min != null)
+  const total = linhas.length
+
+  if (tratosComHorario.length === 0) {
+    return {
+      total_tratos: total,
+      tratos_com_horario: 0,
+      tratos_no_horario: 0,
+      tratos_atraso_leve: 0,
+      tratos_atraso_grave: 0,
+      desvio_medio_min: null,
+      pior_desvio_min: null,
+    }
+  }
+
+  const desvios = tratosComHorario.map((l) => l.desvio_min!)
+  const desvioMedio = desvios.reduce((s, d) => s + d, 0) / desvios.length
+  const piorDesvio = desvios.reduce((p, d) => (Math.abs(d) > Math.abs(p) ? d : p), 0)
+
+  return {
+    total_tratos: total,
+    tratos_com_horario: tratosComHorario.length,
+    tratos_no_horario: tratosComHorario.filter((l) => l.status === 'ok').length,
+    tratos_atraso_leve: tratosComHorario.filter((l) => l.status === 'alerta').length,
+    tratos_atraso_grave: tratosComHorario.filter((l) => l.status === 'critico').length,
+    desvio_medio_min: Math.round(desvioMedio),
+    pior_desvio_min: Math.round(piorDesvio),
+  }
+}

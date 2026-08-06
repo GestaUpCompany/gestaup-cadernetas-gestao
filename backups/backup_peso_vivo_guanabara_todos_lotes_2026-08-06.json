@@ -1,0 +1,44 @@
+{
+  "backup_date": "2026-08-06",
+  "fazenda": "Guanabara",
+  "fazenda_id": "f8be22c5-12e9-4bda-a813-fae8cb3d47ec",
+  "description": "Backup de peso_vivo_kg de 23 registros de suplementacao com divergencia vs projecao do cron. Join por lote_id (nao por nome). Lotes inativados sem plano ativo foram excluidos.",
+  "categories": {
+    "cat1_created_at_bug": "Registros de 05/08 sincronizados em 06/08 apos cron. PWA leu peso projetado para 06/08 e gravou no registro com data 05/08.",
+    "cat2_pre_planos": "Registros de 24-28/07 criados antes dos planos nutricionais existirem. Pesos estaticos antigos divergem da projecao retroativa do plano (data_inicio=23/07).",
+    "cat3_data_inicio_retroativo": "Registros de 29/07 onde o data_inicio do plano foi alterado retroativamente. O PWA gravou com o data_inicio original (~28/07), mas a projecao atual usa data_inicio=23/07.",
+    "cat_extra": "Lote 05 Recria 29/07 com diff pequeno de +0.80, possivel arredondamento ou edicao posterior do plano."
+  },
+  "records": [
+    {"id": "e9d4b95a-2093-47a1-8ada-4da4e1ae6e94", "lote": "Lote 02 Recria", "data_registro": "2026-07-24", "peso_gravado": 281.00, "peso_correto": 270.50, "diff": 10.50, "categoria": "cat2_pre_planos"},
+    {"id": "0d0d011d-c367-4d24-8672-1f5fe19b5ad8", "lote": "Lote 02 Recria", "data_registro": "2026-07-28", "peso_gravado": 281.00, "peso_correto": 272.50, "diff": 8.50, "categoria": "cat2_pre_planos"},
+    {"id": "8b89da66-fb30-42c4-8910-ec30ca0dbc45", "lote": "Lote 02 Recria", "data_registro": "2026-08-05", "peso_gravado": 277.00, "peso_correto": 276.50, "diff": 0.50, "categoria": "cat1_created_at_bug"},
+    {"id": "4c9803ab-f748-4bf9-adba-a53bbb2e4939", "lote": "Lote 05", "data_registro": "2026-07-29", "peso_gravado": 531.40, "peso_correto": 538.40, "diff": -7.00, "categoria": "cat3_data_inicio_retroativo"},
+    {"id": "ca12b0d5-cb04-45ec-9dfb-e61b159fb70e", "lote": "Lote 05", "data_registro": "2026-08-05", "peso_gravado": 549.60, "peso_correto": 548.20, "diff": 1.40, "categoria": "cat1_created_at_bug"},
+    {"id": "2b8d3efc-7e3f-4307-b893-5140d5930a2e", "lote": "Lote 05 Recria", "data_registro": "2026-07-24", "peso_gravado": 350.00, "peso_correto": 390.80, "diff": -40.80, "categoria": "cat2_pre_planos"},
+    {"id": "f46131c6-748e-4679-b831-7a379194c9cc", "lote": "Lote 05 Recria", "data_registro": "2026-07-28", "peso_gravado": 350.00, "peso_correto": 394.00, "diff": -44.00, "categoria": "cat2_pre_planos"},
+    {"id": "1b5fcb17-cbad-41f1-b50c-feeb43c97a10", "lote": "Lote 05 Recria", "data_registro": "2026-07-29", "peso_gravado": 395.60, "peso_correto": 394.80, "diff": 0.80, "categoria": "cat_extra"},
+    {"id": "8b13c905-68d0-454f-9927-42ab50d989f2", "lote": "Lote 05 Recria", "data_registro": "2026-08-05", "peso_gravado": 401.20, "peso_correto": 400.40, "diff": 0.80, "categoria": "cat1_created_at_bug"},
+    {"id": "7f91c0a8-9d67-4741-a791-7278dee818c2", "lote": "Lote 06", "data_registro": "2026-07-29", "peso_gravado": 541.40, "peso_correto": 548.40, "diff": -7.00, "categoria": "cat3_data_inicio_retroativo"},
+    {"id": "82384ef2-1cf1-45ec-83aa-c2671eb0ee5a", "lote": "Lote 06", "data_registro": "2026-08-05", "peso_gravado": 559.60, "peso_correto": 558.20, "diff": 1.40, "categoria": "cat1_created_at_bug"},
+    {"id": "68014725-6bfd-41e2-bb92-b78ba2582659", "lote": "Lote 10 Recria", "data_registro": "2026-07-24", "peso_gravado": 222.00, "peso_correto": 280.50, "diff": -58.50, "categoria": "cat2_pre_planos"},
+    {"id": "4a0eb237-b94d-4eaf-b1a5-ed5bd76fd382", "lote": "Lote 10 Recria", "data_registro": "2026-07-28", "peso_gravado": 222.00, "peso_correto": 282.50, "diff": -60.50, "categoria": "cat2_pre_planos"},
+    {"id": "d47e762e-8d69-45c0-9306-12e1dbc9413c", "lote": "Lote 10 Recria", "data_registro": "2026-07-29", "peso_gravado": 280.50, "peso_correto": 283.00, "diff": -2.50, "categoria": "cat3_data_inicio_retroativo"},
+    {"id": "734fde49-d751-4467-a9c7-f2ccd23aa16b", "lote": "Lote 10 Recria", "data_registro": "2026-08-05", "peso_gravado": 287.00, "peso_correto": 286.50, "diff": 0.50, "categoria": "cat1_created_at_bug"},
+    {"id": "c014b869-b839-469b-99a2-3659528ffd35", "lote": "lote 11", "data_registro": "2026-07-24", "peso_gravado": 367.65, "peso_correto": 390.80, "diff": -23.15, "categoria": "cat2_pre_planos"},
+    {"id": "1ba8e42a-e30c-4a02-9b36-c6aef9929dd9", "lote": "lote 11", "data_registro": "2026-07-28", "peso_gravado": 370.85, "peso_correto": 394.00, "diff": -23.15, "categoria": "cat2_pre_planos"},
+    {"id": "21347783-fb45-4120-b184-aaaaedd2630e", "lote": "Lote 11", "data_registro": "2026-08-05", "peso_gravado": 401.20, "peso_correto": 400.40, "diff": 0.80, "categoria": "cat1_created_at_bug"},
+    {"id": "226e7984-86cc-49a1-94d6-856c101a2a4c", "lote": "Lote 12", "data_registro": "2026-08-05", "peso_gravado": 177.00, "peso_correto": 176.50, "diff": 0.50, "categoria": "cat1_created_at_bug"},
+    {"id": "66915c4d-b177-41ca-867c-2afe4ae7efdd", "lote": "Lote 2b Recria", "data_registro": "2026-07-24", "peso_gravado": 304.00, "peso_correto": 350.80, "diff": -46.80, "categoria": "cat2_pre_planos"},
+    {"id": "ff5a1df4-a6ce-456b-8709-7789145a9f0a", "lote": "Lote 2b Recria", "data_registro": "2026-07-28", "peso_gravado": 304.00, "peso_correto": 354.00, "diff": -50.00, "categoria": "cat2_pre_planos"},
+    {"id": "e91e416e-a606-424b-baed-7eb3c978d11b", "lote": "Lote 2b Recria", "data_registro": "2026-07-29", "peso_gravado": 350.80, "peso_correto": 354.80, "diff": -4.00, "categoria": "cat3_data_inicio_retroativo"},
+    {"id": "5e48864c-4a8c-45c0-9714-3f6d1870fb39", "lote": "Vacas Cria", "data_registro": "2026-08-05", "peso_gravado": 407.00, "peso_correto": 406.50, "diff": 0.50, "categoria": "cat1_created_at_bug"}
+  ],
+  "summary": {
+    "total_records": 23,
+    "cat1_created_at_bug": 8,
+    "cat2_pre_planos": 10,
+    "cat3_data_inicio_retroativo": 4,
+    "cat_extra": 1
+  }
+}

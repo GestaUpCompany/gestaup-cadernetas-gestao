@@ -24,7 +24,6 @@ export function EditarFazenda() {
     endereco: '',
     telefone: '',
     email: '',
-    planilha_id: '',
     logo_url: '',
     ativo: true,
     acesso_confinamento: false,
@@ -57,7 +56,6 @@ export function EditarFazenda() {
         endereco: fazenda.endereco || '',
         telefone: fazenda.telefone || '',
         email: fazenda.email || '',
-        planilha_id: fazenda.planilha_id || '',
         logo_url: fazenda.logo_url || '',
         ativo: fazenda.ativo,
         acesso_confinamento: fazenda.acesso_confinamento,
@@ -121,7 +119,6 @@ export function EditarFazenda() {
       endereco: formData.endereco || undefined,
       telefone: formData.telefone || undefined,
       email: formData.email || undefined,
-      planilha_id: formData.planilha_id || undefined,
       logo_url: logoUrl || undefined,
       ativo: formData.ativo,
       acesso_confinamento: formData.acesso_confinamento,
@@ -163,7 +160,7 @@ export function EditarFazenda() {
   }
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-4xl">
       <div className="mb-6">
         <Button variant="secondary" onClick={() => navigate('/admin/fazendas')}>
           Voltar
@@ -250,9 +247,9 @@ export function EditarFazenda() {
             />
           </div>
 
-          {/* Contato e Integrações */}
+          {/* Contato e Grupo */}
           <div className="space-y-3">
-            <h3 className="text-lg font-semibold text-gray-800">Contato e Integrações</h3>
+            <h3 className="text-lg font-semibold text-gray-800">Contato e Grupo</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
                 label="Email"
@@ -262,28 +259,20 @@ export function EditarFazenda() {
                 onChange={handleChange}
                 placeholder="email@exemplo.com"
               />
-              <Input
-                label="ID da Planilha (Google Sheets)"
-                name="planilha_id"
-                value={formData.planilha_id}
-                onChange={handleChange}
-                placeholder="ID da planilha para integração"
-              />
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Grupo de Fazendas</label>
+                <select
+                  value={selectedGrupo}
+                  onChange={(e) => setSelectedGrupo(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-primary"
+                >
+                  <option value="">Sem grupo</option>
+                  {grupos.filter(g => g.ativo).map((g) => (
+                    <option key={g.id} value={g.id}>{g.nome}</option>
+                  ))}
+                </select>
+              </div>
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">Grupo de Fazendas</label>
-            <select
-              value={selectedGrupo}
-              onChange={(e) => setSelectedGrupo(e.target.value)}
-              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-primary"
-            >
-              <option value="">Sem grupo</option>
-              {grupos.filter(g => g.ativo).map((g) => (
-                <option key={g.id} value={g.id}>{g.nome}</option>
-              ))}
-            </select>
           </div>
 
           {/* Configurações de Acesso */}
