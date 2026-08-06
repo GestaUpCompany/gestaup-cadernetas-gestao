@@ -254,7 +254,10 @@ export async function createFazendaWithController(
 
     if (peaoResponse.ok) {
       const peaoResult = await peaoResponse.json()
-      if (peaoResult.success) {
+      if (peaoResult.success && peaoResult.user?.id) {
+        const peaoAuthId = peaoResult.user.id
+
+        // Inserir peão na tabela peoes
         const { error: peaoError } = await supabase
           .from('peoes')
           .insert({
@@ -266,6 +269,39 @@ export async function createFazendaWithController(
 
         if (peaoError) {
           console.error('Erro ao inserir peão na tabela peoes:', peaoError)
+        }
+
+        // Inserir peão na tabela usuarios (necessário para RLS de lote_categorias)
+        // A Edge Function create-auth-user-only cria apenas em auth.users, não em usuarios.
+        // Sem este registro, a RLS bloqueia SELECT em lote_categorias e o PWA exibe
+        // categorias/peso/cabeças zerados mesmo com dados válidos no banco.
+        const { error: peaoUsuarioError } = await supabase
+          .from('usuarios')
+          .insert({
+            id: peaoAuthId,
+            auth_id: peaoAuthId,
+            email: peaoEmail,
+            nome: `Peão ${params.nome}`,
+            papel: 'controller',
+            ativo: true,
+          })
+
+        if (peaoUsuarioError) {
+          console.error('Erro ao inserir peão na tabela usuarios:', peaoUsuarioError)
+        }
+
+        // Associar peão à fazenda na tabela usuario_fazenda
+        const { error: peaoAssociacaoError } = await supabase
+          .from('usuario_fazenda')
+          .insert({
+            usuario_id: peaoAuthId,
+            fazenda_id: fazenda.id,
+            papel: 'controller',
+            ativo: true,
+          })
+
+        if (peaoAssociacaoError) {
+          console.error('Erro ao associar peão à fazenda:', peaoAssociacaoError)
         }
       }
     } else {
