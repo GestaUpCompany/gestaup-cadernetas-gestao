@@ -350,7 +350,7 @@ export function RelatorioPublico() {
     if (!relatorioInfo || !dados) return
     try {
       setExportandoPDF(true)
-      await gerarPDFRelatorioAbastecimento({
+      const blob = await gerarPDFRelatorioAbastecimento({
         titulo: relatorioInfo.titulo,
         fazendaNome: relatorioInfo.fazenda_nome,
         fazendaLogoUrl: relatorioInfo.fazenda_logo_url,
@@ -368,6 +368,16 @@ export function RelatorioPublico() {
         totalRegistros,
         detalhesPorMaquina,
       })
+
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      const nomeFazenda = relatorioInfo.fazenda_nome || 'Fazenda'
+      link.download = `Gesta'Up - Relatório de Abastecimento ${nomeFazenda}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
     } catch (err) {
       console.error('Erro ao exportar PDF:', err)
       alert('Erro ao gerar PDF. Tente novamente.')

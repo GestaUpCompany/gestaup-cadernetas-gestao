@@ -119,14 +119,14 @@ function LeituraCochoLabel(props: any) {
   )
 }
 
-// Factory que cria par de labels customizados (Trato + Consumo %PV) com
+// Factory que cria par de labels customizados (CMS + Consumo %PV) com
 // prevenção de colisão baseada exclusivamente em posição gráfica (pixels).
 // O label da barra registra sua posição Y no Map compartilhado; o label da
 // linha consulta essa posição e reposiciona para baixo se houver colisão.
 function criarLabelsAntiColisao() {
   const barPositions = new Map<number, number>()
 
-  function TratoLabel(props: any) {
+  function CmsLabel(props: any) {
     const { x, y, width, value, index } = props
     if (value == null) return null
 
@@ -154,8 +154,8 @@ function criarLabelsAntiColisao() {
     const barTopY = barPositions.get(index)
     const COLLISION_THRESHOLD = 18
 
-    // Posição default: 10px acima do ponto (comportamento original)
-    let labelY = y - 10
+    // Posição default: 16px acima do ponto, afastado do círculo
+    let labelY = y - 16
 
     if (barTopY != null) {
       const distance = Math.abs(barTopY - y)
@@ -179,7 +179,7 @@ function criarLabelsAntiColisao() {
     )
   }
 
-  return { TratoLabel, ConsumoPercentPVLabel }
+  return { CmsLabel, ConsumoPercentPVLabel }
 }
 
 export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
@@ -547,7 +547,7 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
             const { consumoMedio, custoMedio } = calcularKPIs(lote)
             const info = lote.info
             const temDados = lote.dados.length > 0
-            const { TratoLabel, ConsumoPercentPVLabel } = criarLabelsAntiColisao()
+            const { CmsLabel, ConsumoPercentPVLabel } = criarLabelsAntiColisao()
 
             return (
               <div key={lote.lote_id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -613,7 +613,7 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
                           <YAxis
                             yAxisId="left"
                             tick={{ fontSize: 11, fill: MEDIUM_TEXT }}
-                            label={{ value: 'Trato (kg/cab/dia)', angle: -90, position: 'insideLeft', offset: 10, style: { fontSize: 12, fill: DARK_TEXT, fontWeight: 'bold', textAnchor: 'middle' } }}
+                            label={{ value: 'CMS (kg/cab/dia)', angle: -90, position: 'insideLeft', offset: 10, style: { fontSize: 12, fill: DARK_TEXT, fontWeight: 'bold', textAnchor: 'middle' } }}
                           />
                           <YAxis
                             yAxisId="right"
@@ -627,26 +627,45 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
                             contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '12px' }}
                             formatter={((value: any, name: any) => {
                               if (name === 'Consumo %PV') return [`${Number(value).toFixed(2)}%`, name]
-                              if (name === 'Trato (kg/cab/dia)') return [`${Number(value).toFixed(2)} kg`, name]
+                              if (name === 'CMS (kg/cab/dia)') return [`${Number(value).toFixed(2)} kg`, name]
                               if (name === 'Leitura Cocho') return [value != null ? value : '—', name]
                               return [String(value), name]
                             }) as any}
                           />
                           <Legend
-                            wrapperStyle={{ fontSize: '12px', fontWeight: 'bold', paddingTop: '25px' }}
+                            wrapperStyle={{ fontSize: '12px', fontWeight: 'bold', paddingTop: '25px', width: '100%' }}
                             iconType="circle"
+                            content={({ payload }: any) => {
+                              if (!payload) return null
+                              const order = ['CMS (kg/cab/dia)', 'Consumo %PV', 'Leitura Cocho']
+                              const sorted = [...payload].sort((a: any, b: any) =>
+                                order.indexOf(a.value) - order.indexOf(b.value)
+                              )
+                              return (
+                                <ul style={{ padding: 0, margin: 0, textAlign: 'center', listStyle: 'none' }}>
+                                  {sorted.map((entry: any, i: number) => (
+                                    <li key={i} style={{ display: 'inline-block', marginRight: 10 }}>
+                                      <svg width="14" height="14" viewBox="0 0 32 32" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: 4 }}>
+                                        <path fill={entry.color} d="M16,0A16,16,0,1,1,-16,0A16,16,0,1,1,16,0" transform="translate(16,16)" />
+                                      </svg>
+                                      <span style={{ color: entry.color, fontSize: '12px', fontWeight: 'bold' }}>{entry.value}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )
+                            }}
                           />
                           <Bar
                             yAxisId="left"
                             dataKey="trato_kg_cab_dia"
-                            name="Trato (kg/cab/dia)"
+                            name="CMS (kg/cab/dia)"
                             fill={BLUE_BAR}
                             radius={[4, 4, 0, 0]}
                             barSize={30}
                           >
                             <LabelList
                               dataKey="trato_kg_cab_dia"
-                              content={TratoLabel}
+                              content={CmsLabel}
                             />
                           </Bar>
                           <Line

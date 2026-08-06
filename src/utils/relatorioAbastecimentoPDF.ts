@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { Chart, registerables } from 'chart.js'
+import { renderRelatorioHeader, type HeaderContext } from './relatorioHeaderPDF'
 
 Chart.register(...registerables)
 
@@ -234,81 +235,19 @@ interface RenderContext {
   fazendaNome: string
 }
 
-// === Header (padrão Manejus 360) ===
+// === Header (delegado para relatorioHeaderPDF) ===
 
 function renderHeader(ctx: RenderContext, titulo: string) {
-  const { doc, pageW, logoBase64, logoFazendaBase64, fazendaNome } = ctx
-
-  // Barra verde
-  setFillColor(doc, GREEN_DARK)
-  doc.rect(0, 0, pageW, 28, 'F')
-
-  // Logo Manej'Us em card branco
-  const logoSize = 16
-  let logoX = 10
-  const logoY = 6
-  const logoMargin = 0.6
-
-  if (logoBase64) {
-    const formato = logoBase64.toLowerCase().includes('data:image/png') ? 'PNG' : 'JPEG'
-    setFillColor(doc, CARD_BG)
-    doc.roundedRect(logoX, logoY, logoSize, logoSize, 2, 2, 'F')
-    doc.addImage(logoBase64, formato, logoX + logoMargin, logoY + logoMargin, logoSize - logoMargin * 2, logoSize - logoMargin * 2)
-    logoX += logoSize + 4
+  const headerCtx: HeaderContext = {
+    doc: ctx.doc,
+    pageW: ctx.pageW,
+    logoGestaoBase64: ctx.logoBase64,
+    logoFazendaBase64: ctx.logoFazendaBase64,
   }
-
-  // Logo da fazenda em card branco
-  if (logoFazendaBase64) {
-    const formato = logoFazendaBase64.toLowerCase().includes('data:image/png') ? 'PNG' : 'JPEG'
-    try {
-      const props = doc.getImageProperties(logoFazendaBase64)
-      const maxFazendaH = 16
-      const maxFazendaW = 30
-      const fazendaH = Math.min(maxFazendaH, (maxFazendaW * props.height) / props.width)
-      const fazendaW = (fazendaH * props.width) / props.height
-      const fazendaY = logoY + (logoSize - fazendaH) / 2
-      const radius = Math.min(2, Math.min(fazendaW, fazendaH) / 4)
-
-      setFillColor(doc, CARD_BG)
-      doc.roundedRect(logoX, fazendaY, fazendaW, fazendaH, radius, radius, 'F')
-      doc.addImage(logoFazendaBase64, formato, logoX + logoMargin, fazendaY + logoMargin, fazendaW - logoMargin * 2, fazendaH - logoMargin * 2)
-      logoX += fazendaW + 5
-    } catch {
-      // Ignora se não conseguir carregar
-    }
-  }
-
-  // Nome do sistema "Manej'Us 360" (360 em amarelo)
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(13)
-  setTextColor(doc, WHITE)
-  doc.text("Manej'Us ", logoX, logoY + 11)
-  const manejUsW = doc.getTextWidth("Manej'Us ")
-  setTextColor(doc, '#FACC15')
-  doc.text('360', logoX + manejUsW, logoY + 11)
-
-  // Título central
-  const titleText = titulo
-  doc.setFontSize(11)
-  doc.setFont('helvetica', 'bold')
-  const titleW = Math.min(220, Math.max(doc.getTextWidth(titleText), fazendaNome ? doc.getTextWidth(fazendaNome) : 0) + 24)
-  const titleCardX = pageW / 2 - titleW / 2
-  const titleCardY = 7
-  const titleCardH = fazendaNome ? 17 : 14
-
-  setFillColor(doc, SHADOW_COLOR)
-  doc.roundedRect(titleCardX + 0.5, titleCardY + 0.5, titleW, titleCardH, 7, 7, 'F')
-  setFillColor(doc, CARD_BG)
-  doc.roundedRect(titleCardX, titleCardY, titleW, titleCardH, 7, 7, 'F')
-  doc.setFontSize(12)
-  setTextColor(doc, GREEN_DARK)
-  doc.text(titleText, pageW / 2, titleCardY + 8, { align: 'center' })
-  if (fazendaNome) {
-    doc.setFontSize(7)
-    setTextColor(doc, MEDIUM_TEXT)
-    doc.setFont('helvetica', 'normal')
-    doc.text(fazendaNome, pageW / 2, titleCardY + 14, { align: 'center' })
-  }
+  renderRelatorioHeader(headerCtx, {
+    titulo,
+    subtitulo: ctx.fazendaNome || undefined,
+  })
 }
 
 // === Pill de período ===
@@ -656,7 +595,7 @@ function renderTabelaOperacional(
 
 // === Função principal ===
 
-export async function gerarPDFRelatorioAbastecimento(dados: DadosPDFRelatorioAbastecimento): Promise<void> {
+export async function gerarPDFRelatorioAbastecimento(dados: DadosPDFRelatorioAbastecimento): Promise<Blob> {
   const doc = new jsPDF({
     orientation: 'landscape',
     unit: 'mm',
@@ -694,8 +633,7 @@ export async function gerarPDFRelatorioAbastecimento(dados: DadosPDFRelatorioAba
   setFillColor(doc, LIGHT_BG)
   doc.rect(0, 0, pageW, pageH, 'F')
 
-  const dataGeracaoFmt = new Date().toLocaleDateString('pt-BR')
-  const tituloPDF = `${dados.titulo} - ${dataGeracaoFmt}`
+  const tituloPDF = 'Relatório de Abastecimento'
 
   renderHeader(ctx, tituloPDF)
   renderPeriodo(ctx, dados.filtros, dados.detalhesPorMaquina)
@@ -760,6 +698,5 @@ export async function gerarPDFRelatorioAbastecimento(dados: DadosPDFRelatorioAba
     doc.text(`Página ${i} de ${numPaginas}`, pageW - margin, pageH - 5, { align: 'right' })
   }
 
-  const nomeArquivo = `${tituloPDF.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')}.pdf`
-  doc.save(nomeArquivo)
+  return doc.output('blob')
 }

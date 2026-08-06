@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf'
 import Chart from 'chart.js/auto'
+import { renderRelatorioHeader, type HeaderContext } from './relatorioHeaderPDF'
 
 export interface DadoRelatorioConsumo {
   data: string
@@ -120,6 +121,17 @@ async function renderizarGraficoConsumo(dados: DadoRelatorioConsumo[], width: nu
       labels: dados.map((d) => d.data_label),
       datasets: [
         {
+          label: 'CMS (kg/cab/dia)',
+          data: dados.map((d) => d.trato_kg_cab_dia),
+          backgroundColor: blueBar,
+          borderRadius: 4,
+          borderSkipped: false,
+          yAxisID: 'y',
+          order: 1,
+          barPercentage: 0.55,
+          categoryPercentage: 0.8,
+        },
+        {
           type: 'line' as any,
           label: 'Consumo %PV',
           data: dados.map((d) => d.consumo_percent_pv),
@@ -137,17 +149,6 @@ async function renderizarGraficoConsumo(dados: DadoRelatorioConsumo[], width: nu
             align: 'top',
             anchor: 'end',
           } as any,
-        },
-        {
-          label: 'Trato (kg/cab/dia)',
-          data: dados.map((d) => d.trato_kg_cab_dia),
-          backgroundColor: blueBar,
-          borderRadius: 4,
-          borderSkipped: false,
-          yAxisID: 'y',
-          order: 1,
-          barPercentage: 0.55,
-          categoryPercentage: 0.8,
         },
         {
           type: 'line' as any,
@@ -172,12 +173,12 @@ async function renderizarGraficoConsumo(dados: DadoRelatorioConsumo[], width: nu
       maintainAspectRatio: false,
       animation: false,
       layout: {
-        padding: { top: 45, right: 40, bottom: 42, left: 45 },
+        padding: { top: 35, right: 20, bottom: 42, left: 45 },
       },
       plugins: {
         legend: {
           position: 'top',
-          align: 'end',
+          align: 'center',
           labels: {
             usePointStyle: true,
             pointStyle: 'circle',
@@ -192,7 +193,7 @@ async function renderizarGraficoConsumo(dados: DadoRelatorioConsumo[], width: nu
           align: 'center',
           color: darkText,
           font: { size: 28, weight: 'bold' },
-          padding: { bottom: 20 },
+          padding: { bottom: 10 },
         },
         tooltip: { enabled: false },
         datalabels: { display: false } as any,
@@ -216,7 +217,7 @@ async function renderizarGraficoConsumo(dados: DadoRelatorioConsumo[], width: nu
           position: 'left',
           title: {
             display: true,
-            text: 'Trato (kg/cab/dia)',
+            text: 'CMS (kg/cab/dia)',
             color: darkText,
             font: { size: 20, weight: 'bold' },
           },
@@ -262,14 +263,14 @@ async function renderizarGraficoConsumo(dados: DadoRelatorioConsumo[], width: nu
         ctx.save()
         ctx.textAlign = 'center'
 
-        const tratoMeta = chart.getDatasetMeta(1)
-        const consumoMeta = chart.getDatasetMeta(0)
+        const tratoMeta = chart.getDatasetMeta(0)
+        const consumoMeta = chart.getDatasetMeta(1)
         const leituraMeta = chart.getDatasetMeta(2)
-        const tratoDataset = chart.data.datasets[1] as any
-        const consumoDataset = chart.data.datasets[0] as any
+        const tratoDataset = chart.data.datasets[0] as any
+        const consumoDataset = chart.data.datasets[1] as any
         const leituraDataset = chart.data.datasets[2] as any
 
-        // 1. Rótulos dos Tratos (barras)
+        // 1. Rótulos do CMS (barras)
         ctx.font = 'bold 16px Inter, sans-serif'
         ctx.fillStyle = darkText
         tratoMeta.data.forEach((bar: any, j: number) => {
@@ -314,18 +315,20 @@ async function renderizarGraficoConsumo(dados: DadoRelatorioConsumo[], width: nu
         })
 
         // 3. Rótulos do Consumo %PV (desenhados por último, com posição dinâmica)
+        // Prevenção de colisão baseada exclusivamente em posição gráfica (pixels):
+        // mede a distância entre o ponto da linha e o topo da barra; se inferior
+        // ao threshold, reposiciona o label para baixo do ponto (lado oposto).
         ctx.font = 'bold 16px Inter, sans-serif'
         ctx.fillStyle = greenLine
         consumoMeta.data.forEach((pt: any, j: number) => {
           const value = `${Number(consumoDataset.data[j]).toFixed(2)}%`
           const bar = tratoMeta.data[j]
-          const distancia = 14
-          const limiteColisao = 24
-          const acima = pt.y - distancia
-          const abaixo = pt.y + distancia
-          const barraTopo = bar ? bar.y : pt.y
-          const colide = bar && Math.abs(pt.y - barraTopo) < limiteColisao
-          const labelY = colide ? abaixo : acima
+          const OFFSET_DEFAULT = 18
+          const OFFSET_COLLISION = 20
+          const COLLISION_THRESHOLD = 18
+          const barraTopo = bar ? bar.y : null
+          const colide = barraTopo != null && Math.abs(pt.y - barraTopo) < COLLISION_THRESHOLD
+          const labelY = colide ? pt.y + OFFSET_COLLISION : pt.y - OFFSET_DEFAULT
           ctx.fillText(value, pt.x, labelY)
         })
 
@@ -345,6 +348,7 @@ interface RenderContext {
   pageH: number
   logoGestaoBase64: string
   logoFazendaBase64: string
+  fazendaNome: string
   greenDark: string
   greenCard: string
   white: string
@@ -356,73 +360,17 @@ interface RenderContext {
 }
 
 function renderHeader(ctx: RenderContext, loteNome: string, isContinuation: boolean) {
-  const { doc, pageW, logoGestaoBase64, logoFazendaBase64, greenDark, cardBg, darkText, mediumText, shadowColor } = ctx
-
-  // Header verde
-  setFillColor(doc, greenDark)
-  doc.rect(0, 0, pageW, 28, 'F')
-
-  // Logo GestaUp
-  const logoGestaoSize = 16
-  const logoGestaoX = 10
-  const logoGestaoY = 6
-  const logoMargin = 0.6
-
-  if (logoGestaoBase64) {
-    const formato = logoGestaoBase64.toLowerCase().includes('data:image/png') ? 'PNG' : 'JPEG'
-    setFillColor(doc, cardBg)
-    doc.roundedRect(logoGestaoX, logoGestaoY, logoGestaoSize, logoGestaoSize, 2, 2, 'F')
-    doc.addImage(logoGestaoBase64, formato, logoGestaoX + logoMargin, logoGestaoY + logoMargin, logoGestaoSize - logoMargin * 2, logoGestaoSize - logoMargin * 2)
+  const headerCtx: HeaderContext = {
+    doc: ctx.doc,
+    pageW: ctx.pageW,
+    logoGestaoBase64: ctx.logoGestaoBase64,
+    logoFazendaBase64: ctx.logoFazendaBase64,
   }
-
-  // Logo da fazenda
-  if (logoFazendaBase64) {
-    const logoFazendaX = logoGestaoX + logoGestaoSize + 6
-    const formato = logoFazendaBase64.toLowerCase().includes('data:image/png') ? 'PNG' : 'JPEG'
-    const logoProps = doc.getImageProperties(logoFazendaBase64)
-    const maxFazendaH = 16
-    const maxFazendaW = 40
-    const logoFazendaH = Math.min(maxFazendaH, (maxFazendaW * logoProps.height) / logoProps.width)
-    const logoFazendaW = (logoFazendaH * logoProps.width) / logoProps.height
-    const logoFazendaY = logoGestaoY + (logoGestaoSize - logoFazendaH) / 2
-    const radius = Math.min(2, Math.min(logoFazendaW, logoFazendaH) / 4)
-
-    setFillColor(doc, cardBg)
-    doc.roundedRect(logoFazendaX, logoFazendaY, logoFazendaW, logoFazendaH, radius, radius, 'F')
-    doc.addImage(logoFazendaBase64, formato, logoFazendaX + logoMargin, logoFazendaY + logoMargin, logoFazendaW - logoMargin * 2, logoFazendaH - logoMargin * 2)
-  }
-
-  // Card branco do título
-  const titleCardX = pageW / 2 - 55
-  const titleCardY = 7
-  const titleCardW = 110
-  const titleCardH = 14
-  setFillColor(doc, shadowColor)
-  doc.roundedRect(titleCardX + 0.5, titleCardY + 0.5, titleCardW, titleCardH, 7, 7, 'F')
-  setFillColor(doc, cardBg)
-  doc.roundedRect(titleCardX, titleCardY, titleCardW, titleCardH, 7, 7, 'F')
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(14)
-  setTextColor(doc, greenDark)
-  doc.text(isContinuation ? 'Análise de Consumo (continuação)' : 'Análise de Consumo', pageW / 2, titleCardY + 9.5, { align: 'center' })
-
-  // Lote pill
-  const lotePillX = pageW - 60
-  const lotePillY = 7
-  const lotePillW = 50
-  const lotePillH = 14
-  setFillColor(doc, shadowColor)
-  doc.roundedRect(lotePillX + 0.5, lotePillY + 0.5, lotePillW, lotePillH, 7, 7, 'F')
-  setFillColor(doc, cardBg)
-  doc.roundedRect(lotePillX, lotePillY, lotePillW, lotePillH, 7, 7, 'F')
-  doc.setFontSize(8)
-  setTextColor(doc, mediumText)
-  doc.setFont('helvetica', 'normal')
-  doc.text('Lote', lotePillX + lotePillW / 2, lotePillY + 5, { align: 'center' })
-  doc.setFontSize(10)
-  setTextColor(doc, darkText)
-  doc.setFont('helvetica', 'bold')
-  doc.text(loteNome, lotePillX + lotePillW / 2, lotePillY + 11, { align: 'center' })
+  renderRelatorioHeader(headerCtx, {
+    titulo: isContinuation ? 'Análise de Consumo (continuação)' : 'Análise de Consumo',
+    subtitulo: ctx.fazendaNome || undefined,
+    pillLabel: loteNome,
+  })
 }
 
 function renderPeriodo(ctx: RenderContext, dataInicio: string, dataFim: string) {
@@ -434,7 +382,7 @@ function renderPeriodo(ctx: RenderContext, dataInicio: string, dataFim: string) 
   doc.setFont('helvetica', 'bold')
   const periodoW = doc.getTextWidth(periodoText) + 12
   const periodoX = 8
-  const periodoY = 32
+  const periodoY = 34
   setFillColor(doc, shadowColor)
   doc.roundedRect(periodoX + 0.5, periodoY + 0.5, periodoW, 10, 5, 5, 'F')
   setFillColor(doc, cardBg)
@@ -451,7 +399,7 @@ function renderKPIsAndPills(ctx: RenderContext, info: InfoLote, dados: DadoRelat
   const kpiW = 36
   const kpiH = 19
   const kpiGap = 3.5
-  let kpiY = 48
+  let kpiY = 64.25
 
   const consumoMedio = dados.length
     ? dados.reduce((s, d) => s + d.consumo_percent_pv, 0) / dados.length
@@ -489,7 +437,7 @@ function renderKPIsAndPills(ctx: RenderContext, info: InfoLote, dados: DadoRelat
   })
 
   // Pills superiores
-  const pillY = 48
+  const pillY = 34
   const pillX = kpiX + kpiW + 10
   const pillH = 19
   const pillGap = 7
@@ -508,8 +456,9 @@ function renderKPIsAndPills(ctx: RenderContext, info: InfoLote, dados: DadoRelat
   const chartX = pillX
   const chartW = pageW - chartX - 8
 
-  // Pills alinhadas à esquerda (mesmo x do gráfico)
-  let pillXAtual = chartX
+  // Pills centralizadas em relação ao card branco do gráfico
+  const totalPillsWidth = pillWidth * pills.length + pillGap * (pills.length - 1)
+  let pillXAtual = chartX + (chartW - totalPillsWidth) / 2
 
   pills.forEach((p) => {
     setFillColor(doc, shadowColor)
@@ -611,8 +560,10 @@ export async function gerarRelatorioConsumoPDF(params: ParametrosRelatorioConsum
     }
   }
 
+  const fazendaNome = lotes[0]?.info?.fazenda_nome || ''
+
   const ctx: RenderContext = {
-    doc, pageW, pageH, logoGestaoBase64, logoFazendaBase64,
+    doc, pageW, pageH, logoGestaoBase64, logoFazendaBase64, fazendaNome,
     greenDark, greenCard, white, darkText, mediumText, lightBg, cardBg, shadowColor,
   }
 
@@ -642,7 +593,7 @@ export async function gerarRelatorioConsumoPDF(params: ParametrosRelatorioConsum
         // Página principal: período + KPIs + pills + gráfico
         renderPeriodo(ctx, dataInicio, dataFim)
         const { chartX, chartW } = renderKPIsAndPills(ctx, lote.info, lote.dados)
-        const chartY = 72
+        const chartY = 58
         const chartH = pageH - chartY - 8
         await renderChartOnPage(ctx, chunk, chartX, chartW, chartY, chartH)
       } else {
