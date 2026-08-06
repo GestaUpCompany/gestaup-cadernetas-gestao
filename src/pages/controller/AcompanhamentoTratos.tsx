@@ -14,8 +14,8 @@ import {
   type LinhaDesvio,
   type ResumoLote,
   type LinhaHorario,
-  type ResumoHorario,
 } from '../../services/acompanhamentoTratosService'
+import type { TipoProgramacao } from '../../services/programacaoTratosService'
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer, ReferenceLine,
@@ -81,12 +81,12 @@ export function AcompanhamentoTratos() {
   const [lotes, setLotes] = useState<LoteOption[]>([])
   const [lotesSelecionados, setLotesSelecionados] = useState<string[]>([])
   const [loteDropdownOpen, setLoteDropdownOpen] = useState(false)
+  const [tipoFiltro, setTipoFiltro] = useState<TipoProgramacao | 'todos'>('todos')
 
   // Dados
   const [linhas, setLinhas] = useState<LinhaDesvio[]>([])
   const [resumos, setResumos] = useState<ResumoLote[]>([])
   const [linhasHorario, setLinhasHorario] = useState<LinhaHorario[]>([])
-  const [resumoHorario, setResumoHorario] = useState<ResumoHorario | null>(null)
 
   // Ordenação da tabela
   const [sortField, setSortField] = useState<'data' | 'lote_nome' | 'planejado_kg' | 'real_kg' | 'desvio_pct'>('data')
@@ -133,12 +133,10 @@ export function AcompanhamentoTratos() {
 
     const cruzado = cruzarPlanejadoReal(planejado, real, dataInicio, dataFim, lotesSelecionados)
     const resumo = calcularResumoPorLote(cruzado, dataInicio, dataFim)
-    const resumoHor = calcularResumoHorarios(horarios)
 
     setLinhas(cruzado)
     setResumos(resumo)
     setLinhasHorario(horarios)
-    setResumoHorario(resumoHor)
     setLoading(false)
   }, [fazendaId, dataInicio, dataFim, lotesSelecionados])
 
@@ -146,13 +144,33 @@ export function AcompanhamentoTratos() {
     if (fazendaId) loadData()
   }, [fazendaId, loadData])
 
+  // Aplicar filtro de tipo (engorda/sequestro) sobre os dados carregados
+  const linhasFiltradas = useMemo(() => {
+    if (tipoFiltro === 'todos') return linhas
+    return linhas.filter((l) => l.tipo === tipoFiltro)
+  }, [linhas, tipoFiltro])
+
+  const resumosFiltrados = useMemo(() => {
+    if (tipoFiltro === 'todos') return resumos
+    return resumos.filter((r) => r.tipo === tipoFiltro)
+  }, [resumos, tipoFiltro])
+
+  const linhasHorarioFiltradas = useMemo(() => {
+    if (tipoFiltro === 'todos') return linhasHorario
+    return linhasHorario.filter((l) => l.tipo === tipoFiltro)
+  }, [linhasHorario, tipoFiltro])
+
+  const resumoHorarioFiltrado = useMemo(() => {
+    return calcularResumoHorarios(linhasHorarioFiltradas)
+  }, [linhasHorarioFiltradas])
+
   // Métricas globais
   const metricas = useMemo(() => {
     let planejadoTotal = 0
     let realTotal = 0
     let diasComRegistro = 0
 
-    for (const l of linhas) {
+    for (const l of linhasFiltradas) {
       if (l.planejado_kg != null) planejadoTotal += l.planejado_kg
       realTotal += l.real_kg
       if (l.n_tratos > 0) diasComRegistro++
@@ -169,15 +187,15 @@ export function AcompanhamentoTratos() {
       desvioTotal,
       desvioPctGlobal,
       diasComRegistro,
-      totalLinhas: linhas.length,
+      totalLinhas: linhasFiltradas.length,
     }
-  }, [linhas])
+  }, [linhasFiltradas])
 
   // Dados para gráfico de tendência (desvio % por data, consolidado)
   const dadosGraficoTendencia = useMemo(() => {
     const mapa: Record<string, { data: string; planejado: number; real: number; desvio_pct: number | null }> = {}
 
-    for (const l of linhas) {
+    for (const l of linhasFiltradas) {
       if (l.planejado_kg == null) continue // pular sem planejamento no gráfico
       if (!mapa[l.data]) {
         mapa[l.data] = { data: l.data, planejado: 0, real: 0, desvio_pct: 0 }
@@ -195,20 +213,20 @@ export function AcompanhamentoTratos() {
     })).sort((a, b) => a.data.localeCompare(b.data))
 
     return arr
-  }, [linhas])
+  }, [linhasFiltradas])
 
   // Dados para gráfico de barras (planejado vs real por lote)
   const dadosGraficoLotes = useMemo(() => {
-    return resumos.map((r) => ({
+    return resumosFiltrados.map((r) => ({
       lote: r.lote_nome,
       planejado: Number(r.planejado_total_kg.toFixed(1)),
       real: Number(r.real_total_kg.toFixed(1)),
     }))
-  }, [resumos])
+  }, [resumosFiltrados])
 
   // Tabela ordenada
   const linhasOrdenadas = useMemo(() => {
-    const sorted = [...linhas]
+    const sorted = [...linhasFiltradas]
     sorted.sort((a, b) => {
       let cmp = 0
       switch (sortField) {
@@ -231,7 +249,7 @@ export function AcompanhamentoTratos() {
       return sortOrder === 'asc' ? cmp : -cmp
     })
     return sorted
-  }, [linhas, sortField, sortOrder])
+  }, [linhasFiltradas, sortField, sortOrder])
 
   const handleSort = (field: typeof sortField) => {
     if (sortField === field) {
@@ -250,6 +268,7 @@ export function AcompanhamentoTratos() {
 
   const limparFiltros = () => {
     setLotesSelecionados([])
+    setTipoFiltro('todos')
     setDataInicio(trintaAtras.toISOString().substring(0, 10))
     setDataFim(hoje.toISOString().substring(0, 10))
   }
@@ -335,6 +354,26 @@ export function AcompanhamentoTratos() {
             )}
           </div>
 
+          {/* Seletor de tipo */}
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Tipo</label>
+            <div className="inline-flex rounded-lg border-2 border-gray-200 overflow-hidden">
+              {(['todos', 'engorda', 'sequestro'] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTipoFiltro(t)}
+                  className={`px-3 py-2 text-sm font-medium transition-colors ${
+                    tipoFiltro === t
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-white text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {t === 'todos' ? 'Todos' : t === 'engorda' ? 'Engorda' : 'Sequestro'}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <Button variant="secondary" size="sm" onClick={limparFiltros}>
             Limpar filtros
           </Button>
@@ -346,7 +385,7 @@ export function AcompanhamentoTratos() {
           <CardSkeleton />
           <CardSkeleton />
         </div>
-      ) : linhas.length === 0 ? (
+      ) : linhasFiltradas.length === 0 ? (
         <Card className="p-8 text-center" disableHover>
           <p className="text-gray-500">Nenhum dado encontrado para o período selecionado.</p>
           <p className="text-sm text-gray-400 mt-1">
@@ -451,7 +490,7 @@ export function AcompanhamentoTratos() {
           </div>
 
           {/* Acompanhamento de Horários */}
-          {resumoHorario && resumoHorario.tratos_com_horario > 0 && (
+          {resumoHorarioFiltrado && resumoHorarioFiltrado.tratos_com_horario > 0 && (
             <>
               <div className="border-t border-gray-200 pt-4">
                 <h3 className="text-lg font-semibold text-gray-800">Pontualidade dos Tratos</h3>
@@ -465,41 +504,41 @@ export function AcompanhamentoTratos() {
               <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
                 <Card className="p-4" disableHover>
                   <p className="text-xs text-gray-500 font-medium">Tratos no horário</p>
-                  <p className="text-xl font-bold text-green-600 mt-1">{resumoHorario.tratos_no_horario}</p>
+                  <p className="text-xl font-bold text-green-600 mt-1">{resumoHorarioFiltrado.tratos_no_horario}</p>
                   <p className="text-xs text-gray-400 mt-0.5">desvio até 15 min</p>
                 </Card>
                 <Card className="p-4" disableHover>
                   <p className="text-xs text-gray-500 font-medium">Atraso leve</p>
-                  <p className="text-xl font-bold text-yellow-600 mt-1">{resumoHorario.tratos_atraso_leve}</p>
+                  <p className="text-xl font-bold text-yellow-600 mt-1">{resumoHorarioFiltrado.tratos_atraso_leve}</p>
                   <p className="text-xs text-gray-400 mt-0.5">15 a 30 min</p>
                 </Card>
                 <Card className="p-4" disableHover>
                   <p className="text-xs text-gray-500 font-medium">Atraso grave</p>
-                  <p className="text-xl font-bold text-red-600 mt-1">{resumoHorario.tratos_atraso_grave}</p>
+                  <p className="text-xl font-bold text-red-600 mt-1">{resumoHorarioFiltrado.tratos_atraso_grave}</p>
                   <p className="text-xs text-gray-400 mt-0.5">mais de 30 min</p>
                 </Card>
                 <Card className="p-4" disableHover>
                   <p className="text-xs text-gray-500 font-medium">Desvio médio</p>
                   <p className={`text-xl font-bold mt-1 ${
-                    resumoHorario.desvio_medio_min != null && Math.abs(resumoHorario.desvio_medio_min) > 30
+                    resumoHorarioFiltrado.desvio_medio_min != null && Math.abs(resumoHorarioFiltrado.desvio_medio_min) > 30
                       ? 'text-red-600'
-                      : resumoHorario.desvio_medio_min != null && Math.abs(resumoHorario.desvio_medio_min) > 15
+                      : resumoHorarioFiltrado.desvio_medio_min != null && Math.abs(resumoHorarioFiltrado.desvio_medio_min) > 15
                       ? 'text-yellow-600'
                       : 'text-green-600'
                   }`}>
-                    {formatDesvioMin(resumoHorario.desvio_medio_min)}
+                    {formatDesvioMin(resumoHorarioFiltrado.desvio_medio_min)}
                   </p>
                 </Card>
                 <Card className="p-4" disableHover>
                   <p className="text-xs text-gray-500 font-medium">Pior desvio</p>
                   <p className={`text-xl font-bold mt-1 ${
-                    resumoHorario.pior_desvio_min != null && Math.abs(resumoHorario.pior_desvio_min) > 30
+                    resumoHorarioFiltrado.pior_desvio_min != null && Math.abs(resumoHorarioFiltrado.pior_desvio_min) > 30
                       ? 'text-red-600'
-                      : resumoHorario.pior_desvio_min != null && Math.abs(resumoHorario.pior_desvio_min) > 15
+                      : resumoHorarioFiltrado.pior_desvio_min != null && Math.abs(resumoHorarioFiltrado.pior_desvio_min) > 15
                       ? 'text-yellow-600'
                       : 'text-green-600'
                   }`}>
-                    {formatDesvioMin(resumoHorario.pior_desvio_min)}
+                    {formatDesvioMin(resumoHorarioFiltrado.pior_desvio_min)}
                   </p>
                 </Card>
               </div>
@@ -507,7 +546,7 @@ export function AcompanhamentoTratos() {
               {/* Tabela detalhada de horários */}
               <Card className="p-4" disableHover>
                 <h3 className="text-sm font-semibold text-gray-700 mb-3">
-                  Detalhamento por trato ({linhasHorario.length} registros)
+                  Detalhamento por trato ({linhasHorarioFiltradas.length} registros)
                 </h3>
                 <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
                   <table className="min-w-full divide-y divide-gray-200 sticky-header">
@@ -524,7 +563,7 @@ export function AcompanhamentoTratos() {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-100">
-                      {linhasHorario.map((l, idx) => {
+                      {linhasHorarioFiltradas.map((l, idx) => {
                         const cor = CORES_STATUS[l.status] || CORES_STATUS.sem_execucao
                         return (
                           <tr key={`${l.lote_id}-${l.data}-${l.ordem_trato}-${idx}`} className="hover:bg-gray-50">
@@ -576,7 +615,7 @@ export function AcompanhamentoTratos() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-100">
-                  {resumos.map((r) => {
+                  {resumosFiltrados.map((r) => {
                     const cor = CORES_STATUS[r.status]
                     return (
                       <tr key={r.lote_id} className="hover:bg-gray-50">

@@ -26,6 +26,7 @@ export interface RegistroTratoDia {
   leitura_media: number | null
   tratadores: string[]
   qtd_registros: number
+  programacao_ids: string[]
 }
 
 export interface LinhaDesvio {
@@ -41,6 +42,7 @@ export interface LinhaDesvio {
   leitura_media: number | null
   tratador: string | null
   status: 'ok' | 'alerta' | 'critico' | 'sem_execucao'
+  tipo: TipoProgramacao | null // engorda, sequestro ou null (sem planejamento)
 }
 
 export interface ResumoLote {
@@ -53,6 +55,7 @@ export interface ResumoLote {
   dias_com_registro: number
   dias_no_periodo: number
   status: 'ok' | 'alerta' | 'critico' | 'sem_execucao'
+  tipo: TipoProgramacao | null
 }
 
 /**
@@ -139,6 +142,7 @@ export async function fetchRealPorLoteDia(
       kg_ofertado_real,
       leitura_cocho_nota,
       nome_usuario,
+      programacao_id,
       lotes (nome),
       currais (nome)
     `)
@@ -173,6 +177,7 @@ export async function fetchRealPorLoteDia(
         leitura_media: null,
         tratadores: [],
         qtd_registros: 0,
+        programacao_ids: [],
       }
     }
 
@@ -181,6 +186,11 @@ export async function fetchRealPorLoteDia(
     entry.kg_ofertado_total += Number(r.kg_ofertado_real) || 0
     entry.n_tratos += 1
     entry.qtd_registros += 1
+
+    // Coletar programacao_ids únicos para determinar o tipo
+    if (r.programacao_id && !entry.programacao_ids.includes(r.programacao_id)) {
+      entry.programacao_ids.push(r.programacao_id)
+    }
 
     // Coletar tratadores únicos
     if (r.nome_usuario && !entry.tratadores.includes(r.nome_usuario)) {
@@ -253,6 +263,7 @@ export function cruzarPlanejadoReal(
     const kgPlanejadoDia = curraisLote.reduce((sum, c) => sum + c.kg_mn_dia, 0)
     const loteNome = curraisLote[0]?.lote_nome ?? '—'
     const curralNome = curraisLote[0]?.curral_nome ?? null
+    const tipoProg = curraisLote[0]?.tipo ?? null
 
     // Data de início efetiva do planejamento: created_at da programação.
     // A tabela programacao_tratos não tem data_inicio, então usamos created_at como proxy.
@@ -285,6 +296,7 @@ export function cruzarPlanejadoReal(
           leitura_media: realDia.leitura_media,
           tratador: realDia.tratadores.join(', ') || null,
           status: classificarDesvio(desvioPct),
+          tipo: tipoProg,
         })
       } else {
         // Dia sem execução para lote planejado
@@ -301,6 +313,7 @@ export function cruzarPlanejadoReal(
           leitura_media: null,
           tratador: null,
           status: 'sem_execucao',
+          tipo: tipoProg,
         })
       }
     }
@@ -339,6 +352,7 @@ export function cruzarPlanejadoReal(
         leitura_media: r.leitura_media,
         tratador: r.tratadores.join(', ') || null,
         status: classificarDesvio(desvioPct),
+        tipo: null,
       })
     }
   }
@@ -383,6 +397,7 @@ export function calcularResumoPorLote(
         dias_com_registro: 0,
         dias_no_periodo: diasNoPeriodo,
         status: 'ok',
+        tipo: linha.tipo,
       }
     }
 
@@ -420,6 +435,7 @@ export interface LinhaHorario {
   horario_real: string | null // HH:MM (timezone da fazenda)
   desvio_min: number | null // minutos de desvio (positivo = atraso, negativo = adianto)
   status: 'ok' | 'alerta' | 'critico' | 'sem_horario'
+  tipo: TipoProgramacao | null
 }
 
 export interface ResumoHorario {
@@ -501,17 +517,30 @@ export async function fetchHorariosTratos(
       .filter((id: any) => id != null)
   )]
 
-  // Buscar horários sugeridos
+  // Buscar horários sugeridos e tipos de programação
   let horariosMapa: Record<string, string | null> = {} // chave: "programacao_id|ordem_trato" -> horario
+  let tiposMapa: Record<string, TipoProgramacao | null> = {} // programacao_id -> tipo
   if (programacaoIds.length > 0) {
-    const { data: percentuais } = await supabase
-      .from('programacao_tratos_percentuais')
-      .select('programacao_id, ordem_trato, horario_sugerido')
-      .in('programacao_id', programacaoIds)
+    const [percentuaisRes, progsRes] = await Promise.all([
+      supabase
+        .from('programacao_tratos_percentuais')
+        .select('programacao_id, ordem_trato, horario_sugerido')
+        .in('programacao_id', programacaoIds),
+      supabase
+        .from('programacao_tratos')
+        .select('id, tipo')
+        .in('id', programacaoIds),
+    ])
 
-    if (percentuais) {
-      for (const p of percentuais) {
+    if (percentuaisRes.data) {
+      for (const p of percentuaisRes.data) {
         horariosMapa[`${p.programacao_id}|${p.ordem_trato}`] = p.horario_sugerido || null
+      }
+    }
+
+    if (progsRes.data) {
+      for (const p of progsRes.data) {
+        tiposMapa[p.id] = p.tipo as TipoProgramacao
       }
     }
   }
@@ -577,6 +606,7 @@ export async function fetchHorariosTratos(
       horario_real: horarioReal,
       desvio_min: desvioMin,
       status: classificarDesvioHorario(desvioMin),
+      tipo: r.programacao_id ? tiposMapa[r.programacao_id] ?? null : null,
     })
   }
 

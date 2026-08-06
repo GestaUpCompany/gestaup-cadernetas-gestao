@@ -1,0 +1,32 @@
+{
+  "backup_date": "2026-08-06",
+  "fazendas": ["Fazenda Sirio", "Grupo Correa"],
+  "fazenda_ids": {
+    "sirio": "99af0828-7371-49a4-9b0d-cba0eca03a15",
+    "grupo_correa": "075f62cd-7a10-421d-ba0e-3c5f4155a806"
+  },
+  "description": "Backup antes do recalculo retroativo apos mudanca de timezone para America/Cuiaba. Os 26 registros (25 Sirio + 1 Grupo Correa) nao tem lote_id nem consumo calculado, pois sao registros antigos com lote digitado livremente. A divergencia era apenas na exibicao da data (data::date em UTC retornava o dia seguinte). Apos ALTER DATABASE SET timezone, data::date agora retorna a data Cuiaba correta. Nao ha calculos de consumo ou peso para refazer.",
+  "total_registros": 26,
+  "registros_com_lote_id": 0,
+  "registros_com_consumo_calculado": 0,
+  "registros_com_peso_vivo": 0,
+  "conclusao": "Nao ha calculos retroativos a refazer. A correcao de timezone do banco ja corrige a exibicao da data para todos os registros. As funcoes recalcular_metricas_suplementacao e recalcular_peso_vivo_lote filtram por lote_id IS NOT NULL, e nenhum destes 26 registros tem lote_id.",
+  "registros": [
+    {"id": "e0373c91-479b-47d8-bded-b084c0104886", "fazenda": "Grupo Correa", "lote": "Lote A", "lote_id": null, "formulacao": "Racao C", "data": "2026-05-11 20:00:00-04", "data_cuiaba": "2026-05-11", "hora_cuiaba": 20, "kg_cocho": 25, "n_cabecas": null, "peso_vivo_kg": null, "consumo_medio_geral_kg_mn": null},
+    {"id": "0c84f0a8-2d4a-4aac-b8ab-f22502c6c80e", "fazenda": "Fazenda Sirio", "lote": "Lote 1-26 / 12-25", "lote_id": null, "formulacao": "Sal Mineral Matsuda", "data": "2026-05-06 20:00:00-04", "data_cuiaba": "2026-05-06", "hora_cuiaba": 20, "kg_cocho": 30, "n_cabecas": null, "peso_vivo_kg": null, "consumo_medio_geral_kg_mn": null},
+    {"id": "960a16e0-fdd9-482e-a2d6-ae34f406598f", "fazenda": "Fazenda Sirio", "lote": "Lote 1-26 / 12-25", "lote_id": null, "formulacao": "Sal Mineral Matsuda", "data": "2026-05-10 20:00:00-04", "data_cuiaba": "2026-05-10", "hora_cuiaba": 20, "kg_cocho": 90, "n_cabecas": null, "peso_vivo_kg": null, "consumo_medio_geral_kg_mn": null},
+    {"id": "88f546c7-a7e4-4853-a2f7-60e3aad938bc", "fazenda": "Fazenda Sirio", "lote": "Lote 10-25", "lote_id": null, "formulacao": "Sal Mineral Matsuda", "data": "2026-05-11 20:00:00-04", "data_cuiaba": "2026-05-11", "hora_cuiaba": 20, "kg_cocho": 90, "n_cabecas": null, "peso_vivo_kg": null, "consumo_medio_geral_kg_mn": null},
+    {"id": "78c436c7-38a6-44d6-9c53-6d6fa79938e4", "fazenda": "Fazenda Sirio", "lote": "Lote 11 / 12-25", "lote_id": null, "formulacao": "Sal Mineral Prado Cria", "data": "2026-05-11 20:00:00-04", "data_cuiaba": "2026-05-11", "hora_cuiaba": 20, "kg_cocho": 90, "n_cabecas": null, "peso_vivo_kg": null, "consumo_medio_geral_kg_mn": null},
+    {"id": "c060bbf3-7f92-4917-8b55-2c2bbef1f8bf", "fazenda": "Fazenda Sirio", "lote": "Lote 11-26", "lote_id": null, "formulacao": "Casca de Soja", "data": "2026-03-04 20:00:00-04", "data_cuiaba": "2026-03-04", "hora_cuiaba": 20, "kg_cocho": 44, "n_cabecas": null, "peso_vivo_kg": null, "consumo_medio_geral_kg_mn": null},
+    {"id": "ac03b1e9-f7c6-4a7e-ad3e-695c50c7d5b4", "fazenda": "Fazenda Sirio", "lote": "Lote 13", "lote_id": null, "formulacao": "1,50%", "data": "2026-05-07 20:00:00-04", "data_cuiaba": "2026-05-07", "hora_cuiaba": 20, "kg_cocho": 120, "n_cabecas": null, "peso_vivo_kg": null, "consumo_medio_geral_kg_mn": null},
+    {"id": "00971d69-29f8-41fb-bb6d-000181c9801c", "fazenda": "Fazenda Sirio", "lote": "Lote 13", "lote_id": null, "formulacao": "1,50%", "data": "2026-05-09 20:00:00-04", "data_cuiaba": "2026-05-09", "hora_cuiaba": 20, "kg_cocho": 120, "n_cabecas": null, "peso_vivo_kg": null, "consumo_medio_geral_kg_mn": null},
+    {"id": "bfd06f22-32b3-43b2-b31c-4704a68683f8", "fazenda": "Fazenda Sirio", "lote": "Lote 13", "lote_id": null, "formulacao": "1,50%", "data": "2026-05-10 20:00:00-04", "data_cuiaba": "2026-05-10", "hora_cuiaba": 20, "kg_cocho": 90, "n_cabecas": null, "peso_vivo_kg": null, "consumo_medio_geral_kg_mn": null},
+    {"id": "95bd2600-6847-4728-bc6b-597179f72e49", "fazenda": "Fazenda Sirio", "lote": "Lote 15", "lote_id": null, "formulacao": "Proteinado 0,2%", "data": "2026-05-04 20:00:00-04", "data_cuiaba": "2026-05-04", "hora_cuiaba": 20, "kg_cocho": 150, "n_cabecas": null, "peso_vivo_kg": null, "consumo_medio_geral_kg_mn": null},
+    {"id": "32de9d9c-7296-4bbc-b5f0-5dd4f51425fa", "fazenda": "Fazenda Sirio", "lote": "Lote 15", "lote_id": null, "formulacao": "Proteinado 0,2%", "data": "2026-05-04 20:00:00-04", "data_cuiaba": "2026-05-04", "hora_cuiaba": 20, "kg_cocho": 120, "n_cabecas": null, "peso_vivo_kg": null, "consumo_medio_geral_kg_mn": null},
+    {"id": "47891c44-d802-4311-82a5-ca9366736c1e", "fazenda": "Fazenda Sirio", "lote": "Lote 16", "lote_id": null, "formulacao": "Proteinado 0,2%", "data": "2026-05-04 20:00:00-04", "data_cuiaba": "2026-05-04", "hora_cuiaba": 20, "kg_cocho": 180, "n_cabecas": null, "peso_vivo_kg": null, "consumo_medio_geral_kg_mn": null},
+    {"id": "f10f905b-7668-42b2-a800-1433fd1cfa86", "fazenda": "Fazenda Sirio", "lote": "Lote 16", "lote_id": null, "formulacao": "Proteinado 0,2%", "data": "2026-05-11 20:00:00-04", "data_cuiaba": "2026-05-11", "hora_cuiaba": 20, "kg_cocho": 120, "n_cabecas": null, "peso_vivo_kg": null, "consumo_medio_geral_kg_mn": null},
+    {"id": "40143fb2-4ed7-4cce-adb1-ce1fd0db86eb", "fazenda": "Fazenda Sirio", "lote": "Lote 16", "lote_id": null, "formulacao": "Proteinado 0,2%", "data": "2026-05-11 20:00:00-04", "data_cuiaba": "2026-05-11", "hora_cuiaba": 20, "kg_cocho": 150, "n_cabecas": null, "peso_vivo_kg": null, "consumo_medio_geral_kg_mn": null},
+    {"id": "909ab4cf-6956-4079-9ec4-39be4ba04e51", "fazenda": "Fazenda Sirio", "lote": "Lote 16", "lote_id": null, "formulacao": "Proteinado 0,2%", "data": "2026-06-01 20:00:00-04", "data_cuiaba": "2026-06-01", "hora_cuiaba": 20, "kg_cocho": 120, "n_cabecas": null, "peso_vivo_kg": null, "consumo_medio_geral_kg_mn": null},
+    {"id": "b0a6f362-21de-4904-afef-cee1e9533407", "fazenda": "Fazenda Sirio", "lote": "Lote 2-26", "lote_id": null, "formulacao": "Sal mineral Vitasal Cria", "data": "2026-05-04 20:00:00-04", "data_cuiaba": "2026-05-04", "hora_cuiaba": 20, "kg_cocho": 30, "n_cabecas": null, "peso_vivo_kg": null, "consumo_medio_geral_kg_mn": null}
+  ]
+}

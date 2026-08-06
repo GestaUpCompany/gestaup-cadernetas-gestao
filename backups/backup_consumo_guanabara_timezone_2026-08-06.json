@@ -1,0 +1,46 @@
+{
+  "backup_date": "2026-08-06",
+  "fazenda": "Guanabara",
+  "fazenda_id": "f8be22c5-12e9-4bda-a813-fae8cb3d47ec",
+  "description": "Backup antes do recalculo de consumo e peso apos mudanca de timezone para America/Cuiaba",
+  "timezone_change": "ALTER DATABASE postgres SET timezone TO 'America/Cuiaba'",
+  "registros_antes_do_recalculo": [
+    {"id": "f1543c70-32cd-4f28-9621-99158e76ea6b", "lote": "Farmacia", "data_cuiaba": "2026-07-27", "kg_cocho": 548, "n_cabecas": 12, "peso_vivo_kg": 454, "consumo_medio_geral_kg_mn": 45.666667, "consumo_medio_geral_percent_pv": 8.929141, "custo_medio_reais_cab_dia": 41.270337},
+    {"id": "44ef15bf-a886-4962-891e-03b2ac11db34", "lote": "Farmacia", "data_cuiaba": "2026-07-29", "kg_cocho": 338, "n_cabecas": 15, "peso_vivo_kg": 454.8, "consumo_medio_geral_kg_mn": 11.266667, "consumo_medio_geral_percent_pv": 2.199081, "custo_medio_reais_cab_dia": 10.182025},
+    {"id": "aab32203-ece7-44a4-a2a4-3792f1edda6d", "lote": "Farmacia", "data_cuiaba": "2026-07-31", "kg_cocho": 429, "n_cabecas": 15, "peso_vivo_kg": 456.4, "consumo_medio_geral_kg_mn": 9.533333, "consumo_medio_geral_percent_pv": 1.854237, "custo_medio_reais_cab_dia": 8.615559},
+    {"id": "80010f3e-f7c6-46fa-8a9e-b599f5897232", "lote": "Farmacia", "data_cuiaba": "2026-08-03", "kg_cocho": 612, "n_cabecas": 15, "peso_vivo_kg": 458.8, "consumo_medio_geral_kg_mn": 20.4, "consumo_medio_geral_percent_pv": 3.947053, "custo_medio_reais_cab_dia": 18.436092},
+    {"id": "e9d4b95a-2093-47a1-8ada-4da4e1ae6e94", "lote": "Lote 02 Recria", "data_cuiaba": "2026-07-24", "kg_cocho": 689, "n_cabecas": 240, "peso_vivo_kg": 270.5, "consumo_medio_geral_kg_mn": 0.717708, "consumo_medio_geral_percent_pv": 0.242429, "custo_medio_reais_cab_dia": 1.022971},
+    {"id": "0d0d011d-c367-4d24-8672-1f5fe19b5ad8", "lote": "Lote 02 Recria", "data_cuiaba": "2026-07-27", "kg_cocho": 672, "n_cabecas": 240, "peso_vivo_kg": 272.5, "consumo_medio_geral_kg_mn": 2.8, "consumo_medio_geral_percent_pv": 0.938848, "custo_medio_reais_cab_dia": 3.990924},
+    {"id": "97385189-a379-4afa-9fd2-ed62c33e8c50", "lote": "Lote 02 Recria", "data_cuiaba": "2026-07-29", "kg_cocho": 643, "n_cabecas": 240, "peso_vivo_kg": 273, "consumo_medio_geral_kg_mn": 1.339583, "consumo_medio_geral_percent_pv": 0.448343, "custo_medio_reais_cab_dia": 1.909348},
+    {"id": "54c506a7-8371-40af-a16c-5a98f73a5786", "lote": "Lote 02 Recria", "data_cuiaba": "2026-07-31", "kg_cocho": 644, "n_cabecas": 240, "peso_vivo_kg": 274, "consumo_medio_geral_kg_mn": 0.894444, "consumo_medio_geral_percent_pv": 0.298268, "custo_medio_reais_cab_dia": 1.274878},
+    {"id": "c2734cb2-93a8-405d-92c6-2692041711bf", "lote": "Lote 02 Recria", "data_cuiaba": "2026-08-03", "kg_cocho": 618, "n_cabecas": 240, "peso_vivo_kg": 275.5, "consumo_medio_geral_kg_mn": 1.2875, "consumo_medio_geral_percent_pv": 0.427001, "custo_medio_reais_cab_dia": 1.835112},
+    {"id": "0900af40-2242-4ac1-b5c5-418d24d9b9ef", "lote": "Lote 05", "data_cuiaba": "2026-07-24", "kg_cocho": 2325, "n_cabecas": 79, "peso_vivo_kg": 350, "consumo_medio_geral_kg_mn": 7.357595, "consumo_medio_geral_percent_pv": 1.866096, "custo_medio_reais_cab_dia": 6.649279},
+    {"id": "4c9803ab-f748-4bf9-adba-a53bbb2e4939", "lote": "Lote 05", "data_cuiaba": "2026-07-29", "kg_cocho": 1816, "n_cabecas": 79, "peso_vivo_kg": 538.4, "consumo_medio_geral_kg_mn": 11.493671, "consumo_medio_geral_percent_pv": 1.895047, "custo_medio_reais_cab_dia": 10.387175},
+    {"id": "9d33ccd9-edbb-40b3-ac82-e9db24f98f22", "lote": "Lote 05", "data_cuiaba": "2026-07-31", "kg_cocho": 2549, "n_cabecas": 79, "peso_vivo_kg": 541.2, "consumo_medio_geral_kg_mn": 10.755274, "consumo_medio_geral_percent_pv": 1.764127, "custo_medio_reais_cab_dia": 9.719864},
+    {"id": "b5d0ca5d-dd79-478d-9eab-e7a3e2486e34", "lote": "Lote 05", "data_cuiaba": "2026-08-03", "kg_cocho": 2190, "n_cabecas": 79, "peso_vivo_kg": 545.4, "consumo_medio_geral_kg_mn": 13.860759, "consumo_medio_geral_percent_pv": 2.255995, "custo_medio_reais_cab_dia": 12.526384},
+    {"id": "2b8d3efc-7e3f-4307-b893-5140d5930a2e", "lote": "Lote 05 Recria", "data_cuiaba": "2026-07-24", "kg_cocho": 2053, "n_cabecas": 177, "peso_vivo_kg": 390.8, "consumo_medio_geral_kg_mn": 2.899718, "consumo_medio_geral_percent_pv": 0.668909, "custo_medio_reais_cab_dia": 3.050909},
+    {"id": "f46131c6-748e-4679-b831-7a379194c9cc", "lote": "Lote 05 Recria", "data_cuiaba": "2026-07-27", "kg_cocho": 1353, "n_cabecas": 177, "peso_vivo_kg": 394, "consumo_medio_geral_kg_mn": 7.644068, "consumo_medio_geral_percent_pv": 1.749017, "custo_medio_reais_cab_dia": 8.04263},
+    {"id": "1b5fcb17-cbad-41f1-b50c-feeb43c97a10", "lote": "Lote 05 Recria", "data_cuiaba": "2026-07-29", "kg_cocho": 1326, "n_cabecas": 177, "peso_vivo_kg": 394.8, "consumo_medio_geral_kg_mn": 3.745763, "consumo_medio_geral_percent_pv": 0.855321, "custo_medio_reais_cab_dia": 3.941067},
+    {"id": "b76c46b6-cf23-4414-a4b7-08a36d609693", "lote": "Lote 05 Recria", "data_cuiaba": "2026-07-31", "kg_cocho": 1291, "n_cabecas": 177, "peso_vivo_kg": 396.4, "consumo_medio_geral_kg_mn": 2.431262, "consumo_medio_geral_percent_pv": 0.552922, "custo_medio_reais_cab_dia": 2.558028},
+    {"id": "854962b1-81fc-4d65-835b-cd9dc22a405c", "lote": "Lote 05 Recria", "data_cuiaba": "2026-08-03", "kg_cocho": 1297, "n_cabecas": 177, "peso_vivo_kg": 398.8, "consumo_medio_geral_kg_mn": 3.663842, "consumo_medio_geral_percent_pv": 0.828223, "custo_medio_reais_cab_dia": 3.854875},
+    {"id": "8436a63a-2023-4605-a52a-823db83115a6", "lote": "Lote 06", "data_cuiaba": "2026-07-24", "kg_cocho": 2463, "n_cabecas": 93, "peso_vivo_kg": 421, "consumo_medio_geral_kg_mn": 6.620968, "consumo_medio_geral_percent_pv": 1.396065, "custo_medio_reais_cab_dia": 5.983567},
+    {"id": "7f91c0a8-9d67-4741-a791-7278dee818c2", "lote": "Lote 06", "data_cuiaba": "2026-07-29", "kg_cocho": 1854, "n_cabecas": 93, "peso_vivo_kg": 548.4, "consumo_medio_geral_kg_mn": 9.967742, "consumo_medio_geral_percent_pv": 1.613487, "custo_medio_reais_cab_dia": 9.008147},
+    {"id": "854d1cb2-f7b9-459c-a7c3-3dfcf1623fc6", "lote": "Lote 06", "data_cuiaba": "2026-07-31", "kg_cocho": 2120, "n_cabecas": 93, "peso_vivo_kg": 551.2, "consumo_medio_geral_kg_mn": 7.598566, "consumo_medio_geral_percent_pv": 1.223739, "custo_medio_reais_cab_dia": 6.867052},
+    {"id": "866a3aa4-ade4-4583-b333-58a4cbbd7c0e", "lote": "Lote 06", "data_cuiaba": "2026-08-03", "kg_cocho": 1989, "n_cabecas": 93, "peso_vivo_kg": 555.4, "consumo_medio_geral_kg_mn": 10.693548, "consumo_medio_geral_percent_pv": 1.709158, "custo_medio_reais_cab_dia": 9.66408},
+    {"id": "68014725-6bfd-41e2-bb92-b78ba2582659", "lote": "Lote 10 Recria", "data_cuiaba": "2026-07-24", "kg_cocho": 521, "n_cabecas": 217, "peso_vivo_kg": 280.5, "consumo_medio_geral_kg_mn": 0.60023, "consumo_medio_geral_percent_pv": 0.195519, "custo_medio_reais_cab_dia": 0.855526},
+    {"id": "4a0eb237-b94d-4eaf-b1a5-ed5bd76fd382", "lote": "Lote 10 Recria", "data_cuiaba": "2026-07-27", "kg_cocho": 612, "n_cabecas": 217, "peso_vivo_kg": 282.5, "consumo_medio_geral_kg_mn": 2.820276, "consumo_medio_geral_percent_pv": 0.912172, "custo_medio_reais_cab_dia": 4.019824},
+    {"id": "d47e762e-8d69-45c0-9306-12e1dbc9413c", "lote": "Lote 10 Recria", "data_cuiaba": "2026-07-29", "kg_cocho": 630, "n_cabecas": 217, "peso_vivo_kg": 283, "consumo_medio_geral_kg_mn": 1.451613, "consumo_medio_geral_percent_pv": 0.468671, "custo_medio_reais_cab_dia": 2.069028},
+    {"id": "a5cc40f6-f7c4-4799-9ad3-c42eb6bf55e2", "lote": "Lote 10 Recria", "data_cuiaba": "2026-07-31", "kg_cocho": 618, "n_cabecas": 217, "peso_vivo_kg": 284, "consumo_medio_geral_kg_mn": 0.949309, "consumo_medio_geral_percent_pv": 0.305417, "custo_medio_reais_cab_dia": 1.353079},
+    {"id": "81c0bea4-2abb-49d3-baab-d34adbd2ad4f", "lote": "Lote 10 Recria", "data_cuiaba": "2026-08-03", "kg_cocho": 612, "n_cabecas": 217, "peso_vivo_kg": 285.5, "consumo_medio_geral_kg_mn": 1.410138, "consumo_medio_geral_percent_pv": 0.451294, "custo_medio_reais_cab_dia": 2.009912},
+    {"id": "c014b869-b839-469b-99a2-3659528ffd35", "lote": "lote 11", "data_cuiaba": "2026-07-24", "kg_cocho": 1942, "n_cabecas": 161, "peso_vivo_kg": 390.8, "consumo_medio_geral_kg_mn": 3.015528, "consumo_medio_geral_percent_pv": 0.695624, "custo_medio_reais_cab_dia": 3.172758},
+    {"id": "1ba8e42a-e30c-4a02-9b36-c6aef9929dd9", "lote": "lote 11", "data_cuiaba": "2026-07-27", "kg_cocho": 1210, "n_cabecas": 161, "peso_vivo_kg": 392.8, "consumo_medio_geral_kg_mn": 7.515528, "consumo_medio_geral_percent_pv": 1.729741, "custo_medio_reais_cab_dia": 7.919375},
+    {"id": "ff5a1df4-4d4e-4f3e-9b9a-8e8e8e8e8e8e", "lote": "Lote 2b Recria", "data_cuiaba": "2026-07-27", "consumo_medio_geral_kg_mn": 4.600806, "nota": "verificar se muda"}
+  ],
+  "valores_esperados_pos_recalculo": {
+    "f1543c70": {
+      "antes": {"consumo_medio_geral_kg_mn": 45.666667, "dias_calculados": 1},
+      "depois_esperado": {"consumo_medio_geral_kg_mn": 22.833333, "dias_calculados": 2},
+      "formula": "548 kg / 2 dias / 12 animais = 22.833333"
+    }
+  }
+}
