@@ -90,6 +90,10 @@ import { LeituraCocho } from './pages/controller/LeituraCocho'
 import { AcompanhamentoTratos } from './pages/controller/AcompanhamentoTratos'
 import { AssistenteIA } from './pages/controller/AssistenteIA'
 import { GerenciamentoIA } from './pages/admin/GerenciamentoIA'
+import { SystemHealth } from './pages/admin/SystemHealth'
+import { AuditLog } from './pages/admin/AuditLog'
+import { UserManagement } from './pages/admin/UserManagement'
+import { FarmMetrics } from './pages/admin/FarmMetrics'
 import { Relatorios } from './pages/controller/Relatorios'
 import { RelatorioPublico } from './pages/public/RelatorioPublico'
 
@@ -240,6 +244,46 @@ function App() {
             <SuperAdminRoute>
               <SuperAdminLayout>
                 <GerenciamentoIA />
+              </SuperAdminLayout>
+            </SuperAdminRoute>
+          }
+        />
+        <Route
+          path="/super-admin/saude-sistema"
+          element={
+            <SuperAdminRoute>
+              <SuperAdminLayout>
+                <SystemHealth />
+              </SuperAdminLayout>
+            </SuperAdminRoute>
+          }
+        />
+        <Route
+          path="/super-admin/usuarios"
+          element={
+            <SuperAdminRoute>
+              <SuperAdminLayout>
+                <UserManagement />
+              </SuperAdminLayout>
+            </SuperAdminRoute>
+          }
+        />
+        <Route
+          path="/super-admin/auditoria"
+          element={
+            <SuperAdminRoute>
+              <SuperAdminLayout>
+                <AuditLog />
+              </SuperAdminLayout>
+            </SuperAdminRoute>
+          }
+        />
+        <Route
+          path="/super-admin/metricas-fazendas"
+          element={
+            <SuperAdminRoute>
+              <SuperAdminLayout>
+                <FarmMetrics />
               </SuperAdminLayout>
             </SuperAdminRoute>
           }

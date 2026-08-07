@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { User, signIn, signUp, signOut, getCurrentUser, updateUltimoAcesso } from '../services/authService'
-import { supabase } from '../services/supabaseClient'
+import { supabase, setAuditContext } from '../services/supabaseClient'
 
 interface AuthContextType {
   user: User | null
@@ -21,6 +21,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     userRef.current = user
+    // Setar contexto de auditoria sempre que o usuário mudar
+    // para que os triggers de audit_log capturem quem fez cada operação
+    if (user) {
+      setAuditContext({ id: user.id, email: user.email, nome: user.nome })
+    }
   }, [user])
 
   useEffect(() => {

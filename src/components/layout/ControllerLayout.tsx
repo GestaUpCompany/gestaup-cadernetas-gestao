@@ -8,6 +8,7 @@ import { Breadcrumbs } from '../ui'
 import { KeyboardHelpModal } from '../ui/KeyboardHelpModal'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { supabase } from '../../services/supabaseClient'
+import { ImpersonationBar } from '../ImpersonationBar'
 
 interface ControllerLayoutProps {
   children: ReactNode
@@ -263,6 +264,7 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
 
   return (
     <div className="min-h-screen bg-gray-100">
+      <ImpersonationBar />
       <Header />
       
       <div className="flex">

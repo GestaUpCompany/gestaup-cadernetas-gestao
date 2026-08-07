@@ -1,6 +1,7 @@
 import { ReactNode, useState } from 'react'
 import { Header } from './Header'
 import { Sidebar, SidebarItem } from './Sidebar'
+import { ImpersonationBar } from '../ImpersonationBar'
 
 interface AdminLayoutProps {
   children: ReactNode
@@ -59,6 +60,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
   return (
     <div className="min-h-screen bg-gray-100">
+      <ImpersonationBar />
       <Header />
       <div className="flex">
         {/* Sidebar - Desktop */}
