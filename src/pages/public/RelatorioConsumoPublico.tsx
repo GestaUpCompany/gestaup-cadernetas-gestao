@@ -108,7 +108,7 @@ function LeituraCochoLabel(props: any) {
       y={labelY}
       textAnchor="middle"
       fill="#FFFFFF"
-      stroke={LEITURA_COLOR}
+      stroke="#000000"
       strokeWidth={2.5}
       paintOrder="stroke"
       fontSize={10}
