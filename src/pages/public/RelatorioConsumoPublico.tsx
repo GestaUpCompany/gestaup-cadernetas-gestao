@@ -297,7 +297,9 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
     try {
       setExportandoPDF(true)
 
-      const lotesRelatorio: LoteRelatorio[] = lotesFiltrados.map((l) => ({
+      const lotesRelatorio: LoteRelatorio[] = lotesFiltrados
+        .filter((l) => !l.info.erro || l.info.erro.length === 0)
+        .map((l) => ({
         info: {
           ...l.info,
           fazenda_id: relatorioInfo.fazenda_id,
@@ -544,6 +546,7 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
             const { consumoMedio, custoMedio } = calcularKPIs(lote)
             const info = lote.info
             const temDados = lote.dados.length > 0
+            const temErro = info.erro && info.erro.length > 0
             const { CmsLabel, ConsumoPercentPVLabel } = criarLabelsAntiColisao()
 
             return (
@@ -556,6 +559,30 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
                   </span>
                 </div>
 
+                {temErro ? (
+                  <div className="p-5">
+                    <div className="rounded-lg bg-amber-50 border border-amber-200 p-4">
+                      <p className="text-sm font-semibold text-amber-900 mb-2">
+                        Não foi possível gerar o relatório deste lote.
+                      </p>
+                      <p className="text-xs text-amber-800 mb-3">
+                        As seguintes categorias ativas possuem dados faltantes necessários para calcular a média ponderada:
+                      </p>
+                      <ul className="space-y-2">
+                        {info.erro!.map((e, i) => (
+                          <li key={i} className="text-sm text-amber-900">
+                            <span className="font-medium capitalize">{e.categoria}</span>
+                            <span className="text-amber-700">: {e.dados_faltantes.join(', ')}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="text-xs text-amber-700 mt-3">
+                        Preencha os dados faltantes na tela de Lotes para que o lote apareça no relatório.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
                 {/* KPIs + Pills */}
                 <div className="p-5 space-y-4">
                   {/* Pills (Nº Cab, Raça, Categoria, Dieta) */}
@@ -563,7 +590,7 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
                     {[
                       { label: 'Nº Cab. Atual', value: formatarInteiro(info.n_cabecas_atual) },
                       { label: 'Raça', value: info.raca || '—' },
-                      { label: 'Categoria', value: info.categoria ? info.categoria.charAt(0).toUpperCase() + info.categoria.slice(1) : '—' },
+                      { label: 'Categoria', value: info.categoria ? info.categoria.split(', ').map(c => c.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')).join(', ') : '—' },
                       { label: 'Dieta', value: info.dieta || '—' },
                     ].map((p) => (
                       <div key={p.label} className="rounded-lg p-2.5 text-center text-white shadow-sm" style={{ backgroundColor: GREEN_DARK }}>
@@ -703,6 +730,8 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
                     </div>
                   )}
                 </div>
+                  </>
+                )}
               </div>
             )
           })

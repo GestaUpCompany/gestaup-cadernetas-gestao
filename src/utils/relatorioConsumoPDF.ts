@@ -26,6 +26,7 @@ export interface InfoLote {
   categoria: string | null
   dieta: string | null
   data_inicio_plano: string | null
+  erro?: { categoria: string; dados_faltantes: string[] }[] | null
 }
 
 export interface ParametrosRelatorioConsumo {
