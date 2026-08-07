@@ -384,9 +384,6 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
               <h2 className="text-sm font-bold leading-tight" style={{ color: GREEN_DARK }}>
                 {relatorioInfo?.titulo || 'Análise de Consumo'}
               </h2>
-              {relatorioInfo?.fazenda_nome && (
-                <p className="text-[10px] text-gray-500 leading-tight">{relatorioInfo.fazenda_nome}</p>
-              )}
             </div>
 
             <div className="flex items-center gap-2">

@@ -458,7 +458,7 @@ export function ControllerDashboard() {
         <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm">
           <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-3 sm:mb-4">Atividades Recentes</h3>
           <div className="space-y-2 sm:space-y-3">
-            {(recentActivities ?? []).map((activity) => (
+            {(recentActivities ?? []).slice(0, 10).map((activity) => (
               <div
                 key={activity.id}
                 className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg cursor-pointer"
