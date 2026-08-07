@@ -6,6 +6,8 @@ export interface ChatResposta {
   resposta: string
   funcoes_chamadas: string[]
   tokens: { input: number; output: number; cached: number }
+  limite_diario?: number
+  limite_restante?: number
 }
 
 export async function enviarPerguntaIA(pergunta: string): Promise<ChatResposta> {

@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useFazenda } from '../../hooks/useDashboardQueries'
 import { Card, Button } from '../../components/ui'
 import { enviarPerguntaIA, ChatResposta } from '../../services/chatIAService'
+import { supabase } from '../../services/supabaseClient'
 
 interface Mensagem {
   id: string
@@ -13,8 +14,6 @@ interface Mensagem {
   tokens?: { input: number; output: number; cached: number }
   timestamp: Date
 }
-
-const FAZENDA_TESTE_ID = 'd649c65e-16ab-4b77-a84b-df937aa41cc3'
 
 const SUGESTOES_PERGUNTAS = [
   'Como está o plano nutricional do Boi Magro? Qual a GMD realizada vs planejada?',
@@ -31,9 +30,23 @@ export function AssistenteIA() {
   const [mensagens, setMensagens] = useState<Mensagem[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [iaAtiva, setIaAtiva] = useState<boolean | null>(null)
+  const [limiteRestante, setLimiteRestante] = useState<number | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  const isFazendaTeste = fazenda?.id === FAZENDA_TESTE_ID
+  useEffect(() => {
+    if (!fazenda?.id) return
+    let cancelled = false
+    supabase
+      .from('ia_fazenda_config')
+      .select('ia_ativo, limite_diario')
+      .eq('fazenda_id', fazenda.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled) setIaAtiva(data?.ia_ativo === true)
+      })
+    return () => { cancelled = true }
+  }, [fazenda?.id])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -55,6 +68,9 @@ export function AssistenteIA() {
 
     try {
       const resultado: ChatResposta = await enviarPerguntaIA(texto)
+      if (typeof resultado.limite_restante === 'number') {
+        setLimiteRestante(resultado.limite_restante)
+      }
       const msgIA: Mensagem = {
         id: crypto.randomUUID(),
         tipo: 'ia',
@@ -84,7 +100,17 @@ export function AssistenteIA() {
     }
   }
 
-  if (!isFazendaTeste) {
+  if (iaAtiva === null) {
+    return (
+      <div className="p-6">
+        <Card className="p-8 text-center">
+          <p className="text-sm text-gray-500">Carregando...</p>
+        </Card>
+      </div>
+    )
+  }
+
+  if (!iaAtiva) {
     return (
       <div className="p-6">
         <Card className="p-8 text-center">
@@ -95,12 +121,14 @@ export function AssistenteIA() {
           </div>
           <h2 className="text-lg font-semibold text-gray-700 mb-2">Assistente de IA indisponível</h2>
           <p className="text-sm text-gray-500">
-            O assistente de IA está em fase de protótipo e ainda não está disponível para esta fazenda.
+            O assistente de IA não está disponível para esta fazenda.
           </p>
         </Card>
       </div>
     )
   }
+
+  const limiteEsgotado = limiteRestante !== null && limiteRestante <= 0
 
   return (
     <div className="p-4 md:p-6 max-w-4xl mx-auto">
@@ -109,9 +137,35 @@ export function AssistenteIA() {
         <p className="text-sm text-gray-500 mt-1">
           Pergunte qualquer coisa sobre a fazenda. A IA consulta os dados reais do sistema e responde.
         </p>
-        <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 border border-amber-200">
-          <span className="w-2 h-2 rounded-full bg-amber-400" />
-          <span className="text-xs text-amber-700 font-medium">Protótipo em teste</span>
+        <div className="mt-2 flex items-center gap-2 flex-wrap">
+          {limiteRestante !== null && (
+            <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border ${
+              limiteEsgotado
+                ? 'bg-red-50 border-red-200'
+                : limiteRestante <= 5
+                ? 'bg-amber-50 border-amber-200'
+                : 'bg-green-50 border-green-200'
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${
+                limiteEsgotado
+                  ? 'bg-red-400'
+                  : limiteRestante <= 5
+                  ? 'bg-amber-400'
+                  : 'bg-green-400'
+              }`} />
+              <span className={`text-xs font-medium ${
+                limiteEsgotado
+                  ? 'text-red-700'
+                  : limiteRestante <= 5
+                  ? 'text-amber-700'
+                  : 'text-green-700'
+              }`}>
+                {limiteEsgotado
+                  ? 'Limite diário esgotado'
+                  : `${limiteRestante} pergunta${limiteRestante === 1 ? '' : 's'} restante${limiteRestante === 1 ? '' : 's'} hoje`}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -135,7 +189,7 @@ export function AssistenteIA() {
                   <button
                     key={sugestao}
                     onClick={() => handleEnviar(sugestao)}
-                    disabled={loading}
+                    disabled={loading || limiteEsgotado}
                     className="text-left p-3 rounded-lg border border-gray-200 hover:border-primary hover:bg-primary/5 transition-colors text-sm text-gray-600 disabled:opacity-50"
                   >
                     {sugestao}
@@ -218,34 +272,42 @@ export function AssistenteIA() {
 
         {/* Área de input */}
         <div className="border-t border-gray-200 p-3">
-          <div className="flex gap-2 items-end">
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Digite sua pergunta sobre a fazenda..."
-              rows={1}
-              disabled={loading}
-              className="flex-1 resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:bg-gray-50"
-              style={{ maxHeight: '120px' }}
-            />
-            <Button
-              onClick={() => handleEnviar()}
-              disabled={loading || !input.trim()}
-              className="flex-shrink-0"
-            >
-              {loading ? (
-                <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <circle cx="12" cy="12" r="10" strokeWidth={3} className="opacity-25" />
-                  <path strokeLinecap="round" strokeWidth={3} d="M4 12a8 8 0 018-8" />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
-              )}
-            </Button>
-          </div>
+          {limiteEsgotado ? (
+            <div className="text-center py-3">
+              <p className="text-sm text-red-600 font-medium">
+                Limite diário de perguntas atingido. Volte amanhã.
+              </p>
+            </div>
+          ) : (
+            <div className="flex gap-2 items-end">
+              <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Digite sua pergunta sobre a fazenda..."
+                rows={1}
+                disabled={loading}
+                className="flex-1 resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:bg-gray-50"
+                style={{ maxHeight: '120px' }}
+              />
+              <Button
+                onClick={() => handleEnviar()}
+                disabled={loading || !input.trim()}
+                className="flex-shrink-0"
+              >
+                {loading ? (
+                  <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10" strokeWidth={3} className="opacity-25" />
+                    <path strokeLinecap="round" strokeWidth={3} d="M4 12a8 8 0 018-8" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
+                )}
+              </Button>
+            </div>
+          )}
           <p className="text-xs text-gray-400 mt-1">
             Enter envia, Shift+Enter quebra linha. A IA consulta apenas dados desta fazenda.
           </p>

@@ -7,6 +7,7 @@ import { FarmSwitcher } from './FarmSwitcher'
 import { Breadcrumbs } from '../ui'
 import { KeyboardHelpModal } from '../ui/KeyboardHelpModal'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
+import { supabase } from '../../services/supabaseClient'
 
 interface ControllerLayoutProps {
   children: ReactNode
@@ -133,8 +134,6 @@ const menuStructure: MenuItem[] = [
   },
 ]
 
-const FAZENDA_TESTE_ID_IA = 'd649c65e-16ab-4b77-a84b-df937aa41cc3'
-
 const menuItemAssistenteIA: MenuItem = {
   label: 'Assistente de IA',
   path: '/controller/assistente-ia',
@@ -203,17 +202,37 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
     }
   }, [mobileMenuOpen])
 
+  const [iaAtiva, setIaAtiva] = useState(false)
+
+  // Busca status da IA para a fazenda atual.
+  useEffect(() => {
+    if (!fazenda?.id) {
+      setIaAtiva(false)
+      return
+    }
+    let cancelled = false
+    supabase
+      .from('ia_fazenda_config')
+      .select('ia_ativo')
+      .eq('fazenda_id', fazenda.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled) setIaAtiva(data?.ia_ativo === true)
+      })
+    return () => { cancelled = true }
+  }, [fazenda?.id])
+
   const visibleMenuStructure = useMemo(() => {
     let structure = menuStructure
     if (!fazenda?.acesso_confinamento) {
       structure = structure.filter((menu) => menu.label !== 'Confinamento')
     }
-    // Protótipo de IA: só visível para a fazenda de testes.
-    if (fazenda?.id === FAZENDA_TESTE_ID_IA) {
+    // IA visível apenas para fazendas com ia_ativo=true em ia_fazenda_config.
+    if (iaAtiva) {
       structure = [...structure, menuItemAssistenteIA]
     }
     return structure
-  }, [fazenda?.acesso_confinamento, fazenda?.id])
+  }, [fazenda?.acesso_confinamento, iaAtiva])
 
   // Auto-open submenu if current path is in it
   useEffect(() => {

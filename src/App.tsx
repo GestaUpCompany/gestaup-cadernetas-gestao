@@ -3,9 +3,11 @@ import { useAuth } from './contexts/AuthContext'
 import { Login } from './pages/auth/Login'
 import { AdminLayout } from './components/layout/AdminLayout'
 import { ControllerLayout } from './components/layout/ControllerLayout'
+import { SuperAdminLayout } from './components/layout/SuperAdminLayout'
 import { AdminRoute } from './components/routes/AdminRoute'
 import { ControllerRoute } from './components/routes/ControllerRoute'
 import { ConfinamentoRoute } from './components/routes/ConfinamentoRoute'
+import { SuperAdminRoute } from './components/routes/SuperAdminRoute'
 import { AdminDashboard } from './pages/admin/Dashboard'
 import { FazendasList } from './pages/admin/Fazendas'
 import { NovaFazenda } from './pages/admin/NovaFazenda'
@@ -87,6 +89,7 @@ import { Notificacoes } from './pages/controller/Notificacoes'
 import { LeituraCocho } from './pages/controller/LeituraCocho'
 import { AcompanhamentoTratos } from './pages/controller/AcompanhamentoTratos'
 import { AssistenteIA } from './pages/controller/AssistenteIA'
+import { GerenciamentoIA } from './pages/admin/GerenciamentoIA'
 import { Relatorios } from './pages/controller/Relatorios'
 import { RelatorioPublico } from './pages/public/RelatorioPublico'
 
@@ -104,6 +107,10 @@ function RoleRedirect() {
 
   if (!user) {
     return <Navigate to="/login" replace />
+  }
+
+  if (user.papel === 'super_admin') {
+    return <Navigate to="/super-admin/gerenciamento-ia" replace />
   }
 
   if (user.papel === 'admin') {
@@ -225,6 +232,16 @@ function App() {
                 <RelatorioAtividades />
               </AdminLayout>
             </AdminRoute>
+          }
+        />
+        <Route
+          path="/super-admin/gerenciamento-ia"
+          element={
+            <SuperAdminRoute>
+              <SuperAdminLayout>
+                <GerenciamentoIA />
+              </SuperAdminLayout>
+            </SuperAdminRoute>
           }
         />
         

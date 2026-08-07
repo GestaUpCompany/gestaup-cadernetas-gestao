@@ -8,7 +8,7 @@ export interface User {
   email: string
   nome: string
   telefone?: string
-  papel: 'admin' | 'controller'
+  papel: 'admin' | 'super_admin' | 'controller'
   ativo: boolean
 }
 
@@ -63,8 +63,8 @@ async function getAccessDeniedReason(userData: User): Promise<string | null> {
     return 'Usuário desativado. Entre em contato com o administrador.'
   }
 
-  // Admins não dependem de vínculo com fazenda.
-  if (userData.papel === 'admin') return null
+  // Admins e super_admins não dependem de vínculo com fazenda.
+  if (userData.papel === 'admin' || userData.papel === 'super_admin') return null
 
   const fazendaAtiva = await hasActiveFazenda(userData.id)
   if (!fazendaAtiva) {

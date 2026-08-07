@@ -2,11 +2,11 @@ import { ReactNode } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 
-interface AdminRouteProps {
+interface SuperAdminRouteProps {
   children: ReactNode
 }
 
-export function AdminRoute({ children }: AdminRouteProps) {
+export function SuperAdminRoute({ children }: SuperAdminRouteProps) {
   const { user, loading } = useAuth()
 
   if (loading) {
@@ -21,11 +21,11 @@ export function AdminRoute({ children }: AdminRouteProps) {
     return <Navigate to="/login" replace />
   }
 
-  if (user.papel === 'super_admin') {
-    return <Navigate to="/super-admin/gerenciamento-ia" replace />
-  }
-
-  if (user.papel !== 'admin') {
+  if (user.papel !== 'super_admin') {
+    // admin comum e controller são redirecionados para suas áreas
+    if (user.papel === 'admin') {
+      return <Navigate to="/admin/dashboard" replace />
+    }
     return <Navigate to="/controller/dashboard" replace />
   }
 

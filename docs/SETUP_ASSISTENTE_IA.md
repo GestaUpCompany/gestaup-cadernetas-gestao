@@ -1,36 +1,49 @@
-# Protótipo Assistente de IA — Setup
+# Assistente de IA — Setup
 
 ## Visão geral
 
-Protótipo de chat com IA (Gemini 2.5 Flash) que responde perguntas sobre a fazenda usando tool-calling. Restrito à fazenda de testes `d649c65e-16ab-4b77-a84b-df937aa41cc3` (Fazenda Gesta'Up).
+Chat com IA (Gemini 3.6 Flash) que responde perguntas sobre a fazenda usando tool-calling. O acesso à IA é controlado por fazenda via tabela `ia_fazenda_config`, gerenciada pelo super administrador no painel de Gerenciamento de IA (`/admin/gerenciamento-ia`).
 
 ## Arquivos criados
 
 | Arquivo | Descrição |
 |---|---|
 | `supabase/migrations/20260804100000_criar_chat_ia_logs.sql` | Tabela `chat_ia_logs` com RLS para auditoria de perguntas/respostas |
+| `supabase/migrations/20260806150000_super_admin_ia_config.sql` | Papel `super_admin`, tabela `ia_fazenda_config`, RPC `get_ia_monitoramento`, backfill de `custo_estimado_usd` |
 | `supabase/functions/chat-fazenda/index.ts` | Edge Function (Deno) com tool-calling via Gemini |
 | `src/services/chatIAService.ts` | Cliente frontend que chama a Edge Function |
 | `src/pages/controller/AssistenteIA.tsx` | Página de chat no painel controller |
+| `src/pages/admin/GerenciamentoIA.tsx` | Painel de super admin para controle de IA por fazenda |
 
 ## Arquivos modificados
 
 | Arquivo | Mudança |
 |---|---|
-| `src/App.tsx` | Import + rota `/controller/assistente-ia` |
-| `src/components/layout/ControllerLayout.tsx` | Item de menu "Assistente de IA" condicionado à fazenda de testes |
+| `src/App.tsx` | Import + rota `/controller/assistente-ia` e `/admin/gerenciamento-ia` |
+| `src/components/layout/ControllerLayout.tsx` | Item de menu "Assistente de IA" condicionado a `ia_fazenda_config.ia_ativo = true` |
+| `src/components/layout/AdminLayout.tsx` | Item de menu "Gerenciamento de IA" condicionado a `papel = 'super_admin'` |
+| `src/components/routes/AdminRoute.tsx` | Aceita `super_admin` além de `admin` |
+| `src/services/authService.ts` | Tipo `papel` inclui `super_admin`; super_admin bypassa validação de fazenda |
 
-## Como o isolamento funciona
+## Como o controle de acesso funciona
 
-Triplo bloqueio, todas as camaras verificam `fazenda_id === d649c65e-16ab-4b77-a84b-df937aa41cc3`:
+O acesso à IA é controlado em três camadas:
 
-1. **UI**: o item de menu só aparece se `fazenda.id === FAZENDA_TESTE_ID`. Usuários de outras fazendas não veem a entrada.
-2. **Página**: `AssistenteIA.tsx` renderiza tela "indisponível" se `fazenda.id !== FAZENDA_TESTE_ID`.
-3. **Edge Function**: bloqueio hard-coded antes de qualquer lógica. Se `fazendaId !== FAZENDA_TESTE_ID`, retorna 403.
+1. **UI (ControllerLayout)**: o item de menu só aparece se `ia_fazenda_config.ia_ativo = true` para a fazenda do usuário. A verificação é feita via query a `ia_fazenda_config` no Supabase.
+2. **Página (AssistenteIA.tsx)**: renderiza tela "indisponível" se `ia_ativo !== true`. Também mostra contador de perguntas restantes hoje.
+3. **Edge Function**: busca `ia_fazenda_config` da fazenda; retorna 403 se não existir ou `ia_ativo = false`. Retorna 429 se o limite diário for atingido.
 
-Nenhuma outra fazenda consegue disparar a IA mesmo chamando a URL da função diretamente.
+O super administrador controla quais fazendas têm acesso e o limite diário de cada uma via painel `/admin/gerenciamento-ia`.
 
-## Funções de tool-calling implementadas (4)
+## Rate limit
+
+O rate limit é por fazenda, não por usuário. A Edge Function conta perguntas bem-sucedidas no dia em `chat_ia_logs` (com `erro IS NULL`) e compara com `limite_diario` da configuração. Se o count >= limite, retorna 429 com mensagem "Limite diário de N perguntas atingido".
+
+O limite é por fazenda porque o cliente paga pela fazenda. Se a fazenda tem 3 usuários, os 20 (ou o limite configurado) são compartilhados.
+
+## Funções de tool-calling implementadas (17)
+
+16 funções específicas + 1 genérica:
 
 | Função | O que faz |
 |---|---|
@@ -38,12 +51,25 @@ Nenhuma outra fazenda consegue disparar a IA mesmo chamando a URL da função di
 | `get_peso_medio_lote` | Peso vivo médio atual e cabeças de um lote (ou todos os ativos) |
 | `get_mortalidade_periodo` | Contagem de mortes e causas no período, por lote ou fazenda |
 | `get_movimentacoes_lote` | Lista movimentações (entrada/saída/transferência) no período |
+| `get_plano_nutricional_lote` | Plano nutricional vigente e histórico de planos de um lote |
+| `get_pastos_fazenda` | Pastos ativos com ocupação atual (lote, cabeças, taxa de lotação) |
+| `get_clima_periodo` | Precipitação e temperatura média no período, por pluviômetro |
+| `get_estoque_insumos` | Saldo atual de insumos agrupado por tipo |
+| `get_tratamentos_periodo` | Tratamentos veterinários aplicados no período |
+| `get_financeiro_lote` | Indicadores financeiros de um lote (custo, margem, arrobas) |
+| `get_individuos_fazenda` | Inventário de indivíduos (total, raças, sexo, categorias) |
+| `get_abastecimento_periodo` | Consumo de combustível no período |
+| `get_maternidade_periodo` | Nascimentos registrados no período |
+| `get_bebedouros_status` | Status dos bebedouros (última limpeza, se precisa limpeza) |
+| `get_funcionarios_fazenda` | Quadro de funcionários ativos |
+| `get_rodeio_periodo` | Registros de rodeio (contagem por categoria, escores) |
+| `query_dados_fazenda` | Query genérica (SELECT read-only) em 40 tabelas com whitelist |
 
-Todas filtram por `fazenda_id = FAZENDA_TESTE_ID` hardcoded.
+Todas filtram por `fazenda_id` resolvido do usuário.
 
 ## Setup necessário no Supabase (executar uma vez)
 
-### 1. Aplicar a migration
+### 1. Aplicar as migrations
 
 ```bash
 supabase db push
@@ -62,49 +88,40 @@ supabase functions deploy chat-fazenda
 A Edge Function precisa de três variáveis de ambiente no Supabase:
 
 ```bash
-# URL do projeto Supabase (já configurada por padrão)
 supabase secrets set SUPABASE_URL=https://<seu-projeto>.supabase.co
-
-# Service Role Key (para queries bypass de RLS dentro da função)
 supabase secrets set SUPABASE_SERVICE_ROLE_KEY=eyJhbGci...
-
-# Chave da API do Gemini (obter em https://aistudio.google.com/apikey)
 supabase secrets set GEMINI_API_KEY=AIza...
-```
-
-A `SUPABASE_ANON_KEY` também precisa estar disponível para validar o JWT do usuário. O Supabase geralmente injeta automaticamente, mas se necessário:
-
-```bash
 supabase secrets set SUPABASE_ANON_KEY=eyJhbGci...
 ```
 
-### 4. Obter a GEMINI_API_KEY
+### 4. Promover um usuário a super_admin
 
-1. Acessar https://aistudio.google.com/apikey
-2. Criar uma API key (gratuito, com generoso free tier)
-3. Copiar a chave (formato `AIza...`)
-4. Rodar `supabase secrets set GEMINI_API_KEY=<chave>`
+```sql
+UPDATE usuarios SET papel = 'super_admin' WHERE email = 'usuario@exemplo.com';
+```
 
-## Como testar
+### 5. Ativar IA para uma fazenda
 
-1. Logar com usuário vinculado à fazenda Gesta'Up (`gestaup`)
-2. O item "Assistente de IA" aparece no menu lateral
-3. Clicar e fazer uma pergunta, ex: "Qual o peso médio atual de todos os lotes?"
-4. A IA chama `get_peso_medio_lote`, recebe os dados, redige a resposta
-5. Verificar logs em `chat_ia_logs` no Supabase Studio
+Via painel `/admin/gerenciamento-ia` (toggle + limite diário), ou via SQL:
+
+```sql
+INSERT INTO ia_fazenda_config (fazenda_id, ia_ativo, limite_diario)
+VALUES ('<fazenda-id>', true, 20)
+ON CONFLICT (fazenda_id) DO UPDATE SET ia_ativo = true, limite_diario = 20;
+```
 
 ## Custo estimado
 
-Com Gemini 2.5 Flash (~$0.075/M input, ~$0.30/M output):
-- ~5k tokens input + ~400 tokens output por pergunta
-- 50 perguntas/dia ≈ $1/mês
-- 200 perguntas/dia ≈ $4/mês
+Com Gemini 3.6 Flash (~$0.075/M input, ~$0.30/M output, ~$0.01875/M cached):
+- Média real observada: ~4.249 input + ~236 output por pergunta
+- 20 perguntas/dia/fazenda × 25 fazendas = 500/dia ≈ $54/mês
+- O painel de super admin mostra projeção mensal e anual em tempo real
 
-Free tier do Google AI Studio cobre os primeiros testes sem custo.
+## Painel de monitoramento (super admin)
 
-## Próximos passos (não implementados no protótipo)
-
-- Expandir catálogo de funções (atualmente 4, meta: 12)
-- Adicionar rate limit por usuário na Edge Function
-- Histórico de conversa persistente (hoje é só em memória na sessão)
-- Fallback para GPT-4o-mini em perguntas que o Flash errar
+`/admin/gerenciamento-ia` mostra:
+- Resumo global: fazendas com IA, perguntas hoje/30d, custos hoje/30d/total
+- Projeção de custos mensal e anual (baseada em média de tokens × limite diário)
+- Tabela por fazenda: toggle de IA, edição de limite, perguntas hoje/total, custos, projeções
+- Detalhes de tokens por fazenda (input, output, cached, médias)
+- A projeção recalcula automaticamente ao ativar IA ou ajustar limite de qualquer fazenda

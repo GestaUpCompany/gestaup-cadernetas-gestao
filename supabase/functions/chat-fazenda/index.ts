@@ -1,22 +1,26 @@
 // Edge Function: chat-fazenda
-// Protótipo de assistente de IA com tool-calling.
+// Assistente de IA com tool-calling.
 //
-// RESTRITO à fazenda de testes d649c65e-16ab-4b77-a84b-df937aa41cc3.
-// Qualquer outra fazenda recebe 403 antes de qualquer lógica.
+// Controle de acesso: a IA só funciona para fazendas com registro ativo em
+// ia_fazenda_config (ia_ativo = true). O super admin controla quais fazendas
+// têm acesso e o limite diário de perguntas via painel de super admin.
+//
+// Rate limit: conta perguntas bem-sucedidas no dia (chat_ia_logs) e compara
+// com limite_diario da configuração da fazenda.
 //
 // Fluxo:
 //   1. Recebe JWT do Supabase Auth, valida usuário.
 //   2. Resolve fazenda_id do usuário via usuario_fazenda.
-//   3. Bloqueia se não for a fazenda de testes.
-//   4. Envia pergunta + catálogo de funções ao Gemini 2.5 Flash.
-//   5. Se a IA chamar uma função, executa a query Supabase (filtrada por fazenda_id),
+//   3. Busca ia_fazenda_config da fazenda. Bloqueia se não existir ou ia_ativo=false.
+//   4. Checa rate limit (perguntas hoje < limite_diario).
+//   5. Envia pergunta + catálogo de funções ao Gemini 3.6 Flash.
+//   6. Se a IA chamar uma função, executa a query Supabase (filtrada por fazenda_id),
 //      devolve o resultado à IA, ela redige a resposta final.
-//   6. Registra log em chat_ia_logs.
-//   7. Devolve { resposta, funcoes_chamadas }.
+//   7. Registra log em chat_ia_logs com custo_estimado_usd calculado.
+//   8. Devolve { resposta, funcoes_chamadas, tokens, limite_restante }.
 
 // @ts-nocheck (Deno runtime, sem tipos locais)
 
-const FAZENDA_TESTE_ID = "d649c65e-16ab-4b77-a84b-df937aa41cc3";
 const GEMINI_MODEL = "gemini-3.6-flash";
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
@@ -2073,6 +2077,7 @@ async function insertLog(
     tokens_input: number;
     tokens_output: number;
     tokens_cached: number;
+    custo_estimado_usd: number;
     erro?: string;
   },
 ): Promise<void> {
@@ -2095,6 +2100,7 @@ async function insertLog(
         tokens_input: log.tokens_input,
         tokens_output: log.tokens_output,
         tokens_cached: log.tokens_cached,
+        custo_estimado_usd: log.custo_estimado_usd,
         erro: log.erro || null,
       }),
     });
@@ -2164,24 +2170,62 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // 3. BLOQUEIO HARD-CODED: só a fazenda de testes.
-    if (fazendaId !== FAZENDA_TESTE_ID) {
+    // 3. Buscar configuração de IA da fazenda (ia_fazenda_config).
+    const configRes = await fetch(
+      `${supabaseUrl}/rest/v1/ia_fazenda_config?select=ia_ativo,limite_diario,custo_input_por_mil,custo_output_por_mil,custo_cached_por_mil&fazenda_id=eq.${fazendaId}`,
+      { headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` } },
+    );
+    const configRows = await configRes.json() as Array<{
+      ia_ativo: boolean;
+      limite_diario: number;
+      custo_input_por_mil: number;
+      custo_output_por_mil: number;
+      custo_cached_por_mil: number;
+    }>;
+
+    if (!configRows || configRows.length === 0 || !configRows[0].ia_ativo) {
       return new Response(JSON.stringify({
-        erro: "Assistente de IA em fase de protótipo. Ainda não disponível para esta fazenda.",
+        erro: "O assistente de IA não está disponível para esta fazenda.",
       }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // 4. Buscar nome da fazenda para contexto.
+    const iaConfig = configRows[0];
+    const limiteDiario = iaConfig.limite_diario;
+
+    // 4. Rate limit: contar perguntas bem-sucedidas hoje.
+    const hojeStart = new Date().toISOString().slice(0, 10); // YYYY-MM-DD UTC
+    const countRes = await fetch(
+      `${supabaseUrl}/rest/v1/chat_ia_logs?select=id&fazenda_id=eq.${fazendaId}&created_at=gte.${hojeStart}&erro=is.null`,
+      { headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` } },
+    );
+    const countRows = await countRes.json() as unknown[];
+    const perguntasHoje = countRows?.length || 0;
+
+    if (perguntasHoje >= limiteDiario) {
+      return new Response(JSON.stringify({
+        erro: `Limite diário de ${limiteDiario} perguntas atingido para esta fazenda. Volte amanhã.`,
+        limite_diario: limiteDiario,
+        perguntas_hoje: perguntasHoje,
+        limite_restante: 0,
+      }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const limiteRestante = limiteDiario - perguntasHoje;
+
+    // 5. Buscar nome da fazenda para contexto.
     const fazendaRes = await fetch(`${supabaseUrl}/rest/v1/fazendas?select=nome&id=eq.${fazendaId}`, {
       headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` },
     });
     const fazendaRows = await fazendaRes.json() as { nome: string }[];
     const fazendaNome = fazendaRows?.[0]?.nome || "Fazenda";
 
-    // 5. Interação com Gemini (até 5 rodadas de function calling).
+    // 6. Interação com Gemini (até 5 rodadas de function calling).
     // System context é idêntico para todas as fazendas, maximizando implicit caching.
     // O nome da fazenda vai na primeira mensagem do usuário.
     const systemContext = buildSystemContext();
@@ -2245,6 +2289,13 @@ Deno.serve(async (req: Request) => {
     }
 
     // 6. Registrar log.
+    // 7. Calcular custo estimado em USD.
+    const custoEstimadoUsd =
+      (totalInputTokens - totalCachedTokens) * iaConfig.custo_input_por_mil / 1000000.0
+      + totalOutputTokens * iaConfig.custo_output_por_mil / 1000000.0
+      + totalCachedTokens * iaConfig.custo_cached_por_mil / 1000000.0;
+
+    // 8. Registrar log.
     await insertLog(supabaseUrl, serviceRoleKey, {
       fazenda_id: fazendaId,
       usuario_id: user.id,
@@ -2255,14 +2306,17 @@ Deno.serve(async (req: Request) => {
       tokens_input: totalInputTokens,
       tokens_output: totalOutputTokens,
       tokens_cached: totalCachedTokens,
+      custo_estimado_usd: custoEstimadoUsd,
       erro: erroMsg,
     });
 
-    // 7. Responder.
+    // 9. Responder.
     return new Response(JSON.stringify({
       resposta: respostaFinal,
       funcoes_chamadas: funcoesChamadas.map(f => f.name),
       tokens: { input: totalInputTokens, output: totalOutputTokens, cached: totalCachedTokens },
+      limite_diario: limiteDiario,
+      limite_restante: limiteRestante - 1, // esta pergunta já contou
     }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

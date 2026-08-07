@@ -34,6 +34,12 @@ const RELATORIOS_DISPONIVEIS: RelatorioDisponivel[] = [
     descricao: 'CMS (kg/cab/dia), consumo %PV, leitura de cocho e custo por lote e período.',
     icone: '🌿',
   },
+  {
+    tipo: 'tratos',
+    titulo: 'Acompanhamento de Tratos',
+    descricao: 'Desvio de kg ofertado vs planejado e pontualidade de horários por lote e trato.',
+    icone: '🐄',
+  },
 ]
 
 export function Relatorios() {
