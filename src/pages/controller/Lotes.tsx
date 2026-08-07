@@ -830,7 +830,7 @@ export function Lotes() {
   }
 
   // Auto-save do lote antes de abrir o modal de planos
-  const abrirPlanosComAutoSave = async (catId: string, catNome: string, catIndex: number) => {
+  const abrirPlanosComAutoSave = async (catId: string, catIndex: number) => {
     // Validações básicas
     if (!formData.nome?.trim()) {
       alert('Preencha o nome do lote antes de gerenciar planos.')
@@ -893,7 +893,8 @@ export function Lotes() {
       const recalculatedCategorias = formData.categorias.map(recalcularCategoria)
       await salvarCategorias(loteId, recalculatedCategorias)
 
-      // Buscar a categoria pelo índice (após save, todas têm ID)
+      // Buscar a categoria correta: priorizar ID (categoria já persistida),
+      // fallback por índice (categoria recém-criada neste save)
       const { data: savedCats } = await supabase
         .from('lote_categorias')
         .select('id, categoria')
@@ -901,23 +902,15 @@ export function Lotes() {
         .eq('ativo', true)
         .order('created_at', { ascending: true })
 
-      const savedCat = savedCats?.[catIndex]
+      const savedCat = catId
+        ? savedCats?.find((c) => c.id === catId)
+        : savedCats?.[catIndex]
       if (savedCat) {
         setAutoSaveToast('Lote salvo automaticamente. Abrindo planos...')
         setTimeout(() => setAutoSaveToast(null), 3000)
         setSelectedCategoriaForPlanos({ loteCategoriaId: savedCat.id, categoria: savedCat.categoria })
         setIsPlanoModalOpen(true)
         // Recarregar lotes para refletir o save
-        await loadLotes()
-        if (editingLote) {
-          await handleEdit({ ...editingLote, id: loteId } as any)
-        }
-      } else if (catId) {
-        // Fallback: se não encontrou por índice mas temos o ID original, usar ele
-        setAutoSaveToast('Lote salvo automaticamente. Abrindo planos...')
-        setTimeout(() => setAutoSaveToast(null), 3000)
-        setSelectedCategoriaForPlanos({ loteCategoriaId: catId, categoria: catNome })
-        setIsPlanoModalOpen(true)
         await loadLotes()
         if (editingLote) {
           await handleEdit({ ...editingLote, id: loteId } as any)
@@ -2310,7 +2303,7 @@ export function Lotes() {
                                         type="button"
                                         size="sm"
                                         disabled={openingPlanos}
-                                        onClick={() => abrirPlanosComAutoSave(cat.id || '', cat.categoria, catIndex)}
+                                        onClick={() => abrirPlanosComAutoSave(cat.id || '', catIndex)}
                                       >
                                         {openingPlanos ? 'Salvando...' : hasPlano ? 'Gerenciar Planos' : 'Criar Plano'}
                                       </Button>
