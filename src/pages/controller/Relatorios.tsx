@@ -38,7 +38,7 @@ const RELATORIOS_DISPONIVEIS: RelatorioDisponivel[] = [
     tipo: 'tratos',
     titulo: 'Acompanhamento de Tratos',
     descricao: 'Desvio de kg ofertado vs planejado e pontualidade de horários por lote e trato.',
-    icone: '🐄',
+    icone: '🐂',
   },
 ]
 
