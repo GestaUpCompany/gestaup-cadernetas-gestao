@@ -1,0 +1,8 @@
+-- Cron update_dados_lotes agora recalcula data_meta_projetada junto com peso_vivo_atual_kg_cab
+-- Antes: o cron projetava o peso mas deixava data_meta_projetada congelada no valor salvo pelo frontend,
+--   criando divergência quando o peso avançava via cron mas a data não era recalculada.
+-- Agora: data_meta_projetada = CURRENT_DATE + ((peso_meta - new_peso_vivo) / gmd)
+--   Usa COALESCE(lc.peso_vivo_meta_kg_cab, pn.peso_meta_kg) como peso meta.
+--   Se o peso já atingiu ou ultrapassou a meta, data_meta = hoje e dias_restantes = 0.
+--   Se não há peso_meta ou gmd, preserva o valor existente (fallback).
+-- Frontend já persiste data_meta_projetada no salvamento (Lotes.tsx linha 1139).

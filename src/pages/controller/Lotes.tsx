@@ -394,7 +394,7 @@ export function Lotes() {
     const gmd = formData.gmd ? parseFloat(formData.gmd.replace(',', '.')) : null
 
     if (pesoMeta && pesoAtual && gmd && gmd > 0) {
-      const diasParaMeta = (pesoMeta - pesoAtual) / gmd
+      const diasParaMeta = Math.ceil((pesoMeta - pesoAtual) / gmd)
       const dataHoje = new Date()
       const dataMeta = new Date(dataHoje.getTime() + (diasParaMeta * 24 * 60 * 60 * 1000))
       
@@ -556,7 +556,7 @@ export function Lotes() {
     if (pesoMeta && pesoAtual && gmd) {
       const gmdNumber = parseFloat(gmd.replace(',', '.'))
       if (gmdNumber > 0) {
-        const diasParaMeta = (pesoMeta - pesoAtual) / gmdNumber
+        const diasParaMeta = Math.ceil((pesoMeta - pesoAtual) / gmdNumber)
         const dataHoje = new Date()
         const dataMeta = new Date(dataHoje.getTime() + (diasParaMeta * 24 * 60 * 60 * 1000))
 

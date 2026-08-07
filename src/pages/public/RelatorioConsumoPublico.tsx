@@ -553,7 +553,7 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
               <div key={lote.lote_id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 {/* Header do lote */}
                 <div className="px-5 py-3 flex items-center justify-between" style={{ backgroundColor: GREEN_DARK }}>
-                  <h2 className="text-base font-bold text-white">Lote {lote.lote_nome}</h2>
+                  <h2 className="text-base font-bold text-white">{lote.lote_nome}</h2>
                   <span className="text-xs text-white opacity-80">
                     {lote.dados.length} registro(s)
                   </span>
