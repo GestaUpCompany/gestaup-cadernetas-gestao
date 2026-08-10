@@ -91,40 +91,15 @@ interface Props {
   relatorioInfo: RelatorioInfo
 }
 
-// Label customizado da Leitura de Cocho: valor em branco, reposiciona para cima
-// quando o ponto está na metade inferior do gráfico (próximo à base da barra).
-function LeituraCochoLabel(props: any) {
-  const { x, y, value, height, viewBox } = props
-  if (value == null) return null
-
-  const chartHeight = (viewBox?.height ?? height ?? 400) as number
-  const pontoY = y as number
-  const naBase = pontoY > chartHeight * 0.65
-  const labelY = naBase ? pontoY - 12 : pontoY + 16
-
-  return (
-    <text
-      x={x}
-      y={labelY}
-      textAnchor="middle"
-      fill="#FFFFFF"
-      stroke="#000000"
-      strokeWidth={2.5}
-      paintOrder="stroke"
-      fontSize={10}
-      fontWeight="bold"
-    >
-      {String(value)}
-    </text>
-  )
-}
-
-// Factory que cria par de labels customizados (CMS + Consumo %PV) com
-// prevenção de colisão baseada exclusivamente em posição gráfica (pixels).
-// O label da barra registra sua posição Y no Map compartilhado; o label da
-// linha consulta essa posição e reposiciona para baixo se houver colisão.
+// Factory que cria os três labels customizados (CMS, Consumo %PV, Leitura de
+// Cocho) com prevenção de colisão baseada exclusivamente em posição gráfica
+// (pixels). Cada label registra sua posição Y no Map compartilhado; o label
+// posterior consulta essa posição e reposiciona para baixo se houver colisão.
+// Ordem de renderização Recharts: Bar (CmsLabel) → Consumo Line → Leitura Line,
+// garantindo que os Maps estejam populados antes da consulta.
 function criarLabelsAntiColisao() {
   const barPositions = new Map<number, number>()
+  const consumoPositions = new Map<number, number>()
 
   function CmsLabel(props: any) {
     const { x, y, width, value, index } = props
@@ -150,6 +125,9 @@ function criarLabelsAntiColisao() {
   function ConsumoPercentPVLabel(props: any) {
     const { x, y, value, index } = props
     if (value == null) return null
+
+    // Registra a posição Y do ponto da linha para o índice atual
+    consumoPositions.set(index, y)
 
     const barTopY = barPositions.get(index)
     const COLLISION_THRESHOLD = 18
@@ -179,7 +157,43 @@ function criarLabelsAntiColisao() {
     )
   }
 
-  return { CmsLabel, ConsumoPercentPVLabel }
+  function LeituraCochoLabel(props: any) {
+    const { x, y, value, index, height, viewBox } = props
+    if (value == null) return null
+
+    const chartHeight = (viewBox?.height ?? height ?? 400) as number
+    const pontoY = y as number
+
+    // Default: acima do ponto quando na metade inferior, abaixo na metade superior
+    const naBase = pontoY > chartHeight * 0.65
+    let labelY = naBase ? pontoY - 12 : pontoY + 16
+
+    // Colisão com ponto do Consumo %PV: move o label para baixo do ponto,
+    // mesmo comportamento do Consumo %PV quando colide com a barra de CMS.
+    const consumoY = consumoPositions.get(index)
+    const COLLISION_THRESHOLD = 34
+    if (consumoY != null && Math.abs(pontoY - consumoY) < COLLISION_THRESHOLD) {
+      labelY = pontoY + 24
+    }
+
+    return (
+      <text
+        x={x}
+        y={labelY}
+        textAnchor="middle"
+        fill="#FFFFFF"
+        stroke="#000000"
+        strokeWidth={2.5}
+        paintOrder="stroke"
+        fontSize={10}
+        fontWeight="bold"
+      >
+        {String(value)}
+      </text>
+    )
+  }
+
+  return { CmsLabel, ConsumoPercentPVLabel, LeituraCochoLabel }
 }
 
 export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
@@ -547,7 +561,7 @@ export function RelatorioConsumoPublico({ token, relatorioInfo }: Props) {
             const info = lote.info
             const temDados = lote.dados.length > 0
             const temErro = info.erro && info.erro.length > 0
-            const { CmsLabel, ConsumoPercentPVLabel } = criarLabelsAntiColisao()
+            const { CmsLabel, ConsumoPercentPVLabel, LeituraCochoLabel } = criarLabelsAntiColisao()
 
             return (
               <div key={lote.lote_id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">

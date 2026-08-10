@@ -304,15 +304,27 @@ async function renderizarGraficoConsumo(dados: DadoRelatorioConsumo[], width: nu
           ctx.stroke()
         })
 
+        // Pré-calcula posições Y do Consumo %PV para detecção de colisão
+        const consumoYByIndex = new Map<number, number>()
+        consumoMeta.data.forEach((pt: any, j: number) => {
+          if (!pt.skip) consumoYByIndex.set(j, pt.y)
+        })
+
         ctx.font = 'bold 11px Inter, sans-serif'
         leituraMeta.data.forEach((pt: any, j: number) => {
           if (pt.skip) return
           const value = leituraDataset.data[j]?.toString() ?? ''
+          // Colisão com ponto do Consumo %PV: move o label para baixo do ponto,
+          // mesmo comportamento do Consumo %PV quando colide com a barra de CMS.
+          const consumoY = consumoYByIndex.get(j)
+          const COLLISION_THRESHOLD = 24
+          const colideComConsumo = consumoY != null && Math.abs(pt.y - consumoY) < COLLISION_THRESHOLD
+          const labelY = colideComConsumo ? pt.y + 20 : pt.y - 10
           ctx.lineWidth = 2
           ctx.strokeStyle = darkText
-          ctx.strokeText(value, pt.x, pt.y - 10)
+          ctx.strokeText(value, pt.x, labelY)
           ctx.fillStyle = white
-          ctx.fillText(value, pt.x, pt.y - 10)
+          ctx.fillText(value, pt.x, labelY)
         })
 
         // 3. Rótulos do Consumo %PV (desenhados por último, com posição dinâmica)
