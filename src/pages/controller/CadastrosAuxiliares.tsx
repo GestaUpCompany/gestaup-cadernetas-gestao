@@ -471,6 +471,22 @@ export function CadastrosAuxiliares() {
         }
 
         data.cadernetas_permitidas = funcionarioRbac.cadernetas_permitidas
+
+        // Gerar pin_hash antes do insert/update para evitar race condition
+        // (insert sem pin_hash + update separado podia deixar funcionario em estado quebrado)
+        if (funcionarioRbac.pin) {
+          if (state.editingItem) {
+            // Edição com PIN novo: incluir pin_hash no update
+            const pinHash = await hashPin(funcionarioRbac.pin, state.editingItem.id, fazendaId)
+            data.pin_hash = pinHash
+          } else {
+            // Novo funcionário: gerar UUID antes do insert para poder computar o hash
+            const newId = crypto.randomUUID()
+            const pinHash = await hashPin(funcionarioRbac.pin, newId, fazendaId)
+            data.id = newId
+            data.pin_hash = pinHash
+          }
+        }
       } else {
         data.pin_hash = null
         data.cadernetas_permitidas = []
@@ -478,7 +494,6 @@ export function CadastrosAuxiliares() {
     }
 
     let error
-    let insertedId: string | null = null
 
     if (state.editingItem) {
       const { error: updateError } = await supabase
@@ -486,18 +501,9 @@ export function CadastrosAuxiliares() {
         .update(data)
         .eq('id', state.editingItem.id)
       error = updateError
-      insertedId = state.editingItem.id
     } else {
-      const { data: inserted, error: insertError } = await supabase.from(tab.table).insert(data).select()
+      const { error: insertError } = await supabase.from(tab.table).insert(data).select()
       error = insertError
-      insertedId = inserted && inserted.length > 0 ? (inserted[0] as GenericItem).id : null
-    }
-
-    // Gerar/atualizar hash do PIN para funcionários
-    if (!error && activeTab === 'funcionarios' && funcionarioRbac.acessa_app && funcionarioRbac.pin && insertedId) {
-      const pinHash = await hashPin(funcionarioRbac.pin, insertedId, fazendaId)
-      const { error: pinError } = await supabase.from(tab.table).update({ pin_hash: pinHash }).eq('id', insertedId)
-      error = pinError
     }
 
     if (error) {
@@ -641,6 +647,7 @@ export function CadastrosAuxiliares() {
         .from('funcionarios')
         .select('id')
         .eq('fazenda_id', fazendaId)
+        .eq('ativo', true)
         .eq('acessa_app', true)
         .not('pin_hash', 'is', null)
         .limit(1)

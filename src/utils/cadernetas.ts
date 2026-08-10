@@ -23,4 +23,5 @@ export const CADERNETAS: CadernetaOption[] = [
   { id: 'entrada-insumos', label: 'Entrada de Insumos' },
   { id: 'saida-insumos', label: 'Produção Fábrica' },
   { id: 'leitura-cocho', label: 'Leitura de Cocho' },
+  { id: 'trato-confinamento', label: 'Trato Confinamento' },
 ]
