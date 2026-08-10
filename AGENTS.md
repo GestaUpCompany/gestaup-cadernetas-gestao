@@ -153,6 +153,20 @@ Correções aplicadas:
 4. **H6: UI distingue saída (laranja) de entrada (verde)**: a timeline do `Lotes.tsx` usa cores diferentes para saída e entrada, e mostra badge "(PWA)" ou "(painel)" conforme `individuo_id` está presente.
 5. **Trigger `update_quant_atual_movimentacao` corrigido**: referenciava colunas renomeadas na migration da cronologia (`peso_entrada` → `peso_entrada_kg_cab`, `peso_vivo_kg` → `peso_vivo_atual_kg_cab`, `peso_vivo_meta_kg` → `peso_vivo_meta_kg_cab`, e removidas `data_meta`, `preco_animal_kg`, `preco_animal_cab`, `custo_operacional`). Também adicionado filtro `ativo = true` nas queries de `lote_categorias`.
 
+### Transferência entre fazendas: registro em registros_movimentacao — adicionado em 2026-08-10
+
+Problema: a RPC `transferir_lote_entre_fazendas` criava o lote destino, atualizava o lote origem e enviava notificações, mas não inseria nada em `registros_movimentacao`. Resultado: transferências entre fazendas não apareciam na lista de movimentações do painel web nem na planilha XLSX exportada. O PWA salvava um registro local no IndexedDB com `motivo='Saída'` + `subtipo='Transferência'`, mas esse valor de subtipo não existia no enum do banco.
+
+Correções aplicadas:
+
+1. **Enums estendidos**: `tipo_movimentacao_motivo` ganhou `'Transferencia'`; `tipo_movimentacao_subtipo` ganhou `'Saida'` e `'Entrada'` (sem acento, conforme decisão do usuário). Hierarquia: `motivo=Transferencia` + `subtipo=Saida` para a fazenda origem, `motivo=Transferencia` + `subtipo=Entrada` para a fazenda destino.
+2. **Coluna `fazenda_destino_id` em `registros_movimentacao`**: uuid FK para `fazendas(id)`, nullable, com índice parcial. Permite rastrear para onde os animais foram. RLS existente não muda (filtra por `fazenda_id`, que é a fazenda dona do registro; `fazenda_destino_id` é informativo).
+3. **RPC atualizada**: `transferir_lote_entre_fazendas` agora insere 2 registros em `registros_movimentacao`: um na fazenda origem (`motivo=Transferencia`, `subtipo=Saida`) e um na fazenda destino (`motivo=Transferencia`, `subtipo=Entrada`). Ambos com `fazenda_destino_id`, `lote_origem_id`, `lote_destino_id`, `categoria` (nomes e cabeças), `causa_observacao` descritiva, `responsavel` (nome do usuário), `sync_status='synced'`.
+4. **PWA alinhado**: `MovimentacaoPage.tsx` agora salva o registro local com `motivoMovimentacao='Transferencia'` + `subtipo='Saida'` (em vez de `'Saída'` + `'Transferência'`), batendo com o que a RPC insere no Supabase. O registro local continua com `syncStatus='synced'` para não duplicar via sync engine. Não há risco de duplicação na lista do PWA porque `ListaRegistros` lê apenas do IndexedDB, nunca do Supabase.
+5. **Painel web atualizado**: `Movimentacao.tsx` faz join `fazenda_destino_nome:fazendas!fazenda_destino_id(nome)`, mostra coluna "Fazenda Destino" na tabela desktop e no card mobile, e inclui `subtipo` e `fazenda_destino_nome` no filtro de busca. `MovimentacaoDetalhes.tsx` mostra subtipo e fazenda destino na seção "Motivação". `MOVIMENTACAO_EXPORT_CONFIG` ganhou coluna "Fazenda Destino" no XLSX.
+
+Disparador: quando mencionar transferência entre fazendas, registro de movimentação de transferência, ou planilha de movimentação com transferência, ler esta seção.
+
 ### Notificações via WhatsApp — análise e plano (adicionado em 2026-08-04, não implementado)
 
 **Estado:** análise completa, branch `feature/notificacoes-whatsapp` criada, nada implementado. Retomar quando o usuário autorizar.
