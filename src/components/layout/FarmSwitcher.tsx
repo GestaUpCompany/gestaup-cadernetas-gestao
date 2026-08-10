@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../services/supabaseClient'
 import { useAuth } from '../../contexts/AuthContext'
 import { useFazenda } from '../../hooks/useDashboardQueries'
-import { setSelectedFazendaId, getSelectedFazendaId } from '../../utils/fazendaContext'
+import { setSelectedFazendaId } from '../../utils/fazendaContext'
 import { Modal } from '../ui'
 
 interface FazendaSimplificada {
@@ -57,9 +57,14 @@ export function FarmSwitcher() {
     loadData()
   }, [fazenda?.grupo_id])
 
-  const currentFazendaId = getSelectedFazendaId() || fazenda?.id
+  // Usa fazenda.id (do hook useFazenda, assincrono) como unica fonte de verdade.
+  // Antes usava getSelectedFazendaId() || fazenda?.id, que podia ser undefined
+  // no primeiro render e fazer a fazenda atual aparecer na lista de troca.
+  const currentFazendaId = fazenda?.id
 
-  const outrasFazendas = fazendasDoGrupo.filter(f => f.id !== currentFazendaId)
+  const outrasFazendas = currentFazendaId
+    ? fazendasDoGrupo.filter(f => f.id !== currentFazendaId)
+    : []
 
   const handleSwitchClick = (target: FazendaSimplificada) => {
     setSelectedFazenda(target)
@@ -131,33 +136,29 @@ export function FarmSwitcher() {
   return (
     <>
       <div className="border-t-2 border-gray-200 p-4">
-        <div className="bg-blue-50 p-3 rounded-lg space-y-2">
+        <div className="bg-blue-50 p-3 rounded-lg space-y-3">
           <div>
-            <p className="text-xs text-blue-600 font-semibold uppercase tracking-wider">Grupo</p>
+            <p className="text-[10px] text-blue-600 font-semibold uppercase tracking-wider">Grupo</p>
             <p className="text-sm font-medium text-gray-800 truncate">{grupo.nome}</p>
           </div>
-          <div>
-            <p className="text-xs text-gray-500">Fazenda atual</p>
+          <div className="border-t border-blue-100 pt-2">
+            <p className="text-[10px] text-gray-500 uppercase tracking-wider">Fazenda atual</p>
             <p className="text-sm font-medium text-gray-800 truncate">{fazenda?.nome || '...'}</p>
-            <p className="text-[10px] text-gray-400 truncate">{fazenda?.acesso_id || ''}</p>
           </div>
           {outrasFazendas.length > 0 && (
-            <div>
-              <p className="text-xs text-gray-500 mb-1">Trocar para:</p>
-              <div className="space-y-1">
+            <div className="border-t border-blue-100 pt-2">
+              <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1.5">Trocar para</p>
+              <div className="space-y-0.5">
                 {outrasFazendas.map(f => (
                   <button
                     key={f.id}
                     onClick={() => handleSwitchClick(f)}
                     className="w-full text-left px-2 py-1.5 rounded-lg text-xs text-gray-700 hover:bg-blue-100 transition-colors flex items-center gap-2"
                   >
-                    <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-3.5 h-3.5 flex-shrink-0 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                     </svg>
-                    <div className="flex-1 min-w-0">
-                      <div className="truncate">{f.nome}</div>
-                      <div className="truncate text-[10px] text-gray-400">{f.acesso_id}</div>
-                    </div>
+                    <span className="truncate">{f.nome}</span>
                   </button>
                 ))}
               </div>

@@ -887,6 +887,9 @@ export function Lotes() {
           .single()
         if (insertError) throw insertError
         loteId = newLote?.id || ''
+        // Atualiza editingLote para o lote recém-criado, evitando que um
+        // handleSubmit posterior faça um segundo insert e duplique o lote.
+        setEditingLote(newLote as any)
       }
 
       // Salvar categorias (inclui raça, peso, etc.)
