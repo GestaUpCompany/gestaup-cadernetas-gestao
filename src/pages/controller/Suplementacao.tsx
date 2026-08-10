@@ -164,18 +164,18 @@ export function Suplementacao() {
             <Button
               onClick={() => {
               // Pre-computar data_anterior e intervalo_dias para cada registro
-              // baseado na serie lote_id + formulacao ordenada por data
+              // baseado na serie por lote_id ordenada por data ( independente da formulação)
               const sorted = [...filteredRegistros].sort((a, b) =>
                 new Date(a.data).getTime() - new Date(b.data).getTime()
               )
               const seriesMap = new Map<string, typeof sorted>()
               for (const reg of sorted) {
-                const key = `${reg.lote_id || ''}|${reg.formulacao || ''}`
+                const key = reg.lote_id || ''
                 if (!seriesMap.has(key)) seriesMap.set(key, [])
                 seriesMap.get(key)!.push(reg)
               }
               const enriched = sorted.map((reg) => {
-                const key = `${reg.lote_id || ''}|${reg.formulacao || ''}`
+                const key = reg.lote_id || ''
                 const series = seriesMap.get(key)!
                 const idx = series.indexOf(reg)
                 const prev = idx > 0 ? series[idx - 1] : null
