@@ -24,6 +24,9 @@ interface RegistroMovimentacao {
   tipo_entrada?: string
   tipo_destino?: string
   categoria?: string
+  subtipo?: string
+  fazenda_destino_id?: string
+  fazenda_destino_nome?: { nome: string } | null
   sync_status?: string
   created_at: string
   updated_at?: string
@@ -52,7 +55,7 @@ export function MovimentacaoDetalhes() {
 
     const { data, error } = await supabase
       .from('registros_movimentacao')
-      .select('*')
+      .select('*, fazenda_destino_nome:fazendas!fazenda_destino_id(nome)')
       .eq('id', id)
       .eq('fazenda_id', fazendaId)
       .is('deleted_at', null)
@@ -130,11 +133,13 @@ export function MovimentacaoDetalhes() {
             <div className="bg-gray-50 p-4 rounded-lg space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <p className="text-sm"><span className="font-medium text-gray-700">Motivo:</span> {registro.motivo_movimentacao || '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Subtipo:</span> {registro.subtipo || '-'}</p>
                 <p className="text-sm"><span className="font-medium text-gray-700">Brinco:</span> {registro.brinco || '-'}</p>
                 <p className="text-sm"><span className="font-medium text-gray-700">Chip:</span> {registro.chip || '-'}</p>
                 <p className="text-sm"><span className="font-medium text-gray-700">Tipo Saída:</span> {registro.tipo_saida || '-'}</p>
                 <p className="text-sm"><span className="font-medium text-gray-700">Tipo Entrada:</span> {registro.tipo_entrada || '-'}</p>
                 <p className="text-sm"><span className="font-medium text-gray-700">Tipo Destino:</span> {registro.tipo_destino || '-'}</p>
+                <p className="text-sm"><span className="font-medium text-gray-700">Fazenda Destino:</span> {registro.fazenda_destino_nome?.nome || '-'}</p>
               </div>
               {registro.causa_observacao && <p className="text-sm"><span className="font-medium text-gray-700">Observação:</span> {registro.causa_observacao}</p>}
             </div>

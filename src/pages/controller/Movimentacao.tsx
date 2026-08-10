@@ -27,6 +27,7 @@ interface RegistroMovimentacao {
   subtipo?: string
   lote_origem_nome?: { nome: string } | null
   lote_destino_nome?: { nome: string } | null
+  fazenda_destino_nome?: { nome: string } | null
   individuo?: { id_brinco: string | null } | null
   sync_status?: string
   created_at: string
@@ -58,7 +59,7 @@ export function Movimentacao() {
 
     let query = supabase
       .from('registros_movimentacao')
-      .select('*, lote_origem_nome:lotes!lote_origem_id(nome), lote_destino_nome:lotes!lote_destino_id(nome), individuo:individuos!individuo_id(id_brinco)')
+      .select('*, lote_origem_nome:lotes!lote_origem_id(nome), lote_destino_nome:lotes!lote_destino_id(nome), fazenda_destino_nome:fazendas!fazenda_destino_id(nome), individuo:individuos!individuo_id(id_brinco)')
       .eq('fazenda_id', fazendaId)
       .is('deleted_at', null)
       .order('data', { ascending: false })
@@ -84,6 +85,8 @@ export function Movimentacao() {
       (registro.categoria && registro.categoria.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.responsavel && registro.responsavel.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.motivo_movimentacao && registro.motivo_movimentacao.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.subtipo && registro.subtipo.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.fazenda_destino_nome?.nome && registro.fazenda_destino_nome.nome.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.numero_cabecas && registro.numero_cabecas.toString().includes(searchTerm.toLowerCase())) ||
       (registro.peso_vivo_atual_kg && registro.peso_vivo_atual_kg.toString().includes(searchTerm.toLowerCase()))
 
@@ -222,12 +225,18 @@ export function Movimentacao() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-500">Motivo:</span>
-                      <span className="text-gray-800 font-medium truncate max-w-[150px]">{registro.motivo_movimentacao || '-'}</span>
+                      <span className="text-gray-800 font-medium truncate max-w-[150px]">{registro.motivo_movimentacao || '-'}{registro.subtipo ? ` (${registro.subtipo})` : ''}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-500">Categoria:</span>
                       <span className="text-gray-800 font-medium truncate max-w-[150px]">{registro.categoria || '-'}</span>
                     </div>
+                    {registro.fazenda_destino_nome?.nome && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Fazenda Destino:</span>
+                        <span className="text-gray-800 font-medium truncate max-w-[150px]">{registro.fazenda_destino_nome.nome}</span>
+                      </div>
+                    )}
                   </div>
                 </Card>
               )
@@ -251,6 +260,7 @@ export function Movimentacao() {
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Peso Médio (kg)</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Motivo</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoria</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fazenda Destino</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -277,10 +287,13 @@ export function Movimentacao() {
                         {registro.peso_vivo_atual_kg || '-'}
                       </td>
                       <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
-                        {registro.motivo_movimentacao || '-'}
+                        {registro.motivo_movimentacao || '-'}{registro.subtipo ? ` (${registro.subtipo})` : ''}
                       </td>
                       <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                         {registro.categoria || '-'}
+                      </td>
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
+                        {registro.fazenda_destino_nome?.nome || '-'}
                       </td>
                     </tr>
                   )

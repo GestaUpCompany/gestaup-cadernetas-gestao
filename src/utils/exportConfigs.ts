@@ -236,7 +236,8 @@ export const MOVIMENTACAO_EXPORT_CONFIG: TableExportConfig = {
     { source: 'lote_destino_nome', header: 'Lote Destino (Cadastro)', transform: (value) => value?.nome || '' },
     { source: 'individuo', header: 'Brinco (Cadastro)', transform: (value) => value?.id_brinco || '' },
     { source: 'tipo_saida', header: 'Tipo de Saída' },
-    { source: 'tipo_entrada', header: 'Tipo de Entrada' }
+    { source: 'tipo_entrada', header: 'Tipo de Entrada' },
+    { source: 'fazenda_destino_nome', header: 'Fazenda Destino', transform: (value) => value?.nome || '' }
   ]
 }
 
