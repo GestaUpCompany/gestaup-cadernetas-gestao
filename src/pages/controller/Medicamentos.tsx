@@ -114,7 +114,7 @@ export function Medicamentos() {
       tipo: formData.tipo,
       nome_comercial: formData.nome_comercial,
       principio_ativo: formData.principio_ativo,
-      dose_recomendada: formData.dose_recomendada || null,
+      dose_recomendada: formData.dose_recomendada,
     }
 
     let error
@@ -286,12 +286,13 @@ export function Medicamentos() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Dose Recomendada
+                Dose Recomendada <span className="text-red-500">*</span>
               </label>
               <Input
                 type="text"
                 value={formData.dose_recomendada}
                 onChange={(e) => setFormData({ ...formData, dose_recomendada: e.target.value })}
+                required
                 placeholder="Ex: 10mg/kg"
                 className="border-gray-200 focus:border-accent"
               />

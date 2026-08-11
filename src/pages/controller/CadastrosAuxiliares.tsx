@@ -225,7 +225,7 @@ const tabs: TabConfig[] = [
         { label: 'Outro', value: 'Outro' },
       ]},
       { name: 'outro_tipo', label: 'Especificar Tipo', required: true, placeholder: 'Descreva o tipo', showIf: (d) => d.tipo === 'Outro' },
-      { name: 'dose_recomendada', label: 'Dose Recomendada', placeholder: 'Ex: 1ml/50kg' },
+      { name: 'dose_recomendada', label: 'Dose Recomendada', required: true, placeholder: 'Ex: 1ml/50kg' },
     ],
     searchPlaceholder: 'Buscar medicamento...',
     orderBy: 'nome_comercial',

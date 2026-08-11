@@ -137,7 +137,7 @@ export function Insumos() {
     const data = {
       fazenda_id: fazendaId,
       nome: formData.nome,
-      tipo: formData.tipo || null,
+      tipo: formData.tipo,
       fornecedor: formData.fornecedor || null,
       teor_ms: formData.teor_ms ? parseFloat(formData.teor_ms.replace(',', '.')) : null,
       preco_ton_mn: formData.preco_ton_mn ? parseCurrency(formData.preco_ton_mn) : null,
@@ -321,11 +321,12 @@ export function Insumos() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
-                  Tipo
+                  Tipo <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={formData.tipo}
                   onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
+                  required
                   className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base border-gray-300 bg-white"
                 >
                   <option value="">Selecione...</option>
@@ -359,13 +360,14 @@ export function Insumos() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
-                  Teor MS (%)
+                  Teor MS (%) <span className="text-red-500">*</span>
                 </label>
                 <Input
                   type="text"
                   inputMode="decimal"
                   value={formData.teor_ms}
                   onChange={(e) => setFormData({ ...formData, teor_ms: e.target.value })}
+                  required
                   placeholder="Ex: 88,00"
                   className="border-gray-200 focus:border-accent"
                 />
@@ -373,13 +375,14 @@ export function Insumos() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
-                  Preço (R$/Ton/MN)
+                  Preço (R$/Ton/MN) <span className="text-red-500">*</span>
                 </label>
                 <Input
                   type="text"
                   inputMode="decimal"
                   value={formData.preco_ton_mn}
                   onChange={(e) => setFormData({ ...formData, preco_ton_mn: maskCurrency(e.target.value) })}
+                  required
                   placeholder="Ex: R$ 750,00"
                   className="border-gray-200 focus:border-accent"
                 />
