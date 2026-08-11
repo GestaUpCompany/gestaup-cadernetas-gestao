@@ -179,15 +179,22 @@ export function Suplementacao() {
                 const series = seriesMap.get(key)!
                 const idx = series.indexOf(reg)
                 const prev = idx > 0 ? series[idx - 1] : null
+                const next = idx < series.length - 1 ? series[idx + 1] : null
                 const dataAtual = new Date(reg.data)
                 const dataAnterior = prev ? new Date(prev.data) : null
+                const dataProximo = next ? new Date(next.data) : null
                 const intervalo = dataAnterior
                   ? Math.max(Math.round((dataAtual.getTime() - dataAnterior.getTime()) / (1000 * 60 * 60 * 24)), 0)
+                  : null
+                const intervaloAteProximo = dataProximo
+                  ? Math.max(Math.round((dataProximo.getTime() - dataAtual.getTime()) / (1000 * 60 * 60 * 24)), 0)
                   : null
                 return {
                   ...reg,
                   data_anterior: dataAnterior ? dataAnterior.toISOString() : null,
-                  intervalo_dias: intervalo
+                  intervalo_dias: intervalo,
+                  data_proximo: dataProximo ? dataProximo.toISOString() : null,
+                  intervalo_ate_proximo_dias: intervaloAteProximo
                 }
               })
               exportToXLSX(enriched, SUPLEMENTACAO_EXPORT_CONFIG)

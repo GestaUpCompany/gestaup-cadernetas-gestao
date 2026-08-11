@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx'
+import ExcelJS from 'exceljs'
 import { formatDate, formatDateTime } from './formatDate'
 
 export type ColumnFormat = 'date' | 'datetime' | 'number' | 'boolean' | 'text'
@@ -137,7 +137,86 @@ function buildColumnList(data: any[], configColumns: ColumnConfig[]): {
   return { configCols: filteredConfigCols, extraKeys }
 }
 
-export function exportToXLSX(data: any[], config: TableExportConfig): void {
+interface ResolvedColumn {
+  header: string
+  value: any
+}
+
+function resolveRow(row: any, configCols: ColumnConfig[], extraKeys: string[]): ResolvedColumn[] {
+  const resolved: ResolvedColumn[] = []
+
+  configCols.forEach(col => {
+    const value = row[col.source]
+    resolved.push({
+      header: col.header,
+      value: col.transform ? col.transform(value) : formatValue(value, col.format),
+    })
+  })
+
+  extraKeys.forEach(key => {
+    const value = row[key]
+    let resolvedValue: any
+    if (key === 'data') {
+      resolvedValue = formatDataField(value)
+    } else if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      resolvedValue = JSON.stringify(value)
+    } else if (Array.isArray(value)) {
+      resolvedValue = value.join(', ')
+    } else {
+      resolvedValue = value
+    }
+    resolved.push({ header: autoHeader(key), value: resolvedValue })
+  })
+
+  return resolved
+}
+
+function applyHeaderStyle(cell: ExcelJS.Cell) {
+  cell.font = { bold: true }
+  cell.alignment = { horizontal: 'center', vertical: 'middle' }
+  cell.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFF0F0F0' },
+  }
+}
+
+function applyDataStyle(cell: ExcelJS.Cell) {
+  cell.alignment = { horizontal: 'center', vertical: 'middle' }
+}
+
+function autoFitColumns(worksheet: ExcelJS.Worksheet, headers: string[]) {
+  worksheet.columns.forEach((col, i) => {
+    const header = headers[i] ?? ''
+    let maxLen = String(header).length
+    for (let r = 2; r <= worksheet.rowCount; r++) {
+      const cell = worksheet.getCell(r, i + 1)
+      const cellValue = cell.value ?? ''
+      const len = String(cellValue).length
+      if (len > maxLen) maxLen = len
+    }
+    col.width = Math.min(Math.max(maxLen + 2, 10), 40)
+  })
+}
+
+async function downloadWorkbook(workbook: ExcelJS.Workbook, tableName: string) {
+  const timestamp = new Date().toISOString().slice(0, 10)
+  const filename = `${tableName}_${timestamp}.xlsx`
+  const buffer = await workbook.xlsx.writeBuffer()
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
+export async function exportToXLSX(data: any[], config: TableExportConfig): Promise<void> {
   if (!data || data.length === 0) {
     console.warn('No data to export')
     return
@@ -145,86 +224,39 @@ export function exportToXLSX(data: any[], config: TableExportConfig): void {
 
   const { configCols, extraKeys } = buildColumnList(data, config.columns)
 
-  // Transform data: configured columns first, then extra columns
-  const transformedData = data.map(row => {
-    const transformedRow: any = {}
+  const workbook = new ExcelJS.Workbook()
+  const worksheet = workbook.addWorksheet(config.sheetName)
 
-    // Configured columns with their headers, transforms and formats
-    configCols.forEach(col => {
-      const value = row[col.source]
-      transformedRow[col.header] = col.transform
-        ? col.transform(value)
-        : formatValue(value, col.format)
-    })
+  // Build resolved rows
+  const resolvedRows = data.map(row => resolveRow(row, configCols, extraKeys))
+  const headers = resolvedRows.length > 0 ? resolvedRows[0].map(c => c.header) : configCols.map(c => c.header)
 
-    // Extra columns with auto-generated headers (same as old CSV)
-    extraKeys.forEach(key => {
-      const value = row[key]
-      if (key === 'data') {
-        transformedRow[autoHeader(key)] = formatDataField(value)
-      } else if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-        transformedRow[autoHeader(key)] = JSON.stringify(value)
-      } else if (Array.isArray(value)) {
-        transformedRow[autoHeader(key)] = value.join(', ')
-      } else {
-        transformedRow[autoHeader(key)] = value
-      }
-    })
+  // Header
+  const headerRow = worksheet.addRow(headers)
+  headerRow.eachCell(cell => applyHeaderStyle(cell))
 
-    return transformedRow
-  })
+  // Data
+  for (const resolved of resolvedRows) {
+    const excelRow = worksheet.addRow(resolved.map(c => c.value))
+    excelRow.eachCell(cell => applyDataStyle(cell))
+  }
 
-  // Create worksheet
-  const worksheet = XLSX.utils.json_to_sheet(transformedData)
+  autoFitColumns(worksheet, headers)
+  worksheet.views = [{ state: 'frozen', ySplit: 1 }]
 
-  // Create workbook
-  const workbook = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(workbook, worksheet, config.sheetName)
-
-  // Generate filename with timestamp
-  const timestamp = new Date().toISOString().slice(0, 10)
-  const filename = `${config.tableName}_${timestamp}.xlsx`
-
-  // Download file
-  XLSX.writeFile(workbook, filename)
+  await downloadWorkbook(workbook, config.tableName)
 }
 
-export function exportToXLSXMultiSheet(config: MultiSheetExportConfig): void {
-  const workbook = XLSX.utils.book_new()
+export async function exportToXLSXMultiSheet(config: MultiSheetExportConfig): Promise<void> {
+  const workbook = new ExcelJS.Workbook()
   const usedNames = new Set<string>()
 
   for (const sheet of config.sheets) {
     if (!sheet.data || sheet.data.length === 0) continue
 
     const { configCols, extraKeys } = buildColumnList(sheet.data, sheet.config.columns)
-
-    const transformedData = sheet.data.map(row => {
-      const transformedRow: any = {}
-
-      configCols.forEach(col => {
-        const value = row[col.source]
-        transformedRow[col.header] = col.transform
-          ? col.transform(value)
-          : formatValue(value, col.format)
-      })
-
-      extraKeys.forEach(key => {
-        const value = row[key]
-        if (key === 'data') {
-          transformedRow[autoHeader(key)] = formatDataField(value)
-        } else if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-          transformedRow[autoHeader(key)] = JSON.stringify(value)
-        } else if (Array.isArray(value)) {
-          transformedRow[autoHeader(key)] = value.join(', ')
-        } else {
-          transformedRow[autoHeader(key)] = value
-        }
-      })
-
-      return transformedRow
-    })
-
-    const worksheet = XLSX.utils.json_to_sheet(transformedData)
+    const resolvedRows = sheet.data.map(row => resolveRow(row, configCols, extraKeys))
+    const headers = resolvedRows.length > 0 ? resolvedRows[0].map(c => c.header) : configCols.map(c => c.header)
 
     // Garante nome único de aba (Excel limita a 31 chars)
     let name = sheet.config.sheetName.slice(0, 31)
@@ -236,10 +268,21 @@ export function exportToXLSXMultiSheet(config: MultiSheetExportConfig): void {
     }
     usedNames.add(name)
 
-    XLSX.utils.book_append_sheet(workbook, worksheet, name)
+    const worksheet = workbook.addWorksheet(name)
+
+    // Header
+    const headerRow = worksheet.addRow(headers)
+    headerRow.eachCell(cell => applyHeaderStyle(cell))
+
+    // Data
+    for (const resolved of resolvedRows) {
+      const excelRow = worksheet.addRow(resolved.map(c => c.value))
+      excelRow.eachCell(cell => applyDataStyle(cell))
+    }
+
+    autoFitColumns(worksheet, headers)
+    worksheet.views = [{ state: 'frozen', ySplit: 1 }]
   }
 
-  const timestamp = new Date().toISOString().slice(0, 10)
-  const filename = `${config.tableName}_${timestamp}.xlsx`
-  XLSX.writeFile(workbook, filename)
+  await downloadWorkbook(workbook, config.tableName)
 }

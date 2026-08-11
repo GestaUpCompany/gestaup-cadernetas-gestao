@@ -518,6 +518,8 @@ export const SUPLEMENTACAO_EXPORT_CONFIG: TableExportConfig = {
     { source: 'data', header: 'Data Atual', format: 'date' },
     { source: 'data_anterior', header: 'Data Anterior', format: 'date' },
     { source: 'intervalo_dias', header: 'Intervalo (dias)', format: 'number' },
+    { source: 'data_proximo', header: 'Trato Seguinte', format: 'date' },
+    { source: 'intervalo_ate_proximo_dias', header: 'Intervalo até seguinte (dias)', format: 'number' },
     { source: 'tratador', header: 'Tratador' },
     { source: 'pasto', header: 'Pasto' },
     { source: 'lote', header: 'Lote' },
