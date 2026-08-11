@@ -24,11 +24,11 @@ interface RegistroOperacoesMaquinas {
   dispositivo_id?: string
   data: string
   veiculo_trator: string
-  implemento_utilizado: string
+  implemento_utilizado?: string
   hora_inicial?: string
   hora_final?: string
-  odometro_horimetro_inicial: string
-  odometro_horimetro_final: string
+  odometro_horimetro_inicial?: string
+  odometro_horimetro_final?: string
   total_odometro_horimetro?: string
   tipo_operacao: string
   observacao?: string
@@ -118,7 +118,7 @@ export function RegistrosOperacoesMaquinasDetalhes() {
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Data:</span> {formatDate(registro.data)}</p>
               <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Veículo/Trator:</span> {registro.veiculo_trator}</p>
-              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Implemento Utilizado:</span> {registro.implemento_utilizado}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Implemento Utilizado:</span> {registro.implemento_utilizado || '-'}</p>
               <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Tipo Operação:</span> {registro.tipo_operacao.charAt(0).toUpperCase() + registro.tipo_operacao.slice(1)}</p>
             </div>
           </div>

@@ -14,7 +14,7 @@ interface RegistroOperacoesMaquinas {
   dispositivo_id?: string
   data: string
   veiculo_trator: string
-  implemento_utilizado: string
+  implemento_utilizado?: string
   hora_inicial?: string
   hora_final?: string
   odometro_horimetro_inicial?: string
@@ -236,7 +236,7 @@ export function RegistrosOperacoesMaquinas() {
                       {registro.veiculo_trator}
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
-                      {registro.implemento_utilizado}
+                      {registro.implemento_utilizado || '-'}
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                       {registro.tipo_operacao}

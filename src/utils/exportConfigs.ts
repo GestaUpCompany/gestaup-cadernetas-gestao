@@ -486,7 +486,7 @@ export const OPERACOES_MAQUINAS_EXPORT_CONFIG: TableExportConfig = {
   columns: [
     { source: 'data', header: 'Data', format: 'date' },
     { source: 'veiculo_trator', header: 'Veículo/Trator' },
-    { source: 'implemento_utilizado', header: 'Implemento Utilizado' },
+    { source: 'implemento_utilizado', header: 'Implemento Utilizado', transform: (value) => value || '' },
     { source: 'hora_inicial', header: 'Hora Inicial' },
     { source: 'hora_final', header: 'Hora Final' },
     { source: 'odometro_horimetro_inicial', header: 'Odômetro/Horímetro Inicial' },
