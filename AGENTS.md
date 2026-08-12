@@ -334,3 +334,36 @@ Cascata completa: `planos_nutricionais` UPDATE → `trigger_recalc_peso_plano` �
 Disparador: quando mencionar "consumo desatualizado", "recálculo de consumo", "teor_ms_dieta mudou", "custo_mn_tonelada mudou", "pct_pv inconsistente", ou problemas com `consumo_kg_ms`/`consumo_pct_pv`/`custo_medio` em `registros_suplementacao`, ler esta seção.
 
 ATENÇÃO: QUALQUER TESTE A SER FEITO EM UMA FAZENDA, FAÇA SOMENTE NA FAZENDA DE ID d649c65e-16ab-4b77-a84b-df937aa41cc3
+
+
+### Mapas KML, georreferenciamento e GPS offline — adicionado em 2026-08-12
+
+Arquitetura aprovada para o MVP de mapas com KML, edição de pastos no Painel Web e visualização offline com GPS no PWA. Documento completo em `docs/ARQUITETURA_MAPA_KML.md`.
+
+**Resumo das decisões:**
+
+1. **Biblioteca de mapa**: MapLibre GL JS + `vis.gl/react-map-gl` + `@mapbox/mapbox-gl-draw`. Sobre Leaflet (raster-first, tiles offline pesados) e Mapbox GL (custo recorrente, vendor lock-in). MapLibre é fork open-source do Mapbox GL, mesma engine, sem token, sem custo, caminho para PMTiles offline no futuro sem reescrita.
+
+2. **Tiles de fundo**: ESRI World Imagery online (gratuito, sem token) no Painel Web e no PWA. No PWA, fallback gracioso offline: quando o MapLibre não carrega tiles, mostra fundo verde acinzentado com aviso discreto "Sem conexão: mostrando delimitações e sua posição". Polígonos, GPS e distância continuam funcionando offline (dados locais + compute local). Satélite offline via PMTiles fica para o futuro (fonte a definir: ortomosaicos próprios do setor de projetos ideal, Mapbox pago como fallback). ESRI offline é violação de termos ("uso apenas dentro do ArcGIS").
+
+3. **Formato**: KML+KMZ como entrada (`fflate` para deszipar KMZ + `@tmcw/togeojson` para KML→GeoJSON), GeoJSON como intercâmbio, PostGIS `geometry(*,4326)` como armazenamento. PostGIS já ativo no Supabase desde 12/08/2026.
+
+4. **Modelo de dados**: colunas novas em tabelas existentes (`pastos.geometria geometry(Polygon,4326)`, `bebedouros.geometria geometry(Point,4326)`, `fazendas.bounding_box geometry(Polygon,4326)`), todas nullable. Tabelas novas `mapa_estradas (LineString)` e `mapa_pontos (Point, tipo text)` para o que não tem casa. Índices GIST em todas. RLS seguindo o padrão `fazenda_id IN (SELECT ... FROM usuario_fazenda ...)`. Não usar tabela `mapa_elementos` genérica (quebra vínculo 1:1, perde validação de tipo de geometria, complica RLS).
+
+5. **GPS no PWA**: `@capacitor/geolocation` para `watchPosition` (nativo, mais preciso que Web Geolocation API).
+
+6. **Distância até pasto-alvo**: `turf.js` (`turf.distance` para centroide, `turf.pointToPolygonDistance` para borda), rodando no celular sem rede.
+
+7. **Offline no PWA**: GeoJSON dos pastos/bebedouros/estradas cacheado no IndexedDB via `cadastroCache.ts` (mesmo padrão existente). Uma query por fazenda, payload pequeno (200-500KB para 100 pastos). Sem multi-tenancy: peão loga com `acesso_id` da fazenda dele, baixa só os dados dela.
+
+8. **Fora do MVP (futuro aditivo, sem reescrita)**: satélite offline via PMTiles, routing pelas estradas (`ngraph.path` ou `turf.shortestPath`), edição de geometrias no PWA, terrain 3D, import de Shapefile.
+
+**Pontos de atenção para a implementação:**
+- Separar camadas no MapLibre: source de satélite separado dos sources de GeoJSON, para trocar online por PMTiles offline sem refactor.
+- Validar geometrias importadas com `ST_IsValid` antes de salvar; usar `ST_MakeValid` se inválido.
+- SRID 4326 consistente (WGS84, padrão GPS e KML).
+- Um polígono por pasto no MVP; MultiPolygon fica para depois.
+- Query de cache filtrar `geometria IS NOT NULL` para não trazer pastos sem geometria (maioria dos 1294 atuais).
+- Incrementar versão do `cadastroCache` para forçar refresh quando o schema mudar.
+
+Disparador: quando mencionar "mapa KML", "georreferenciamento", "pastos no mapa", "GPS no PWA", "MapLibre", "PostGIS", "geometria de pasto", "distância até pasto", ou retomar a implementação de mapas, ler esta seção e o `docs/ARQUITETURA_MAPA_KML.md`.
