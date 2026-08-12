@@ -334,6 +334,59 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.get_lote_por_pasto(uuid) TO authenticated;
 
+-- ==================== get_lote_por_curral ====================
+-- Retorna o lote associado a um curral (via currais.lote_id) com dados reais
+CREATE OR REPLACE FUNCTION public.get_lote_por_curral(p_curral_id uuid)
+RETURNS TABLE (
+  id uuid,
+  nome text,
+  cabecas_atual bigint,
+  raca text,
+  sexo text,
+  peso_medio_atual_kg numeric
+)
+LANGUAGE sql
+SECURITY DEFINER
+AS $$
+  SELECT
+    l.id,
+    l.nome,
+    COALESCE((
+      SELECT SUM(lc.quant_atual)
+      FROM lote_categorias lc
+      WHERE lc.lote_id = l.id AND lc.ativo = true AND lc.quant_atual > 0
+    ), 0) AS cabecas_atual,
+    l.raca,
+    l.sexo,
+    CASE
+      WHEN COALESCE((
+        SELECT SUM(lc.quant_atual)
+        FROM lote_categorias lc
+        WHERE lc.lote_id = l.id AND lc.ativo = true AND lc.quant_atual > 0
+      ), 0) > 0
+      THEN round(
+        COALESCE((
+          SELECT SUM(lc.quant_atual * lc.peso_vivo_atual_kg_cab)
+          FROM lote_categorias lc
+          WHERE lc.lote_id = l.id AND lc.ativo = true AND lc.quant_atual > 0 AND lc.peso_vivo_atual_kg_cab IS NOT NULL
+        ), 0) /
+        COALESCE((
+          SELECT SUM(lc.quant_atual)
+          FROM lote_categorias lc
+          WHERE lc.lote_id = l.id AND lc.ativo = true AND lc.quant_atual > 0 AND lc.peso_vivo_atual_kg_cab IS NOT NULL
+        ), 1),
+        2
+      )
+      ELSE NULL
+    END AS peso_medio_atual_kg
+  FROM lotes l
+  JOIN currais c ON c.lote_id = l.id
+  WHERE c.id = p_curral_id
+  LIMIT 1;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.get_lote_por_curral(uuid) TO authenticated;
+
 -- ==================== salvar_estrada ====================
 -- Cria uma nova estrada (LineString) na fazenda
 CREATE OR REPLACE FUNCTION public.salvar_estrada(
@@ -459,7 +512,7 @@ BEGIN
   END IF;
 
   INSERT INTO public.mapa_pontos (fazenda_id, tipo, nome, geometria)
-  VALUES (p_fazenda_id, p_tipo, p_nome, v_geom::geometry(Point, 4326))
+  VALUES (p_fazenda_id, p_tipo, p_nome, v_geom::geometry(Geometry, 4326))
   RETURNING id INTO v_id;
 
   RETURN v_id;
@@ -493,7 +546,7 @@ BEGIN
     END IF;
 
     UPDATE public.mapa_pontos
-    SET geometria = v_geom::geometry(Point, 4326), updated_at = now()
+    SET geometria = v_geom::geometry(Geometry, 4326), updated_at = now()
     WHERE id = p_ponto_id;
   END IF;
 
@@ -527,3 +580,77 @@ $$;
 GRANT EXECUTE ON FUNCTION public.salvar_ponto(uuid, text, text, text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.atualizar_ponto(uuid, text, text, text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.remover_ponto(uuid) TO authenticated;
+
+-- ==================== get_currais_com_geometria ====================
+CREATE OR REPLACE FUNCTION public.get_currais_com_geometria(p_fazenda_id uuid)
+RETURNS TABLE(id uuid, nome text, lote_id uuid, geometria json)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT c.id, c.nome, c.lote_id, ST_AsGeoJSON(c.geometria)::json
+  FROM public.currais c
+  WHERE c.fazenda_id = p_fazenda_id
+    AND c.geometria IS NOT NULL
+    AND c.deleted_at IS NULL;
+END;
+$$;
+
+-- ==================== salvar_geometria_curral ====================
+CREATE OR REPLACE FUNCTION public.salvar_geometria_curral(
+  p_curral_id uuid,
+  p_geometria_geojson text
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_geom geometry;
+BEGIN
+  v_geom := ST_GeomFromGeoJSON(p_geometria_geojson);
+  v_geom := ST_SetSRID(v_geom, 4326);
+  v_geom := ST_Force2D(v_geom);
+
+  IF NOT ST_IsValid(v_geom) THEN
+    v_geom := ST_Force2D(ST_MakeValid(v_geom));
+    IF v_geom IS NULL OR NOT ST_IsValid(v_geom) THEN
+      RAISE EXCEPTION 'Geometria inválida.';
+    END IF;
+  END IF;
+
+  UPDATE public.currais
+  SET geometria = v_geom::geometry(Polygon, 4326), updated_at = now()
+  WHERE id = p_curral_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Curral não encontrado: %', p_curral_id;
+  END IF;
+
+  RETURN true;
+END;
+$$;
+
+-- ==================== remover_geometria_curral ====================
+CREATE OR REPLACE FUNCTION public.remover_geometria_curral(p_curral_id uuid)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  UPDATE public.currais
+  SET geometria = NULL, updated_at = now()
+  WHERE id = p_curral_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Curral não encontrado: %', p_curral_id;
+  END IF;
+
+  RETURN true;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.get_currais_com_geometria(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.salvar_geometria_curral(uuid, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.remover_geometria_curral(uuid) TO authenticated;

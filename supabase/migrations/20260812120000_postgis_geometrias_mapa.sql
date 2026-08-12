@@ -40,12 +40,13 @@ CREATE TABLE IF NOT EXISTS public.mapa_estradas (
 );
 
 -- mapa_pontos: pontos de interesse sem tabela própria (cochos, portões, saleiros, currais de manejo)
+-- geometria é genérica (Geometry) para aceitar Point (cochos, portões) e Polygon (fábricas)
 CREATE TABLE IF NOT EXISTS public.mapa_pontos (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   fazenda_id uuid NOT NULL REFERENCES public.fazendas(id) ON DELETE CASCADE,
-  tipo text NOT NULL,  -- 'cocho', 'portao', 'saleiro', 'curral_manejo', etc.
+  tipo text NOT NULL,  -- 'cocho', 'portao', 'saleiro', 'fabrica', etc.
   nome text NOT NULL,
-  geometria geometry(Point, 4326) NOT NULL,
+  geometria geometry(Geometry, 4326) NOT NULL,
   ativo boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
@@ -232,3 +233,10 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.mapa_estradas TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.mapa_pontos TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.mapa_estradas TO anon;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.mapa_pontos TO anon;
+
+-- ==================== currais.geometria ====================
+-- Curral como área (Polygon), igual ao pasto, para routing e visualização
+ALTER TABLE public.currais
+  ADD COLUMN IF NOT EXISTS geometria geometry(Polygon, 4326);
+
+CREATE INDEX IF NOT EXISTS idx_currais_geometria ON public.currais USING GIST (geometria);

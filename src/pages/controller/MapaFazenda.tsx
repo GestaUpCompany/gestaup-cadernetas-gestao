@@ -50,6 +50,28 @@ interface PontoMapa {
   geometria_geojson?: GeoJSON.FeatureCollection | null
 }
 
+interface CurralMapa {
+  id: string
+  nome: string
+  lote_id: string | null
+  geometria_geojson?: GeoJSON.FeatureCollection | null
+}
+
+interface CurralDetalhe extends CurralMapa {
+  largura_m: number | null
+  comprimento_m: number | null
+  metros_cocho_m: number | null
+  formulacao_nome: string | null
+  lote_atual?: {
+    id: string
+    nome: string
+    n_cabecas: number
+    raca?: string | null
+    sexo?: string | null
+    peso_medio_atual_kg?: number | null
+  } | null
+}
+
 // Tipos de pontos de interesse com cor e ícone
 const TIPOS_PONTO: { value: string; label: string; cor: string; icone: string }[] = [
   { value: 'fabrica', label: 'Fábrica de Ração', cor: '#7c3aed', icone: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5' },
@@ -294,6 +316,8 @@ export function MapaFazenda() {
   const [bebedouros, setBebedouros] = useState<BebedouroMapa[]>([])
   const [estradas, setEstradas] = useState<EstradaMapa[]>([])
   const [pontos, setPontos] = useState<PontoMapa[]>([])
+  const [currais, setCurrais] = useState<CurralMapa[]>([])
+  const [curraisSemGeo, setCurraisSemGeo] = useState<{ id: string; nome: string }[]>([])
   const [pastoDetalhe, setPastoDetalhe] = useState<PastoDetalhe | null>(null)
   const [popup, setPopup] = useState<{ lng: number; lat: number; nome: string } | null>(null)
   const [popupBebedouro, setPopupBebedouro] = useState<{ lng: number; lat: number; id: string; nome: string } | null>(null)
@@ -307,12 +331,29 @@ export function MapaFazenda() {
   const [nomeEstrada, setNomeEstrada] = useState('')
   const [estradaDesenhada, setEstradaDesenhada] = useState<GeoJSON.Feature<GeoJSON.LineString> | null>(null)
   const [estradaDetalhe, setEstradaDetalhe] = useState<EstradaMapa | null>(null)
-  const [visCamadas, setVisCamadas] = useState({ pastos: true, bebedouros: true, estradas: true, pontos: true })
+  const [visCamadas, setVisCamadas] = useState({ pastos: true, bebedouros: true, estradas: true, pontos: true, fabricas: true, currais: true })
   const [showPontoModal, setShowPontoModal] = useState(false)
   const [pontoDesenhado, setPontoDesenhado] = useState<GeoJSON.Feature<GeoJSON.Point> | null>(null)
   const [tipoPontoSelecionado, setTipoPontoSelecionado] = useState('fabrica')
   const [nomePonto, setNomePonto] = useState('')
   const [pontoDetalhe, setPontoDetalhe] = useState<PontoMapa | null>(null)
+  const [fabricaDetalhe, setFabricaDetalhe] = useState<PontoMapa | null>(null)
+  const [curralDetalhe, setCurralDetalhe] = useState<CurralDetalhe | null>(null)
+  const [showFabricaModal, setShowFabricaModal] = useState(false)
+  const [nomeFabrica, setNomeFabrica] = useState('')
+  const [showCurralModal, setShowCurralModal] = useState(false)
+  const [curralSelecionadoAssoc, setCurralSelecionadoAssoc] = useState('')
+  const [showAssocTipoModal, setShowAssocTipoModal] = useState(false)
+  const [editandoFabrica, setEditandoFabrica] = useState<{ fabricaId: string; fabricaNome: string; featureId: string } | null>(null)
+  const [editandoCurral, setEditandoCurral] = useState<{ curralId: string; curralNome: string; featureId: string } | null>(null)
+  const [modoRota, setModoRota] = useState<null | 'origem' | 'destinos'>(null)
+  const [rotaOrigem, setRotaOrigem] = useState<GeoJSON.Point | null>(null)
+  const [rotaDestinos, setRotaDestinos] = useState<GeoJSON.Point[]>([])
+  const [rotaResultado, setRotaResultado] = useState<GeoJSON.FeatureCollection | null>(null)
+  const [rotaSetas, setRotaSetas] = useState<GeoJSON.FeatureCollection | null>(null)
+  const [rotaDistancia, setRotaDistancia] = useState<number | null>(null)
+  const [calculandoRota, setCalculandoRota] = useState(false)
+  const [rotaErro, setRotaErro] = useState<string | null>(null)
   const [pastosSelecionados, setPastosSelecionados] = useState<Set<string>>(new Set())
   const [showRemocaoLoteModal, setShowRemocaoLoteModal] = useState(false)
   const [removerBebedourosLote, setRemoverBebedourosLote] = useState(false)
@@ -351,6 +392,21 @@ export function MapaFazenda() {
   const editandoEstradaRef = useRef<{ estradaId: string; estradaNome: string; featureId: string } | null>(null)
   useEffect(() => { editandoEstradaRef.current = editandoEstrada }, [editandoEstrada])
 
+  const editandoFabricaRef = useRef<{ fabricaId: string; fabricaNome: string; featureId: string } | null>(null)
+  useEffect(() => { editandoFabricaRef.current = editandoFabrica }, [editandoFabrica])
+
+  const editandoCurralRef = useRef<{ curralId: string; curralNome: string; featureId: string } | null>(null)
+  useEffect(() => { editandoCurralRef.current = editandoCurral }, [editandoCurral])
+
+  const modoRotaRef = useRef<null | 'origem' | 'destinos'>(null)
+  useEffect(() => { modoRotaRef.current = modoRota }, [modoRota])
+
+  const rotaOrigemRef = useRef<GeoJSON.Point | null>(null)
+  useEffect(() => { rotaOrigemRef.current = rotaOrigem }, [rotaOrigem])
+
+  const rotaDestinosRef = useRef<GeoJSON.Point[]>([])
+  useEffect(() => { rotaDestinosRef.current = rotaDestinos }, [rotaDestinos])
+
   // Esc sai do modo tela cheia
   useEffect(() => {
     if (!modoTelaCheia) return
@@ -385,7 +441,7 @@ export function MapaFazenda() {
 
     // Buscar pastos com geometria (ST_AsGeoJSON) e sem geometria (para o modal de associação)
     // e bebedouros com geometria (para renderizar no mapa)
-    const [pastosComGeo, pastosSemGeo, bebedourosComGeo, estradasRes, pontosRes] = await Promise.all([
+    const [pastosComGeo, pastosSemGeo, bebedourosComGeo, estradasRes, pontosRes, curraisComGeoRes, curraisSemGeoRes] = await Promise.all([
       supabase.rpc('get_pastos_com_geometria', { p_fazenda_id: fid }),
       supabase
         .from('pastos')
@@ -406,6 +462,14 @@ export function MapaFazenda() {
         .select('id, tipo, nome, geometria')
         .eq('fazenda_id', fid)
         .eq('ativo', true)
+        .order('nome'),
+      supabase.rpc('get_currais_com_geometria', { p_fazenda_id: fid }),
+      supabase
+        .from('currais')
+        .select('id, nome')
+        .eq('fazenda_id', fid)
+        .is('geometria', null)
+        .is('deleted_at', null)
         .order('nome'),
     ])
 
@@ -505,6 +569,31 @@ export function MapaFazenda() {
       setPontos(pontosParsed)
     }
 
+    if (curraisComGeoRes.data) {
+      const curraisParsed: CurralMapa[] = (curraisComGeoRes.data as any[]).map((c) => ({
+        id: c.id,
+        nome: c.nome,
+        lote_id: c.lote_id,
+        geometria_geojson: c.geometria
+          ? ({
+              type: 'FeatureCollection',
+              features: [
+                {
+                  type: 'Feature',
+                  properties: { id: c.id, nome: c.nome },
+                  geometry: c.geometria,
+                },
+              ],
+            } as GeoJSON.FeatureCollection)
+          : null,
+      }))
+      setCurrais(curraisParsed)
+    }
+
+    if (curraisSemGeoRes.data) {
+      setCurraisSemGeo((curraisSemGeoRes.data as any[]).map((c) => ({ id: c.id, nome: c.nome })))
+    }
+
     setLoading(false)
   }, [user])
 
@@ -576,6 +665,54 @@ export function MapaFazenda() {
     if (!estrada?.geometria_geojson?.features?.[0]) return { type: 'FeatureCollection', features: [] }
     return { type: 'FeatureCollection', features: [estrada.geometria_geojson.features[0]] }
   }, [estradas, estradaDetalhe])
+
+  // Fábricas: pontos com tipo='fabrica' e geometria Polygon
+  const fabricas = useMemo(() => pontos.filter((p) => p.tipo === 'fabrica'), [pontos])
+
+  // Pontos regulares (não fábricas)
+  const pontosRegulares = useMemo(() => pontos.filter((p) => p.tipo !== 'fabrica'), [pontos])
+
+  const fabricasGeoJSON = useMemo<GeoJSON.FeatureCollection>(() => {
+    const features: GeoJSON.Feature[] = []
+    fabricas.forEach((f) => {
+      if (f.geometria_geojson?.features?.[0]) {
+        features.push({
+          type: 'Feature',
+          properties: { id: f.id, nome: f.nome },
+          geometry: f.geometria_geojson.features[0].geometry,
+        })
+      }
+    })
+    return { type: 'FeatureCollection', features }
+  }, [fabricas])
+
+  const curraisGeoJSON = useMemo<GeoJSON.FeatureCollection>(() => {
+    const features: GeoJSON.Feature[] = []
+    currais.forEach((c) => {
+      if (c.geometria_geojson?.features?.[0]) {
+        features.push({
+          type: 'Feature',
+          properties: { id: c.id, nome: c.nome },
+          geometry: c.geometria_geojson.features[0].geometry,
+        })
+      }
+    })
+    return { type: 'FeatureCollection', features }
+  }, [currais])
+
+  const fabricaDetalheGeoJSON = useMemo<GeoJSON.FeatureCollection>(() => {
+    if (!fabricaDetalhe) return { type: 'FeatureCollection', features: [] }
+    const f = fabricas.find((x) => x.id === fabricaDetalhe.id)
+    if (!f?.geometria_geojson?.features?.[0]) return { type: 'FeatureCollection', features: [] }
+    return { type: 'FeatureCollection', features: [f.geometria_geojson.features[0]] }
+  }, [fabricas, fabricaDetalhe])
+
+  const curralDetalheGeoJSON = useMemo<GeoJSON.FeatureCollection>(() => {
+    if (!curralDetalhe) return { type: 'FeatureCollection', features: [] }
+    const c = currais.find((x) => x.id === curralDetalhe.id)
+    if (!c?.geometria_geojson?.features?.[0]) return { type: 'FeatureCollection', features: [] }
+    return { type: 'FeatureCollection', features: [c.geometria_geojson.features[0]] }
+  }, [currais, curralDetalhe])
 
   const bebedourosGeoJSON = useMemo<GeoJSON.FeatureCollection>(() => {
     const features: GeoJSON.Feature[] = []
@@ -764,11 +901,34 @@ export function MapaFazenda() {
   }
 
   // ==================== Desenho (Terra Draw) ====================
-  // Inicialização acontece no onLoad do Map (handleMapLoad), que garante
-  // que o mapa está completamente carregado antes de criar o adapter.
-  const handleMapLoad = useCallback(() => {
+  // Cria (ou recria) a instância do Terra Draw sobre o mapa atual.
+  // Extraído para função reutilizável porque o adapter pode corromper
+  // o estado interno após sequências de clear/setMode, e a única forma
+  // confiável de recuperar é recriar a instância inteira sobre o mesmo mapa.
+  const criarTerraDraw = useCallback((): TerraDraw | null => {
     const map = mapRef.current?.getMap()
-    if (!map || drawRef.current) return
+    if (!map) return null
+
+    // Destruir instância anterior se existir
+    if (drawRef.current) {
+      try { drawRef.current.stop() } catch { /* ignore */ }
+      drawRef.current = null
+    }
+
+    // Limpar manualmente layers e sources órfãos do Terra Draw no mapa.
+    // Quando stop() falha (adapter corrompido), os layers/sources com
+    // prefixo "td-" ficam órfãos e impedem a criação de um novo adapter.
+    const tdLayers = [
+      'td-point', 'td-point-marker',
+      'td-linestring',
+      'td-polygon', 'td-polygon-fill', 'td-polygon-outline',
+    ]
+    tdLayers.forEach((layerId) => {
+      try { if (map.getLayer(layerId)) map.removeLayer(layerId) } catch { /* ignore */ }
+    })
+    ;['td-point', 'td-linestring', 'td-polygon'].forEach((sourceId) => {
+      try { if (map.getSource(sourceId)) map.removeSource(sourceId) } catch { /* ignore */ }
+    })
 
     const adapter = new TerraDrawMapLibreGLAdapter({ map })
     const draw = new TerraDraw({
@@ -889,6 +1049,8 @@ export function MapaFazenda() {
       // Ignorar finish quando estiver em modo de edição de geometria existente
       if (editandoGeometriaRef.current) return
       if (editandoEstradaRef.current) return
+      if (editandoFabricaRef.current) return
+      if (editandoCurralRef.current) return
 
       const snapshot = draw.getSnapshot()
       if (snapshot.length === 0) return
@@ -911,6 +1073,22 @@ export function MapaFazenda() {
         setPontoDesenhado(lastFeature as GeoJSON.Feature<GeoJSON.Point>)
         setNomePonto('')
         setShowPontoModal(true)
+        return
+      }
+
+      // Se for fábrica (polígono): abrir modal para nomear
+      if (lastFeature.geometry.type === 'Polygon' && modoAtual === 'fabrica') {
+        setFeatureDesenhada(lastFeature)
+        setNomeFabrica('')
+        setShowFabricaModal(true)
+        return
+      }
+
+      // Se for curral (polígono): abrir modal para associar a curral existente
+      if (lastFeature.geometry.type === 'Polygon' && modoAtual === 'curral') {
+        setFeatureDesenhada(lastFeature)
+        setCurralSelecionadoAssoc('')
+        setShowCurralModal(true)
         return
       }
 
@@ -986,12 +1164,23 @@ export function MapaFazenda() {
       }
     })
 
+    return draw
+  }, [])
+
+  // Inicialização acontece no onLoad do Map (handleMapLoad), que garante
+  // que o mapa está completamente carregado antes de criar o adapter.
+  const handleMapLoad = useCallback(() => {
+    const map = mapRef.current?.getMap()
+    if (!map || drawRef.current) return
+
+    criarTerraDraw()
+
     // Adicionar controles de navegação e escala
     const navControl = new maplibregl.NavigationControl()
     const scaleControl = new maplibregl.ScaleControl()
     map.addControl(navControl, 'top-right')
     map.addControl(scaleControl, 'bottom-left')
-  }, [])
+  }, [criarTerraDraw])
 
   // Cleanup ao desmontar
   useEffect(() => {
@@ -1007,8 +1196,35 @@ export function MapaFazenda() {
     }
   }, [])
 
+  // Limpa o estado do Terra Draw. Se clear() falhar (adapter corrompido),
+  // recria a instância inteira sobre o mesmo mapa, que é a única forma
+  // confiável de recuperar o estado de desenho.
+  const limparFeaturesTerraDraw = () => {
+    if (!drawRef.current) return
+    try {
+      drawRef.current.clear()
+    } catch (e) {
+      console.warn('[Mapa] clear() falhou, recriando instância Terra Draw:', e)
+      criarTerraDraw()
+    }
+  }
+
+  // Reseta o Terra Draw para o modo render, limpando features.
+  // Se clear/setMode falhar, recria a instância inteira.
+  const resetarTerraDraw = () => {
+    if (!drawRef.current) return
+    try {
+      drawRef.current.clear()
+      drawRef.current.setMode('render')
+    } catch (e) {
+      console.warn('[Mapa] reset falhou, recriando instância Terra Draw:', e)
+      criarTerraDraw()
+    }
+  }
+
   const ativarDesenhoPoligono = () => {
     if (!drawRef.current) return
+    limparFeaturesTerraDraw()
     drawRef.current.setMode('polygon')
     setDrawMode('polygon')
     const canvas = mapRef.current?.getCanvas()
@@ -1017,6 +1233,7 @@ export function MapaFazenda() {
 
   const ativarDesenhoPonto = () => {
     if (!drawRef.current) return
+    limparFeaturesTerraDraw()
     drawRef.current.setMode('point')
     setDrawMode('point')
     const canvas = mapRef.current?.getCanvas()
@@ -1025,6 +1242,7 @@ export function MapaFazenda() {
 
   const ativarDesenhoEstrada = () => {
     if (!drawRef.current) return
+    limparFeaturesTerraDraw()
     drawRef.current.setMode('linestring')
     setDrawMode('linestring')
     const canvas = mapRef.current?.getCanvas()
@@ -1060,15 +1278,17 @@ export function MapaFazenda() {
       })
       if (error) throw error
       setImportStatus({ type: 'success', msg: `Estrada "${nomeEstrada.trim()}" salva com sucesso.` })
-      // Remover feature do Terra Draw ANTES de mudar estado (evita crash no adapter)
       if (drawRef.current && estradaDesenhada.id) {
-        try { drawRef.current.removeFeatures([String(estradaDesenhada.id)]) } catch (e) {
+        try {
+          resetarTerraDraw()
+        } catch (e) {
           console.warn('[Mapa] Erro ao remover feature do Terra Draw:', e)
         }
       }
       setShowEstradaModal(false)
       setEstradaDesenhada(null)
       setNomeEstrada('')
+      setDrawMode(null)
       loadData()
     } catch (err) {
       console.error('Erro ao salvar estrada:', err)
@@ -1080,13 +1300,18 @@ export function MapaFazenda() {
 
   const cancelarEstrada = () => {
     if (drawRef.current && estradaDesenhada?.id) {
-      try { drawRef.current.removeFeatures([String(estradaDesenhada.id)]) } catch (e) {
+      try {
+          resetarTerraDraw()
+        } catch (e) {
         console.warn('[Mapa] Erro ao remover feature do Terra Draw:', e)
       }
     }
     setShowEstradaModal(false)
     setEstradaDesenhada(null)
     setNomeEstrada('')
+    setDrawMode(null)
+    const canvas = mapRef.current?.getCanvas()
+    if (canvas) canvas.style.cursor = ''
   }
 
   const removerEstrada = async (estradaId: string) => {
@@ -1107,6 +1332,7 @@ export function MapaFazenda() {
 
   const ativarDesenhoPontoInteresse = () => {
     if (!drawRef.current) return
+    limparFeaturesTerraDraw()
     drawRef.current.setMode('point')
     setDrawMode('point-interesse')
     const canvas = mapRef.current?.getCanvas()
@@ -1127,13 +1353,16 @@ export function MapaFazenda() {
       if (error) throw error
       setImportStatus({ type: 'success', msg: `Ponto "${nomePonto.trim()}" salvo com sucesso.` })
       if (drawRef.current && pontoDesenhado.id) {
-        try { drawRef.current.removeFeatures([String(pontoDesenhado.id)]) } catch (e) {
+        try {
+          resetarTerraDraw()
+        } catch (e) {
           console.warn('[Mapa] Erro ao remover feature:', e)
         }
       }
       setShowPontoModal(false)
       setPontoDesenhado(null)
       setNomePonto('')
+      setDrawMode(null)
       loadData()
     } catch (err) {
       console.error('Erro ao salvar ponto:', err)
@@ -1145,13 +1374,18 @@ export function MapaFazenda() {
 
   const cancelarPonto = () => {
     if (drawRef.current && pontoDesenhado?.id) {
-      try { drawRef.current.removeFeatures([String(pontoDesenhado.id)]) } catch (e) {
+      try {
+          resetarTerraDraw()
+        } catch (e) {
         console.warn('[Mapa] Erro ao remover feature:', e)
       }
     }
     setShowPontoModal(false)
     setPontoDesenhado(null)
     setNomePonto('')
+    setDrawMode(null)
+    const canvas = mapRef.current?.getCanvas()
+    if (canvas) canvas.style.cursor = ''
   }
 
   const removerPonto = async (pontoId: string) => {
@@ -1168,20 +1402,419 @@ export function MapaFazenda() {
     }
   }
 
-  const limparDesenho = () => {
+  // ==================== Fábricas ====================
+
+  const ativarDesenhoFabrica = () => {
     if (!drawRef.current) return
+    limparFeaturesTerraDraw()
+    drawRef.current.setMode('polygon')
+    setDrawMode('fabrica')
+    const canvas = mapRef.current?.getCanvas()
+    if (canvas) canvas.style.cursor = 'crosshair'
+  }
+
+  const salvarFabrica = async () => {
+    if (!featureDesenhada || !fazendaId || !nomeFabrica.trim()) return
+    setSalvando(true)
+    try {
+      const geojsonStr = JSON.stringify(featureDesenhada.geometry)
+      const { error } = await supabase.rpc('salvar_ponto', {
+        p_fazenda_id: fazendaId,
+        p_tipo: 'fabrica',
+        p_nome: nomeFabrica.trim(),
+        p_geometria_geojson: geojsonStr,
+      })
+      if (error) throw error
+      setImportStatus({ type: 'success', msg: `Fábrica "${nomeFabrica.trim()}" salva com sucesso.` })
+      if (drawRef.current && featureDesenhada.id) {
+        try {
+          resetarTerraDraw()
+        } catch (e) {
+          console.warn('[Mapa] Erro ao remover feature:', e)
+        }
+      }
+      setShowFabricaModal(false)
+      setFeatureDesenhada(null)
+      setNomeFabrica('')
+      setDrawMode(null)
+      loadData()
+    } catch (err) {
+      console.error('Erro ao salvar fábrica:', err)
+      setImportStatus({ type: 'error', msg: `Erro ao salvar fábrica: ${(err as Error).message}` })
+    } finally {
+      setSalvando(false)
+    }
+  }
+
+  const cancelarFabrica = () => {
+    if (drawRef.current && featureDesenhada?.id) {
+      try {
+          resetarTerraDraw()
+        } catch (e) {
+        console.warn('[Mapa] Erro ao remover feature:', e)
+      }
+    }
+    setShowFabricaModal(false)
+    setFeatureDesenhada(null)
+    setNomeFabrica('')
+    setDrawMode(null)
+    const canvas = mapRef.current?.getCanvas()
+    if (canvas) canvas.style.cursor = ''
+  }
+
+  const removerFabrica = async (fabricaId: string) => {
+    if (!confirm('Remover esta fábrica do mapa?')) return
+    try {
+      const { error } = await supabase.rpc('remover_ponto', { p_ponto_id: fabricaId })
+      if (error) throw error
+      setFabricaDetalhe(null)
+      setImportStatus({ type: 'success', msg: 'Fábrica removida.' })
+      loadData()
+    } catch (err) {
+      console.error('Erro ao remover fábrica:', err)
+      setImportStatus({ type: 'error', msg: `Erro ao remover: ${(err as Error).message}` })
+    }
+  }
+
+  const iniciarEdicaoFabrica = (fabricaId: string, fabricaNome: string) => {
+    if (!drawRef.current) return
+    const fabrica = fabricas.find((f) => f.id === fabricaId)
+    if (!fabrica?.geometria_geojson?.features?.[0]) return
+    const feature = fabrica.geometria_geojson.features[0]
+    const featureId = crypto.randomUUID()
+    const featureToAdd = { type: 'Feature', geometry: feature.geometry, properties: { mode: 'render' }, id: featureId } as any
+    try {
+      const validation = drawRef.current.addFeatures([featureToAdd])
+      const rejeitadas = validation.filter((v: any) => !v.valid)
+      if (rejeitadas.length > 0) { console.error('[Mapa] Feature rejeitada:', rejeitadas); return }
+    } catch (err) { console.error('[Mapa] Erro ao adicionar feature:', err); return }
+    drawRef.current.setMode('select')
+    setDrawMode('select')
+    setTimeout(() => { try { drawRef.current?.selectFeature(featureId) } catch (e) { console.warn(e) } }, 200)
+    setFabricaDetalhe(null)
+    setEditandoFabrica({ fabricaId, fabricaNome, featureId })
+    const canvas = mapRef.current?.getCanvas()
+    if (canvas) canvas.style.cursor = 'pointer'
+  }
+
+  const salvarEdicaoFabrica = async () => {
+    if (!editandoFabrica || !drawRef.current) return
+    setSalvandoEdicao(true)
     try {
       const snapshot = drawRef.current.getSnapshot()
-      snapshot.forEach((f) => {
-        if (f.id) {
-          drawRef.current?.removeFeatures([String(f.id)])
-        }
-      })
+      const featureEditada = snapshot.find((f) => String(f.id) === editandoFabrica.featureId)
+      if (!featureEditada) throw new Error('Feature não encontrada no snapshot.')
+      const geojsonStr = JSON.stringify(featureEditada.geometry)
+      const { error } = await supabase.rpc('atualizar_ponto', { p_ponto_id: editandoFabrica.fabricaId, p_geometria_geojson: geojsonStr })
+      if (error) throw error
+      setImportStatus({ type: 'success', msg: `Fábrica "${editandoFabrica.fabricaNome}" atualizada.` })
+      try { resetarTerraDraw() } catch { /* ignore */ }
+      setDrawMode(null)
+      setEditandoFabrica(null)
+      const canvas = mapRef.current?.getCanvas()
+      if (canvas) canvas.style.cursor = ''
+      loadData()
     } catch (err) {
-      // Adapter pode falhar se o mapa estiver num estado inválido
-      console.warn('[Mapa] Erro ao limpar desenho:', err)
+      console.error('Erro ao salvar edição de fábrica:', err)
+      setImportStatus({ type: 'error', msg: `Erro: ${(err as Error).message}` })
+    } finally {
+      setSalvandoEdicao(false)
     }
+  }
+
+  const cancelarEdicaoFabrica = () => {
+    if (!drawRef.current || !editandoFabrica) return
+    try { resetarTerraDraw() } catch (e) { console.warn(e) }
     setDrawMode(null)
+    setEditandoFabrica(null)
+    const canvas = mapRef.current?.getCanvas()
+    if (canvas) canvas.style.cursor = ''
+  }
+
+  // ==================== Currais ====================
+
+  const ativarDesenhoCurral = () => {
+    if (!drawRef.current) return
+    limparFeaturesTerraDraw()
+    drawRef.current.setMode('polygon')
+    setDrawMode('curral')
+    const canvas = mapRef.current?.getCanvas()
+    if (canvas) canvas.style.cursor = 'crosshair'
+  }
+
+  const salvarCurral = async () => {
+    if (!featureDesenhada || !fazendaId || !curralSelecionadoAssoc) return
+    setSalvando(true)
+    try {
+      const geojsonStr = JSON.stringify(featureDesenhada.geometry)
+      const { error } = await supabase.rpc('salvar_geometria_curral', {
+        p_curral_id: curralSelecionadoAssoc,
+        p_geometria_geojson: geojsonStr,
+      })
+      if (error) throw error
+      const curralNome = curraisSemGeo.find((c) => c.id === curralSelecionadoAssoc)?.nome || ''
+      setImportStatus({ type: 'success', msg: `Curral "${curralNome}" associado com sucesso.` })
+      if (drawRef.current && featureDesenhada.id) {
+        try {
+          resetarTerraDraw()
+        } catch (e) { console.warn(e) }
+      }
+      setShowCurralModal(false)
+      setFeatureDesenhada(null)
+      setCurralSelecionadoAssoc('')
+      setDrawMode(null)
+      loadData()
+    } catch (err) {
+      console.error('Erro ao salvar curral:', err)
+      setImportStatus({ type: 'error', msg: `Erro ao salvar curral: ${(err as Error).message}` })
+    } finally {
+      setSalvando(false)
+    }
+  }
+
+  const cancelarCurral = () => {
+    if (drawRef.current && featureDesenhada?.id) {
+      try {
+          resetarTerraDraw()
+        } catch (e) { console.warn(e) }
+    }
+    setShowCurralModal(false)
+    setFeatureDesenhada(null)
+    setCurralSelecionadoAssoc('')
+    setDrawMode(null)
+    const canvas = mapRef.current?.getCanvas()
+    if (canvas) canvas.style.cursor = ''
+  }
+
+  const removerGeometriaCurral = async (curralId: string) => {
+    if (!confirm('Remover a geometria deste curral do mapa?')) return
+    try {
+      const { error } = await supabase.rpc('remover_geometria_curral', { p_curral_id: curralId })
+      if (error) throw error
+      setCurralDetalhe(null)
+      setImportStatus({ type: 'success', msg: 'Geometria do curral removida.' })
+      loadData()
+    } catch (err) {
+      console.error('Erro ao remover curral:', err)
+      setImportStatus({ type: 'error', msg: `Erro ao remover: ${(err as Error).message}` })
+    }
+  }
+
+  const iniciarEdicaoCurral = (curralId: string, curralNome: string) => {
+    if (!drawRef.current) return
+    const curral = currais.find((c) => c.id === curralId)
+    if (!curral?.geometria_geojson?.features?.[0]) return
+    const feature = curral.geometria_geojson.features[0]
+    const featureId = crypto.randomUUID()
+    const featureToAdd = { type: 'Feature', geometry: feature.geometry, properties: { mode: 'render' }, id: featureId } as any
+    try {
+      const validation = drawRef.current.addFeatures([featureToAdd])
+      const rejeitadas = validation.filter((v: any) => !v.valid)
+      if (rejeitadas.length > 0) { console.error('[Mapa] Feature rejeitada:', rejeitadas); return }
+    } catch (err) { console.error('[Mapa] Erro ao adicionar feature:', err); return }
+    drawRef.current.setMode('select')
+    setDrawMode('select')
+    setTimeout(() => { try { drawRef.current?.selectFeature(featureId) } catch (e) { console.warn(e) } }, 200)
+    setCurralDetalhe(null)
+    setEditandoCurral({ curralId, curralNome, featureId })
+    const canvas = mapRef.current?.getCanvas()
+    if (canvas) canvas.style.cursor = 'pointer'
+  }
+
+  const salvarEdicaoCurral = async () => {
+    if (!editandoCurral || !drawRef.current) return
+    setSalvandoEdicao(true)
+    try {
+      const snapshot = drawRef.current.getSnapshot()
+      const featureEditada = snapshot.find((f) => String(f.id) === editandoCurral.featureId)
+      if (!featureEditada) throw new Error('Feature não encontrada.')
+      const geojsonStr = JSON.stringify(featureEditada.geometry)
+      const { error } = await supabase.rpc('salvar_geometria_curral', { p_curral_id: editandoCurral.curralId, p_geometria_geojson: geojsonStr })
+      if (error) throw error
+      setImportStatus({ type: 'success', msg: `Curral "${editandoCurral.curralNome}" atualizado.` })
+      try { resetarTerraDraw() } catch { /* ignore */ }
+      setDrawMode(null)
+      setEditandoCurral(null)
+      const canvas = mapRef.current?.getCanvas()
+      if (canvas) canvas.style.cursor = ''
+      loadData()
+    } catch (err) {
+      console.error('Erro ao salvar edição de curral:', err)
+      setImportStatus({ type: 'error', msg: `Erro: ${(err as Error).message}` })
+    } finally {
+      setSalvandoEdicao(false)
+    }
+  }
+
+  const cancelarEdicaoCurral = () => {
+    if (!drawRef.current || !editandoCurral) return
+    try { resetarTerraDraw() } catch (e) { console.warn(e) }
+    setDrawMode(null)
+    setEditandoCurral(null)
+    const canvas = mapRef.current?.getCanvas()
+    if (canvas) canvas.style.cursor = ''
+  }
+
+  // ==================== Rota (Corte C) ====================
+
+  const ativarModoRota = () => {
+    if (modoRota) {
+      cancelarRota()
+      return
+    }
+    setModoRota('origem')
+    setRotaOrigem(null)
+    setRotaDestinos([])
+    setRotaResultado(null)
+    setRotaSetas(null)
+    setRotaDistancia(null)
+    setRotaErro(null)
+    const canvas = mapRef.current?.getCanvas()
+    if (canvas) canvas.style.cursor = 'crosshair'
+  }
+
+  const cancelarRota = () => {
+    setModoRota(null)
+    setRotaOrigem(null)
+    setRotaDestinos([])
+    setRotaResultado(null)
+    setRotaSetas(null)
+    setRotaDistancia(null)
+    setRotaErro(null)
+    const canvas = mapRef.current?.getCanvas()
+    if (canvas) canvas.style.cursor = ''
+  }
+
+  const removerUltimoDestino = () => {
+    setRotaDestinos((prev) => prev.slice(0, -1))
+  }
+
+  // Gera pontos com setas direcionais ao longo da rota.
+  // Para cada segmento da LineString, calcula o bearing (azimute) e
+  // coloca setas ao longo da rota para indicar a direção do trajeto.
+  // Garante pelo menos uma seta no meio de cada segmento, mesmo os curtos.
+  const gerarSetasRota = (rotaGeojson: GeoJSON.Geometry): GeoJSON.FeatureCollection => {
+    const features: GeoJSON.Feature[] = []
+    const ESPACAMENTO_M = 100
+
+    const processarLineString = (coords: number[][]) => {
+      let distAcumulada = 0
+      let proximoMarcador = ESPACAMENTO_M
+
+      for (let i = 0; i < coords.length - 1; i++) {
+        const [lng1, lat1] = coords[i]
+        const [lng2, lat2] = coords[i + 1]
+        const dLat = (lat2 - lat1) * Math.PI / 180
+        const dLng = (lng2 - lng1) * Math.PI / 180
+        const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2
+        const segLen = 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+        if (segLen < 0.5) continue
+
+        const y = Math.sin(dLng) * Math.cos(lat2 * Math.PI / 180)
+        const x = Math.cos(lat1 * Math.PI / 180) * Math.sin(lat2 * Math.PI / 180) - Math.sin(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.cos(dLng)
+        let bearing = Math.atan2(y, x) * 180 / Math.PI
+        bearing = (bearing + 360) % 360
+
+        // Setas espaçadas a cada ESPACAMENTO_M
+        while (distAcumulada + segLen >= proximoMarcador) {
+          const frac = (proximoMarcador - distAcumulada) / segLen
+          const lng = lng1 + (lng2 - lng1) * frac
+          const lat = lat1 + (lat2 - lat1) * frac
+          features.push({
+            type: 'Feature',
+            properties: { bearing },
+            geometry: { type: 'Point', coordinates: [lng, lat] },
+          })
+          proximoMarcador += ESPACAMENTO_M
+        }
+
+        // Garantir pelo menos uma seta no meio do segmento se não teve nenhuma
+        const setasNesteSegmento = features.filter(
+          (f) => f.geometry.type === 'Point' &&
+          (f.geometry as GeoJSON.Point).coordinates[0] >= Math.min(lng1, lng2) - 0.0001 &&
+          (f.geometry as GeoJSON.Point).coordinates[0] <= Math.max(lng1, lng2) + 0.0001
+        ).length
+        if (setasNesteSegmento === 0 && segLen >= 5) {
+          features.push({
+            type: 'Feature',
+            properties: { bearing },
+            geometry: { type: 'Point', coordinates: [(lng1 + lng2) / 2, (lat1 + lat2) / 2] },
+          })
+        }
+
+        distAcumulada += segLen
+      }
+    }
+
+    if (rotaGeojson.type === 'LineString') {
+      processarLineString(rotaGeojson.coordinates)
+    } else if (rotaGeojson.type === 'MultiLineString') {
+      rotaGeojson.coordinates.forEach(processarLineString)
+    }
+
+    return { type: 'FeatureCollection', features }
+  }
+
+  const finalizarRota = async () => {
+    const origem = rotaOrigemRef.current
+    const destinos = rotaDestinosRef.current
+    if (!origem || destinos.length === 0) return
+    setModoRota(null)
+    const canvas = mapRef.current?.getCanvas()
+    if (canvas) canvas.style.cursor = 'wait'
+    setCalculandoRota(true)
+    setRotaErro(null)
+    try {
+      // Reconstruir topologia das estradas antes de calcular a rota.
+      // pgr_createTopology faz DDL internamente e falha dentro de
+      // SECURITY DEFINER via PostgREST, por isso é uma RPC separada.
+      const { error: topoError } = await supabase.rpc('reconstruir_topologia_estradas', {
+        p_fazenda_id: fazendaId,
+      })
+      if (topoError) throw topoError
+
+      const destinosJson = JSON.stringify(destinos.map((d) => d))
+      const { data, error } = await supabase.rpc('encontrar_rota_multi', {
+        p_fazenda_id: fazendaId,
+        p_origem_geojson: JSON.stringify(origem),
+        p_destinos_geojson: destinosJson,
+      })
+      if (error) throw error
+      const resultado = data as any
+      if (resultado && resultado.length > 0) {
+        const row = resultado[0]
+        if (row.encontrou && row.rota) {
+          setRotaResultado({
+            type: 'FeatureCollection',
+            features: [{
+              type: 'Feature',
+              properties: { distancia_m: row.distancia_m, ordem: row.ordem_visita },
+              geometry: row.rota,
+            }],
+          })
+          setRotaSetas(gerarSetasRota(row.rota as GeoJSON.Geometry))
+          setRotaDistancia(row.distancia_m)
+        } else {
+          setRotaErro('Não foi possível encontrar uma rota. Verifique se as estradas formam uma rede conectada entre os pontos.')
+        }
+      } else {
+        setRotaErro('Resposta vazia do servidor de rotas.')
+      }
+    } catch (err) {
+      console.error('Erro ao calcular rota:', err)
+      setRotaErro(`Erro ao calcular rota: ${(err as Error).message}`)
+    } finally {
+      setCalculandoRota(false)
+      const canvas2 = mapRef.current?.getCanvas()
+      if (canvas2) canvas2.style.cursor = ''
+    }
+  }
+
+  const limparDesenho = () => {
+    if (!drawRef.current) return
+    limparFeaturesTerraDraw()
+    setDrawMode(null)
+    cancelarRota()
     const canvas = mapRef.current?.getCanvas()
     if (canvas) canvas.style.cursor = ''
   }
@@ -1211,9 +1844,17 @@ export function MapaFazenda() {
       if (error) throw error
 
       setImportStatus({ type: 'success', msg: 'Geometria salva com sucesso.' })
+      if (drawRef.current && featureDesenhada?.id) {
+        try {
+          resetarTerraDraw()
+        } catch (e) {
+          console.warn('[Mapa] Erro ao remover feature:', e)
+        }
+      }
       setShowAssocModal(false)
       setFeatureDesenhada(null)
       setPastoSelecionadoAssoc('')
+      setDrawMode(null)
       // Recarregar dados
       loadData()
     } catch (err) {
@@ -1241,9 +1882,17 @@ export function MapaFazenda() {
       if (error) throw error
 
       setImportStatus({ type: 'success', msg: 'Localização do bebedouro salva com sucesso.' })
+      if (drawRef.current && featureDesenhada?.id) {
+        try {
+          resetarTerraDraw()
+        } catch (e) {
+          console.warn('[Mapa] Erro ao remover feature:', e)
+        }
+      }
       setShowAssocModal(false)
       setFeatureDesenhada(null)
       setPastoSelecionadoAssoc('')
+      setDrawMode(null)
       loadData()
     } catch (err) {
       console.error('Erro ao salvar geometria do bebedouro:', err)
@@ -1422,15 +2071,13 @@ export function MapaFazenda() {
 
       setImportStatus({ type: 'success', msg: `Geometria do pasto "${editandoGeometria.pastoNome}" atualizada com sucesso.` })
 
-      // Remover a feature do Terra Draw
+      // Remover a feature do Terra Draw e voltar ao modo normal
       try {
-        drawRef.current.removeFeatures([editandoGeometria.featureId])
+        resetarTerraDraw()
       } catch {
         // ignore
       }
 
-      // Voltar ao modo normal
-      drawRef.current.setMode('render')
       setDrawMode(null)
       setEditandoGeometria(null)
 
@@ -1451,12 +2098,11 @@ export function MapaFazenda() {
     if (!drawRef.current || !editandoGeometria) return
 
     try {
-      drawRef.current.removeFeatures([editandoGeometria.featureId])
+      resetarTerraDraw()
     } catch (err) {
       console.warn('[Mapa] Erro ao remover feature de edição:', err)
     }
 
-    drawRef.current.setMode('render')
     setDrawMode(null)
     setEditandoGeometria(null)
 
@@ -1536,12 +2182,11 @@ export function MapaFazenda() {
       setImportStatus({ type: 'success', msg: `Estrada "${editandoEstrada.estradaNome}" atualizada com sucesso.` })
 
       try {
-        drawRef.current.removeFeatures([editandoEstrada.featureId])
+        resetarTerraDraw()
       } catch {
         // ignore
       }
 
-      drawRef.current.setMode('render')
       setDrawMode(null)
       setEditandoEstrada(null)
 
@@ -1561,12 +2206,11 @@ export function MapaFazenda() {
     if (!drawRef.current || !editandoEstrada) return
 
     try {
-      drawRef.current.removeFeatures([editandoEstrada.featureId])
+      resetarTerraDraw()
     } catch (err) {
       console.warn('[Mapa] Erro ao remover feature de edição:', err)
     }
 
-    drawRef.current.setMode('render')
     setDrawMode(null)
     setEditandoEstrada(null)
 
@@ -1581,20 +2225,40 @@ export function MapaFazenda() {
     setPastoDetectado(null)
     setBebedourosDoPasto([])
     setBuscandoPasto(false)
-    // Remover a feature desenhada do Terra Draw
+    // Remover a feature desenhada do Terra Draw (voltar para render antes)
     if (drawRef.current && featureDesenhada?.id) {
       try {
-        drawRef.current.removeFeatures([String(featureDesenhada.id)])
-      } catch (err) {
+          resetarTerraDraw()
+        } catch (err) {
         console.warn('[Mapa] Erro ao remover feature:', err)
       }
     }
+    setDrawMode(null)
+    const canvas = mapRef.current?.getCanvas()
+    if (canvas) canvas.style.cursor = ''
   }
 
   // ==================== Click no pasto para ver detalhes ou selecionar ====================
   const handleMapClick = async (e: maplibregl.MapLayerMouseEvent) => {
     // Se está em modo de desenho, não tratar click como seleção
-    if (drawMode || editandoGeometria || editandoEstrada) return
+    // Modo rota: intercepta o clique antes de tudo
+    if (modoRotaRef.current) {
+      const ponto: GeoJSON.Point = { type: 'Point', coordinates: [e.lngLat.lng, e.lngLat.lat] }
+      if (modoRotaRef.current === 'origem') {
+        setRotaOrigem(ponto)
+        setRotaResultado(null)
+        setRotaDistancia(null)
+        setRotaErro(null)
+        setRotaDestinos([])
+        setModoRota('destinos')
+      } else if (modoRotaRef.current === 'destinos') {
+        // Adicionar mais um destino (não calcula ainda; usuário clica "Finalizar")
+        setRotaDestinos((prev) => [...prev, ponto])
+      }
+      return
+    }
+
+    if (drawMode || editandoGeometria || editandoEstrada || editandoFabrica || editandoCurral) return
 
     const features = e.features
     if (!features || features.length === 0) return
@@ -1630,6 +2294,35 @@ export function MapaFazenda() {
       }
     }
 
+    // Verificar se clicou numa fábrica
+    const fabricaFeature = features.find((f) => f.source === 'fabricas-source')
+    if (fabricaFeature) {
+      const fabricaId = fabricaFeature.properties?.id as string
+      const fabricaNome = fabricaFeature.properties?.nome as string
+      if (fabricaId) {
+        setFabricaDetalhe({ id: fabricaId, tipo: 'fabrica', nome: fabricaNome, geometria_geojson: null })
+        setPastoDetalhe(null)
+        setEstradaDetalhe(null)
+        setPontoDetalhe(null)
+        setCurralDetalhe(null)
+        return
+      }
+    }
+
+    // Verificar se clicou num curral
+    const curralFeature = features.find((f) => f.source === 'currais-source')
+    if (curralFeature) {
+      const curralId = curralFeature.properties?.id as string
+      if (curralId) {
+        setPastoDetalhe(null)
+        setEstradaDetalhe(null)
+        setPontoDetalhe(null)
+        setFabricaDetalhe(null)
+        await carregarDetalheCurral(curralId)
+        return
+      }
+    }
+
     // Verificar se clicou num ponto de interesse
     const pontoFeature = features.find((f) => f.source === 'pontos-source')
     if (pontoFeature) {
@@ -1640,6 +2333,8 @@ export function MapaFazenda() {
         setPontoDetalhe({ id: pontoId, tipo: pontoTipo, nome: pontoNome, geometria_geojson: null })
         setPastoDetalhe(null)
         setEstradaDetalhe(null)
+        setFabricaDetalhe(null)
+        setCurralDetalhe(null)
         return
       }
     }
@@ -1654,6 +2349,8 @@ export function MapaFazenda() {
         setEstradaDetalhe({ id: estradaId, nome: estradaNome, geometria_geojson: null })
         setPastoDetalhe(null)
         setPontoDetalhe(null)
+        setFabricaDetalhe(null)
+        setCurralDetalhe(null)
         return
       }
     }
@@ -1695,6 +2392,13 @@ export function MapaFazenda() {
       }
 
       if (feature && (feature.geometry?.type === 'Polygon' || feature.geometry?.type === 'Point')) {
+        // Se for polígono, perguntar se é pasto ou fábrica antes de associar
+        if (feature.geometry?.type === 'Polygon') {
+          setFeatureDesenhada(feature as any)
+          setShowAssocTipoModal(true)
+          return
+        }
+        // Se for ponto, associar direto (bebedouro)
         setFeatureDesenhada(feature as any)
         setPastoSelecionadoAssoc('')
         setPastoDetectado(null)
@@ -1785,9 +2489,55 @@ export function MapaFazenda() {
         setPastoDetalhe(detalhe)
         setEstradaDetalhe(null)
         setPontoDetalhe(null)
+        setFabricaDetalhe(null)
+        setCurralDetalhe(null)
       }
     } catch (err) {
       console.error('Erro ao carregar detalhe do pasto:', err)
+    }
+  }
+
+  const carregarDetalheCurral = async (curralId: string) => {
+    try {
+      const [curralRes, loteRes] = await Promise.all([
+        supabase
+          .from('currais')
+          .select('*, formulacoes(nome), linhas_confinamento(largura_m, comprimento_m, metros_cocho_m)')
+          .eq('id', curralId)
+          .maybeSingle(),
+        supabase.rpc('get_lote_por_curral', { p_curral_id: curralId }),
+      ])
+
+      if (curralRes.data) {
+        const c = curralRes.data as any
+        const loteData = (loteRes.data as any[])?.[0] ?? null
+
+        const loteInfo = loteData
+          ? {
+              id: loteData.id,
+              nome: loteData.nome,
+              n_cabecas: loteData.cabecas_atual || 0,
+              raca: loteData.raca,
+              sexo: loteData.sexo,
+              peso_medio_atual_kg: loteData.peso_medio_atual_kg ?? null,
+            }
+          : null
+
+        const detalhe: CurralDetalhe = {
+          id: c.id,
+          nome: c.nome,
+          lote_id: c.lote_id,
+          geometria_geojson: null,
+          largura_m: c.linhas_confinamento?.largura_m ?? null,
+          comprimento_m: c.linhas_confinamento?.comprimento_m ?? null,
+          metros_cocho_m: c.linhas_confinamento?.metros_cocho_m ?? null,
+          formulacao_nome: c.formulacoes?.nome ?? null,
+          lote_atual: loteInfo,
+        }
+        setCurralDetalhe(detalhe)
+      }
+    } catch (err) {
+      console.error('Erro ao carregar detalhe do curral:', err)
     }
   }
 
@@ -1891,6 +2641,39 @@ export function MapaFazenda() {
             Marcar Ponto
           </span>
         </Button>
+        <Button
+          variant={drawMode === 'fabrica' ? 'primary' : 'secondary'}
+          onClick={ativarDesenhoFabrica}
+        >
+          <span className="flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5" />
+            </svg>
+            Desenhar Fábrica
+          </span>
+        </Button>
+        <Button
+          variant={drawMode === 'curral' ? 'primary' : 'secondary'}
+          onClick={ativarDesenhoCurral}
+        >
+          <span className="flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+            </svg>
+            Desenhar Curral
+          </span>
+        </Button>
+        <Button
+          variant={modoRota ? 'primary' : 'secondary'}
+          onClick={ativarModoRota}
+        >
+          <span className="flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+            </svg>
+            Traçar Rota
+          </span>
+        </Button>
         <Button variant="secondary" onClick={limparDesenho}>
           Limpar Desenho
         </Button>
@@ -1982,6 +2765,30 @@ export function MapaFazenda() {
               Pontos
             </span>
           </label>
+          <label className="flex items-center gap-1.5 cursor-pointer text-sm">
+            <input
+              type="checkbox"
+              checked={visCamadas.fabricas}
+              onChange={(e) => setVisCamadas((v) => ({ ...v, fabricas: e.target.checked }))}
+              className="accent-violet-700"
+            />
+            <span className="flex items-center gap-1">
+              <span className="w-3 h-3 bg-violet-700 border border-violet-900" />
+              Fábricas
+            </span>
+          </label>
+          <label className="flex items-center gap-1.5 cursor-pointer text-sm">
+            <input
+              type="checkbox"
+              checked={visCamadas.currais}
+              onChange={(e) => setVisCamadas((v) => ({ ...v, currais: e.target.checked }))}
+              className="accent-amber-800"
+            />
+            <span className="flex items-center gap-1">
+              <span className="w-3 h-3 bg-amber-800 border border-amber-900" />
+              Currais
+            </span>
+          </label>
         </div>
         <Button
           variant="secondary"
@@ -2009,7 +2816,9 @@ export function MapaFazenda() {
           {pastos.filter((p) => p.geometria_geojson).length} pastos ·{' '}
           {bebedouros.filter((b) => b.geometria_geojson).length} bebedouros ·{' '}
           {estradas.length} estradas ·{' '}
-          {pontos.length} pontos
+          {pontosRegulares.length} pontos ·{' '}
+          {fabricas.length} fábricas ·{' '}
+          {currais.length} currais
         </div>
       </div>
 
@@ -2068,6 +2877,95 @@ export function MapaFazenda() {
               {salvandoEdicao ? 'Salvando...' : 'Salvar Edição'}
             </Button>
           </div>
+        </div>
+      )}
+
+      {/* Barra de edição de fábrica (overlay em tela cheia) */}
+      {editandoFabrica && (
+        <div className={modoTelaCheia
+          ? 'absolute top-16 left-2 right-2 z-10 flex items-center gap-3 bg-violet-50 border border-violet-200 p-3 rounded-lg flex-wrap shadow-lg'
+          : 'flex items-center gap-3 bg-violet-50 border border-violet-200 p-3 rounded-lg flex-wrap'
+        }>
+          <span className="text-sm font-medium text-violet-800">
+            Editando fábrica <strong>{editandoFabrica.fabricaNome}</strong>.
+            Arraste os vértices para reposicioná-los. Clique duas vezes num ponto intermediário para criar um novo vértice. Clique com o botão direito num vértice para removê-lo.
+          </span>
+          <div className="flex gap-2 ml-auto">
+            <Button variant="secondary" onClick={cancelarEdicaoFabrica} disabled={salvandoEdicao}>Cancelar</Button>
+            <Button variant="primary" onClick={salvarEdicaoFabrica} disabled={salvandoEdicao}>
+              {salvandoEdicao ? 'Salvando...' : 'Salvar Edição'}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Barra de edição de curral (overlay em tela cheia) */}
+      {editandoCurral && (
+        <div className={modoTelaCheia
+          ? 'absolute top-16 left-2 right-2 z-10 flex items-center gap-3 bg-amber-50 border border-amber-200 p-3 rounded-lg flex-wrap shadow-lg'
+          : 'flex items-center gap-3 bg-amber-50 border border-amber-200 p-3 rounded-lg flex-wrap'
+        }>
+          <span className="text-sm font-medium text-amber-800">
+            Editando curral <strong>{editandoCurral.curralNome}</strong>.
+            Arraste os vértices para reposicioná-los. Clique duas vezes num ponto intermediário para criar um novo vértice. Clique com o botão direito num vértice para removê-lo.
+          </span>
+          <div className="flex gap-2 ml-auto">
+            <Button variant="secondary" onClick={cancelarEdicaoCurral} disabled={salvandoEdicao}>Cancelar</Button>
+            <Button variant="primary" onClick={salvarEdicaoCurral} disabled={salvandoEdicao}>
+              {salvandoEdicao ? 'Salvando...' : 'Salvar Edição'}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Barra de rota (instruções + resultado) */}
+      {(modoRota || rotaResultado || rotaErro || calculandoRota) && (
+        <div className={modoTelaCheia
+          ? 'absolute top-16 left-2 right-2 z-10 flex items-center gap-3 bg-blue-50 border border-blue-200 p-3 rounded-lg flex-wrap shadow-lg'
+          : 'flex items-center gap-3 bg-blue-50 border border-blue-200 p-3 rounded-lg flex-wrap'
+        }>
+          {calculandoRota && (
+            <span className="text-sm font-medium text-blue-800">
+              Calculando rota...
+            </span>
+          )}
+          {!calculandoRota && modoRota === 'origem' && (
+            <>
+              <span className="text-sm font-medium text-blue-800">
+                Clique no mapa para marcar a origem (ex: fábrica).
+              </span>
+              <Button variant="secondary" onClick={cancelarRota} className="ml-auto">Cancelar</Button>
+            </>
+          )}
+          {!calculandoRota && modoRota === 'destinos' && (
+            <>
+              <span className="text-sm font-medium text-blue-800">
+                Origem marcada. Clique nos currais/cochos para adicionar destinos ({rotaDestinos.length} adicionado{rotaDestinos.length === 1 ? '' : 's'}).
+              </span>
+              {rotaDestinos.length > 0 && (
+                <Button variant="secondary" onClick={removerUltimoDestino} className="ml-auto">Desfazer último</Button>
+              )}
+              {rotaDestinos.length >= 1 && (
+                <Button variant="primary" onClick={finalizarRota}>Calcular Rota</Button>
+              )}
+              <Button variant="secondary" onClick={cancelarRota}>Cancelar</Button>
+            </>
+          )}
+          {!calculandoRota && !modoRota && rotaResultado && rotaDistancia != null && (
+            <>
+              <span className="text-sm font-medium text-blue-800">
+                Rota encontrada: <strong>{(rotaDistancia / 1000).toFixed(2)} km</strong>
+                ({rotaDistancia.toFixed(0)} m) com {rotaDestinos.length} parada{rotaDestinos.length === 1 ? '' : 's'}
+              </span>
+              <Button variant="secondary" onClick={cancelarRota} className="ml-auto">Limpar Rota</Button>
+            </>
+          )}
+          {!calculandoRota && !modoRota && rotaErro && (
+            <>
+              <span className="text-sm font-medium text-red-700">{rotaErro}</span>
+              <Button variant="secondary" onClick={cancelarRota} className="ml-auto">Fechar</Button>
+            </>
+          )}
         </div>
       )}
 
@@ -2145,6 +3043,8 @@ export function MapaFazenda() {
               ...(visCamadas.bebedouros ? ['bebedouros-circle'] : []),
               ...(visCamadas.estradas ? ['estradas-line'] : []),
               ...(visCamadas.pontos ? ['pontos-circle'] : []),
+              ...(visCamadas.fabricas ? ['fabricas-fill', 'fabricas-line'] : []),
+              ...(visCamadas.currais ? ['currais-fill', 'currais-line'] : []),
               ...(featuresImportadas ? ['import-fill', 'import-line', 'import-point', 'import-line-string'] : []),
             ]}
             onClick={handleMapClick}
@@ -2324,11 +3224,11 @@ export function MapaFazenda() {
               )
             })()}
 
-            {/* Source: pontos de interesse */}
-            {pontos.length > 0 && (() => {
+            {/* Source: pontos de interesse (exclui fábricas, que têm layer própria) */}
+            {pontosRegulares.length > 0 && (() => {
               const pontosGeoJSON: GeoJSON.FeatureCollection = {
                 type: 'FeatureCollection',
-                features: pontos
+                features: pontosRegulares
                   .filter((p) => p.geometria_geojson?.features?.[0])
                   .map((p) => {
                     const f = p.geometria_geojson!.features[0]
@@ -2356,6 +3256,183 @@ export function MapaFazenda() {
                 </Source>
               )
             })()}
+
+            {/* Source: fábricas (polígonos roxos) */}
+            {fabricasGeoJSON.features.length > 0 && (
+              <Source id="fabricas-source" type="geojson" data={fabricasGeoJSON}>
+                <Layer
+                  id="fabricas-fill"
+                  type="fill"
+                  layout={{ visibility: visCamadas.fabricas ? 'visible' : 'none' }}
+                  paint={{
+                    'fill-color': '#7c3aed',
+                    'fill-opacity': 0.3,
+                  }}
+                  filter={editandoFabrica
+                    ? ['all', ['==', '$type', 'Polygon'], ['!=', 'id', editandoFabrica.fabricaId]]
+                    : ['==', '$type', 'Polygon']}
+                />
+                <Layer
+                  id="fabricas-line"
+                  type="line"
+                  layout={{ visibility: visCamadas.fabricas ? 'visible' : 'none' }}
+                  paint={{
+                    'line-color': '#5b21b6',
+                    'line-width': 2,
+                    'line-opacity': 0.9,
+                  }}
+                  filter={editandoFabrica
+                    ? ['all', ['==', '$type', 'Polygon'], ['!=', 'id', editandoFabrica.fabricaId]]
+                    : ['==', '$type', 'Polygon']}
+                />
+              </Source>
+            )}
+
+            {/* Source: currais (polígonos marrom) */}
+            {curraisGeoJSON.features.length > 0 && (
+              <Source id="currais-source" type="geojson" data={curraisGeoJSON}>
+                <Layer
+                  id="currais-fill"
+                  type="fill"
+                  layout={{ visibility: visCamadas.currais ? 'visible' : 'none' }}
+                  paint={{
+                    'fill-color': '#92400e',
+                    'fill-opacity': 0.3,
+                  }}
+                  filter={editandoCurral
+                    ? ['all', ['==', '$type', 'Polygon'], ['!=', 'id', editandoCurral.curralId]]
+                    : ['==', '$type', 'Polygon']}
+                />
+                <Layer
+                  id="currais-line"
+                  type="line"
+                  layout={{ visibility: visCamadas.currais ? 'visible' : 'none' }}
+                  paint={{
+                    'line-color': '#78350f',
+                    'line-width': 2,
+                    'line-opacity': 0.9,
+                  }}
+                  filter={editandoCurral
+                    ? ['all', ['==', '$type', 'Polygon'], ['!=', 'id', editandoCurral.curralId]]
+                    : ['==', '$type', 'Polygon']}
+                />
+              </Source>
+            )}
+
+            {/* Source: highlight da fábrica em detalhe */}
+            {fabricaDetalheGeoJSON.features.length > 0 && (
+              <Source id="fabrica-detalhe-highlight" type="geojson" data={fabricaDetalheGeoJSON}>
+                <Layer
+                  id="fabrica-detalhe-line"
+                  type="line"
+                  paint={{ 'line-color': '#2563eb', 'line-width': 4, 'line-opacity': 0.9 }}
+                  filter={['==', '$type', 'Polygon']}
+                />
+              </Source>
+            )}
+
+            {/* Source: highlight do curral em detalhe */}
+            {curralDetalheGeoJSON.features.length > 0 && (
+              <Source id="curral-detalhe-highlight" type="geojson" data={curralDetalheGeoJSON}>
+                <Layer
+                  id="curral-detalhe-line"
+                  type="line"
+                  paint={{ 'line-color': '#2563eb', 'line-width': 4, 'line-opacity': 0.9 }}
+                  filter={['==', '$type', 'Polygon']}
+                />
+              </Source>
+            )}
+
+            {/* Source: marcadores de origem e destinos da rota */}
+            {(rotaOrigem || rotaDestinos.length > 0) && (
+              <Source id="rota-marcadores" type="geojson" data={{
+                type: 'FeatureCollection',
+                features: [
+                  ...(rotaOrigem ? [{ type: 'Feature' as const, properties: { tipo: 'origem', label: 'Origem' }, geometry: rotaOrigem }] : []),
+                  ...rotaDestinos.map((d, i) => ({
+                    type: 'Feature' as const,
+                    properties: { tipo: 'destino', label: `Parada ${i + 1}` },
+                    geometry: d,
+                  })),
+                ],
+              }}>
+                <Layer
+                  id="rota-marcadores-circle"
+                  type="circle"
+                  paint={{
+                    'circle-radius': 8,
+                    'circle-color': ['match', ['get', 'tipo'], 'origem', '#16a34a', '#dc2626'],
+                    'circle-stroke-color': '#ffffff',
+                    'circle-stroke-width': 2,
+                  }}
+                />
+                <Layer
+                  id="rota-marcadores-label"
+                  type="symbol"
+                  layout={{
+                    'text-field': ['get', 'label'],
+                    'text-size': 12,
+                    'text-offset': [0, 1.5],
+                    'text-anchor': 'top',
+                  }}
+                  paint={{
+                    'text-color': '#1e3a8a',
+                    'text-halo-color': '#ffffff',
+                    'text-halo-width': 2,
+                  }}
+                />
+              </Source>
+            )}
+
+            {/* Source: linha da rota calculada */}
+            {rotaResultado && rotaResultado.features.length > 0 && (
+              <Source id="rota-line" type="geojson" data={rotaResultado}>
+                <Layer
+                  id="rota-line-casing"
+                  type="line"
+                  paint={{
+                    'line-color': '#ffffff',
+                    'line-width': 8,
+                    'line-opacity': 0.6,
+                  }}
+                />
+                <Layer
+                  id="rota-line-main"
+                  type="line"
+                  paint={{
+                    'line-color': '#2563eb',
+                    'line-width': 4,
+                    'line-opacity': 0.9,
+                    'line-dasharray': [1, 0],
+                  }}
+                />
+              </Source>
+            )}
+
+            {/* Source: setas direcionais ao longo da rota */}
+            {rotaSetas && rotaSetas.features.length > 0 && (
+              <Source id="rota-setas" type="geojson" data={rotaSetas}>
+                <Layer
+                  id="rota-setas-symbol"
+                  type="symbol"
+                  layout={{
+                    'symbol-placement': 'point',
+                    'text-field': '➤',
+                    'text-size': 18,
+                    'text-rotate': ['-', ['get', 'bearing'], 90],
+                    'text-rotation-alignment': 'map',
+                    'text-allow-overlap': true,
+                    'text-anchor': 'center',
+                  }}
+                  paint={{
+                    'text-color': '#1d4ed8',
+                    'text-opacity': 0.9,
+                    'text-halo-color': '#ffffff',
+                    'text-halo-width': 1.5,
+                  }}
+                />
+              </Source>
+            )}
 
             {/* Source: features importadas (camada temporária) */}
             {featuresImportadas && (
@@ -2772,6 +3849,142 @@ export function MapaFazenda() {
             </Card>
           </div>
         )}
+
+        {/* Side Panel: detalhes da fábrica */}
+        {fabricaDetalhe && (
+          <div className={modoTelaCheia
+            ? 'absolute top-2 right-2 bottom-2 w-80 z-10 overflow-y-auto shadow-xl'
+            : 'w-full lg:w-80 flex-shrink-0'
+          }>
+            <Card>
+              <div className="p-4">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="w-4 h-4 bg-violet-700 border border-violet-900" />
+                    <div>
+                      <h2 className="text-lg font-bold text-gray-900">{fabricaDetalhe.nome}</h2>
+                      <p className="text-xs text-gray-500">Fábrica</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setFabricaDetalhe(null)} className="text-gray-400 hover:text-gray-600">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="mt-4 pt-3 border-t border-gray-200 space-y-2">
+                  <Button variant="secondary" onClick={() => iniciarEdicaoFabrica(fabricaDetalhe.id, fabricaDetalhe.nome)} className="w-full">
+                    Editar Geometria
+                  </Button>
+                  <Button variant="danger" onClick={() => removerFabrica(fabricaDetalhe.id)} className="w-full">
+                    Remover Fábrica
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* Side Panel: detalhes do curral */}
+        {curralDetalhe && (
+          <div className={modoTelaCheia
+            ? 'absolute top-2 right-2 bottom-2 w-80 z-10 overflow-y-auto shadow-xl'
+            : 'w-full lg:w-80 flex-shrink-0'
+          }>
+            <Card>
+              <div className="p-4">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="w-4 h-4 bg-amber-800 border border-amber-900" />
+                    <div>
+                      <h2 className="text-lg font-bold text-gray-900">{curralDetalhe.nome}</h2>
+                      <p className="text-xs text-gray-500">Curral</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setCurralDetalhe(null)} className="text-gray-400 hover:text-gray-600">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="space-y-2 text-sm">
+                  {curralDetalhe.formulacao_nome && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Formulação:</span>
+                      <span className="font-medium text-gray-800">{curralDetalhe.formulacao_nome}</span>
+                    </div>
+                  )}
+                  {curralDetalhe.largura_m != null && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Largura:</span>
+                      <span className="font-medium text-gray-800">{curralDetalhe.largura_m} m</span>
+                    </div>
+                  )}
+                  {curralDetalhe.comprimento_m != null && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Comprimento:</span>
+                      <span className="font-medium text-gray-800">{curralDetalhe.comprimento_m} m</span>
+                    </div>
+                  )}
+                  {curralDetalhe.metros_cocho_m != null && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Metros de cocho:</span>
+                      <span className="font-medium text-gray-800">{curralDetalhe.metros_cocho_m} m</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Lote atual */}
+                {curralDetalhe.lote_atual ? (
+                  <div className="mt-4 pt-3 border-t border-gray-200">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Lote Atual</p>
+                    <div className="text-sm space-y-1">
+                      <p className="font-medium">{curralDetalhe.lote_atual.nome}</p>
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-gray-600">
+                        <span>Cabeças:</span>
+                        <span className="font-medium text-gray-800">{curralDetalhe.lote_atual.n_cabecas}</span>
+                        {curralDetalhe.lote_atual.raca && (
+                          <>
+                            <span>Raça:</span>
+                            <span className="font-medium text-gray-800">{curralDetalhe.lote_atual.raca}</span>
+                          </>
+                        )}
+                        {curralDetalhe.lote_atual.sexo && (
+                          <>
+                            <span>Sexo:</span>
+                            <span className="font-medium text-gray-800">{curralDetalhe.lote_atual.sexo}</span>
+                          </>
+                        )}
+                        {curralDetalhe.lote_atual.peso_medio_atual_kg != null && (
+                          <>
+                            <span>Peso médio:</span>
+                            <span className="font-medium text-gray-800">
+                              {curralDetalhe.lote_atual.peso_medio_atual_kg} kg
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-4 pt-3 border-t border-gray-200">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Lote Atual</p>
+                    <p className="text-sm text-gray-400 italic">Sem lote associado</p>
+                  </div>
+                )}
+
+                <div className="mt-4 pt-3 border-t border-gray-200 space-y-2">
+                  <Button variant="secondary" onClick={() => iniciarEdicaoCurral(curralDetalhe.id, curralDetalhe.nome)} className="w-full">
+                    Editar Geometria
+                  </Button>
+                  <Button variant="danger" onClick={() => removerGeometriaCurral(curralDetalhe.id)} className="w-full">
+                    Remover Geometria
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          </div>
+        )}
       </div>
 
       {/* Modal: associar geometria desenhada a pasto (polígono) ou bebedouro (ponto) */}
@@ -3046,6 +4259,124 @@ export function MapaFazenda() {
               disabled={!nomePonto.trim() || salvando}
             >
               {salvando ? 'Salvando...' : 'Salvar Ponto'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal: nomear fábrica */}
+      <Modal
+        isOpen={showFabricaModal}
+        onClose={cancelarFabrica}
+        title="Nomear Fábrica"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Digite um nome para esta fábrica. Ela será o ponto de origem das rotas do vagão de suplemento.
+          </p>
+          <input
+            type="text"
+            value={nomeFabrica}
+            onChange={(e) => setNomeFabrica(e.target.value)}
+            placeholder="Ex: Fábrica de ração 1"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            autoFocus
+            onKeyDown={(e) => { if (e.key === 'Enter' && nomeFabrica.trim()) salvarFabrica() }}
+          />
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="secondary" onClick={cancelarFabrica}>Cancelar</Button>
+            <Button variant="primary" onClick={salvarFabrica} disabled={!nomeFabrica.trim() || salvando}>
+              {salvando ? 'Salvando...' : 'Salvar Fábrica'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal: associar curral */}
+      <Modal
+        isOpen={showCurralModal}
+        onClose={cancelarCurral}
+        title="Associar ao Curral"
+        size="sm"
+      >
+        <div className="space-y-4">
+          {curraisSemGeo.length === 0 ? (
+            <p className="text-sm text-gray-600">
+              Não há currais sem geometria disponíveis. Todos os currais já têm área delimitada ou não há currais cadastrados.
+            </p>
+          ) : (
+            <>
+              <p className="text-sm text-gray-600">
+                Selecione o curral ao qual esta área pertence.
+              </p>
+              <select
+                value={curralSelecionadoAssoc}
+                onChange={(e) => setCurralSelecionadoAssoc(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Selecione um curral...</option>
+                {curraisSemGeo.map((c) => (
+                  <option key={c.id} value={c.id}>{c.nome}</option>
+                ))}
+              </select>
+            </>
+          )}
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="secondary" onClick={cancelarCurral}>Cancelar</Button>
+            <Button variant="primary" onClick={salvarCurral} disabled={!curralSelecionadoAssoc || salvando}>
+              {salvando ? 'Salvando...' : 'Salvar Curral'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal: perguntar tipo de associação (pasto ou fábrica) */}
+      <Modal
+        isOpen={showAssocTipoModal}
+        onClose={() => {
+          if (drawRef.current && featureDesenhada?.id) {
+            try {
+          resetarTerraDraw()
+        } catch (e) { console.warn(e) }
+          }
+          setShowAssocTipoModal(false)
+          setFeatureDesenhada(null)
+          setDrawMode(null)
+          const canvas = mapRef.current?.getCanvas()
+          if (canvas) canvas.style.cursor = ''
+        }}
+        title="Associar Área Importada"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Esta área importada é um pasto ou uma fábrica?
+          </p>
+          <div className="flex gap-2 pt-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setShowAssocTipoModal(false)
+                setPastoSelecionadoAssoc('')
+                setPastoDetectado(null)
+                setBebedourosDoPasto([])
+                setShowAssocModal(true)
+              }}
+              className="flex-1"
+            >
+              Pasto
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setShowAssocTipoModal(false)
+                setNomeFabrica('')
+                setShowFabricaModal(true)
+              }}
+              className="flex-1"
+            >
+              Fábrica
             </Button>
           </div>
         </div>
