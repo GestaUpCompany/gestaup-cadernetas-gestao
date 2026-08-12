@@ -367,3 +367,23 @@ Arquitetura aprovada para o MVP de mapas com KML, edição de pastos no Painel W
 - Incrementar versão do `cadastroCache` para forçar refresh quando o schema mudar.
 
 Disparador: quando mencionar "mapa KML", "georreferenciamento", "pastos no mapa", "GPS no PWA", "MapLibre", "PostGIS", "geometria de pasto", "distância até pasto", ou retomar a implementação de mapas, ler esta seção e o `docs/ARQUITETURA_MAPA_KML.md`.
+
+### Fix de dupla contagem em `calculate_quant_atual` — adicionado em 2026-08-13
+
+Problema: o LOTE 15P GAR 6A (GBJ Mirandópolis) aparecia com 456 cabeças em vez de 228. O cron `update_dados_lotes` recalcula `quant_atual` chamando `calculate_quant_atual(lote_id, categoria)`, que soma `quant_inicial + SUM(movimentações)`. Quando uma `lote_categorias` é criada para receber animais de uma apartação, o `quant_inicial` já reflete esses animais, mas a movimentação de origem (com `lote_destino_id = lote_novo`) também é somada, contando os mesmos animais 2x. Bug simétrico: saídas anteriores à criação da categoria também eram subtraídas indevidamente (ex: TIP LOTE 12/vaca: 48 → 99, Lote 29/garrote: 35 → 132).
+
+Causa raiz: a função não filtrava movimentações por data. Movimentações anteriores ao `created_at` da categoria já estão refletidas no `quant_inicial` e não deveriam ser re-somadas/re-subtraídas. A cláusula fallback `(tipo_entrada IS NULL AND lote_destino_id IS NOT NULL)` em `v_sum_transf_entrada` capturava registros de `motivo='Saída'` (apartação) como entrada do destino mesmo quando a categoria nasceu dessa movimentação.
+
+Fix implementado (migration `20260813150000_fix_dupla_contagem_calculate_quant_atual.sql`):
+1. Capturar `created_at` da `lote_categorias` ativa junto com `quant_inicial`.
+2. Filtrar TODAS as queries de `registros_movimentacao`, `registros_morte` e `registros_maternidade` por `data >= v_created_at` (movimentações anteriores já estão no `quant_inicial`).
+3. Exceção: quando `quant_inicial IS NULL`, desativar o filtro de data (`v_date_cutoff = '1900-01-01'`). Categorias de bezerro/bezerra ao pé frequentemente têm `quant_inicial=NULL` e a contagem vem das maternidades; filtrar por data zeraria o estoque.
+
+Impacto aplicado (cron rodado em 2026-08-13, 9 categorias com plano ativo corrigidas):
+- Dupla contagem de entradas corrigida (6 lotes): LOTE 15P GAR 6A (456→228), LOTE 16P GAR 6B (228→7), L1/boi magro (147→48), Lote 21/garrote (163→80), L5/Novilha (96→69), Lote 30/garrote (127→113).
+- Subtração indevida de saídas corrigida (3 lotes): TIP LOTE 23/touro (9→10), TIP LOTE 12/vaca (48→99), Lote 29/garrote (35→132).
+- Zero divergências restantes entre `quant_atual` gravado e `calculate_quant_atual` para categorias com plano ativo.
+
+Categorias sem plano nutricional ativo não são atualizadas pelo cron e mantêm o `quant_atual` gravado até serem editadas no frontend. O frontend já chama `calculate_quant_atual` ao salvar (indiretamente via cron na próxima execução).
+
+Disparador: quando mencionar "dupla contagem", "cabeças duplicadas", "quant_atual inflado", "calculate_quant_atual", "apartação duplicada", ou problemas com contagem de cabeças após transferência, ler esta seção.

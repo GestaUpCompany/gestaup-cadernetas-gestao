@@ -85,6 +85,7 @@ import { HistoricoOcupacao } from './pages/controller/HistoricoOcupacao'
 import { Individuos } from './pages/controller/Individuos'
 import { IndividuoNovo } from './pages/controller/IndividuoNovo'
 import { FaixasCategorias } from './pages/controller/FaixasCategorias'
+import { MapaFazenda } from './pages/controller/MapaFazenda'
 import { Notificacoes } from './pages/controller/Notificacoes'
 import { LeituraCocho } from './pages/controller/LeituraCocho'
 import { AcompanhamentoTratos } from './pages/controller/AcompanhamentoTratos'
@@ -997,6 +998,16 @@ function App() {
             <ControllerRoute>
               <ControllerLayout>
                 <FaixasCategorias />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/mapa-fazenda"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <MapaFazenda />
               </ControllerLayout>
             </ControllerRoute>
           }

@@ -45,6 +45,7 @@ const menuStructure: MenuItem[] = [
       { label: 'Indivíduos', path: '/controller/individuos' },
       { label: 'Cadastros Auxiliares', path: '/controller/cadastros-auxiliares' },
       { label: 'Faixas de Categorias', path: '/controller/faixas-categorias' },
+      { label: 'Mapa da Fazenda', path: '/controller/mapa-fazenda' },
     ],
   },
   {
