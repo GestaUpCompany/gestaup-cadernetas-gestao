@@ -9,9 +9,9 @@ import { strFromU8, unzipSync } from 'fflate'
 import { supabase } from '../../services/supabaseClient'
 import { useAuth } from '../../contexts/AuthContext'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
-import { Button, Modal, Select } from '../../components/ui'
+import { Button } from '../../components/ui'
 import type { PastoMapa, BebedouroMapa, EstradaMapa, PontoMapa, CurralMapa, CurralDetalhe, PastoDetalhe } from './mapaFazenda/types'
-import { mapStyle, TIPOS_PONTO, corPonto, terraDrawStyles } from './mapaFazenda/mapaConfig'
+import { mapStyle, corPonto, terraDrawStyles } from './mapaFazenda/mapaConfig'
 import { calcularMelhorLabel, gerarCirculoPrecisao } from './mapaFazenda/geometriaUtils'
 import { loadSavedView, saveView } from './mapaFazenda/viewPersist'
 import { PastoDetalhePanel } from './mapaFazenda/PastoDetalhePanel'
@@ -19,6 +19,8 @@ import { EstradaDetalhePanel } from './mapaFazenda/EstradaDetalhePanel'
 import { PontoDetalhePanel } from './mapaFazenda/PontoDetalhePanel'
 import { FabricaDetalhePanel } from './mapaFazenda/FabricaDetalhePanel'
 import { CurralDetalhePanel } from './mapaFazenda/CurralDetalhePanel'
+import { AssocGeometriaModal } from './mapaFazenda/AssocGeometriaModal'
+import { ConfirmarRemocaoModal, RemocaoLoteModal, NomearEstradaModal, NomearPontoModal, NomearFabricaModal, AssociarCurralModal, AssocTipoModal } from './mapaFazenda/MapaModais'
 
 export function MapaFazenda() {
   const { user } = useAuth()
@@ -3417,357 +3419,92 @@ export function MapaFazenda() {
       </div>
 
       {/* Modal: associar geometria desenhada a pasto (polígono) ou bebedouro (ponto) */}
-      <Modal
+      <AssocGeometriaModal
         isOpen={showAssocModal}
         onClose={cancelarAssociacao}
-        title={featureDesenhada?.geometry.type === 'Point' ? 'Associar ao Bebedouro' : 'Associar ao Pasto'}
-        size="md"
-      >
-        <div className="space-y-4">
-          {featureDesenhada?.geometry.type === 'Point' ? (
-            <>
-              {buscandoPasto ? (
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  Detectando pasto...
-                </div>
-              ) : pastoDetectado ? (
-                <>
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-800">
-                    Ponto marcado dentro do pasto <strong>{pastoDetectado.nome}</strong>.
-                  </div>
-
-                  {bebedourosDoPasto.length === 0 ? (
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
-                      Este pasto não tem bebedouros associados, ou todos já possuem localização marcada.
-                      Associe bebedouros ao pasto na página de Pastos antes de marcá-los no mapa.
-                    </div>
-                  ) : bebedourosDoPasto.length === 1 ? (
-                    <div className="space-y-2">
-                      <p className="text-sm text-gray-600">
-                        Este pasto tem apenas um bebedouro sem localização. Confirme para salvá-lo:
-                      </p>
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800 font-medium">
-                        {bebedourosDoPasto[0].nome}
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <p className="text-sm text-gray-600">
-                        Selecione qual bebedouro deste pasto está nesta localização:
-                      </p>
-                      <Select
-                        label="Bebedouro"
-                        value={pastoSelecionadoAssoc}
-                        onChange={(value) => setPastoSelecionadoAssoc(value)}
-                        options={[
-                          { value: '', label: 'Selecione um bebedouro...' },
-                          ...bebedourosDoPasto.map((b) => ({ value: b.id, label: b.nome })),
-                        ]}
-                      />
-                    </>
-                  )}
-
-                  <div className="flex justify-end gap-2 pt-2">
-                    <Button variant="secondary" onClick={cancelarAssociacao}>
-                      Cancelar
-                    </Button>
-                    <Button
-                      variant="primary"
-                      onClick={salvarGeometriaBebedouro}
-                      disabled={!pastoSelecionadoAssoc || salvando || bebedourosDoPasto.length === 0}
-                    >
-                      {salvando ? 'Salvando...' : 'Salvar Localização'}
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800">
-                    O ponto foi marcado fora de qualquer pasto com geometria.
-                    Bebedouros só podem ser marcados dentro de pastos. Desenhe o pasto primeiro ou
-                    marque o ponto dentro de um pasto já delimitado.
-                  </div>
-                  <div className="flex justify-end gap-2 pt-2">
-                    <Button variant="secondary" onClick={cancelarAssociacao}>
-                      Entendi
-                    </Button>
-                  </div>
-                </>
-              )}
-            </>
-          ) : (
-            <>
-              <p className="text-sm text-gray-600">
-                Selecione qual pasto cadastrado esta delimitação representa. A geometria será salva no banco.
-              </p>
-
-              {pastosSemGeometria.length === 0 ? (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
-                  Todos os pastos já possuem geometria. Para reassociar, remova a geometria existente na página de Pastos.
-                </div>
-              ) : (
-                <Select
-                  label="Pasto"
-                  value={pastoSelecionadoAssoc}
-                  onChange={(value) => setPastoSelecionadoAssoc(value)}
-                  options={[
-                    { value: '', label: 'Selecione um pasto...' },
-                    ...pastosSemGeometria.map((p) => ({ value: p.id, label: p.nome })),
-                  ]}
-                />
-              )}
-
-              <div className="flex justify-end gap-2 pt-2">
-                <Button variant="secondary" onClick={cancelarAssociacao}>
-                  Cancelar
-                </Button>
-                <Button
-                  variant="primary"
-                  onClick={salvarGeometriaPasto}
-                  disabled={!pastoSelecionadoAssoc || salvando || pastosSemGeometria.length === 0}
-                >
-                  {salvando ? 'Salvando...' : 'Salvar Geometria'}
-                </Button>
-              </div>
-            </>
-          )}
-        </div>
-      </Modal>
+        featureDesenhada={featureDesenhada}
+        buscandoPasto={buscandoPasto}
+        pastoDetectado={pastoDetectado}
+        bebedourosDoPasto={bebedourosDoPasto}
+        pastosSemGeometria={pastosSemGeometria}
+        pastoSelecionadoAssoc={pastoSelecionadoAssoc}
+        setPastoSelecionadoAssoc={setPastoSelecionadoAssoc}
+        salvando={salvando}
+        onSalvarBebedouro={salvarGeometriaBebedouro}
+        onSalvarPasto={salvarGeometriaPasto}
+      />
 
       {/* Modal: confirmar remoção de geometria */}
-      <Modal
+      <ConfirmarRemocaoModal
         isOpen={confirmarRemocao !== null}
         onClose={() => setConfirmarRemocao(null)}
-        title="Remover do Mapa"
-        size="sm"
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-gray-600">
-            Tem certeza que deseja remover a geometria de{' '}
-            <strong>{confirmarRemocao?.tipo === 'pasto' ? 'pasto' : 'bebedouro'}</strong>{' '}
-            <strong>{confirmarRemocao?.nome}</strong> do mapa?
-          </p>
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
-            O cadastro não será excluído, apenas a delimitação geográfica será removida.
-            Você poderá redesenhar ou reimportar a geometria depois.
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="secondary" onClick={() => setConfirmarRemocao(null)}>
-              Cancelar
-            </Button>
-            <Button
-              variant="primary"
-              onClick={confirmarRemocaoGeometria}
-              disabled={removendo}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {removendo ? 'Removendo...' : 'Remover Geometria'}
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        confirmarRemocao={confirmarRemocao}
+        removendo={removendo}
+        onConfirmar={confirmarRemocaoGeometria}
+      />
 
       {/* Modal: confirmar remoção em lote */}
-      <Modal
+      <RemocaoLoteModal
         isOpen={showRemocaoLoteModal}
         onClose={() => setShowRemocaoLoteModal(false)}
-        title="Remover Geometrias em Lote"
-        size="md"
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-gray-600">
-            Tem certeza que deseja remover a geometria de{' '}
-            <strong>{pastosSelecionados.size} pasto(s)</strong> do mapa?
-          </p>
-
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
-            Os cadastros não serão excluídos, apenas as delimitações geográficas serão removidas.
-            Você poderá redesenhar ou reimportar as geometrias depois.
-          </div>
-
-          <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
-            <input
-              type="checkbox"
-              checked={removerBebedourosLote}
-              onChange={(e) => setRemoverBebedourosLote(e.target.checked)}
-              className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            Remover também as geometrias dos bebedouros dentro destes pastos
-          </label>
-
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="secondary" onClick={() => setShowRemocaoLoteModal(false)}>
-              Cancelar
-            </Button>
-            <Button
-              variant="primary"
-              onClick={confirmarRemocaoLote}
-              disabled={removendoLote}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {removendoLote ? 'Removendo...' : `Remover ${pastosSelecionados.size} Pasto(s)`}
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        quantidadePastos={pastosSelecionados.size}
+        removerBebedourosLote={removerBebedourosLote}
+        setRemoverBebedourosLote={setRemoverBebedourosLote}
+        removendoLote={removendoLote}
+        onConfirmar={confirmarRemocaoLote}
+      />
 
       {/* Modal: nomear estrada */}
-      <Modal
+      <NomearEstradaModal
         isOpen={showEstradaModal}
         onClose={cancelarEstrada}
-        title="Nomear Estrada"
-        size="sm"
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-gray-600">
-            Digite um nome para esta estrada. Ela será usada para cálculo de rotas dentro da fazenda.
-          </p>
-          <input
-            type="text"
-            value={nomeEstrada}
-            onChange={(e) => setNomeEstrada(e.target.value)}
-            placeholder="Ex: Estrada principal, Acesso ao curral, etc."
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            autoFocus
-            onKeyDown={(e) => { if (e.key === 'Enter' && nomeEstrada.trim()) salvarEstrada() }}
-          />
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="secondary" onClick={cancelarEstrada}>Cancelar</Button>
-            <Button
-              variant="primary"
-              onClick={salvarEstrada}
-              disabled={!nomeEstrada.trim() || salvando}
-            >
-              {salvando ? 'Salvando...' : 'Salvar Estrada'}
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        nomeEstrada={nomeEstrada}
+        setNomeEstrada={setNomeEstrada}
+        salvando={salvando}
+        onSalvar={salvarEstrada}
+      />
 
       {/* Modal: nomear ponto de interesse */}
-      <Modal
+      <NomearPontoModal
         isOpen={showPontoModal}
         onClose={cancelarPonto}
-        title="Marcar Ponto de Interesse"
-        size="sm"
-      >
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
-            <select
-              value={tipoPontoSelecionado}
-              onChange={(e) => setTipoPontoSelecionado(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            >
-              {TIPOS_PONTO.map((t) => (
-                <option key={t.value} value={t.value}>{t.label}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
-            <input
-              type="text"
-              value={nomePonto}
-              onChange={(e) => setNomePonto(e.target.value)}
-              placeholder="Ex: Fábrica de ração 1, Curral de manejo, etc."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              autoFocus
-              onKeyDown={(e) => { if (e.key === 'Enter' && nomePonto.trim()) salvarPonto() }}
-            />
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="secondary" onClick={cancelarPonto}>Cancelar</Button>
-            <Button
-              variant="primary"
-              onClick={salvarPonto}
-              disabled={!nomePonto.trim() || salvando}
-            >
-              {salvando ? 'Salvando...' : 'Salvar Ponto'}
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        tipoPontoSelecionado={tipoPontoSelecionado}
+        setTipoPontoSelecionado={setTipoPontoSelecionado}
+        nomePonto={nomePonto}
+        setNomePonto={setNomePonto}
+        salvando={salvando}
+        onSalvar={salvarPonto}
+      />
 
       {/* Modal: nomear fábrica */}
-      <Modal
+      <NomearFabricaModal
         isOpen={showFabricaModal}
         onClose={cancelarFabrica}
-        title="Nomear Fábrica"
-        size="sm"
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-gray-600">
-            Digite um nome para esta fábrica. Ela será o ponto de origem das rotas do vagão de suplemento.
-          </p>
-          <input
-            type="text"
-            value={nomeFabrica}
-            onChange={(e) => setNomeFabrica(e.target.value)}
-            placeholder="Ex: Fábrica de ração 1"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            autoFocus
-            onKeyDown={(e) => { if (e.key === 'Enter' && nomeFabrica.trim()) salvarFabrica() }}
-          />
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="secondary" onClick={cancelarFabrica}>Cancelar</Button>
-            <Button variant="primary" onClick={salvarFabrica} disabled={!nomeFabrica.trim() || salvando}>
-              {salvando ? 'Salvando...' : 'Salvar Fábrica'}
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        nomeFabrica={nomeFabrica}
+        setNomeFabrica={setNomeFabrica}
+        salvando={salvando}
+        onSalvar={salvarFabrica}
+      />
 
       {/* Modal: associar curral */}
-      <Modal
+      <AssociarCurralModal
         isOpen={showCurralModal}
         onClose={cancelarCurral}
-        title="Associar ao Curral"
-        size="sm"
-      >
-        <div className="space-y-4">
-          {curraisSemGeo.length === 0 ? (
-            <p className="text-sm text-gray-600">
-              Não há currais sem geometria disponíveis. Todos os currais já têm área delimitada ou não há currais cadastrados.
-            </p>
-          ) : (
-            <>
-              <p className="text-sm text-gray-600">
-                Selecione o curral ao qual esta área pertence.
-              </p>
-              <select
-                value={curralSelecionadoAssoc}
-                onChange={(e) => setCurralSelecionadoAssoc(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Selecione um curral...</option>
-                {curraisSemGeo.map((c) => (
-                  <option key={c.id} value={c.id}>{c.nome}</option>
-                ))}
-              </select>
-            </>
-          )}
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="secondary" onClick={cancelarCurral}>Cancelar</Button>
-            <Button variant="primary" onClick={salvarCurral} disabled={!curralSelecionadoAssoc || salvando}>
-              {salvando ? 'Salvando...' : 'Salvar Curral'}
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        curraisSemGeo={curraisSemGeo}
+        curralSelecionadoAssoc={curralSelecionadoAssoc}
+        setCurralSelecionadoAssoc={setCurralSelecionadoAssoc}
+        salvando={salvando}
+        onSalvar={salvarCurral}
+      />
 
       {/* Modal: perguntar tipo de associação (pasto ou fábrica) */}
-      <Modal
+      <AssocTipoModal
         isOpen={showAssocTipoModal}
         onClose={() => {
           if (drawRef.current && featureDesenhada?.id) {
             try {
-          resetarTerraDraw()
-        } catch (e) { console.warn(e) }
+              resetarTerraDraw()
+            } catch (e) { console.warn(e) }
           }
           setShowAssocTipoModal(false)
           setFeatureDesenhada(null)
@@ -3775,41 +3512,19 @@ export function MapaFazenda() {
           const canvas = mapRef.current?.getCanvas()
           if (canvas) canvas.style.cursor = ''
         }}
-        title="Associar Área Importada"
-        size="sm"
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-gray-600">
-            Esta área importada é um pasto ou uma fábrica?
-          </p>
-          <div className="flex gap-2 pt-2">
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setShowAssocTipoModal(false)
-                setPastoSelecionadoAssoc('')
-                setPastoDetectado(null)
-                setBebedourosDoPasto([])
-                setShowAssocModal(true)
-              }}
-              className="flex-1"
-            >
-              Pasto
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setShowAssocTipoModal(false)
-                setNomeFabrica('')
-                setShowFabricaModal(true)
-              }}
-              className="flex-1"
-            >
-              Fábrica
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        onSelecionarPasto={() => {
+          setShowAssocTipoModal(false)
+          setPastoSelecionadoAssoc('')
+          setPastoDetectado(null)
+          setBebedourosDoPasto([])
+          setShowAssocModal(true)
+        }}
+        onSelecionarFabrica={() => {
+          setShowAssocTipoModal(false)
+          setNomeFabrica('')
+          setShowFabricaModal(true)
+        }}
+      />
     </div>
   )
 }
