@@ -8,11 +8,10 @@ import { kml } from '@tmcw/togeojson'
 import { strFromU8, unzipSync } from 'fflate'
 import { supabase } from '../../services/supabaseClient'
 import { useAuth } from '../../contexts/AuthContext'
-import { getFazendaIdForUser } from '../../utils/fazendaContext'
 import { Button } from '../../components/ui'
-import type { PastoMapa, BebedouroMapa, EstradaMapa, PontoMapa, CurralMapa, CurralDetalhe, PastoDetalhe } from './mapaFazenda/types'
+import type { BebedouroMapa, EstradaMapa, PontoMapa, CurralDetalhe, PastoDetalhe } from './mapaFazenda/types'
 import { mapStyle, corPonto, terraDrawStyles } from './mapaFazenda/mapaConfig'
-import { calcularMelhorLabel, gerarCirculoPrecisao } from './mapaFazenda/geometriaUtils'
+import { gerarCirculoPrecisao } from './mapaFazenda/geometriaUtils'
 import { loadSavedView, saveView } from './mapaFazenda/viewPersist'
 import { PastoDetalhePanel } from './mapaFazenda/PastoDetalhePanel'
 import { EstradaDetalhePanel } from './mapaFazenda/EstradaDetalhePanel'
@@ -21,20 +20,24 @@ import { FabricaDetalhePanel } from './mapaFazenda/FabricaDetalhePanel'
 import { CurralDetalhePanel } from './mapaFazenda/CurralDetalhePanel'
 import { AssocGeometriaModal } from './mapaFazenda/AssocGeometriaModal'
 import { ConfirmarRemocaoModal, RemocaoLoteModal, NomearEstradaModal, NomearPontoModal, NomearFabricaModal, AssociarCurralModal, AssocTipoModal } from './mapaFazenda/MapaModais'
+import { useMapaData } from './mapaFazenda/useMapaData'
 
 export function MapaFazenda() {
   const { user } = useAuth()
   const mapRef = useRef<MapRef>(null)
   const drawRef = useRef<TerraDraw | null>(null)
 
-  const [fazendaId, setFazendaId] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [pastos, setPastos] = useState<PastoMapa[]>([])
-  const [bebedouros, setBebedouros] = useState<BebedouroMapa[]>([])
-  const [estradas, setEstradas] = useState<EstradaMapa[]>([])
-  const [pontos, setPontos] = useState<PontoMapa[]>([])
-  const [currais, setCurrais] = useState<CurralMapa[]>([])
-  const [curraisSemGeo, setCurraisSemGeo] = useState<{ id: string; nome: string }[]>([])
+  // Dados do mapa (carregamento + GeoJSON sources derivados)
+  const {
+    fazendaId, loading,
+    pastos, bebedouros, estradas, currais,
+    curraisSemGeo, pastosSemGeometria,
+    loadData,
+    pastosGeoJSON, pastosLabelsGeoJSON,
+    fabricas, pontosRegulares,
+    fabricasGeoJSON, curraisGeoJSON, bebedourosGeoJSON,
+  } = useMapaData(user)
+
   const [pastoDetalhe, setPastoDetalhe] = useState<PastoDetalhe | null>(null)
   const [popup, setPopup] = useState<{ lng: number; lat: number; nome: string } | null>(null)
   const [popupBebedouro, setPopupBebedouro] = useState<{ lng: number; lat: number; id: string; nome: string } | null>(null)
@@ -83,7 +86,6 @@ export function MapaFazenda() {
   const [pastoDetectado, setPastoDetectado] = useState<{ id: string; nome: string } | null>(null)
   const [bebedourosDoPasto, setBebedourosDoPasto] = useState<{ id: string; nome: string }[]>([])
   const [buscandoPasto, setBuscandoPasto] = useState(false)
-  const [pastosSemGeometria, setPastosSemGeometria] = useState<{ id: string; nome: string }[]>([])
   const [salvando, setSalvando] = useState(false)
   const [importStatus, setImportStatus] = useState<{ type: 'success' | 'error' | 'info'; msg: string } | null>(null)
 
@@ -144,218 +146,7 @@ export function MapaFazenda() {
   }, [modoTelaCheia])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // ==================== Carregar dados ====================
-  const loadData = useCallback(async () => {
-    if (!user) return
-    setLoading(true)
-
-    const fid = await getFazendaIdForUser(user.id)
-    if (!fid) {
-      setLoading(false)
-      return
-    }
-    setFazendaId(fid)
-
-    // Buscar pastos com geometria (ST_AsGeoJSON) e sem geometria (para o modal de associação)
-    // e bebedouros com geometria (para renderizar no mapa)
-    const [pastosComGeo, pastosSemGeo, bebedourosComGeo, estradasRes, pontosRes, curraisComGeoRes, curraisSemGeoRes] = await Promise.all([
-      supabase.rpc('get_pastos_com_geometria', { p_fazenda_id: fid }),
-      supabase
-        .from('pastos')
-        .select('id, nome')
-        .eq('fazenda_id', fid)
-        .is('geometria', null)
-        .is('deleted_at', null)
-        .order('nome'),
-      supabase.rpc('get_bebedouros_com_geometria', { p_fazenda_id: fid }),
-      supabase
-        .from('mapa_estradas')
-        .select('id, nome, geometria')
-        .eq('fazenda_id', fid)
-        .eq('ativo', true)
-        .order('nome'),
-      supabase
-        .from('mapa_pontos')
-        .select('id, tipo, nome, geometria')
-        .eq('fazenda_id', fid)
-        .eq('ativo', true)
-        .order('nome'),
-      supabase.rpc('get_currais_com_geometria', { p_fazenda_id: fid }),
-      supabase
-        .from('currais')
-        .select('id, nome')
-        .eq('fazenda_id', fid)
-        .is('geometria', null)
-        .is('deleted_at', null)
-        .order('nome'),
-    ])
-
-    if (pastosComGeo.data) {
-      const pastosParsed: PastoMapa[] = (pastosComGeo.data as any[]).map((p) => ({
-        id: p.id,
-        nome: p.nome,
-        setor: p.setor,
-        tipo: p.tipo,
-        area_total_ha: p.area_total_ha,
-        area_util_ha: p.area_util_ha,
-        especie: p.especie,
-        ativo: p.ativo,
-        metragem_cocho_m: p.metragem_cocho_m,
-        possui_deposito: p.possui_deposito,
-        fonte_agua_principal: p.fonte_agua_principal,
-        modulo_nome: p.modulo_nome,
-        geometria_geojson: p.geometria_geojson
-          ? ({
-              type: 'FeatureCollection',
-              features: [
-                {
-                  type: 'Feature',
-                  properties: { id: p.id, nome: p.nome },
-                  geometry: typeof p.geometria_geojson === 'string' ? JSON.parse(p.geometria_geojson) : p.geometria_geojson,
-                },
-              ],
-            } as GeoJSON.FeatureCollection)
-          : null,
-      }))
-      setPastos(pastosParsed)
-    }
-
-    if (pastosSemGeo.data) {
-      setPastosSemGeometria(pastosSemGeo.data as { id: string; nome: string }[])
-    }
-
-    if (bebedourosComGeo.data) {
-      const bebedourosParsed: BebedouroMapa[] = (bebedourosComGeo.data as any[]).map((b) => ({
-        id: b.id,
-        nome: b.nome,
-        capacidade: b.capacidade,
-        geometria_geojson: b.geometria_geojson
-          ? ({
-              type: 'FeatureCollection',
-              features: [
-                {
-                  type: 'Feature',
-                  properties: { id: b.id, nome: b.nome },
-                  geometry: typeof b.geometria_geojson === 'string' ? JSON.parse(b.geometria_geojson) : b.geometria_geojson,
-                },
-              ],
-            } as GeoJSON.FeatureCollection)
-          : null,
-      }))
-      setBebedouros(bebedourosParsed)
-    }
-
-    if (estradasRes.data) {
-      const estradasParsed: EstradaMapa[] = (estradasRes.data as any[]).map((e) => ({
-        id: e.id,
-        nome: e.nome,
-        geometria_geojson: e.geometria
-          ? ({
-              type: 'FeatureCollection',
-              features: [
-                {
-                  type: 'Feature',
-                  properties: { id: e.id, nome: e.nome },
-                  geometry: typeof e.geometria === 'string' ? JSON.parse(e.geometria) : e.geometria,
-                },
-              ],
-            } as GeoJSON.FeatureCollection)
-          : null,
-      }))
-      setEstradas(estradasParsed)
-    }
-
-    if (pontosRes.data) {
-      const pontosParsed: PontoMapa[] = (pontosRes.data as any[]).map((p) => ({
-        id: p.id,
-        tipo: p.tipo,
-        nome: p.nome,
-        geometria_geojson: p.geometria
-          ? ({
-              type: 'FeatureCollection',
-              features: [
-                {
-                  type: 'Feature',
-                  properties: { id: p.id, tipo: p.tipo, nome: p.nome },
-                  geometry: typeof p.geometria === 'string' ? JSON.parse(p.geometria) : p.geometria,
-                },
-              ],
-            } as GeoJSON.FeatureCollection)
-          : null,
-      }))
-      setPontos(pontosParsed)
-    }
-
-    if (curraisComGeoRes.data) {
-      const curraisParsed: CurralMapa[] = (curraisComGeoRes.data as any[]).map((c) => ({
-        id: c.id,
-        nome: c.nome,
-        lote_id: c.lote_id,
-        geometria_geojson: c.geometria
-          ? ({
-              type: 'FeatureCollection',
-              features: [
-                {
-                  type: 'Feature',
-                  properties: { id: c.id, nome: c.nome },
-                  geometry: c.geometria,
-                },
-              ],
-            } as GeoJSON.FeatureCollection)
-          : null,
-      }))
-      setCurrais(curraisParsed)
-    }
-
-    if (curraisSemGeoRes.data) {
-      setCurraisSemGeo((curraisSemGeoRes.data as any[]).map((c) => ({ id: c.id, nome: c.nome })))
-    }
-
-    setLoading(false)
-  }, [user])
-
-  useEffect(() => {
-    loadData()
-  }, [loadData])
-
-  // ==================== GeoJSON sources ====================
-  const pastosGeoJSON = useMemo<GeoJSON.FeatureCollection>(() => {
-    const features: GeoJSON.Feature[] = []
-    pastos.forEach((p) => {
-      if (p.geometria_geojson?.features?.[0]) {
-        features.push(p.geometria_geojson.features[0])
-      }
-    })
-    return { type: 'FeatureCollection', features }
-  }, [pastos])
-
-  // GeoJSON de labels (centróide de cada pasto com nome e áreas)
-  const pastosLabelsGeoJSON = useMemo<GeoJSON.FeatureCollection>(() => {
-    const features: GeoJSON.Feature[] = []
-    pastos.forEach((p) => {
-      if (p.geometria_geojson?.features?.[0]?.geometry?.type === 'Polygon') {
-        const coords = p.geometria_geojson.features[0].geometry.coordinates[0] as [number, number][]
-        // Calcular o melhor ponto para o label (centróide verdadeiro, com fallback se cair fora)
-        const [lng, lat] = calcularMelhorLabel(coords)
-
-        const areaTotal = p.area_total_ha != null ? `${p.area_total_ha} ha` : ''
-        const areaUtil = p.area_util_ha != null ? `${p.area_util_ha} ha` : ''
-        const sublabel = [areaTotal, areaUtil].filter(Boolean).join(' · ')
-
-        features.push({
-          type: 'Feature',
-          properties: {
-            id: p.id,
-            nome: p.nome,
-            sublabel,
-          },
-          geometry: { type: 'Point', coordinates: [lng, lat] },
-        })
-      }
-    })
-    return { type: 'FeatureCollection', features }
-  }, [pastos])
-
+  // GeoJSON sources que dependem de estado de detalhe (ficam no componente)
   // GeoJSON dos pastos selecionados (para highlight visual)
   const pastosSelecionadosGeoJSON = useMemo<GeoJSON.FeatureCollection>(() => {
     const features: GeoJSON.Feature[] = []
@@ -383,40 +174,6 @@ export function MapaFazenda() {
     return { type: 'FeatureCollection', features: [estrada.geometria_geojson.features[0]] }
   }, [estradas, estradaDetalhe])
 
-  // Fábricas: pontos com tipo='fabrica' e geometria Polygon
-  const fabricas = useMemo(() => pontos.filter((p) => p.tipo === 'fabrica'), [pontos])
-
-  // Pontos regulares (não fábricas)
-  const pontosRegulares = useMemo(() => pontos.filter((p) => p.tipo !== 'fabrica'), [pontos])
-
-  const fabricasGeoJSON = useMemo<GeoJSON.FeatureCollection>(() => {
-    const features: GeoJSON.Feature[] = []
-    fabricas.forEach((f) => {
-      if (f.geometria_geojson?.features?.[0]) {
-        features.push({
-          type: 'Feature',
-          properties: { id: f.id, nome: f.nome },
-          geometry: f.geometria_geojson.features[0].geometry,
-        })
-      }
-    })
-    return { type: 'FeatureCollection', features }
-  }, [fabricas])
-
-  const curraisGeoJSON = useMemo<GeoJSON.FeatureCollection>(() => {
-    const features: GeoJSON.Feature[] = []
-    currais.forEach((c) => {
-      if (c.geometria_geojson?.features?.[0]) {
-        features.push({
-          type: 'Feature',
-          properties: { id: c.id, nome: c.nome },
-          geometry: c.geometria_geojson.features[0].geometry,
-        })
-      }
-    })
-    return { type: 'FeatureCollection', features }
-  }, [currais])
-
   const fabricaDetalheGeoJSON = useMemo<GeoJSON.FeatureCollection>(() => {
     if (!fabricaDetalhe) return { type: 'FeatureCollection', features: [] }
     const f = fabricas.find((x) => x.id === fabricaDetalhe.id)
@@ -430,16 +187,6 @@ export function MapaFazenda() {
     if (!c?.geometria_geojson?.features?.[0]) return { type: 'FeatureCollection', features: [] }
     return { type: 'FeatureCollection', features: [c.geometria_geojson.features[0]] }
   }, [currais, curralDetalhe])
-
-  const bebedourosGeoJSON = useMemo<GeoJSON.FeatureCollection>(() => {
-    const features: GeoJSON.Feature[] = []
-    bebedouros.forEach((b) => {
-      if (b.geometria_geojson?.features?.[0]) {
-        features.push(b.geometria_geojson.features[0])
-      }
-    })
-    return { type: 'FeatureCollection', features }
-  }, [bebedouros])
 
   // ==================== Import KML/KMZ ====================
   // ==================== Geolocalização do dispositivo ====================
