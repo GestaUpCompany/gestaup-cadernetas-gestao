@@ -470,12 +470,13 @@ export function Lotes() {
   }, [formData.data_liberacao_sisbov])
 
   // Sync quant_atual with quant_inicial for new categories (not yet saved)
+  // quant_atual é read-only no frontend: só a trigger/cron devem atualizá-lo.
+  // Na criação manual, quant_atual = quant_inicial automaticamente.
   useEffect(() => {
     if (!editingLote) {
-      // For new lots, sync quant_atual with quant_inicial only if quant_atual is not set
       const updatedCategorias = formData.categorias.map(cat => ({
         ...cat,
-        quant_atual: cat.quant_atual === undefined ? (cat.quant_inicial || undefined) : cat.quant_atual
+        quant_atual: cat.quant_inicial || undefined
       }))
       setFormData({ ...formData, categorias: updatedCategorias })
     }
@@ -1110,7 +1111,7 @@ export function Lotes() {
     // Upsert categorias: preserva IDs existentes
     for (const cat of recalculatedCategorias) {
       const categoriaId = cat.id || existingByName[cat.categoria.toLowerCase()]
-      const categoriaPayload = {
+      const categoriaPayload: Record<string, any> = {
         lote_id: loteId,
         categoria: cat.categoria,
         quant_inicial: cat.quant_inicial ? parseInt(cat.quant_inicial.toString()) : null,
@@ -1163,6 +1164,13 @@ export function Lotes() {
         custo_total_entrada_reais_cab: cat.custo_total_entrada_reais_cab ? parseFloat(cat.custo_total_entrada_reais_cab.toString()) : null,
         custo_total_entrada_reais_lote: cat.custo_total_entrada_reais_lote ? parseFloat(cat.custo_total_entrada_reais_lote.toString()) : null,
         ativo: cat.ativo ?? true,
+      }
+
+      // Ao editar categoria existente, não enviar quant_inicial (imutável) nem
+      // quant_atual (gerido por trigger/cron) para evitar sobrescrever valores do banco.
+      if (categoriaId) {
+        delete categoriaPayload.quant_inicial
+        delete categoriaPayload.quant_atual
       }
 
       try {
@@ -2170,7 +2178,7 @@ export function Lotes() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                           <div className="col-span-1">
                             <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
-                              Quant. Inicial (cab)
+                              Quant. Inicial (cab){!cat.id && <span className="text-red-500">*</span>}
                             </label>
                             <Input
                               type="number"
@@ -2178,11 +2186,16 @@ export function Lotes() {
                               onChange={(e) => {
                                 const updatedCategorias = [...formData.categorias]
                                 const val = e.target.value ? parseFloat(e.target.value) : undefined
-                                updatedCategorias[catIndex] = { ...cat, quant_inicial: val, quant_atual: val }
+                                updatedCategorias[catIndex] = { ...cat, quant_inicial: val }
+                                if (!editingLote) {
+                                  updatedCategorias[catIndex].quant_atual = val
+                                }
                                 setFormData({ ...formData, categorias: updatedCategorias })
                               }}
                               placeholder="0"
-                              className="border-gray-200 focus:border-accent"
+                              disabled={!!cat.id}
+                              className={`border-gray-200 focus:border-accent ${cat.id ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                              title={cat.id ? 'Quant. inicial é definida na criação e não pode ser alterada' : ''}
                             />
                           </div>
                           <div>
@@ -2192,13 +2205,10 @@ export function Lotes() {
                             <Input
                               type="number"
                               value={cat.quant_atual?.toString() || ''}
-                              onChange={(e) => {
-                                const updatedCategorias = [...formData.categorias]
-                                updatedCategorias[catIndex] = { ...cat, quant_atual: e.target.value ? parseFloat(e.target.value) : undefined }
-                                setFormData({ ...formData, categorias: updatedCategorias })
-                              }}
+                              readOnly
                               placeholder="0"
-                              className="border-gray-200 focus:border-accent"
+                              className="border-gray-200 bg-gray-50 cursor-not-allowed"
+                              title="Quant. atual é calculada automaticamente pelas movimentações"
                             />
                           </div>
                           <div>

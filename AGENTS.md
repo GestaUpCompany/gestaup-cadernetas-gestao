@@ -387,3 +387,13 @@ Impacto aplicado (cron rodado em 2026-08-13, 9 categorias com plano ativo corrig
 Categorias sem plano nutricional ativo não são atualizadas pelo cron e mantêm o `quant_atual` gravado até serem editadas no frontend. O frontend já chama `calculate_quant_atual` ao salvar (indiretamente via cron na próxima execução).
 
 Disparador: quando mencionar "dupla contagem", "cabeças duplicadas", "quant_atual inflado", "calculate_quant_atual", "apartação duplicada", ou problemas com contagem de cabeças após transferência, ler esta seção.
+
+### Sincronização de `peoes.fazenda_id` ao renomear `acesso_id` da fazenda — adicionado em 2026-08-13
+
+Problema: a tabela `peoes` guarda o `acesso_id` da fazenda em texto na coluna `fazenda_id` (não o UUID). O fluxo de login do peão no PWA (`authService.ts:20` e Edge Function `login-peao`) faz `peoes?fazenda_id=ilike.<acesso_id_digitado>` para encontrar o peão, e depois `getFazendaByAcessoId(acesso_id)` para carregar a fazenda. Quando o `acesso_id` da fazenda era renomeado no Painel Web, `peoes.fazenda_id` não era atualizado, quebrando o login do peão nos dois sentidos: digitando o novo `acesso_id` o peão não era encontrado; digitando o antigo a fazenda não era encontrada.
+
+Caso real (Fazenda Estrela, 13/08/2026): fazenda originalmente "Transcal" (`acesso_id = 'transcal'`) foi renomeada para "Fazenda Estrela" (`acesso_id = 'estrela'`). O `peoes.fazenda_id` ficou stale em `'transcal'`, quebrando o login do peão. O vínculo em `usuarios`/`usuario_fazenda` (backfill de 06/08) continuou correto porque aponta para o UUID da fazenda, que não mudou. Fix manual aplicado: `UPDATE peoes SET fazenda_id = 'estrela' WHERE id = '9c69309f-5d20-4f15-81bc-47d0f90bb6b3'`.
+
+Correção estrutural aplicada (migration `sync_peoes_fazenda_id_on_acesso_id_update`): trigger `trg_sync_peoes_fazenda_id_on_acesso_id_update` AFTER UPDATE OF acesso_id ON fazendas, executa `sync_peoes_fazenda_id_on_acesso_id_update()` (SECURITY DEFINER, plpgsql). Quando `NEW.acesso_id IS DISTINCT FROM OLD.acesso_id`, faz `UPDATE peoes SET fazenda_id = NEW.acesso_id WHERE fazenda_id = OLD.acesso_id`. Testada na fazenda de testes (`d649c65e`): rename `gestaup` → `gestauptesttrigger` propagou para `peoes.fazenda_id`, e o rename reverso propagou de volta.
+
+Disparador: quando mencionar "renomear acesso_id", "peão não consegue logar após renomear fazenda", "peoes.fazenda_id stale", "login do peão quebrado", ou problemas com login do peão após mudança de `acesso_id`, ler esta seção.
