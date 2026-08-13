@@ -2552,8 +2552,8 @@ export function MapaFazenda() {
               ...(visCamadas.bebedouros ? ['bebedouros-circle'] : []),
               ...(visCamadas.estradas ? ['estradas-line'] : []),
               ...(visCamadas.pontos ? ['pontos-circle'] : []),
-              ...(visCamadas.fabricas ? ['fabricas-fill', 'fabricas-line'] : []),
-              ...(visCamadas.currais ? ['currais-fill', 'currais-line'] : []),
+              ...(visCamadas.fabricas ? ['fabricas-fill', 'fabricas-line', 'fabricas-label'] : []),
+              ...(visCamadas.currais ? ['currais-fill', 'currais-line', 'currais-label'] : []),
               ...(featuresImportadas ? ['import-fill', 'import-line', 'import-point', 'import-line-string'] : []),
             ]}
             onClick={handleMapClick}

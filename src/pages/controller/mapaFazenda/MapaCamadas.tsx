@@ -310,6 +310,26 @@ export function MapaCamadas({
               ? ['all', ['==', '$type', 'Polygon'], ['!=', 'id', editandoFabrica.fabricaId]]
               : ['==', '$type', 'Polygon']}
           />
+          <Layer
+            id="fabricas-label"
+            type="symbol"
+            layout={{
+              'text-field': ['get', 'nome'],
+              'text-anchor': 'center',
+              'text-justify': 'center',
+              'text-allow-overlap': true,
+              'text-size': 12,
+              visibility: visCamadas.fabricas ? 'visible' : 'none',
+            }}
+            paint={{
+              'text-color': '#5b21b6',
+              'text-halo-color': '#ffffff',
+              'text-halo-width': 2,
+            }}
+            filter={editandoFabrica
+              ? ['all', ['==', '$type', 'Polygon'], ['!=', 'id', editandoFabrica.fabricaId]]
+              : ['==', '$type', 'Polygon']}
+          />
         </Source>
       )}
 
@@ -336,6 +356,26 @@ export function MapaCamadas({
               'line-color': '#78350f',
               'line-width': 2,
               'line-opacity': 0.9,
+            }}
+            filter={editandoCurral
+              ? ['all', ['==', '$type', 'Polygon'], ['!=', 'id', editandoCurral.curralId]]
+              : ['==', '$type', 'Polygon']}
+          />
+          <Layer
+            id="currais-label"
+            type="symbol"
+            layout={{
+              'text-field': ['get', 'nome'],
+              'text-anchor': 'center',
+              'text-justify': 'center',
+              'text-allow-overlap': true,
+              'text-size': 12,
+              visibility: visCamadas.currais ? 'visible' : 'none',
+            }}
+            paint={{
+              'text-color': '#78350f',
+              'text-halo-color': '#ffffff',
+              'text-halo-width': 2,
             }}
             filter={editandoCurral
               ? ['all', ['==', '$type', 'Polygon'], ['!=', 'id', editandoCurral.curralId]]
