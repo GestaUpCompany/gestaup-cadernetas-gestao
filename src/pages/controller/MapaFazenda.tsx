@@ -2574,8 +2574,8 @@ export function MapaFazenda() {
 
       {/* Toolbar (overlay compacto em tela cheia) */}
       <div className={modoTelaCheia
-        ? 'absolute top-2 left-2 right-2 z-10 flex items-center gap-2 flex-wrap bg-white/95 p-2 rounded-lg border border-gray-200 shadow-lg'
-        : 'flex items-center gap-2 flex-wrap bg-white p-3 rounded-lg border border-gray-200'
+        ? 'absolute top-2 left-2 right-2 z-10 flex items-center gap-1.5 flex-wrap bg-white/95 p-2 rounded-lg border border-gray-200 shadow-lg'
+        : 'flex items-center gap-1.5 flex-wrap bg-white p-3 rounded-lg border border-gray-200'
       }>
         <input
           ref={fileInputRef}
@@ -2584,9 +2584,13 @@ export function MapaFazenda() {
           onChange={handleFileImport}
           className="hidden"
         />
+
+        {/* Grupo 1: Importar */}
         <Button
           variant="secondary"
+          size="sm"
           onClick={() => fileInputRef.current?.click()}
+          className="bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200"
         >
           <span className="flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2595,128 +2599,183 @@ export function MapaFazenda() {
             Importar KML/KMZ
           </span>
         </Button>
+        {featuresImportadas && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              setFeaturesImportadas(null)
+              setImportStatus(null)
+            }}
+            className="bg-red-50 text-red-700 hover:bg-red-100 border border-red-200"
+          >
+            Remover Importação
+          </Button>
+        )}
+
+        {/* Divider */}
+        <div className="w-px h-8 bg-gray-300 mx-1" />
+
+        {/* Grupo 2: Desenhar (colorido por entidade) */}
         <Button
           variant={drawMode === 'polygon' ? 'primary' : 'secondary'}
+          size="sm"
           onClick={ativarDesenhoPoligono}
+          className={drawMode === 'polygon'
+            ? 'bg-green-600 text-white hover:bg-green-700 border border-green-700'
+            : 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200'}
         >
           <span className="flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4l16 0l0 16l-16 0z" />
             </svg>
-            Desenhar Pasto
+            Pasto
           </span>
         </Button>
         <Button
           variant={drawMode === 'point' ? 'primary' : 'secondary'}
+          size="sm"
           onClick={ativarDesenhoPonto}
+          className={drawMode === 'point'
+            ? 'bg-blue-600 text-white hover:bg-blue-700 border border-blue-700'
+            : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200'}
         >
           <span className="flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2a8 8 0 00-8 8c0 5 8 12 8 12s8-7 8-12a8 8 0 00-8-8z" />
               <circle cx="12" cy="10" r="3" />
             </svg>
-            Marcar Bebedouro
+            Bebedouro
           </span>
         </Button>
         <Button
           variant={drawMode === 'linestring' ? 'primary' : 'secondary'}
+          size="sm"
           onClick={ativarDesenhoEstrada}
+          className={drawMode === 'linestring'
+            ? 'bg-amber-600 text-white hover:bg-amber-700 border border-amber-700'
+            : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200'}
         >
           <span className="flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 18c4-8 12-8 16 0M4 18a2 2 0 11-4 0 2 2 0 014 0zM20 18a2 2 0 110-4 2 2 0 010 4z" />
             </svg>
-            Traçar Estrada
+            Estrada
           </span>
         </Button>
         <Button
           variant={drawMode === 'point-interesse' ? 'primary' : 'secondary'}
+          size="sm"
           onClick={ativarDesenhoPontoInteresse}
+          className={drawMode === 'point-interesse'
+            ? 'bg-purple-600 text-white hover:bg-purple-700 border border-purple-700'
+            : 'bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200'}
         >
           <span className="flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            Marcar Ponto
+            Ponto
           </span>
         </Button>
         <Button
           variant={drawMode === 'fabrica' ? 'primary' : 'secondary'}
+          size="sm"
           onClick={ativarDesenhoFabrica}
+          className={drawMode === 'fabrica'
+            ? 'bg-violet-700 text-white hover:bg-violet-800 border border-violet-800'
+            : 'bg-violet-50 text-violet-700 hover:bg-violet-100 border border-violet-200'}
         >
           <span className="flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5" />
             </svg>
-            Desenhar Fábrica
+            Fábrica
           </span>
         </Button>
         <Button
           variant={drawMode === 'curral' ? 'primary' : 'secondary'}
+          size="sm"
           onClick={ativarDesenhoCurral}
+          className={drawMode === 'curral'
+            ? 'bg-amber-800 text-white hover:bg-amber-900 border border-amber-900'
+            : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-300'}
         >
           <span className="flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
             </svg>
-            Desenhar Curral
+            Curral
           </span>
         </Button>
+
+        {/* Divider */}
+        <div className="w-px h-8 bg-gray-300 mx-1" />
+
+        {/* Grupo 3: Ferramentas */}
         <Button
           variant={modoRota ? 'primary' : 'secondary'}
+          size="sm"
           onClick={ativarModoRota}
+          className={modoRota
+            ? 'bg-indigo-600 text-white hover:bg-indigo-700 border border-indigo-700'
+            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'}
         >
           <span className="flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
             </svg>
-            Traçar Rota
+            Rota
           </span>
-        </Button>
-        <Button variant="secondary" onClick={limparDesenho}>
-          Limpar Desenho
         </Button>
         <Button
           variant={modoSelecaoMultipla ? 'primary' : 'secondary'}
+          size="sm"
           onClick={() => {
             setModoSelecaoMultipla(!modoSelecaoMultipla)
             setPastosSelecionados(new Set())
           }}
+          className={modoSelecaoMultipla
+            ? 'bg-gray-700 text-white hover:bg-gray-800 border border-gray-800'
+            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'}
         >
           <span className="flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
             </svg>
-            {modoSelecaoMultipla ? 'Sair da Seleção' : 'Seleção Múltipla'}
+            {modoSelecaoMultipla ? 'Sair Seleção' : 'Seleção'}
           </span>
         </Button>
         <Button
           variant="secondary"
+          size="sm"
+          onClick={limparDesenho}
+          className="bg-gray-100 text-gray-500 hover:bg-red-50 hover:text-red-600 border border-gray-300"
+        >
+          Limpar
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={handleLocalizarDispositivo}
           disabled={localizando}
+          className="bg-gray-100 text-gray-700 hover:bg-blue-50 hover:text-blue-700 border border-gray-300"
         >
           <span className="flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <circle cx="12" cy="12" r="3" strokeWidth={2} />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2v3m0 14v3m10-10h-3M5 12H2" />
             </svg>
-            {localizando ? 'Localizando...' : 'Minha Localização'}
+            {localizando ? 'Localizando...' : 'Localização'}
           </span>
         </Button>
-        {featuresImportadas && (
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setFeaturesImportadas(null)
-              setImportStatus(null)
-            }}
-          >
-            Remover Importação
-          </Button>
-        )}
-        {/* Controle de camadas */}
-        <div className="flex items-center gap-3 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200">
+
+        {/* Divider */}
+        <div className="w-px h-8 bg-gray-300 mx-1" />
+
+        {/* Grupo 4: Visualização (camadas + tela cheia) */}
+        <div className="flex items-center gap-2 bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-200">
           <label className="flex items-center gap-1.5 cursor-pointer text-sm">
             <input
               type="checkbox"
@@ -2792,7 +2851,9 @@ export function MapaFazenda() {
         </div>
         <Button
           variant="secondary"
+          size="sm"
           onClick={() => setModoTelaCheia((v) => !v)}
+          className="bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300"
         >
           <span className="flex items-center gap-2">
             {modoTelaCheia ? (
