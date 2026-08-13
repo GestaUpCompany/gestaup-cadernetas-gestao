@@ -100,3 +100,20 @@ export function gerarCirculoPrecisao(lng: number, lat: number, raioMetros: numbe
 
   return coords
 }
+
+// Calcular comprimento de uma LineString em metros (Haversine simplificado)
+export function calcularComprimentoEstrada(feature: GeoJSON.Feature<GeoJSON.LineString> | undefined): number {
+  if (!feature?.geometry?.coordinates) return 0
+  const coords = feature.geometry.coordinates
+  let total = 0
+  for (let i = 1; i < coords.length; i++) {
+    const [lng1, lat1] = coords[i - 1]
+    const [lng2, lat2] = coords[i]
+    const R = 6371000 // raio da Terra em metros
+    const dLat = (lat2 - lat1) * Math.PI / 180
+    const dLng = (lng2 - lng1) * Math.PI / 180
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2
+    total += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  }
+  return total
+}

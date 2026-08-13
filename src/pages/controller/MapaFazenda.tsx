@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { Map, MapRef, Source, Layer, Popup } from 'react-map-gl/maplibre'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
@@ -10,14 +9,18 @@ import { strFromU8, unzipSync } from 'fflate'
 import { supabase } from '../../services/supabaseClient'
 import { useAuth } from '../../contexts/AuthContext'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
-import { Button, Card, Modal, Select } from '../../components/ui'
+import { Button, Modal, Select } from '../../components/ui'
 import type { PastoMapa, BebedouroMapa, EstradaMapa, PontoMapa, CurralMapa, CurralDetalhe, PastoDetalhe } from './mapaFazenda/types'
-import { mapStyle, TIPOS_PONTO, corPonto, labelPonto, terraDrawStyles } from './mapaFazenda/mapaConfig'
+import { mapStyle, TIPOS_PONTO, corPonto, terraDrawStyles } from './mapaFazenda/mapaConfig'
 import { calcularMelhorLabel, gerarCirculoPrecisao } from './mapaFazenda/geometriaUtils'
 import { loadSavedView, saveView } from './mapaFazenda/viewPersist'
+import { PastoDetalhePanel } from './mapaFazenda/PastoDetalhePanel'
+import { EstradaDetalhePanel } from './mapaFazenda/EstradaDetalhePanel'
+import { PontoDetalhePanel } from './mapaFazenda/PontoDetalhePanel'
+import { FabricaDetalhePanel } from './mapaFazenda/FabricaDetalhePanel'
+import { CurralDetalhePanel } from './mapaFazenda/CurralDetalhePanel'
 
 export function MapaFazenda() {
-  const navigate = useNavigate()
   const { user } = useAuth()
   const mapRef = useRef<MapRef>(null)
   const drawRef = useRef<TerraDraw | null>(null)
@@ -961,22 +964,6 @@ export function MapaFazenda() {
     if (canvas) canvas.style.cursor = 'crosshair'
   }
 
-  // Calcular comprimento de uma LineString em metros (Haversine simplificado)
-  const calcularComprimentoEstrada = (feature: GeoJSON.Feature<GeoJSON.LineString> | undefined): number => {
-    if (!feature?.geometry?.coordinates) return 0
-    const coords = feature.geometry.coordinates
-    let total = 0
-    for (let i = 1; i < coords.length; i++) {
-      const [lng1, lat1] = coords[i - 1]
-      const [lng2, lat2] = coords[i]
-      const R = 6371000 // raio da Terra em metros
-      const dLat = (lat2 - lat1) * Math.PI / 180
-      const dLng = (lng2 - lng1) * Math.PI / 180
-      const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2
-      total += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-    }
-    return total
-  }
 
   const salvarEstrada = async () => {
     if (!estradaDesenhada || !fazendaId || !nomeEstrada.trim()) return
@@ -3375,388 +3362,57 @@ export function MapaFazenda() {
 
         {/* Side Panel: detalhes do pasto (overlay flutuante em tela cheia) */}
         {pastoDetalhe && (
-          <div className={modoTelaCheia
-            ? 'absolute top-2 right-2 bottom-2 w-80 z-10 overflow-y-auto shadow-xl'
-            : 'w-full lg:w-80 flex-shrink-0'
-          }>
-            <Card>
-              <div className="p-4">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h2 className="text-lg font-bold text-gray-900">{pastoDetalhe.nome}</h2>
-                    {pastoDetalhe.modulo_nome && (
-                      <p className="text-xs text-gray-500">Módulo: {pastoDetalhe.modulo_nome}</p>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => {
-                      setPastoDetalhe(null)
-                      setPopup(null)
-                    }}
-                    className="text-gray-400 hover:text-gray-600"
-                    aria-label="Fechar detalhes"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-
-                <div className="space-y-2 text-sm">
-                  {pastoDetalhe.setor && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Setor:</span>
-                      <span className="font-medium">{pastoDetalhe.setor}</span>
-                    </div>
-                  )}
-                  {pastoDetalhe.tipo && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Tipo:</span>
-                      <span className="font-medium">{pastoDetalhe.tipo}</span>
-                    </div>
-                  )}
-                  {pastoDetalhe.area_total_ha != null && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Área total:</span>
-                      <span className="font-medium">{pastoDetalhe.area_total_ha} ha</span>
-                    </div>
-                  )}
-                  {pastoDetalhe.area_util_ha != null && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Área útil:</span>
-                      <span className="font-medium">{pastoDetalhe.area_util_ha} ha</span>
-                    </div>
-                  )}
-                  {pastoDetalhe.especie && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Espécie:</span>
-                      <span className="font-medium">{pastoDetalhe.especie}</span>
-                    </div>
-                  )}
-                  {pastoDetalhe.metragem_cocho_m != null && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Cocho:</span>
-                      <span className="font-medium">{pastoDetalhe.metragem_cocho_m} m</span>
-                    </div>
-                  )}
-                  {pastoDetalhe.fonte_agua_principal && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Água:</span>
-                      <span className="font-medium">{pastoDetalhe.fonte_agua_principal}</span>
-                    </div>
-                  )}
-                  {pastoDetalhe.possui_deposito != null && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Depósito:</span>
-                      <span className="font-medium">{pastoDetalhe.possui_deposito ? 'Sim' : 'Não'}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Lote atual */}
-                {pastoDetalhe.lote_atual && (
-                  <div className="mt-4 pt-3 border-t border-gray-200">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Lote Atual</p>
-                    <div className="text-sm space-y-1">
-                      <p className="font-medium">{pastoDetalhe.lote_atual.nome}</p>
-                      <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-gray-600">
-                        <span>Cabeças:</span>
-                        <span className="font-medium text-gray-800">{pastoDetalhe.lote_atual.n_cabecas}</span>
-                        {pastoDetalhe.lote_atual.raca && (
-                          <>
-                            <span>Raça:</span>
-                            <span className="font-medium text-gray-800">{pastoDetalhe.lote_atual.raca}</span>
-                          </>
-                        )}
-                        {pastoDetalhe.lote_atual.sexo && (
-                          <>
-                            <span>Sexo:</span>
-                            <span className="font-medium text-gray-800">{pastoDetalhe.lote_atual.sexo}</span>
-                          </>
-                        )}
-                        {pastoDetalhe.lote_atual.peso_medio_atual_kg != null && (
-                          <>
-                            <span>Peso médio:</span>
-                            <span className="font-medium text-gray-800">
-                              {pastoDetalhe.lote_atual.peso_medio_atual_kg} kg
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Bebedouros */}
-                {pastoDetalhe.bebedouros.length > 0 && (
-                  <div className="mt-4 pt-3 border-t border-gray-200">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Bebedouros</p>
-                    <div className="flex flex-wrap gap-1">
-                      {pastoDetalhe.bebedouros.map((b) => (
-                        <span key={b.id} className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded">
-                          {b.nome}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Ações: editar pasto, editar geometria e remover geometria */}
-                <div className="mt-4 pt-3 border-t border-gray-200 space-y-2">
-                  <Button
-                    variant="secondary"
-                    onClick={() => navigate(`/controller/pastos?pasto=${pastoDetalhe.id}`)}
-                    className="w-full"
-                  >
-                    Editar Pasto
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    onClick={() => iniciarEdicaoGeometria(pastoDetalhe.id, pastoDetalhe.nome)}
-                    className="w-full text-blue-600 hover:text-blue-700 border-blue-200"
-                  >
-                    Editar Geometria
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    onClick={() => removerGeometriaPasto(pastoDetalhe.id, pastoDetalhe.nome)}
-                    className="w-full text-red-600 hover:text-red-700 border-red-200"
-                  >
-                    Remover do Mapa
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          </div>
+          <PastoDetalhePanel
+            detalhe={pastoDetalhe}
+            modoTelaCheia={modoTelaCheia}
+            onFechar={() => { setPastoDetalhe(null); setPopup(null) }}
+            onEditarGeometria={iniciarEdicaoGeometria}
+            onRemoverGeometria={removerGeometriaPasto}
+          />
         )}
 
         {/* Side Panel: detalhes da estrada (overlay flutuante em tela cheia) */}
         {estradaDetalhe && (
-          <div className={modoTelaCheia
-            ? 'absolute top-2 right-2 bottom-2 w-80 z-10 overflow-y-auto shadow-xl'
-            : 'w-full lg:w-80 flex-shrink-0'
-          }>
-            <Card>
-              <div className="p-4">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h2 className="text-lg font-bold text-gray-900">{estradaDetalhe.nome}</h2>
-                    <p className="text-xs text-gray-500">Estrada interna</p>
-                  </div>
-                  <button
-                    onClick={() => setEstradaDetalhe(null)}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Comprimento:</span>
-                    <span className="font-medium">
-                      {estradas.find((e) => e.id === estradaDetalhe.id)?.geometria_geojson?.features?.[0]?.geometry?.type === 'LineString'
-                        ? `${(calcularComprimentoEstrada(estradas.find((e) => e.id === estradaDetalhe.id)?.geometria_geojson?.features?.[0] as GeoJSON.Feature<GeoJSON.LineString>)).toFixed(0)} m`
-                        : '—'
-                      }
-                    </span>
-                  </div>
-                </div>
-                <div className="mt-4 pt-3 border-t border-gray-200 space-y-2">
-                  <Button
-                    variant="secondary"
-                    onClick={() => iniciarEdicaoEstrada(estradaDetalhe.id, estradaDetalhe.nome)}
-                    className="w-full"
-                  >
-                    Editar Geometria
-                  </Button>
-                  <Button
-                    variant="danger"
-                    onClick={() => removerEstrada(estradaDetalhe.id)}
-                    className="w-full"
-                  >
-                    Remover Estrada
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          </div>
+          <EstradaDetalhePanel
+            detalhe={estradaDetalhe}
+            estradas={estradas}
+            modoTelaCheia={modoTelaCheia}
+            onFechar={() => setEstradaDetalhe(null)}
+            onEditarGeometria={iniciarEdicaoEstrada}
+            onRemover={removerEstrada}
+          />
         )}
 
         {/* Side Panel: detalhes do ponto de interesse */}
         {pontoDetalhe && (
-          <div className={modoTelaCheia
-            ? 'absolute top-2 right-2 bottom-2 w-80 z-10 overflow-y-auto shadow-xl'
-            : 'w-full lg:w-80 flex-shrink-0'
-          }>
-            <Card>
-              <div className="p-4">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="w-4 h-4 rounded-full border-2 border-white shadow" style={{ backgroundColor: corPonto(pontoDetalhe.tipo) }} />
-                    <div>
-                      <h2 className="text-lg font-bold text-gray-900">{pontoDetalhe.nome}</h2>
-                      <p className="text-xs text-gray-500">{labelPonto(pontoDetalhe.tipo)}</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setPontoDetalhe(null)}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-                <div className="mt-4 pt-3 border-t border-gray-200 space-y-2">
-                  <Button
-                    variant="danger"
-                    onClick={() => removerPonto(pontoDetalhe.id)}
-                    className="w-full"
-                  >
-                    Remover Ponto
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          </div>
+          <PontoDetalhePanel
+            detalhe={pontoDetalhe}
+            modoTelaCheia={modoTelaCheia}
+            onFechar={() => setPontoDetalhe(null)}
+            onRemover={removerPonto}
+          />
         )}
 
         {/* Side Panel: detalhes da fábrica */}
         {fabricaDetalhe && (
-          <div className={modoTelaCheia
-            ? 'absolute top-2 right-2 bottom-2 w-80 z-10 overflow-y-auto shadow-xl'
-            : 'w-full lg:w-80 flex-shrink-0'
-          }>
-            <Card>
-              <div className="p-4">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="w-4 h-4 bg-violet-700 border border-violet-900" />
-                    <div>
-                      <h2 className="text-lg font-bold text-gray-900">{fabricaDetalhe.nome}</h2>
-                      <p className="text-xs text-gray-500">Fábrica</p>
-                    </div>
-                  </div>
-                  <button onClick={() => setFabricaDetalhe(null)} className="text-gray-400 hover:text-gray-600">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-                <div className="mt-4 pt-3 border-t border-gray-200 space-y-2">
-                  <Button variant="secondary" onClick={() => iniciarEdicaoFabrica(fabricaDetalhe.id, fabricaDetalhe.nome)} className="w-full">
-                    Editar Geometria
-                  </Button>
-                  <Button variant="danger" onClick={() => removerFabrica(fabricaDetalhe.id)} className="w-full">
-                    Remover Fábrica
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          </div>
+          <FabricaDetalhePanel
+            detalhe={fabricaDetalhe}
+            modoTelaCheia={modoTelaCheia}
+            onFechar={() => setFabricaDetalhe(null)}
+            onEditarGeometria={iniciarEdicaoFabrica}
+            onRemover={removerFabrica}
+          />
         )}
 
         {/* Side Panel: detalhes do curral */}
         {curralDetalhe && (
-          <div className={modoTelaCheia
-            ? 'absolute top-2 right-2 bottom-2 w-80 z-10 overflow-y-auto shadow-xl'
-            : 'w-full lg:w-80 flex-shrink-0'
-          }>
-            <Card>
-              <div className="p-4">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="w-4 h-4 bg-amber-800 border border-amber-900" />
-                    <div>
-                      <h2 className="text-lg font-bold text-gray-900">{curralDetalhe.nome}</h2>
-                      <p className="text-xs text-gray-500">Curral</p>
-                    </div>
-                  </div>
-                  <button onClick={() => setCurralDetalhe(null)} className="text-gray-400 hover:text-gray-600">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-                <div className="space-y-2 text-sm">
-                  {curralDetalhe.formulacao_nome && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Formulação:</span>
-                      <span className="font-medium text-gray-800">{curralDetalhe.formulacao_nome}</span>
-                    </div>
-                  )}
-                  {curralDetalhe.largura_m != null && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Largura:</span>
-                      <span className="font-medium text-gray-800">{curralDetalhe.largura_m} m</span>
-                    </div>
-                  )}
-                  {curralDetalhe.comprimento_m != null && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Comprimento:</span>
-                      <span className="font-medium text-gray-800">{curralDetalhe.comprimento_m} m</span>
-                    </div>
-                  )}
-                  {curralDetalhe.metros_cocho_m != null && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Metros de cocho:</span>
-                      <span className="font-medium text-gray-800">{curralDetalhe.metros_cocho_m} m</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Lote atual */}
-                {curralDetalhe.lote_atual ? (
-                  <div className="mt-4 pt-3 border-t border-gray-200">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Lote Atual</p>
-                    <div className="text-sm space-y-1">
-                      <p className="font-medium">{curralDetalhe.lote_atual.nome}</p>
-                      <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-gray-600">
-                        <span>Cabeças:</span>
-                        <span className="font-medium text-gray-800">{curralDetalhe.lote_atual.n_cabecas}</span>
-                        {curralDetalhe.lote_atual.raca && (
-                          <>
-                            <span>Raça:</span>
-                            <span className="font-medium text-gray-800">{curralDetalhe.lote_atual.raca}</span>
-                          </>
-                        )}
-                        {curralDetalhe.lote_atual.sexo && (
-                          <>
-                            <span>Sexo:</span>
-                            <span className="font-medium text-gray-800">{curralDetalhe.lote_atual.sexo}</span>
-                          </>
-                        )}
-                        {curralDetalhe.lote_atual.peso_medio_atual_kg != null && (
-                          <>
-                            <span>Peso médio:</span>
-                            <span className="font-medium text-gray-800">
-                              {curralDetalhe.lote_atual.peso_medio_atual_kg} kg
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mt-4 pt-3 border-t border-gray-200">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Lote Atual</p>
-                    <p className="text-sm text-gray-400 italic">Sem lote associado</p>
-                  </div>
-                )}
-
-                <div className="mt-4 pt-3 border-t border-gray-200 space-y-2">
-                  <Button variant="secondary" onClick={() => iniciarEdicaoCurral(curralDetalhe.id, curralDetalhe.nome)} className="w-full">
-                    Editar Geometria
-                  </Button>
-                  <Button variant="danger" onClick={() => removerGeometriaCurral(curralDetalhe.id)} className="w-full">
-                    Remover Geometria
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          </div>
+          <CurralDetalhePanel
+            detalhe={curralDetalhe}
+            modoTelaCheia={modoTelaCheia}
+            onFechar={() => setCurralDetalhe(null)}
+            onEditarGeometria={iniciarEdicaoCurral}
+            onRemoverGeometria={removerGeometriaCurral}
+          />
         )}
       </div>
 
