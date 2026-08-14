@@ -65,6 +65,7 @@ export function MapaFazenda() {
   const [showAssocModal, setShowAssocModal] = useState(false)
   const [modoSelecaoMultipla, setModoSelecaoMultipla] = useState(false)
   const [modoTelaCheia, setModoTelaCheia] = useState(false)
+  const [modoEdicao, setModoEdicao] = useState(false)
   const [showEstradaModal, setShowEstradaModal] = useState(false)
   const [nomeEstrada, setNomeEstrada] = useState('')
   const [estradaDesenhada, setEstradaDesenhada] = useState<GeoJSON.Feature<GeoJSON.LineString> | null>(null)
@@ -1663,6 +1664,7 @@ export function MapaFazenda() {
         setPontoDetalhe(null)
         setCurralDetalhe(null)
         setMorteDetalhe(null)
+        setMorteDestaqueId(null)
         return
       }
     }
@@ -1677,6 +1679,7 @@ export function MapaFazenda() {
         setPontoDetalhe(null)
         setFabricaDetalhe(null)
         setMorteDetalhe(null)
+        setMorteDestaqueId(null)
         await carregarDetalheCurral(curralId)
         return
       }
@@ -1695,6 +1698,7 @@ export function MapaFazenda() {
         setFabricaDetalhe(null)
         setCurralDetalhe(null)
         setMorteDetalhe(null)
+        setMorteDestaqueId(null)
         return
       }
     }
@@ -1734,6 +1738,7 @@ export function MapaFazenda() {
             pesoVivo: registro.peso_vivo,
             fotoUrl: registro.foto_url,
           })
+          setMorteDestaqueId(morteId)
         }
         setPastoDetalhe(null)
         setEstradaDetalhe(null)
@@ -1757,6 +1762,7 @@ export function MapaFazenda() {
         setFabricaDetalhe(null)
         setCurralDetalhe(null)
         setMorteDetalhe(null)
+        setMorteDestaqueId(null)
         return
       }
     }
@@ -1898,6 +1904,7 @@ export function MapaFazenda() {
         setFabricaDetalhe(null)
         setCurralDetalhe(null)
         setMorteDetalhe(null)
+        setMorteDestaqueId(null)
       }
     } catch (err) {
       console.error('Erro ao carregar detalhe do pasto:', err)
@@ -1992,6 +1999,50 @@ export function MapaFazenda() {
           className="hidden"
         />
 
+        {/* Toggle Modo Edição / Visualização */}
+        <Button
+          variant={modoEdicao ? 'primary' : 'secondary'}
+          size="sm"
+          onClick={() => {
+            setModoEdicao(!modoEdicao)
+            if (modoEdicao) {
+              // Sair do modo edição: cancelar qualquer desenho ativo
+              if (drawMode) {
+                try { resetarTerraDraw() } catch { /* ignore */ }
+                setDrawMode(null)
+                const canvas = mapRef.current?.getCanvas()
+                if (canvas) canvas.style.cursor = ''
+              }
+              setModoSelecaoMultipla(false)
+              setPastosSelecionados(new Set())
+            }
+          }}
+          className={modoEdicao
+            ? 'bg-gray-800 text-white hover:bg-gray-900 border border-gray-900'
+            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'}
+        >
+          <span className="flex items-center gap-2">
+            {modoEdicao ? (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                Visualização
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Editar
+              </>
+            )}
+          </span>
+        </Button>
+
+        {modoEdicao && (
+        <>
         {/* Grupo 1: Importar */}
         <Button
           variant="secondary"
@@ -2162,6 +2213,12 @@ export function MapaFazenda() {
         >
           Limpar
         </Button>
+
+        {/* Divider */}
+        <div className="w-px h-8 bg-gray-300 mx-1" />
+        </>
+        )}
+
         <Button
           variant="secondary"
           size="sm"
@@ -2690,6 +2747,7 @@ export function MapaFazenda() {
                       }],
                     })
                     setMorteDetalhe(null)
+        setMorteDestaqueId(null)
                     setPastoDetalhe(null)
                     setEstradaDetalhe(null)
                     setPontoDetalhe(null)
