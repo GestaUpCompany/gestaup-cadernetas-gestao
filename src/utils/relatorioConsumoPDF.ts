@@ -404,7 +404,7 @@ function renderPeriodo(ctx: RenderContext, dataInicio: string, dataFim: string) 
   doc.text(periodoText, periodoX + periodoW / 2, periodoY + 6.5, { align: 'center' })
 }
 
-function renderKPIsAndPills(ctx: RenderContext, info: InfoLote, dados: DadoRelatorioConsumo[]) {
+function renderKPIsAndPills(ctx: RenderContext, info: InfoLote, dados: DadoRelatorioConsumo[], dataInicio: string, dataFim: string) {
   const { doc, pageW, greenCard, white, shadowColor } = ctx
 
   // KPIs laterais (coluna esquerda)
@@ -449,44 +449,84 @@ function renderKPIsAndPills(ctx: RenderContext, info: InfoLote, dados: DadoRelat
     kpiY += kpiH + kpiGap
   })
 
-  // Pills superiores
+  // Pills superiores (mede o período para não sobrepor a data à esquerda)
   const pillY = 34
-  const pillX = kpiX + kpiW + 10
-  const pillH = 19
   const pillGap = 7
+  const pillPadding = 8
+  const minPillWidth = 40
+  const rightMargin = 8
   const pills = [
     { label: 'Nº Cab. Atual', value: formatarInteiro(info.n_cabecas_atual) },
     { label: 'Raça', value: info.raca || '—' },
-    { label: 'Categoria', value: (info.categoria ? info.categoria.charAt(0).toUpperCase() + info.categoria.slice(1) : '—') },
+    { label: 'Categoria', value: (info.categoria ? info.categoria.split(/,\s*/).map((c) => c.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')).join(', ') : '—') },
     { label: 'Dieta', value: info.dieta || '—' },
   ]
 
-  const pillWidth = Math.max(
-    40,
-    ...pills.map((p) => Math.max(doc.getTextWidth(p.value), doc.getTextWidth(p.label)) + 16)
+  doc.setFontSize(8)
+  doc.setFont('helvetica', 'bold')
+  const periodoText = `${formatarDataNumerica(dataInicio)}  a  ${formatarDataNumerica(dataFim)}`
+  const periodoW = doc.getTextWidth(periodoText) + 12
+  const minPillStart = 8 + periodoW + 4
+
+  const nPills = pills.length
+  const maxPillWidth = Math.min(
+    85,
+    (pageW - rightMargin - minPillStart - pillGap * (nPills - 1)) / nPills
   )
 
-  const chartX = pillX
+  const valueLineH = 4
+  const labelLineH = 3.5
+  const valueLabelGap = 7.5
+
+  const measuredPills = pills.map((p) => {
+    doc.setFontSize(11)
+    doc.setFont('helvetica', 'bold')
+    const valueLines = doc.splitTextToSize(p.value, maxPillWidth - pillPadding * 2) as string[]
+    const valueLineW = Math.max(...valueLines.map((line) => doc.getTextWidth(line)))
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    const labelLines = doc.splitTextToSize(p.label, maxPillWidth - pillPadding * 2) as string[]
+    const labelLineW = Math.max(...labelLines.map((line) => doc.getTextWidth(line)))
+    const width = Math.max(minPillWidth, Math.max(valueLineW, labelLineW) + pillPadding * 2)
+    const valueStartY = pillY + 7.5
+    const labelStartY = valueStartY + (valueLines.length - 1) * valueLineH + valueLabelGap
+    const height = labelStartY - pillY + (labelLines.length - 1) * labelLineH + 2
+    return { ...p, width, valueLines, labelLines, height }
+  })
+
+  // Mantém o alinhamento do gráfico independente dos pills
+  const chartX = kpiX + kpiW + 10
   const chartW = pageW - chartX - 8
 
-  // Pills centralizadas em relação ao card branco do gráfico
-  const totalPillsWidth = pillWidth * pills.length + pillGap * (pills.length - 1)
-  let pillXAtual = chartX + (chartW - totalPillsWidth) / 2
+  // Alinha a altura de todos os pills à altura do maior
+  const pillRowH = Math.max(...measuredPills.map((p) => p.height))
 
-  pills.forEach((p) => {
+  // Desenha cada pill com sua própria largura, a partir da data
+  let pillXAtual = minPillStart
+  measuredPills.forEach((p) => {
+    const valueStartY = pillY + 7.5
+    const labelStartY = valueStartY + (p.valueLines.length - 1) * valueLineH + valueLabelGap
+
     setFillColor(doc, shadowColor)
-    doc.roundedRect(pillXAtual + 0.5, pillY + 0.5, pillWidth, pillH, 4, 4, 'F')
+    doc.roundedRect(pillXAtual + 0.5, pillY + 0.5, p.width, pillRowH, 4, 4, 'F')
     setFillColor(doc, greenCard)
-    doc.roundedRect(pillXAtual, pillY, pillWidth, pillH, 4, 4, 'F')
+    doc.roundedRect(pillXAtual, pillY, p.width, pillRowH, 4, 4, 'F')
+
     doc.setFontSize(11)
     setTextColor(doc, white)
     doc.setFont('helvetica', 'bold')
-    doc.text(p.value, pillXAtual + pillWidth / 2, pillY + 7.5, { align: 'center' })
+    p.valueLines.forEach((line, i) => {
+      doc.text(line, pillXAtual + p.width / 2, valueStartY + i * valueLineH, { align: 'center' })
+    })
+
     doc.setFontSize(9)
     setTextColor(doc, white)
     doc.setFont('helvetica', 'normal')
-    doc.text(p.label, pillXAtual + pillWidth / 2, pillY + 15, { align: 'center' })
-    pillXAtual += pillWidth + pillGap
+    p.labelLines.forEach((line, i) => {
+      doc.text(line, pillXAtual + p.width / 2, labelStartY + i * labelLineH, { align: 'center' })
+    })
+
+    pillXAtual += p.width + pillGap
   })
 
   return { chartX, chartW }
@@ -605,7 +645,7 @@ export async function gerarRelatorioConsumoPDF(params: ParametrosRelatorioConsum
       if (!isContinuation) {
         // Página principal: período + KPIs + pills + gráfico
         renderPeriodo(ctx, dataInicio, dataFim)
-        const { chartX, chartW } = renderKPIsAndPills(ctx, lote.info, lote.dados)
+        const { chartX, chartW } = renderKPIsAndPills(ctx, lote.info, lote.dados, dataInicio, dataFim)
         const chartY = 58
         const chartH = pageH - chartY - 8
         await renderChartOnPage(ctx, chunk, chartX, chartW, chartY, chartH)
