@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
@@ -53,13 +53,14 @@ export function Notificacoes() {
   const [filtroLida, setFiltroLida] = useState<FiltroLida>('todas')
   const [busca, setBusca] = useState('')
 
-  const [config, setConfig] = useState<NotificacaoConfig | null>(null)
   const [loadingConfig, setLoadingConfig] = useState(true)
   const [percentualAviso, setPercentualAviso] = useState(95)
   const [recategorizacaoAtivo, setRecategorizacaoAtivo] = useState(true)
   const [tratosAtivo, setTratosAtivo] = useState(true)
   const [savingConfig, setSavingConfig] = useState(false)
   const [configSalvo, setConfigSalvo] = useState(false)
+  const configLoadedRef = useRef(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [confirmDeleteAll, setConfirmDeleteAll] = useState(false)
@@ -87,11 +88,11 @@ export function Notificacoes() {
     if (error) {
       console.error('Erro ao buscar config:', error)
     } else if (data) {
-      setConfig(data as NotificacaoConfig)
       setPercentualAviso(Number((data as NotificacaoConfig).threshold_recategorizacao))
       setRecategorizacaoAtivo((data as NotificacaoConfig).recategorizacao_ativo)
       setTratosAtivo((data as NotificacaoConfig).tratos_ativo ?? true)
     }
+    configLoadedRef.current = true
     setLoadingConfig(false)
   }, [fazendaId])
 
@@ -230,7 +231,7 @@ export function Notificacoes() {
     }
   }
 
-  const handleSalvarConfig = async () => {
+  const salvarConfig = useCallback(async (threshold: number, recatAtivo: boolean, tratosAtivoParam: boolean) => {
     if (!fazendaId) return
     setSavingConfig(true)
     setConfigSalvo(false)
@@ -238,21 +239,47 @@ export function Notificacoes() {
     const { data, error } = await supabase
       .rpc('salvar_notificacoes_config', {
         p_fazenda_id: fazendaId,
-        p_threshold_recategorizacao: percentualAviso,
-        p_recategorizacao_ativo: recategorizacaoAtivo,
-        p_tratos_ativo: tratosAtivo,
+        p_threshold_recategorizacao: threshold,
+        p_recategorizacao_ativo: recatAtivo,
+        p_tratos_ativo: tratosAtivoParam,
       })
 
     if (error) {
       console.error('Erro ao salvar config:', error)
     } else if (data) {
-      setConfig(data as NotificacaoConfig)
       setConfigSalvo(true)
       setTimeout(() => setConfigSalvo(false), 3000)
     }
 
     setSavingConfig(false)
+  }, [fazendaId])
+
+  const toggleTratos = () => {
+    const novo = !tratosAtivo
+    setTratosAtivo(novo)
+    if (configLoadedRef.current) salvarConfig(percentualAviso, recategorizacaoAtivo, novo)
   }
+
+  const toggleRecategorizacao = () => {
+    const novo = !recategorizacaoAtivo
+    setRecategorizacaoAtivo(novo)
+    if (configLoadedRef.current) salvarConfig(percentualAviso, novo, tratosAtivo)
+  }
+
+  const handleSliderChange = (valor: number) => {
+    setPercentualAviso(valor)
+    if (!configLoadedRef.current) return
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      salvarConfig(valor, recategorizacaoAtivo, tratosAtivo)
+    }, 600)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [])
 
   const getTipoIcon = (tipo: string) => {
     switch (tipo) {
@@ -363,7 +390,7 @@ export function Notificacoes() {
                 <p className="text-sm text-gray-500">Envia notificação no fim da tarde com os horários dos tratos do dia seguinte</p>
               </div>
               <button
-                onClick={() => setTratosAtivo(!tratosAtivo)}
+                onClick={toggleTratos}
                 className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors shrink-0 ${tratosAtivo ? 'bg-green-500' : 'bg-gray-300'}`}
               >
                 <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${tratosAtivo ? 'translate-x-6' : 'translate-x-1'}`} />
@@ -380,7 +407,7 @@ export function Notificacoes() {
                   <p className="text-sm text-gray-500">Ativa ou desativa alertas de lotes próximos do limite da faixa</p>
                 </div>
                 <button
-                  onClick={() => setRecategorizacaoAtivo(!recategorizacaoAtivo)}
+                  onClick={toggleRecategorizacao}
                   className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors shrink-0 ${recategorizacaoAtivo ? 'bg-green-500' : 'bg-gray-300'}`}
                 >
                   <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${recategorizacaoAtivo ? 'translate-x-6' : 'translate-x-1'}`} />
@@ -399,7 +426,7 @@ export function Notificacoes() {
                   max={99}
                   step={1}
                   value={percentualAviso}
-                  onChange={e => setPercentualAviso(Number(e.target.value))}
+                  onChange={e => handleSliderChange(Number(e.target.value))}
                   className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary"
                 />
                 <div className="flex justify-between text-xs text-gray-400 mt-1">
@@ -413,21 +440,20 @@ export function Notificacoes() {
               </div>
             </div>
 
-            {/* Botão salvar */}
-            <div className="flex items-center gap-3">
-              <Button
-                onClick={handleSalvarConfig}
-                disabled={savingConfig || (config?.threshold_recategorizacao === percentualAviso && config?.recategorizacao_ativo === recategorizacaoAtivo && (config?.tratos_ativo ?? true) === tratosAtivo)}
-                variant="primary"
-              >
-                {savingConfig ? 'Salvando...' : 'Salvar configurações'}
-              </Button>
+            {/* Status de salvamento automático */}
+            <div className="flex items-center gap-2 min-h-[20px]">
+              {savingConfig && (
+                <span className="text-sm text-gray-500 flex items-center gap-1">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-400"></div>
+                  Salvando...
+                </span>
+              )}
               {configSalvo && (
                 <span className="text-sm text-green-600 flex items-center gap-1">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  Configurações salvas
+                  Salvo automaticamente
                 </span>
               )}
             </div>
