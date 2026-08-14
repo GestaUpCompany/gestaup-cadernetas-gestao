@@ -6,7 +6,7 @@ import { calcularMelhorLabel } from './geometriaUtils'
 import { corPonto } from './mapaConfig'
 import type { PastoMapa, BebedouroMapa, EstradaMapa, PontoMapa, CurralMapa } from './types'
 
-export function useMapaData(user: { id: string } | null) {
+export function useMapaData(user: { id: string } | null, mortesDataInicio?: string | null, mortesDataFim?: string | null) {
   const [fazendaId, setFazendaId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [pastos, setPastos] = useState<PastoMapa[]>([])
@@ -16,6 +16,7 @@ export function useMapaData(user: { id: string } | null) {
   const [currais, setCurrais] = useState<CurralMapa[]>([])
   const [curraisSemGeo, setCurraisSemGeo] = useState<{ id: string; nome: string }[]>([])
   const [pastosSemGeometria, setPastosSemGeometria] = useState<{ id: string; nome: string }[]>([])
+  const [mortes, setMortes] = useState<any[]>([])
 
   const loadData = useCallback(async () => {
     if (!user) return
@@ -190,6 +191,26 @@ export function useMapaData(user: { id: string } | null) {
     loadData()
   }, [loadData])
 
+  // Carregamento separado de mortes (para nao recarregar o mapa todo ao mudar o filtro de data)
+  const loadMortes = useCallback(async () => {
+    if (!fazendaId) return
+    const { data } = await supabase
+      .from('registros_morte')
+      .select('id, data, causa_morte, brinco, chip, categoria, sexo, raca, idade, pasto, lote, peso_vivo, latitude, longitude, gps_accuracy, foto_url')
+      .eq('fazenda_id', fazendaId)
+      .not('latitude', 'is', null)
+      .not('longitude', 'is', null)
+      .gte('data', mortesDataInicio || '1900-01-01')
+      .lte('data', mortesDataFim || '2100-01-01')
+      .order('data', { ascending: false })
+      .limit(500)
+    if (data) setMortes(data as any[])
+  }, [fazendaId, mortesDataInicio, mortesDataFim])
+
+  useEffect(() => {
+    loadMortes()
+  }, [loadMortes])
+
   // ==================== GeoJSON sources ====================
   const pastosGeoJSON = useMemo<GeoJSON.FeatureCollection>(() => {
     const features: GeoJSON.Feature[] = []
@@ -287,6 +308,23 @@ export function useMapaData(user: { id: string } | null) {
     return { type: 'FeatureCollection', features }
   }, [pontosRegulares])
 
+  // Mortes com coordenadas GPS (pontos no mapa)
+  // So carregamos o id nas properties; os detalhes vêm do array mortes no click handler
+  // (evita corromper acentos/cedilha na serializacao do MapLibre)
+  const mortesGeoJSON = useMemo<GeoJSON.FeatureCollection>(() => {
+    const features: GeoJSON.Feature[] = []
+    mortes.forEach((m) => {
+      if (m.latitude != null && m.longitude != null) {
+        features.push({
+          type: 'Feature',
+          properties: { id: m.id },
+          geometry: { type: 'Point', coordinates: [m.longitude, m.latitude] },
+        })
+      }
+    })
+    return { type: 'FeatureCollection', features }
+  }, [mortes])
+
   return {
     // Estado
     fazendaId,
@@ -298,6 +336,7 @@ export function useMapaData(user: { id: string } | null) {
     currais,
     curraisSemGeo,
     pastosSemGeometria,
+    mortes,
     // Setters (para uso pelos handlers de salvar/remover)
     setPastos,
     setBebedouros,
@@ -308,6 +347,7 @@ export function useMapaData(user: { id: string } | null) {
     setPastosSemGeometria,
     // Recarga
     loadData,
+    loadMortes,
     // GeoJSON sources derivados
     pastosGeoJSON,
     pastosLabelsGeoJSON,
@@ -318,5 +358,6 @@ export function useMapaData(user: { id: string } | null) {
     bebedourosGeoJSON,
     estradasGeoJSON,
     pontosRegularesGeoJSON,
+    mortesGeoJSON,
   }
 }

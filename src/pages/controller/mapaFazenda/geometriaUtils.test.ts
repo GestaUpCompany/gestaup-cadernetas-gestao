@@ -120,7 +120,7 @@ describe('gerarCirculoPrecisao', () => {
     const raioMetros = 500
     const coords = gerarCirculoPrecisao(lng, lat, raioMetros)
     // Medir distancia do centro ao primeiro ponto (deve ser ~raioMetros)
-    const [px, py] = coords[0]
+    const [, py] = coords[0]
     // deltaLat = (raioKm * cos(0)) / 111.32 = 0.5 / 111.32
     const deltaLatEsperado = 0.5 / 111.32
     expect(py - lat).toBeCloseTo(deltaLatEsperado, 8)

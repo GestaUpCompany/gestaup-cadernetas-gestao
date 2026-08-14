@@ -11,6 +11,7 @@ interface VisCamadas {
   pontos: boolean
   fabricas: boolean
   currais: boolean
+  mortes: boolean
 }
 
 interface EdicaoGeometria { pastoId: string; pastoNome: string; featureId: string }
@@ -31,6 +32,11 @@ interface Props {
   bebedourosGeoJSON: GeoJSON.FeatureCollection
   fabricasGeoJSON: GeoJSON.FeatureCollection
   curraisGeoJSON: GeoJSON.FeatureCollection
+  mortesGeoJSON: GeoJSON.FeatureCollection
+  // Config de mortes
+  agruparMortes: boolean
+  areaSelecaoGeoJSON: GeoJSON.FeatureCollection | null
+  morteDestaqueId: string | null
   // GeoJSON sources derivados de detalhe (do componente)
   pastosSelecionadosGeoJSON: GeoJSON.FeatureCollection
   pastoDetalheGeoJSON: GeoJSON.FeatureCollection
@@ -64,7 +70,10 @@ interface Props {
 
 export function MapaCamadas({
   visCamadas,
-  pastosGeoJSON, pastosLabelsGeoJSON, bebedourosGeoJSON, fabricasGeoJSON, curraisGeoJSON,
+  pastosGeoJSON, pastosLabelsGeoJSON, bebedourosGeoJSON, fabricasGeoJSON, curraisGeoJSON, mortesGeoJSON,
+  agruparMortes,
+  areaSelecaoGeoJSON,
+  morteDestaqueId,
   pastosSelecionadosGeoJSON, pastoDetalheGeoJSON, estradaDetalheGeoJSON,
   fabricaDetalheGeoJSON, curralDetalheGeoJSON,
   estradas, pontosRegulares,
@@ -494,6 +503,108 @@ export function MapaCamadas({
               'text-opacity': 0.9,
               'text-halo-color': '#ffffff',
               'text-halo-width': 1.5,
+            }}
+          />
+        </Source>
+      )}
+
+      {/* Source: mortes com coordenadas GPS (com clustering) */}
+      {/* key força recriacao da source quando o toggle muda (MapLibre nao atualiza cluster dinamicamente) */}
+      <Source
+        id="mortes-source"
+        type="geojson"
+        data={mortesGeoJSON}
+        cluster={agruparMortes}
+        clusterRadius={40}
+        clusterMaxZoom={16}
+        key={`mortes-source-${agruparMortes}`}
+      >
+        {/* Pontos individuais (nao-clusterizados) */}
+        <Layer
+          id="mortes-circle"
+          type="circle"
+          layout={{ visibility: visCamadas.mortes ? 'visible' : 'none' }}
+          paint={{
+            'circle-radius': 7,
+            'circle-color': '#991b1b',
+            'circle-stroke-color': '#ffffff',
+            'circle-stroke-width': 2,
+            'circle-opacity': 0.9,
+          }}
+          filter={['!', ['has', 'point_count']]}
+        />
+        {/* Halo de destaque para morte vinda da notificacao */}
+        {morteDestaqueId && (
+          <Layer
+            id="mortes-destaque"
+            type="circle"
+            layout={{ visibility: visCamadas.mortes ? 'visible' : 'none' }}
+            paint={{
+              'circle-radius': 16,
+              'circle-color': '#fbbf24',
+              'circle-stroke-color': '#f59e0b',
+              'circle-stroke-width': 3,
+              'circle-opacity': 0.4,
+            }}
+            filter={['==', ['get', 'id'], morteDestaqueId]}
+          />
+        )}
+        {/* Círculo do cluster */}
+        <Layer
+          id="mortes-cluster-circle"
+          type="circle"
+          layout={{ visibility: visCamadas.mortes ? 'visible' : 'none' }}
+          paint={{
+            'circle-radius': [
+              'step',
+              ['get', 'point_count'],
+              18,
+              5, 22,
+              10, 28,
+              20, 34,
+            ],
+            'circle-color': '#991b1b',
+            'circle-stroke-color': '#ffffff',
+            'circle-stroke-width': 2,
+            'circle-opacity': 0.85,
+          }}
+          filter={['has', 'point_count']}
+        />
+        {/* Texto do cluster (quantidade) */}
+        <Layer
+          id="mortes-cluster-label"
+          type="symbol"
+          layout={{
+            visibility: visCamadas.mortes ? 'visible' : 'none',
+            'text-field': '{point_count_abbreviated}',
+            'text-size': 13,
+            'text-font': ['Noto Sans Regular'],
+          }}
+          paint={{
+            'text-color': '#ffffff',
+          }}
+          filter={['has', 'point_count']}
+        />
+      </Source>
+
+      {/* Source: retângulo de seleção de área (persistente após seleção) */}
+      {areaSelecaoGeoJSON && (
+        <Source id="area-selecao-source" type="geojson" data={areaSelecaoGeoJSON}>
+          <Layer
+            id="area-selecao-fill"
+            type="fill"
+            paint={{
+              'fill-color': '#dc2626',
+              'fill-opacity': 0.08,
+            }}
+          />
+          <Layer
+            id="area-selecao-line"
+            type="line"
+            paint={{
+              'line-color': '#dc2626',
+              'line-width': 2,
+              'line-dasharray': [2, 1],
             }}
           />
         </Source>

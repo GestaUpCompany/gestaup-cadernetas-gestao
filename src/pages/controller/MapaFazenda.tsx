@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Map, MapRef } from 'react-map-gl/maplibre'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
@@ -15,6 +16,8 @@ import { EstradaDetalhePanel } from './mapaFazenda/EstradaDetalhePanel'
 import { PontoDetalhePanel } from './mapaFazenda/PontoDetalhePanel'
 import { FabricaDetalhePanel } from './mapaFazenda/FabricaDetalhePanel'
 import { CurralDetalhePanel } from './mapaFazenda/CurralDetalhePanel'
+import { MorteDetalhePanel } from './mapaFazenda/MorteDetalhePanel'
+import { MortesAgregadasPanel } from './mapaFazenda/MortesAgregadasPanel'
 import { AssocGeometriaModal } from './mapaFazenda/AssocGeometriaModal'
 import { ConfirmarRemocaoModal, RemocaoLoteModal, NomearEstradaModal, NomearPontoModal, NomearFabricaModal, AssociarCurralModal, AssocTipoModal } from './mapaFazenda/MapaModais'
 import { useMapaData } from './mapaFazenda/useMapaData'
@@ -26,6 +29,21 @@ export function MapaFazenda() {
   const mapRef = useRef<MapRef>(null)
   const drawRef = useRef<TerraDraw | null>(null)
 
+  // Filtro de data para mortes (antes do hook para evitar uso antes da declaracao)
+  const [mortesDataInicio, setMortesDataInicio] = useState<string | null>(null)
+  const [mortesDataFim, setMortesDataFim] = useState<string | null>(null)
+  const [agruparMortes, setAgruparMortes] = useState(false)
+  const [modoSelecaoArea, setModoSelecaoArea] = useState(false)
+  const [areaSelecao, setAreaSelecao] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null)
+  const [mortesSelecionadas, setMortesSelecionadas] = useState<any[]>([])
+  const arrastandoSelecaoRef = useRef(false)
+  const [areaSelecaoGeoJSON, setAreaSelecaoGeoJSON] = useState<GeoJSON.FeatureCollection | null>(null)
+  const [morteDestaqueId, setMorteDestaqueId] = useState<string | null>(null)
+
+  // Param ?morte=<id> da URL (vem da notificacao "Ver no Mapa")
+  const [searchParams, setSearchParams] = useSearchParams()
+  const morteParam = searchParams.get('morte')
+
   // Dados do mapa (carregamento + GeoJSON sources derivados)
   const {
     fazendaId, loading,
@@ -35,7 +53,8 @@ export function MapaFazenda() {
     pastosGeoJSON, pastosLabelsGeoJSON,
     fabricas, pontosRegulares,
     fabricasGeoJSON, curraisGeoJSON, bebedourosGeoJSON,
-  } = useMapaData(user)
+    mortesGeoJSON, mortes,
+  } = useMapaData(user, mortesDataInicio, mortesDataFim)
 
   const [pastoDetalhe, setPastoDetalhe] = useState<PastoDetalhe | null>(null)
   const [popup, setPopup] = useState<{ lng: number; lat: number; nome: string } | null>(null)
@@ -50,7 +69,7 @@ export function MapaFazenda() {
   const [nomeEstrada, setNomeEstrada] = useState('')
   const [estradaDesenhada, setEstradaDesenhada] = useState<GeoJSON.Feature<GeoJSON.LineString> | null>(null)
   const [estradaDetalhe, setEstradaDetalhe] = useState<EstradaMapa | null>(null)
-  const [visCamadas, setVisCamadas] = useState({ pastos: true, bebedouros: true, estradas: true, pontos: true, fabricas: true, currais: true })
+  const [visCamadas, setVisCamadas] = useState({ pastos: true, bebedouros: true, estradas: true, pontos: true, fabricas: true, currais: true, mortes: true })
   const [showPontoModal, setShowPontoModal] = useState(false)
   const [pontoDesenhado, setPontoDesenhado] = useState<GeoJSON.Feature<GeoJSON.Point> | null>(null)
   const [tipoPontoSelecionado, setTipoPontoSelecionado] = useState('fabrica')
@@ -58,6 +77,7 @@ export function MapaFazenda() {
   const [pontoDetalhe, setPontoDetalhe] = useState<PontoMapa | null>(null)
   const [fabricaDetalhe, setFabricaDetalhe] = useState<PontoMapa | null>(null)
   const [curralDetalhe, setCurralDetalhe] = useState<CurralDetalhe | null>(null)
+  const [morteDetalhe, setMorteDetalhe] = useState<any>(null)
   const [showFabricaModal, setShowFabricaModal] = useState(false)
   const [nomeFabrica, setNomeFabrica] = useState('')
   const [showCurralModal, setShowCurralModal] = useState(false)
@@ -98,11 +118,77 @@ export function MapaFazenda() {
 
   const fazendaIdRef = useRef<string | null>(null)
   const bebedourosRef = useRef<BebedouroMapa[]>([])
+  const mortesRef = useRef<any[]>([])
   const editandoGeometriaRef = useRef<{ pastoId: string; pastoNome: string; featureId: string } | null>(null)
 
   // Manter refs sincronizadas com estado
   useEffect(() => { fazendaIdRef.current = fazendaId }, [fazendaId])
   useEffect(() => { bebedourosRef.current = bebedouros }, [bebedouros])
+  useEffect(() => { mortesRef.current = mortes }, [mortes])
+
+  // Quando vem da notificacao (?morte=<id>), centralizar mapa e abrir detalhe
+  useEffect(() => {
+    if (!morteParam) return
+    // Tentar encontrar no array de mortes carregadas (com coordenadas)
+    const registro = mortes?.find((m) => m.id === morteParam)
+    if (registro) {
+      // Centralizar mapa nas coordenadas da morte
+      if (registro.latitude != null && registro.longitude != null && mapRef.current) {
+        mapRef.current.easeTo({
+          center: [registro.longitude, registro.latitude],
+          zoom: Math.max(mapRef.current.getZoom(), 15),
+        })
+      }
+      setMorteDetalhe({
+        id: registro.id,
+        data: registro.data,
+        causaMorte: registro.causa_morte,
+        brinco: registro.brinco,
+        chip: registro.chip,
+        categoria: registro.categoria,
+        sexo: registro.sexo,
+        raca: registro.raca,
+        idade: registro.idade,
+        pasto: registro.pasto,
+        lote: registro.lote,
+        pesoVivo: registro.peso_vivo,
+        fotoUrl: registro.foto_url,
+      })
+      setMorteDestaqueId(registro.id)
+      setSearchParams({}, { replace: true })
+      return
+    }
+    // Se nao encontrou no array (morte sem coordenadas), buscar direto no banco
+    if (mortes && mortes.length >= 0) {
+      // mortes ja carregou mas o registro nao tem coordenadas (nao esta no array filtrado)
+      supabase
+        .from('registros_morte')
+        .select('id, data, causa_morte, brinco, chip, categoria, sexo, raca, idade, pasto, lote, peso_vivo, foto_url')
+        .eq('id', morteParam)
+        .single()
+        .then(({ data }) => {
+          if (data) {
+            setMorteDetalhe({
+              id: data.id,
+              data: data.data,
+              causaMorte: data.causa_morte,
+              brinco: data.brinco,
+              chip: data.chip,
+              categoria: data.categoria,
+              sexo: data.sexo,
+              raca: data.raca,
+              idade: data.idade,
+              pasto: data.pasto,
+              lote: data.lote,
+              pesoVivo: data.peso_vivo,
+              fotoUrl: data.foto_url,
+            })
+            setMorteDestaqueId(data.id)
+          }
+          setSearchParams({}, { replace: true })
+        })
+    }
+  }, [morteParam, mortes, setSearchParams])
   useEffect(() => { editandoGeometriaRef.current = editandoGeometria }, [editandoGeometria])
 
   const editandoEstradaRef = useRef<{ estradaId: string; estradaNome: string; featureId: string } | null>(null)
@@ -1576,6 +1662,7 @@ export function MapaFazenda() {
         setEstradaDetalhe(null)
         setPontoDetalhe(null)
         setCurralDetalhe(null)
+        setMorteDetalhe(null)
         return
       }
     }
@@ -1589,6 +1676,7 @@ export function MapaFazenda() {
         setEstradaDetalhe(null)
         setPontoDetalhe(null)
         setFabricaDetalhe(null)
+        setMorteDetalhe(null)
         await carregarDetalheCurral(curralId)
         return
       }
@@ -1604,6 +1692,52 @@ export function MapaFazenda() {
         setPontoDetalhe({ id: pontoId, tipo: pontoTipo, nome: pontoNome, geometria_geojson: null })
         setPastoDetalhe(null)
         setEstradaDetalhe(null)
+        setFabricaDetalhe(null)
+        setCurralDetalhe(null)
+        setMorteDetalhe(null)
+        return
+      }
+    }
+
+    // Verificar se clicou num cluster de mortes (zoom in no centro)
+    const clusterFeature = features.find((f) => f.source === 'mortes-source' && f.properties?.point_count)
+    if (clusterFeature) {
+      const coords = (clusterFeature.geometry as any).coordinates
+      if (coords) {
+        const currentZoom = mapRef.current?.getZoom() || 10
+        mapRef.current?.easeTo({ center: coords, zoom: currentZoom + 2 })
+      }
+      return
+    }
+
+    // Verificar se clicou numa morte (ponto GPS individual)
+    // Buscar o registro original no array mortesRef para preservar acentos/cedilha
+    // (MapLibre pode corromper caracteres UTF-8 nas properties do feature)
+    const morteFeature = features.find((f) => f.source === 'mortes-source' && !f.properties?.point_count)
+    if (morteFeature) {
+      const morteId = morteFeature.properties?.id as string
+      if (morteId) {
+        const registro = mortesRef.current.find((m) => m.id === morteId)
+        if (registro) {
+          setMorteDetalhe({
+            id: registro.id,
+            data: registro.data,
+            causaMorte: registro.causa_morte,
+            brinco: registro.brinco,
+            chip: registro.chip,
+            categoria: registro.categoria,
+            sexo: registro.sexo,
+            raca: registro.raca,
+            idade: registro.idade,
+            pasto: registro.pasto,
+            lote: registro.lote,
+            pesoVivo: registro.peso_vivo,
+            fotoUrl: registro.foto_url,
+          })
+        }
+        setPastoDetalhe(null)
+        setEstradaDetalhe(null)
+        setPontoDetalhe(null)
         setFabricaDetalhe(null)
         setCurralDetalhe(null)
         return
@@ -1622,6 +1756,7 @@ export function MapaFazenda() {
         setPontoDetalhe(null)
         setFabricaDetalhe(null)
         setCurralDetalhe(null)
+        setMorteDetalhe(null)
         return
       }
     }
@@ -1762,6 +1897,7 @@ export function MapaFazenda() {
         setPontoDetalhe(null)
         setFabricaDetalhe(null)
         setCurralDetalhe(null)
+        setMorteDetalhe(null)
       }
     } catch (err) {
       console.error('Erro ao carregar detalhe do pasto:', err)
@@ -2119,6 +2255,62 @@ export function MapaFazenda() {
               Currais
             </span>
           </label>
+          <label className="flex items-center gap-1.5 cursor-pointer text-sm">
+            <input
+              type="checkbox"
+              checked={visCamadas.mortes}
+              onChange={(e) => setVisCamadas((v) => ({ ...v, mortes: e.target.checked }))}
+              className="accent-red-800"
+            />
+            <span className="flex items-center gap-1">
+              <span className="w-3 h-3 rounded-full bg-red-800 border border-red-900" />
+              Mortes
+            </span>
+          </label>
+          {visCamadas.mortes && (
+            <div className="flex items-center gap-1.5 text-xs border-l border-gray-300 pl-2 ml-1">
+              <span className="text-gray-500">Perodo:</span>
+              <input
+                type="date"
+                value={mortesDataInicio || ''}
+                onChange={(e) => setMortesDataInicio(e.target.value || null)}
+                className="border border-gray-300 rounded px-1 py-0.5 text-xs"
+              />
+              <span className="text-gray-400">at</span>
+              <input
+                type="date"
+                value={mortesDataFim || ''}
+                onChange={(e) => setMortesDataFim(e.target.value || null)}
+                className="border border-gray-300 rounded px-1 py-0.5 text-xs"
+              />
+              {(mortesDataInicio || mortesDataFim) && (
+                <button
+                  onClick={() => { setMortesDataInicio(null); setMortesDataFim(null) }}
+                  className="text-gray-400 hover:text-gray-600 text-xs"
+                  title="Limpar filtro"
+                >
+                  &#10005;
+                </button>
+              )}
+              <label className="flex items-center gap-1 cursor-pointer ml-1" title="Agrupar mortes proximas">
+                <input
+                  type="checkbox"
+                  checked={agruparMortes}
+                  onChange={(e) => setAgruparMortes(e.target.checked)}
+                  className="accent-red-800"
+                />
+                <span className="text-gray-600">Agrupar</span>
+              </label>
+              <button
+                onClick={() => { setModoSelecaoArea(true); setMortesSelecionadas([]); setAreaSelecaoGeoJSON(null) }}
+                disabled={modoSelecaoArea}
+                className="text-xs px-2 py-0.5 rounded border border-red-700 text-red-800 hover:bg-red-50 disabled:opacity-50 disabled:cursor-default ml-1"
+                title="Selecionar área para ver métricas agregadas"
+              >
+                Selecionar área
+              </button>
+            </div>
+          )}
         </div>
         <Button
           variant="secondary"
@@ -2303,7 +2495,10 @@ export function MapaFazenda() {
 
       {/* Barra de ações em lote (seleção múltipla) */}
       {modoSelecaoMultipla && (
-        <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 p-3 rounded-lg flex-wrap">
+        <div className={modoTelaCheia
+          ? 'absolute top-16 left-2 right-2 z-30 flex items-center gap-3 bg-blue-50 border border-blue-200 p-3 rounded-lg flex-wrap shadow-lg'
+          : 'flex items-center gap-3 bg-blue-50 border border-blue-200 p-3 rounded-lg flex-wrap'
+        }>
           <span className="text-sm font-medium text-blue-800">
             {pastosSelecionados.size === 0
               ? 'Clique nos pastos no mapa para selecioná-los.'
@@ -2361,7 +2556,7 @@ export function MapaFazenda() {
         {/* Mapa */}
         <div className={modoTelaCheia
           ? 'flex-1 relative'
-          : 'flex-1 rounded-lg overflow-hidden border border-gray-200'
+          : 'flex-1 relative rounded-lg overflow-hidden border border-gray-200'
         } style={modoTelaCheia
           ? { height: '100%' }
           : { height: 'calc(100vh - 280px)', minHeight: '400px' }
@@ -2377,6 +2572,7 @@ export function MapaFazenda() {
               ...(visCamadas.pontos ? ['pontos-circle'] : []),
               ...(visCamadas.fabricas ? ['fabricas-fill', 'fabricas-line', 'fabricas-label'] : []),
               ...(visCamadas.currais ? ['currais-fill', 'currais-line', 'currais-label'] : []),
+              ...(visCamadas.mortes ? ['mortes-circle', 'mortes-cluster-circle'] : []),
               ...(featuresImportadas ? ['import-fill', 'import-line', 'import-point', 'import-line-string'] : []),
             ]}
             onClick={handleMapClick}
@@ -2391,6 +2587,10 @@ export function MapaFazenda() {
               bebedourosGeoJSON={bebedourosGeoJSON}
               fabricasGeoJSON={fabricasGeoJSON}
               curraisGeoJSON={curraisGeoJSON}
+              mortesGeoJSON={mortesGeoJSON}
+              agruparMortes={agruparMortes}
+              areaSelecaoGeoJSON={areaSelecaoGeoJSON}
+              morteDestaqueId={morteDestaqueId}
               pastosSelecionadosGeoJSON={pastosSelecionadosGeoJSON}
               pastoDetalheGeoJSON={pastoDetalheGeoJSON}
               estradaDetalheGeoJSON={estradaDetalheGeoJSON}
@@ -2417,6 +2617,106 @@ export function MapaFazenda() {
 
             {/* Controles de navegação adicionados via useEffect no map instance */}
           </Map>
+
+          {/* Overlay de selecao por area (retangulo) */}
+          {modoSelecaoArea && (
+            <div
+              className="absolute inset-0 z-20"
+              style={{ cursor: 'crosshair' }}
+              onMouseDown={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect()
+                const x = e.clientX - rect.left
+                const y = e.clientY - rect.top
+                arrastandoSelecaoRef.current = true
+                setAreaSelecao({ x1: x, y1: y, x2: x, y2: y })
+              }}
+              onMouseMove={(e) => {
+                if (!arrastandoSelecaoRef.current) return
+                const rect = e.currentTarget.getBoundingClientRect()
+                const x = e.clientX - rect.left
+                const y = e.clientY - rect.top
+                setAreaSelecao((prev) => prev ? { ...prev, x2: x, y2: y } : null)
+              }}
+              onMouseUp={(e) => {
+                if (!arrastandoSelecaoRef.current) return
+                arrastandoSelecaoRef.current = false
+                const rect = e.currentTarget.getBoundingClientRect()
+                const x2 = e.clientX - rect.left
+                const y2 = e.clientY - rect.top
+                setAreaSelecao((prev) => {
+                  if (!prev) { setModoSelecaoArea(false); return null }
+                  const x1 = prev.x1
+                  const y1 = prev.y1
+                  const minX = Math.min(x1, x2)
+                  const maxX = Math.max(x1, x2)
+                  const minY = Math.min(y1, y2)
+                  const maxY = Math.max(y1, y2)
+                  // Ignorar clique sem arrasto (menos de 5px)
+                  if (Math.abs(maxX - minX) < 5 || Math.abs(maxY - minY) < 5) {
+                    setModoSelecaoArea(false)
+                    return null
+                  }
+                  // Converter pixels para coordenadas
+                  const lngLat1 = mapRef.current?.unproject([minX, minY])
+                  const lngLat2 = mapRef.current?.unproject([maxX, maxY])
+                  if (lngLat1 && lngLat2) {
+                    const minLng = Math.min(lngLat1.lng, lngLat2.lng)
+                    const maxLng = Math.max(lngLat1.lng, lngLat2.lng)
+                    const minLat = Math.min(lngLat1.lat, lngLat2.lat)
+                    const maxLat = Math.max(lngLat1.lat, lngLat2.lat)
+                    const bbox = { minLng, maxLng, minLat, maxLat }
+                    const selecionadas = mortesRef.current.filter((m) =>
+                      m.latitude != null && m.longitude != null &&
+                      m.longitude >= bbox.minLng && m.longitude <= bbox.maxLng &&
+                      m.latitude >= bbox.minLat && m.latitude <= bbox.maxLat
+                    )
+                    setMortesSelecionadas(selecionadas)
+                    // Guardar retângulo como GeoJSON para destacar no mapa
+                    setAreaSelecaoGeoJSON({
+                      type: 'FeatureCollection',
+                      features: [{
+                        type: 'Feature',
+                        properties: {},
+                        geometry: {
+                          type: 'Polygon',
+                          coordinates: [[
+                            [minLng, minLat],
+                            [maxLng, minLat],
+                            [maxLng, maxLat],
+                            [minLng, maxLat],
+                            [minLng, minLat],
+                          ]],
+                        },
+                      }],
+                    })
+                    setMorteDetalhe(null)
+                    setPastoDetalhe(null)
+                    setEstradaDetalhe(null)
+                    setPontoDetalhe(null)
+                    setFabricaDetalhe(null)
+                    setCurralDetalhe(null)
+                  }
+                  setModoSelecaoArea(false)
+                  return null
+                })
+              }}
+            >
+              {areaSelecao && (
+                <div
+                  className="absolute border-2 border-dashed border-red-700 bg-red-700/10 pointer-events-none"
+                  style={{
+                    left: Math.min(areaSelecao.x1, areaSelecao.x2),
+                    top: Math.min(areaSelecao.y1, areaSelecao.y2),
+                    width: Math.abs(areaSelecao.x2 - areaSelecao.x1),
+                    height: Math.abs(areaSelecao.y2 - areaSelecao.y1),
+                  }}
+                />
+              )}
+              <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-red-800 text-white text-xs px-3 py-1 rounded-full shadow-lg pointer-events-none">
+                Clique e arraste para selecionar a área
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Side Panel: detalhes do pasto (overlay flutuante em tela cheia) */}
@@ -2471,6 +2771,41 @@ export function MapaFazenda() {
             onFechar={() => setCurralDetalhe(null)}
             onEditarGeometria={iniciarEdicaoCurral}
             onRemoverGeometria={removerGeometriaCurral}
+          />
+        )}
+
+        {/* Side Panel: detalhes da morte */}
+        {morteDetalhe && (
+          <MorteDetalhePanel
+            detalhe={morteDetalhe}
+            modoTelaCheia={modoTelaCheia}
+            onFechar={() => { setMorteDetalhe(null); setMorteDestaqueId(null) }}
+          />
+        )}
+
+        {/* Side Panel: métricas agregadas de mortes na área selecionada */}
+        {mortesSelecionadas.length > 0 && !morteDetalhe && (
+          <MortesAgregadasPanel
+            mortes={mortesSelecionadas}
+            modoTelaCheia={modoTelaCheia}
+            onFechar={() => { setMortesSelecionadas([]); setAreaSelecaoGeoJSON(null) }}
+            onVerDetalhe={(m) => {
+              setMorteDetalhe({
+                id: m.id,
+                data: m.data,
+                causaMorte: m.causa_morte,
+                brinco: m.brinco,
+                chip: m.chip,
+                categoria: m.categoria,
+                sexo: m.sexo,
+                raca: m.raca,
+                idade: m.idade,
+                pasto: m.pasto,
+                lote: m.lote,
+                pesoVivo: m.peso_vivo,
+                fotoUrl: m.foto_url,
+              })
+            }}
           />
         )}
       </div>
