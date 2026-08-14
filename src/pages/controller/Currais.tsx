@@ -168,7 +168,7 @@ export function Currais() {
         .is('deleted_at', null)
         .order('nome', { ascending: true }),
       supabase.from('lotes').select('id, nome, n_cabecas, pasto_id').eq('fazenda_id', fazendaId).eq('ativo', true).is('deleted_at', null).order('nome'),
-      supabase.from('formulacoes').select('id, nome, tipo').eq('fazenda_id', fazendaId).eq('ativo', true).is('deleted_at', null).order('nome'),
+      supabase.from('formulacoes').select('id, nome, tipo, e_premix').eq('fazenda_id', fazendaId).eq('ativo', true).eq('e_premix', false).is('deleted_at', null).order('nome'),
     ])
 
     if (linhasData.error) {

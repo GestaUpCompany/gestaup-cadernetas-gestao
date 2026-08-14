@@ -608,9 +608,10 @@ export function FaixasCategorias() {
     setLoadingFormulacoes(true)
     const { data, error } = await supabase
       .from('formulacoes')
-      .select('id, nome, categoria')
+      .select('id, nome, categoria, e_premix')
       .eq('fazenda_id', fazendaId)
       .eq('ativo', true)
+      .eq('e_premix', false)
       .order('nome', { ascending: true })
     if (error) {
       console.error('Erro ao carregar formulações:', error)

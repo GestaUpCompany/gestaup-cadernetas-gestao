@@ -257,7 +257,7 @@ export function Lotes() {
       const [pastosData, racasData, formulacoesData] = await Promise.all([
         supabase.from('pastos').select('id, nome').eq('fazenda_id', fazendaId).eq('ativo', true).is('deleted_at', null),
         supabase.from('racas').select('id, nome').eq('fazenda_id', fazendaId).eq('ativo', true).is('deleted_at', null).order('nome'),
-        supabase.from('formulacoes').select('id, nome, tipo, categoria, consumo_ms_percent_pv, gmd').eq('fazenda_id', fazendaId).eq('ativo', true).is('deleted_at', null).order('nome'),
+        supabase.from('formulacoes').select('id, nome, tipo, categoria, consumo_ms_percent_pv, gmd, e_premix').eq('fazenda_id', fazendaId).eq('ativo', true).eq('e_premix', false).is('deleted_at', null).order('nome'),
       ])
 
       if (pastosData.data) setPastos(pastosData.data)

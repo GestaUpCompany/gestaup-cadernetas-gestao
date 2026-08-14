@@ -135,9 +135,10 @@ export function PlanoNutricionalModal({
       if (fId) {
         const { data: formulacoesData, error: formError } = await supabase
           .from('formulacoes')
-          .select('id, nome, tipo, gmd, consumo_ms_percent_pv, categoria')
+          .select('id, nome, tipo, gmd, consumo_ms_percent_pv, categoria, e_premix')
           .eq('fazenda_id', fId)
           .eq('ativo', true)
+          .eq('e_premix', false)
           .order('nome', { ascending: true })
 
         if (formError) throw formError

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, CardSkeleton, CardItem } from '../../components/ui'
@@ -35,6 +36,7 @@ interface Insumo {
   fornecedor?: string
   teor_ms?: number
   preco_ton_mn?: number
+  formulacao_origem_id?: string | null
   ativo: boolean
   created_at: string
   updated_at: string
@@ -47,6 +49,7 @@ interface FornecedorOption {
 
 export function Insumos() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [insumos, setInsumos] = useState<Insumo[]>([])
   const [fornecedores, setFornecedores] = useState<FornecedorOption[]>([])
   const [loading, setLoading] = useState(true)
@@ -178,6 +181,11 @@ export function Insumos() {
   }
 
   const handleEdit = (insumo: Insumo) => {
+    // Insumos gerados de premix são read-only: redireciona para a formulação de origem
+    if (insumo.formulacao_origem_id) {
+      navigate(`/controller/formulacoes?edit=${insumo.formulacao_origem_id}`)
+      return
+    }
     setEditingInsumo(insumo)
     setFormData({
       nome: insumo.nome,
@@ -204,6 +212,14 @@ export function Insumos() {
   }
 
   const handleToggleActive = async (insumo: Insumo) => {
+    // Insumos gerados de premix não podem ser desativados diretamente
+    if (insumo.formulacao_origem_id) {
+      alert(
+        'Este insumo é gerado automaticamente por uma formulação premix. ' +
+        'Para desativá-lo, desative a formulação de origem em Formulações.'
+      )
+      return
+    }
     const { error } = await supabase
       .from('insumos')
       .update({ ativo: !insumo.ativo })
@@ -426,6 +442,14 @@ export function Insumos() {
                 status={insumo.ativo}
                 onClick={() => handleEdit(insumo)}
               >
+                {insumo.formulacao_origem_id && (
+                  <div className="mb-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 text-xs font-medium">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Gerado de formulação
+                  </div>
+                )}
                 <div className="space-y-2 mb-4">
                   {insumo.fornecedor && (
                     <p className="text-sm text-gray-500">
@@ -454,8 +478,9 @@ export function Insumos() {
                       handleEdit(insumo)
                     }}
                   >
-                    Editar
+                    {insumo.formulacao_origem_id ? 'Editar na formulação' : 'Editar'}
                   </Button>
+                  {!insumo.formulacao_origem_id && (
                   <Button
                     size="sm"
                     variant="secondary"
@@ -467,6 +492,7 @@ export function Insumos() {
                   >
                     {insumo.ativo ? 'Desativar' : 'Ativar'}
                   </Button>
+                  )}
                 </div>
               </CardItem>
             ))}

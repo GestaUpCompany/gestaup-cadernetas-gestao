@@ -10,6 +10,10 @@ function fmt(n: number, digits = 2): string {
   return n.toFixed(digits).replace('.', ',')
 }
 
+function capitalizeWords(str: string): string {
+  return str.split(/([ -])/).map(part => part.charAt(0).toLocaleUpperCase('pt-BR') + part.slice(1)).join('')
+}
+
 function parseCommaDecimal(val: string): number {
   const cleaned = val.replace(/\./g, '').replace(',', '.')
   return parseFloat(cleaned) || 0
@@ -35,6 +39,7 @@ interface Dieta {
   custo_mn_tonelada?: number
   consumo_ms_kg_cab_dia?: number
   ativo: boolean
+  e_premix?: boolean
   categoria_inferida_automaticamente?: boolean
   categoria_inferida_observacao?: string
   created_at: string
@@ -46,6 +51,7 @@ interface InsumoOption {
   nome: string
   teor_ms?: number
   preco_ton_mn?: number
+  formulacao_origem_id?: string | null
 }
 
 interface DietaInsumoCalc {
@@ -132,10 +138,12 @@ export function Formulacoes() {
     gmd: '0,000',
     sistema_producao: '',
     ativo: true,
+    e_premix: false,
   })
   const [selectedInsumos, setSelectedInsumos] = useState<DietaInsumoCalc[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [showInactive, setShowInactive] = useState(false)
+  const [premixFilter, setPremixFilter] = useState<'todos' | 'tmr' | 'premix'>('todos')
 
   useEffect(() => {
     loadFormulacoes()
@@ -151,6 +159,13 @@ export function Formulacoes() {
       }
     }
   }, [searchParams, formulacoes])
+
+  // Resetar e_premix para false quando há um premix selecionado como ingrediente (evita premix aninhado)
+  useEffect(() => {
+    if (selectedInsumos.some(s => insumos.find(i => i.id === s.insumo_id)?.formulacao_origem_id != null) && formData.e_premix) {
+      setFormData(prev => ({ ...prev, e_premix: false }))
+    }
+  }, [selectedInsumos, insumos])
 
   const loadFormulacoes = async () => {
     if (!user) return
@@ -182,7 +197,7 @@ export function Formulacoes() {
 
     const { data } = await supabase
       .from('insumos')
-      .select('id, nome, teor_ms, preco_ton_mn')
+      .select('id, nome, teor_ms, preco_ton_mn, formulacao_origem_id')
       .eq('fazenda_id', fazendaId)
       .eq('ativo', true)
       .is('deleted_at', null)
@@ -249,6 +264,12 @@ export function Formulacoes() {
   const custoMSToneladaRaw = teorMSDieta > 0 ? custoTotalExact / (teorMSDietaExact / 100) : 0
   const custoMSTonelada = parseFloat(custoMSToneladaRaw.toFixed(2))
 
+  // Detecta se há um premix (insumo gerado) selecionado como ingrediente
+  const temPremixSelecionado = selectedInsumos.some(s => {
+    const insumo = insumos.find(i => i.id === s.insumo_id)
+    return insumo?.formulacao_origem_id != null
+  })
+
   const handleAddInsumo = (insumoId: string) => {
     const insumo = insumos.find(i => i.id === insumoId)
     if (!insumo || selectedInsumos.some(s => s.insumo_id === insumoId)) return
@@ -301,44 +322,107 @@ export function Formulacoes() {
     const pesoVivo = parseFloat(parseFloat(formData.peso_vivo_medio || '0').toFixed(2))
     const gmd = parseFloat(parseCommaDecimal(formData.gmd || '0').toFixed(3))
 
+    // Validação bloqueante: colisão de nome com insumo atômico ativo
+    if (formData.e_premix) {
+      const { data: colisao } = await supabase
+        .from('insumos')
+        .select('id, nome')
+        .eq('fazenda_id', fazendaId)
+        .eq('nome', formData.nome)
+        .eq('ativo', true)
+        .is('formulacao_origem_id', null)
+        .maybeSingle()
+
+      if (colisao) {
+        alert(
+          `Já existe um insumo atômico chamado "${formData.nome}". ` +
+          `Renomeie a formulação ou o insumo existente para evitar confusão no select de ingredientes.`
+        )
+        setSubmitting(false)
+        return
+      }
+    }
+
     const data = {
       fazenda_id: fazendaId,
       nome: formData.nome,
       descricao: formData.descricao || null,
       tipo: formData.tipo || null,
-      categoria: formData.categoria || null,
-      consumo_ms_percent_pv: metaPV,
-      peso_vivo_medio: pesoVivo,
-      gmd: gmd || null,
-      sistema_producao: formData.sistema_producao || null,
+      categoria: formData.e_premix ? null : (formData.categoria || null),
+      consumo_ms_percent_pv: formData.e_premix ? 0 : metaPV,
+      peso_vivo_medio: formData.e_premix ? 0 : pesoVivo,
+      gmd: formData.e_premix ? null : (gmd || null),
+      sistema_producao: formData.e_premix ? null : (formData.sistema_producao || null),
       insumos: recalculated as unknown as Record<string, unknown>[],
       custo_total: custoTotal,
-      custo_dieta_reais_cab_dia: custoDiarioTotal,
-      consumo_mn_kg_cab_dia: consumoMNTotal,
+      custo_dieta_reais_cab_dia: formData.e_premix ? 0 : custoDiarioTotal,
+      consumo_mn_kg_cab_dia: formData.e_premix ? 0 : consumoMNTotal,
       teor_ms_dieta: teorMSDieta,
       custo_ms_tonelada: custoMSTonelada,
       custo_mn_tonelada: custoTotal,
-      consumo_ms_kg_cab_dia: consumoMSTotal,
+      consumo_ms_kg_cab_dia: formData.e_premix ? 0 : consumoMSTotal,
       ativo: formData.ativo,
+      e_premix: formData.e_premix,
       categoria_inferida_automaticamente: false,
       categoria_inferida_observacao: null,
     }
 
     let error
+    let savedFormulacaoId: string | null = null
     if (editingFormulacao) {
       const { error: updateError } = await supabase
         .from('formulacoes')
         .update(data)
         .eq('id', editingFormulacao.id)
       error = updateError
+      savedFormulacaoId = editingFormulacao.id
     } else {
-      const { error: insertError } = await supabase.from('formulacoes').insert(data)
+      const { data: inserted, error: insertError } = await supabase
+        .from('formulacoes')
+        .insert(data)
+        .select('id')
+        .single()
       error = insertError
+      savedFormulacaoId = inserted?.id || null
     }
 
     if (error) {
       console.error('Erro ao salvar formulação:', error)
     } else {
+      // Upsert do insumo gerado se a formulação é premix
+      if (formData.e_premix && savedFormulacaoId) {
+        const insumoData = {
+          fazenda_id: fazendaId,
+          nome: formData.nome,
+          tipo: 'Premix',
+          teor_ms: teorMSDieta,
+          preco_ton_mn: custoTotal,
+          ativo: formData.ativo,
+          deleted_at: formData.ativo ? null : new Date().toISOString(),
+          formulacao_origem_id: savedFormulacaoId,
+        }
+
+        const { data: existingInsumo } = await supabase
+          .from('insumos')
+          .select('id')
+          .eq('formulacao_origem_id', savedFormulacaoId)
+          .maybeSingle()
+
+        if (existingInsumo) {
+          await supabase.from('insumos').update(insumoData).eq('id', existingInsumo.id)
+        } else {
+          await supabase.from('insumos').insert(insumoData)
+        }
+      }
+
+      // Desmarcação do premix: desativar insumo gerado
+      if (!formData.e_premix && editingFormulacao?.e_premix) {
+        await supabase
+          .from('insumos')
+          .update({ ativo: false, deleted_at: new Date().toISOString() })
+          .eq('formulacao_origem_id', editingFormulacao.id)
+      }
+
       setFormData({
         nome: '',
         descricao: '',
@@ -349,16 +433,23 @@ export function Formulacoes() {
         gmd: '0,000',
         sistema_producao: '',
         ativo: true,
+        e_premix: false,
       })
       setSelectedInsumos([])
       setShowForm(false)
       setEditingFormulacao(null)
-      loadFormulacoes()
+      await Promise.all([loadFormulacoes(), loadInsumos()])
     }
     setSubmitting(false)
   }
 
+  const handleNewForm = () => {
+    loadInsumos()
+    setShowForm(true)
+  }
+
   const handleEdit = (dieta: Dieta) => {
+    loadInsumos()
     setEditingFormulacao(dieta)
     setFormData({
       nome: dieta.nome,
@@ -370,6 +461,7 @@ export function Formulacoes() {
       gmd: dieta.gmd?.toFixed(3).replace('.', ',') || '0,000',
       sistema_producao: dieta.sistema_producao || '',
       ativo: dieta.ativo,
+      e_premix: dieta.e_premix ?? false,
     })
     setSelectedInsumos(dieta.insumos?.map(i => ({
       insumo_id: i.insumo_id,
@@ -399,6 +491,7 @@ export function Formulacoes() {
       gmd: '0,000',
       sistema_producao: '',
       ativo: true,
+      e_premix: false,
     })
     setSelectedInsumos([])
     setShowForm(false)
@@ -422,7 +515,14 @@ export function Formulacoes() {
     if (error) {
       console.error('Erro ao atualizar formulação:', error)
     } else {
-      loadFormulacoes()
+      // Se a formulação é premix, desativar/reativar o insumo gerado junto
+      if (dieta.e_premix) {
+        await supabase
+          .from('insumos')
+          .update({ ativo: !dieta.ativo, deleted_at: !dieta.ativo ? new Date().toISOString() : null })
+          .eq('formulacao_origem_id', dieta.id)
+      }
+      await Promise.all([loadFormulacoes(), loadInsumos()])
     }
   }
 
@@ -482,7 +582,16 @@ export function Formulacoes() {
           >
             {showInactive ? '✓ Mostrando Desativados' : 'Mostrar Desativados'}
           </button>
-          <Button onClick={() => setShowForm(true)} className="h-10">Nova Formulação</Button>
+          <select
+            value={premixFilter}
+            onChange={(e) => setPremixFilter(e.target.value as 'todos' | 'tmr' | 'premix')}
+            className="px-3 py-2 rounded-lg font-medium transition-all duration-200 border-2 h-10 bg-white text-gray-700 border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="todos">Todas</option>
+            <option value="tmr">Só TMR</option>
+            <option value="premix">Só Premix</option>
+          </select>
+          <Button onClick={handleNewForm} className="h-10">Nova Formulação</Button>
         </div>
       </div>
 
@@ -530,9 +639,9 @@ export function Formulacoes() {
                   <option value="Proteico">Proteico</option>
                   <option value="Proteico-Energético">Proteico-Energético</option>
                   <option value="Ração">Ração</option>
-                  <option value="Premix">Premix</option>
                 </select>
               </div>
+              {!formData.e_premix && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Categoria *</label>
                 {editingFormulacao?.categoria_inferida_automaticamente && (
@@ -566,6 +675,7 @@ export function Formulacoes() {
                   <option value="tropa">Tropa</option>
                 </select>
               </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Descrição</label>
                 <Input
@@ -578,7 +688,8 @@ export function Formulacoes() {
               </div>
             </div>
 
-            {/* Parameters */}
+            {/* Parameters (TMR only) */}
+            {!formData.e_premix && (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Meta Consumo MS (%PV)</label>
@@ -631,9 +742,47 @@ export function Formulacoes() {
                 </select>
               </div>
             </div>
+            )}
+
+            {/* Premix toggle (always visible) */}
+            {/* Premix toggle (hidden when a premix is selected as ingredient, to prevent nested premix) */}
+            {!temPremixSelecionado && (
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, e_premix: !formData.e_premix })}
+                className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 border-2 ${
+                  formData.e_premix
+                    ? 'bg-indigo-100 text-indigo-800 border-indigo-300 hover:bg-indigo-200'
+                    : 'bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200'
+                }`}
+              >
+                {formData.e_premix ? '✓ Premix' : 'Premix'}
+              </button>
+              <span className="text-xs text-gray-500 leading-tight">
+                Marque se esta formulação é um premix. Ela gerará automaticamente um insumo
+                para uso em outras formulações (TMR do vagão).
+              </span>
+            </div>
+            )}
+            {temPremixSelecionado && formData.e_premix && (
+              <div className="p-3 rounded-lg bg-blue-50 border border-blue-300 text-xs text-blue-900">
+                Esta formulação contém um premix como ingrediente, então não pode ser um premix.
+                O modo premix foi desativado.
+              </div>
+            )}
 
             {/* Add insumo */}
             <div className="border-t border-gray-200 pt-4">
+              {formData.e_premix && selectedInsumos.length === 0 && (
+                <div className="mb-3 p-3 rounded-lg bg-amber-50 border border-amber-300 text-xs text-amber-900">
+                  <p className="font-semibold mb-1">Premix sem insumos</p>
+                  <p>
+                    Um premix deve conter pelo menos um insumo para gerar um ingrediente válido
+                    (com teor MS e preço corretos). Adicione os ingredientes do premix abaixo.
+                  </p>
+                </div>
+              )}
               <label className="block text-sm font-medium text-gray-700 mb-2">Adicionar Insumo</label>
               <select
                 onChange={(e) => {
@@ -665,9 +814,9 @@ export function Formulacoes() {
                       <th className="text-right p-2 font-medium text-gray-700 bg-green-50 w-28">Form. MS (%)</th>
                       <th className="text-right p-2 font-medium text-gray-700">Form. MN (%)</th>
                       <th className="text-right p-2 font-medium text-gray-700">Custo Dieta (R$/Ton)</th>
-                      <th className="text-right p-2 font-medium text-gray-700">Consumo MS (kg/Cab/Dia)</th>
-                      <th className="text-right p-2 font-medium text-gray-700">Consumo MN (kg/Cab/Dia)</th>
-                      <th className="text-right p-2 font-medium text-gray-700">Custo Dieta (R$/Cab/Dia)</th>
+                      {!formData.e_premix && <th className="text-right p-2 font-medium text-gray-700">Consumo MS (kg/Cab/Dia)</th>}
+                      {!formData.e_premix && <th className="text-right p-2 font-medium text-gray-700">Consumo MN (kg/Cab/Dia)</th>}
+                      {!formData.e_premix && <th className="text-right p-2 font-medium text-gray-700">Custo Dieta (R$/Cab/Dia)</th>}
                       <th className="p-2 w-8"></th>
                     </tr>
                   </thead>
@@ -691,11 +840,13 @@ export function Formulacoes() {
                         <td className="p-2 text-right text-gray-600">
                           R$ {(item.custo_tonelada || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
-                        <td className="p-2 text-right text-gray-600">{fmt(item.consumo_ms_kg_cab_dia || 0, 3)}</td>
-                        <td className="p-2 text-right text-gray-600">{fmt(item.consumo_mn_kg_cab_dia || 0, 3)}</td>
+                        {!formData.e_premix && <td className="p-2 text-right text-gray-600">{fmt(item.consumo_ms_kg_cab_dia || 0, 3)}</td>}
+                        {!formData.e_premix && <td className="p-2 text-right text-gray-600">{fmt(item.consumo_mn_kg_cab_dia || 0, 3)}</td>}
+                        {!formData.e_premix && (
                         <td className="p-2 text-right text-gray-600">
                           R$ {(item.custo_dieta_reais_cab_dia || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
+                        )}
                         <td className="p-2">
                           <button
                             type="button"
@@ -732,11 +883,13 @@ export function Formulacoes() {
                           <span className="absolute bottom-0 right-0 w-0 h-0 border-l-[6px] border-l-transparent border-b-[6px] border-b-yellow-400"></span>
                         </div>
                       </td>
-                      <td className="p-2 text-right text-gray-800">{fmt(consumoMSTotal, 3)}</td>
-                      <td className="p-2 text-right text-gray-800">{fmt(consumoMNTotal, 3)}</td>
+                      {!formData.e_premix && <td className="p-2 text-right text-gray-800">{fmt(consumoMSTotal, 3)}</td>}
+                      {!formData.e_premix && <td className="p-2 text-right text-gray-800">{fmt(consumoMNTotal, 3)}</td>}
+                      {!formData.e_premix && (
                       <td className="p-2 text-right text-gray-800">
                         R$ {custoDiarioTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
+                      )}
                       <td className="p-2"></td>
                     </tr>
                   </tbody>
@@ -744,8 +897,8 @@ export function Formulacoes() {
               </div>
             )}
 
-            {/* Summary parameters */}
-            {selectedInsumos.length > 0 && (
+            {/* Summary parameters (TMR only) */}
+            {selectedInsumos.length > 0 && !formData.e_premix && (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 bg-green-50 p-4 rounded-lg">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Meta Consumo MS (%PV)</label>
@@ -806,13 +959,16 @@ export function Formulacoes() {
       {!showForm && formulacoes.length === 0 ? (
         <Card className="bg-white p-12 border-0 shadow-sm text-center">
           <p className="text-gray-600 mb-4">Nenhuma formulação cadastrada</p>
-          <Button onClick={() => setShowForm(true)}>Criar Primeira Formulação</Button>
+          <Button onClick={handleNewForm}>Criar Primeira Formulação</Button>
         </Card>
       ) : !showForm ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {formulacoes
             .filter((dieta) =>
               (showInactive || dieta.ativo) &&
+              (premixFilter === 'todos' ||
+               (premixFilter === 'premix' && dieta.e_premix) ||
+               (premixFilter === 'tmr' && !dieta.e_premix)) &&
               (dieta.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
               (dieta.tipo && dieta.tipo.toLowerCase().includes(searchTerm.toLowerCase())))
             )
@@ -820,30 +976,36 @@ export function Formulacoes() {
               <CardItem
                 key={dieta.id}
                 title={dieta.nome}
-                subtitle={dieta.categoria ? `${(dieta.tipo || 'Sem tipo').replace(/\b\w/g, (c) => c.toUpperCase())} • ${dieta.categoria.replace(/\b\w/g, (c) => c.toUpperCase())}` : (dieta.tipo ? dieta.tipo.replace(/\b\w/g, (c) => c.toUpperCase()) : undefined)}
+                subtitle={
+                  dieta.e_premix
+                    ? `Premix • ${capitalizeWords(dieta.tipo || 'Sem tipo')}`
+                    : (dieta.categoria
+                        ? `${capitalizeWords(dieta.tipo || 'Sem tipo')} • ${capitalizeWords(dieta.categoria)}`
+                        : (dieta.tipo ? capitalizeWords(dieta.tipo) : undefined))
+                }
                 status={dieta.ativo}
                 onClick={() => handleEdit(dieta)}
               >
                 <div className="space-y-1 mb-4 text-sm text-gray-600">
-                  {dieta.consumo_ms_percent_pv != null && (
+                  {!dieta.e_premix && dieta.consumo_ms_percent_pv != null && (
                     <p><span className="font-medium">Meta MS (%PV):</span> {fmt(dieta.consumo_ms_percent_pv)}%</p>
                   )}
-                  {dieta.peso_vivo_medio != null && (
+                  {!dieta.e_premix && dieta.peso_vivo_medio != null && (
                     <p><span className="font-medium">PV Médio:</span> {fmt(dieta.peso_vivo_medio)} kg</p>
                   )}
-                  {dieta.gmd != null && (
+                  {!dieta.e_premix && dieta.gmd != null && (
                     <p><span className="font-medium">GMD Planejado:</span> {fmt(dieta.gmd, 3)} kg/Cab/Dia</p>
                   )}
-                  {dieta.sistema_producao && (
+                  {!dieta.e_premix && dieta.sistema_producao && (
                     <p><span className="font-medium">Sistema:</span> {dieta.sistema_producao}</p>
                   )}
                   {dieta.teor_ms_dieta != null && (
                     <p><span className="font-medium">Teor MS:</span> {fmt(dieta.teor_ms_dieta)}%</p>
                   )}
-                  {dieta.consumo_ms_kg_cab_dia != null && (
+                  {!dieta.e_premix && dieta.consumo_ms_kg_cab_dia != null && (
                     <p><span className="font-medium">Consumo MS:</span> {fmt(dieta.consumo_ms_kg_cab_dia, 3)} kg</p>
                   )}
-                  {dieta.custo_dieta_reais_cab_dia != null && (
+                  {!dieta.e_premix && dieta.custo_dieta_reais_cab_dia != null && (
                     <p><span className="font-medium">Custo/dia:</span> R$ {dieta.custo_dieta_reais_cab_dia.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                   )}
                   {dieta.insumos && dieta.insumos.length > 0 && (
