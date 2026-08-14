@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, ConfirmModal, Select } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, Select } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
@@ -28,8 +28,7 @@ export function ItensSupermercado() {
     ativo: true,
   })
   const [submitting, setSubmitting] = useState(false)
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [itemToDelete, setItemToDelete] = useState<string | null>(null)
+  const [showInactive, setShowInactive] = useState(false)
 
   useEffect(() => {
     loadItens()
@@ -130,28 +129,17 @@ export function ItensSupermercado() {
     setShowForm(true)
   }
 
-  const handleDeleteClick = (id: string) => {
-    setItemToDelete(id)
-    setShowDeleteModal(true)
-  }
-
-  const handleDeleteConfirm = async () => {
-    if (!itemToDelete) return
-
+  const handleToggleActive = async (item: ItemSupermercado) => {
     const { error } = await supabase
       .from('itens_supermercado')
-      .delete()
-      .eq('id', itemToDelete)
+      .update({ ativo: !item.ativo })
+      .eq('id', item.id)
 
     if (error) {
-      console.error('Erro ao deletar item:', error)
-      alert('Erro ao deletar item')
+      console.error('Erro ao atualizar item:', error)
     } else {
       loadItens()
     }
-
-    setShowDeleteModal(false)
-    setItemToDelete(null)
   }
 
   const handleCancel = () => {
@@ -166,7 +154,7 @@ export function ItensSupermercado() {
   )
 
   const activeItens = filteredItens.filter(item => item.ativo)
-  const inactiveItens = filteredItens.filter(item => !item.ativo)
+  const inactiveItens = showInactive ? filteredItens.filter(item => !item.ativo) : []
 
   // Keyboard shortcuts
   useKeyboardShortcuts([
@@ -221,6 +209,17 @@ export function ItensSupermercado() {
           onChange={(e) => setSearchTerm(e.target.value)}
           className="flex-1"
         />
+        <button
+          type="button"
+          onClick={() => setShowInactive(!showInactive)}
+          className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 border-2 h-10 ${
+            showInactive
+              ? 'bg-primary text-white border-primary hover:bg-primary/90'
+              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+          }`}
+        >
+          {showInactive ? '✓ Mostrando Desativados' : 'Mostrar Desativados'}
+        </button>
       </div>
 
       {/* Form */}
@@ -320,10 +319,10 @@ export function ItensSupermercado() {
                   <Button
                     variant="secondary"
                     size="sm"
-                    onClick={() => handleDeleteClick(item.id)}
+                    onClick={() => handleToggleActive(item)}
                     className="flex-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2"
                   >
-                    Excluir
+                    Desativar
                   </Button>
                 </div>
               </Card>
@@ -365,10 +364,10 @@ export function ItensSupermercado() {
                   <Button
                     variant="secondary"
                     size="sm"
-                    onClick={() => handleDeleteClick(item.id)}
+                    onClick={() => handleToggleActive(item)}
                     className="flex-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2"
                   >
-                    Excluir
+                    Ativar
                   </Button>
                 </div>
               </Card>
@@ -377,14 +376,6 @@ export function ItensSupermercado() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
-      <ConfirmModal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
-        onConfirm={handleDeleteConfirm}
-        title="Confirmar Exclusão"
-        message="Tem certeza que deseja excluir este item? Esta ação não pode ser desfeita."
-      />
     </div>
   )
 }

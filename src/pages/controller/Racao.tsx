@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, ConfirmModal, CardItem } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, CardItem } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
@@ -38,8 +38,7 @@ export function Racao() {
     ativo: true,
   })
   const [submitting, setSubmitting] = useState(false)
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [racaoToDelete, setRacaoToDelete] = useState<string | null>(null)
+  const [showInactive, setShowInactive] = useState(false)
 
   useEffect(() => {
     loadRacoes()
@@ -169,30 +168,10 @@ export function Racao() {
     setShowForm(false)
   }
 
-  const handleDeleteClick = (id: string) => {
-    setRacaoToDelete(id)
-    setShowDeleteModal(true)
-  }
-
-  const handleDeleteConfirm = async () => {
-    if (!racaoToDelete) return
-
-    const { error } = await supabase.from('racao').delete().eq('id', racaoToDelete)
-
-    if (error) {
-      console.error('Erro ao excluir ração:', error)
-    } else {
-      loadRacoes()
-    }
-
-    setRacaoToDelete(null)
-    setShowDeleteModal(false)
-  }
-
   const handleToggleActive = async (racao: Racao) => {
     const { error } = await supabase
       .from('racao')
-      .update({ ativo: !racao.ativo })
+      .update({ ativo: !racao.ativo, deleted_at: !racao.ativo ? new Date().toISOString() : null })
       .eq('id', racao.id)
 
     if (error) {
@@ -247,6 +226,17 @@ export function Racao() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-xs border-gray-200 focus:border-accent h-10"
           />
+          <button
+            type="button"
+            onClick={() => setShowInactive(!showInactive)}
+            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 border-2 h-10 ${
+              showInactive
+                ? 'bg-primary text-white border-primary hover:bg-primary/90'
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            {showInactive ? '✓ Mostrando Desativados' : 'Mostrar Desativados'}
+          </button>
           <Button onClick={() => setShowForm(true)} className="h-10">Nova Ração</Button>
         </div>
       </div>
@@ -397,8 +387,9 @@ export function Racao() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {racoes
             .filter((racao) =>
-              racao.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              (racao.tipo && racao.tipo.toLowerCase().includes(searchTerm.toLowerCase()))
+              (showInactive || racao.ativo) &&
+              (racao.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              (racao.tipo && racao.tipo.toLowerCase().includes(searchTerm.toLowerCase())))
             )
             .map((racao) => (
               <CardItem
@@ -449,32 +440,11 @@ export function Racao() {
                   >
                     Editar
                   </Button>
-                  <Button
-                    variant="secondary"
-                    className="flex-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleDeleteClick(racao.id)
-                    }}
-                  >
-                    Excluir
-                  </Button>
                 </div>
               </CardItem>
             ))}
         </div>
       ) : null}
-
-      <ConfirmModal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
-        onConfirm={handleDeleteConfirm}
-        title="Excluir Ração"
-        message="Tem certeza que deseja excluir esta ração? Esta ação não pode ser desfeita."
-        confirmText="Excluir"
-        cancelText="Cancelar"
-        variant="danger"
-      />
     </div>
   )
 }

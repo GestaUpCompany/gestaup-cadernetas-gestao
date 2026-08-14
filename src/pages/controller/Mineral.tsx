@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, ConfirmModal, CardItem } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, CardItem } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
@@ -38,8 +38,7 @@ export function Mineral() {
     ativo: true,
   })
   const [submitting, setSubmitting] = useState(false)
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [mineralToDelete, setMineralToDelete] = useState<string | null>(null)
+  const [showInactive, setShowInactive] = useState(false)
 
   useEffect(() => {
     loadMinerais()
@@ -169,30 +168,10 @@ export function Mineral() {
     setShowForm(false)
   }
 
-  const handleDeleteClick = (id: string) => {
-    setMineralToDelete(id)
-    setShowDeleteModal(true)
-  }
-
-  const handleDeleteConfirm = async () => {
-    if (!mineralToDelete) return
-
-    const { error } = await supabase.from('mineral').delete().eq('id', mineralToDelete)
-
-    if (error) {
-      console.error('Erro ao excluir mineral:', error)
-    } else {
-      loadMinerais()
-    }
-
-    setMineralToDelete(null)
-    setShowDeleteModal(false)
-  }
-
   const handleToggleActive = async (mineral: Mineral) => {
     const { error } = await supabase
       .from('mineral')
-      .update({ ativo: !mineral.ativo })
+      .update({ ativo: !mineral.ativo, deleted_at: !mineral.ativo ? new Date().toISOString() : null })
       .eq('id', mineral.id)
 
     if (error) {
@@ -247,6 +226,17 @@ export function Mineral() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-xs border-gray-200 focus:border-accent h-10"
           />
+          <button
+            type="button"
+            onClick={() => setShowInactive(!showInactive)}
+            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 border-2 h-10 ${
+              showInactive
+                ? 'bg-primary text-white border-primary hover:bg-primary/90'
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            {showInactive ? '✓ Mostrando Desativados' : 'Mostrar Desativados'}
+          </button>
           <Button onClick={() => setShowForm(true)} className="h-10">Nova Mineral</Button>
         </div>
       </div>
@@ -397,8 +387,9 @@ export function Mineral() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {minerais
             .filter((mineral) =>
-              mineral.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              (mineral.tipo && mineral.tipo.toLowerCase().includes(searchTerm.toLowerCase()))
+              (showInactive || mineral.ativo) &&
+              (mineral.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              (mineral.tipo && mineral.tipo.toLowerCase().includes(searchTerm.toLowerCase())))
             )
             .map((mineral) => (
               <CardItem
@@ -449,32 +440,11 @@ export function Mineral() {
                   >
                     Editar
                   </Button>
-                  <Button
-                    variant="secondary"
-                    className="flex-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleDeleteClick(mineral.id)
-                    }}
-                  >
-                    Excluir
-                  </Button>
                 </div>
               </CardItem>
             ))}
         </div>
       ) : null}
-
-      <ConfirmModal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
-        onConfirm={handleDeleteConfirm}
-        title="Excluir Mineral"
-        message="Tem certeza que deseja excluir este mineral? Esta ação não pode ser desfeita."
-        confirmText="Excluir"
-        cancelText="Cancelar"
-        variant="danger"
-      />
     </div>
   )
 }

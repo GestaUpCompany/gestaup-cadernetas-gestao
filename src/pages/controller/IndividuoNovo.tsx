@@ -159,10 +159,10 @@ export function IndividuoNovo() {
 
     const [racasRes, lotesRes, setoresRes, fornecedoresRes, machosRes, femeasRes] =
       await Promise.all([
-        supabase.from('racas').select('id, nome').eq('fazenda_id', fazenda).is('deleted_at', null),
-        supabase.from('lotes').select('id, nome').eq('fazenda_id', fazenda).is('deleted_at', null),
-        supabase.from('setores').select('id, nome').eq('fazenda_id', fazenda).is('deleted_at', null),
-        supabase.from('fornecedores').select('id, nome').eq('fazenda_id', fazenda).is('deleted_at', null),
+        supabase.from('racas').select('id, nome').eq('fazenda_id', fazenda).eq('ativo', true).is('deleted_at', null),
+        supabase.from('lotes').select('id, nome').eq('fazenda_id', fazenda).eq('ativo', true).is('deleted_at', null),
+        supabase.from('setores').select('id, nome').eq('fazenda_id', fazenda).eq('ativo', true).is('deleted_at', null),
+        supabase.from('fornecedores').select('id, nome').eq('fazenda_id', fazenda).eq('ativo', true).is('deleted_at', null),
         supabase
           .from('individuos')
           .select('id, id_brinco, id_chip, id_manejo, id_provisorio_cria')

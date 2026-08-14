@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, ConfirmModal, CardItem } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, CardItem } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
@@ -135,8 +135,7 @@ export function Formulacoes() {
   })
   const [selectedInsumos, setSelectedInsumos] = useState<DietaInsumoCalc[]>([])
   const [submitting, setSubmitting] = useState(false)
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [formulacaoToDelete, setFormulacaoToDelete] = useState<string | null>(null)
+  const [showInactive, setShowInactive] = useState(false)
 
   useEffect(() => {
     loadFormulacoes()
@@ -186,6 +185,7 @@ export function Formulacoes() {
       .select('id, nome, teor_ms, preco_ton_mn')
       .eq('fazenda_id', fazendaId)
       .eq('ativo', true)
+      .is('deleted_at', null)
       .order('nome')
 
     setInsumos(data as InsumoOption[] || [])
@@ -404,30 +404,19 @@ export function Formulacoes() {
     setShowForm(false)
   }
 
-  const handleDeleteClick = (id: string) => {
-    setFormulacaoToDelete(id)
-    setShowDeleteModal(true)
-  }
-
-  const handleDeleteConfirm = async () => {
-    if (!formulacaoToDelete) return
-
-    const { error } = await supabase.from('formulacoes').delete().eq('id', formulacaoToDelete)
-
-    if (error) {
-      console.error('Erro ao excluir formulação:', error)
+  const handleToggleActive = async (dieta: Dieta) => {
+    const updates: { ativo: boolean; deleted_at?: string | null } = { ativo: !dieta.ativo }
+    if (!dieta.ativo) {
+      // Reativando: limpa o deleted_at
+      updates.deleted_at = null
     } else {
-      loadFormulacoes()
+      // Desativando: marca deleted_at (soft delete)
+      updates.deleted_at = new Date().toISOString()
     }
 
-    setFormulacaoToDelete(null)
-    setShowDeleteModal(false)
-  }
-
-  const handleToggleActive = async (dieta: Dieta) => {
     const { error } = await supabase
       .from('formulacoes')
-      .update({ ativo: !dieta.ativo })
+      .update(updates)
       .eq('id', dieta.id)
 
     if (error) {
@@ -482,6 +471,17 @@ export function Formulacoes() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-xs border-gray-200 focus:border-accent h-10"
           />
+          <button
+            type="button"
+            onClick={() => setShowInactive(!showInactive)}
+            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 border-2 h-10 ${
+              showInactive
+                ? 'bg-primary text-white border-primary hover:bg-primary/90'
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            {showInactive ? '✓ Mostrando Desativados' : 'Mostrar Desativados'}
+          </button>
           <Button onClick={() => setShowForm(true)} className="h-10">Nova Formulação</Button>
         </div>
       </div>
@@ -812,8 +812,9 @@ export function Formulacoes() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {formulacoes
             .filter((dieta) =>
-              dieta.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              (dieta.tipo && dieta.tipo.toLowerCase().includes(searchTerm.toLowerCase()))
+              (showInactive || dieta.ativo) &&
+              (dieta.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              (dieta.tipo && dieta.tipo.toLowerCase().includes(searchTerm.toLowerCase())))
             )
             .map((dieta) => (
               <CardItem
@@ -873,33 +874,11 @@ export function Formulacoes() {
                   >
                     {dieta.ativo ? 'Desativar' : 'Ativar'}
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="text-red-600 hover:text-red-700"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleDeleteClick(dieta.id)
-                    }}
-                  >
-                    Excluir
-                  </Button>
                 </div>
               </CardItem>
             ))}
         </div>
       ) : null}
-
-      <ConfirmModal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
-        onConfirm={handleDeleteConfirm}
-        title="Excluir Formulação"
-        message="Tem certeza que deseja excluir esta formulação? Esta ação não pode ser desfeita."
-        confirmText="Excluir"
-        cancelText="Cancelar"
-        variant="danger"
-      />
     </div>
   )
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, ConfirmModal, CardItem } from '../../components/ui'
+import { Button, Card, Input, CardItem } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import * as XLSX from 'xlsx'
 import { formatDate } from '../../utils/formatDate'
@@ -30,8 +30,7 @@ export function BebedourosCadastro() {
   const [editingBebedouro, setEditingBebedouro] = useState<Bebedouro | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [bebedouroToDelete, setBebedouroToDelete] = useState<string | null>(null)
+  const [showInactive, setShowInactive] = useState(false)
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
   const [importSuccess, setImportSuccess] = useState<string | null>(null)
@@ -65,6 +64,7 @@ export function BebedourosCadastro() {
       .select('id, nome')
       .eq('fazenda_id', fazendaId)
       .eq('ativo', true)
+      .is('deleted_at', null)
       .order('nome', { ascending: true })
 
     if (error) {
@@ -174,29 +174,6 @@ export function BebedourosCadastro() {
       setor_id: bebedouro.setor_id || ''
     })
     setShowForm(true)
-  }
-
-  const handleDeleteClick = (id: string) => {
-    setBebedouroToDelete(id)
-    setShowDeleteModal(true)
-  }
-
-  const handleDeleteConfirm = async () => {
-    if (!bebedouroToDelete) return
-
-    const { error } = await supabase
-      .from('bebedouros')
-      .delete()
-      .eq('id', bebedouroToDelete)
-
-    if (error) {
-      console.error('Erro ao excluir bebedouro:', error)
-    } else {
-      loadBebedouros()
-    }
-
-    setShowDeleteModal(false)
-    setBebedouroToDelete(null)
   }
 
   const shortcuts = [
@@ -438,6 +415,17 @@ export function BebedourosCadastro() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full sm:max-w-xs border-gray-200 focus:border-accent h-10 text-sm"
           />
+          <button
+            type="button"
+            onClick={() => setShowInactive(!showInactive)}
+            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 border-2 h-10 ${
+              showInactive
+                ? 'bg-primary text-white border-primary hover:bg-primary/90'
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            {showInactive ? '✓ Mostrando Desativados' : 'Mostrar Desativados'}
+          </button>
           <div className="flex flex-wrap gap-2 w-full sm:w-auto">
             <Button onClick={() => setShowForm(true)} className="h-10 text-sm flex-1 sm:flex-none">Novo Bebedouro</Button>
             <Button onClick={downloadTemplate} variant="secondary" className="h-10 text-sm flex-1 sm:flex-none">Baixar Modelo</Button>
@@ -571,6 +559,7 @@ export function BebedourosCadastro() {
       ) : !showForm ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {bebedouros
+            .filter((bebedouro) => (showInactive || bebedouro.ativo))
             .filter((bebedouro) =>
               bebedouro.nome.toLowerCase().includes(searchTerm.toLowerCase())
             )
@@ -611,32 +600,11 @@ export function BebedourosCadastro() {
                   >
                     Editar
                   </Button>
-                  <Button 
-                    variant="secondary" 
-                    className="flex-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleDeleteClick(bebedouro.id)
-                    }}
-                  >
-                    Excluir
-                  </Button>
                 </div>
               </CardItem>
             ))}
         </div>
       ) : null}
-
-      <ConfirmModal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
-        onConfirm={handleDeleteConfirm}
-        title="Excluir Bebedouro"
-        message="Tem certeza que deseja excluir este bebedouro? Esta ação não pode ser desfeita."
-        confirmText="Excluir"
-        cancelText="Cancelar"
-        variant="danger"
-      />
     </div>
   )
 }

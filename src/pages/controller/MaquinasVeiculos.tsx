@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
@@ -55,8 +55,7 @@ export function MaquinasVeiculos() {
     observacoes: '',
   })
   const [submitting, setSubmitting] = useState(false)
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [maquinaVeiculoToDelete, setMaquinaVeiculoToDelete] = useState<string | null>(null)
+  const [showInactive, setShowInactive] = useState(false)
 
   useEffect(() => {
     loadMaquinasVeiculos()
@@ -222,31 +221,10 @@ export function MaquinasVeiculos() {
     setShowForm(false)
   }
 
-  const handleDeleteClick = (id: string) => {
-    setMaquinaVeiculoToDelete(id)
-    setShowDeleteModal(true)
-  }
-
-  const handleDeleteConfirm = async () => {
-    if (!maquinaVeiculoToDelete) return
-
-    const { error } = await supabase.from('maquinas_veiculos').delete().eq('id', maquinaVeiculoToDelete)
-
-    if (error) {
-      console.error('Erro ao excluir máquina/veículo:', error)
-    } else {
-      loadMaquinasVeiculos()
-    }
-
-    setShowDeleteModal(false)
-    setMaquinaVeiculoToDelete(null)
-  }
-
   const handleToggleActive = async (maquinaVeiculo: MaquinaVeiculo) => {
-    const newStatus = maquinaVeiculo.status === 'Ativo' ? 'Inativo' : 'Ativo'
     const { error } = await supabase
       .from('maquinas_veiculos')
-      .update({ status: newStatus })
+      .update({ ativo: !maquinaVeiculo.ativo })
       .eq('id', maquinaVeiculo.id)
 
     if (error) {
@@ -257,6 +235,7 @@ export function MaquinasVeiculos() {
   }
 
   const filteredMaquinasVeiculos = maquinasVeiculos.filter((mv) => {
+    if (!showInactive && !mv.ativo) return false
     const searchLower = searchTerm.toLowerCase()
     return (
       mv.nome.toLowerCase().includes(searchLower) ||
@@ -301,12 +280,23 @@ export function MaquinasVeiculos() {
       </div>
 
       {!showForm && (
-        <div className="mb-6">
+        <div className="mb-6 flex gap-2">
           <Input
             placeholder="Buscar por nome, modelo, placa, categoria..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
+          <button
+            type="button"
+            onClick={() => setShowInactive(!showInactive)}
+            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 border-2 h-10 ${
+              showInactive
+                ? 'bg-primary text-white border-primary hover:bg-primary/90'
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            {showInactive ? '✓ Mostrando Desativados' : 'Mostrar Desativados'}
+          </button>
         </div>
       )}
 
@@ -497,7 +487,7 @@ export function MaquinasVeiculos() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredMaquinasVeiculos.map((mv) => (
-                <Card key={mv.id} className={mv.status !== 'Ativo' ? 'opacity-60' : ''}>
+                <Card key={mv.id} className={!mv.ativo ? 'opacity-60' : ''}>
                   <div className="flex justify-between items-start mb-3">
                     <h3 className="text-lg font-semibold">{mv.nome}</h3>
                     <span
@@ -575,14 +565,7 @@ export function MaquinasVeiculos() {
                       variant="secondary"
                       onClick={() => handleToggleActive(mv)}
                     >
-                      {mv.status === 'Ativo' ? 'Desativar' : 'Ativar'}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="danger"
-                      onClick={() => handleDeleteClick(mv.id)}
-                    >
-                      Excluir
+                      {mv.ativo ? 'Desativar' : 'Ativar'}
                     </Button>
                   </div>
                 </Card>
@@ -591,14 +574,6 @@ export function MaquinasVeiculos() {
           )}
         </>
       )}
-
-      <ConfirmModal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
-        onConfirm={handleDeleteConfirm}
-        title="Confirmar Exclusão"
-        message="Tem certeza que deseja excluir esta máquina/veículo?"
-      />
     </div>
   )
 }

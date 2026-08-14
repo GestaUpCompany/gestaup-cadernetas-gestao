@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, ConfirmModal, CardItem } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, CardItem } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
@@ -25,8 +25,7 @@ export function CausasMorte() {
     descricao: '',
   })
   const [submitting, setSubmitting] = useState(false)
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [causaToDelete, setCausaToDelete] = useState<string | null>(null)
+  const [showInactive, setShowInactive] = useState(false)
 
   useEffect(() => {
     loadCausas()
@@ -132,26 +131,6 @@ export function CausasMorte() {
     setShowForm(false)
   }
 
-  const handleDeleteClick = (id: string) => {
-    setCausaToDelete(id)
-    setShowDeleteModal(true)
-  }
-
-  const handleDeleteConfirm = async () => {
-    if (!causaToDelete) return
-
-    const { error } = await supabase.from('causas_morte').delete().eq('id', causaToDelete)
-
-    if (error) {
-      console.error('Erro ao excluir causa de morte:', error)
-    } else {
-      loadCausas()
-    }
-
-    setShowDeleteModal(false)
-    setCausaToDelete(null)
-  }
-
   const shortcuts = [
     {
       key: 'f',
@@ -203,6 +182,17 @@ export function CausasMorte() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-xs border-gray-200 focus:border-accent h-10"
           />
+          <button
+            type="button"
+            onClick={() => setShowInactive(!showInactive)}
+            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 border-2 h-10 ${
+              showInactive
+                ? 'bg-primary text-white border-primary hover:bg-primary/90'
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            {showInactive ? '✓ Mostrando Desativados' : 'Mostrar Desativados'}
+          </button>
           <Button onClick={() => setShowForm(true)} className="h-10">Nova Causa</Button>
         </div>
       </div>
@@ -260,6 +250,7 @@ export function CausasMorte() {
       ) : !showForm ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {causas
+            .filter((causa) => (showInactive || causa.ativo))
             .filter((causa) =>
               causa.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
               (causa.descricao && causa.descricao.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -293,32 +284,11 @@ export function CausasMorte() {
                   >
                     Editar
                   </Button>
-                  <Button 
-                    variant="secondary" 
-                    className="flex-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleDeleteClick(causa.id)
-                    }}
-                  >
-                    Excluir
-                  </Button>
                 </div>
               </CardItem>
             ))}
         </div>
       ) : null}
-
-      <ConfirmModal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
-        onConfirm={handleDeleteConfirm}
-        title="Excluir Causa de Morte"
-        message="Tem certeza que deseja excluir esta causa de morte? Esta ação não pode ser desfeita."
-        confirmText="Excluir"
-        cancelText="Cancelar"
-        variant="danger"
-      />
     </div>
   )
 }

@@ -54,6 +54,7 @@ export function Relatorios() {
   const [tituloLink, setTituloLink] = useState('')
   const [linkGerado, setLinkGerado] = useState<string | null>(null)
   const [copiado, setCopiado] = useState(false)
+  const [showInactive, setShowInactive] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -173,20 +174,22 @@ export function Relatorios() {
 
   const excluirLink = async (id: string) => {
     if (!fazendaId) return
-    if (!confirm('Excluir este link público definitivamente? Esta ação não pode ser desfeita.')) return
+    if (!confirm('Inativar este link público? O registro será desativado, não excluído. Você pode reativá-lo posteriormente.')) return
 
     const { error } = await supabase
       .from('relatorios_publicos')
-      .delete()
+      .update({ ativo: false, deleted_at: new Date().toISOString() })
       .eq('id', id)
 
     if (error) {
-      console.error('Erro ao excluir link:', error)
-      alert('Erro ao excluir link.')
+      console.error('Erro ao inativar link:', error)
+      alert('Erro ao inativar link.')
     } else {
       await carregarLinks(fazendaId)
     }
   }
+
+  const linksVisiveis = linksAtivos.filter((l) => showInactive || l.ativo)
 
   if (loading) {
     return (
@@ -202,10 +205,25 @@ export function Relatorios() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Relatórios</h1>
-        <p className="text-gray-600 mt-1">
-          Gere relatórios em PDF ou crie links públicos interativos para compartilhar.
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Relatórios</h1>
+            <p className="text-gray-600 mt-1">
+              Gere relatórios em PDF ou crie links públicos interativos para compartilhar.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowInactive(!showInactive)}
+            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 border-2 h-10 ${
+              showInactive
+                ? 'bg-primary text-white border-primary hover:bg-primary/90'
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            {showInactive ? '✓ Mostrando Desativados' : 'Mostrar Desativados'}
+          </button>
+        </div>
       </div>
 
       {/* Relatórios disponíveis */}
@@ -264,7 +282,7 @@ export function Relatorios() {
       </div>
 
       {/* Links ativos */}
-      {linksAtivos.length > 0 && (
+      {linksVisiveis.length > 0 && (
         <div>
           <h2 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">
             Links públicos ({linksAtivos.filter((l) => l.ativo).length} ativos de {linksAtivos.length})
@@ -281,7 +299,7 @@ export function Relatorios() {
                 </tr>
               </thead>
               <tbody>
-                {linksAtivos.map((link) => (
+                {linksVisiveis.map((link) => (
                   <tr key={link.id} className="border-t border-gray-100 hover:bg-gray-50">
                     <td className="py-3 px-4 text-gray-900 font-medium">{link.titulo}</td>
                     <td className="py-3 px-4 text-gray-600 capitalize">{link.tipo}</td>

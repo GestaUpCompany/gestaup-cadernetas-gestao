@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, ConfirmModal } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
@@ -23,8 +23,7 @@ export function Implementos() {
     nome: '',
   })
   const [submitting, setSubmitting] = useState(false)
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [implementoToDelete, setImplementoToDelete] = useState<string | null>(null)
+  const [showInactive, setShowInactive] = useState(false)
 
   useEffect(() => {
     loadImplementos()
@@ -126,30 +125,13 @@ export function Implementos() {
     setShowForm(false)
   }
 
-  const handleDeleteClick = (id: string) => {
-    setImplementoToDelete(id)
-    setShowDeleteModal(true)
-  }
-
-  const handleDeleteConfirm = async () => {
-    if (!implementoToDelete) return
-
-    const { error } = await supabase.from('implementos').delete().eq('id', implementoToDelete)
-
-    if (error) {
-      console.error('Erro ao excluir implemento:', error)
-    } else {
-      loadImplementos()
-    }
-
-    setShowDeleteModal(false)
-    setImplementoToDelete(null)
-  }
-
   const handleToggleActive = async (implemento: Implemento) => {
     const { error } = await supabase
       .from('implementos')
-      .update({ ativo: !implemento.ativo })
+      .update({
+        ativo: !implemento.ativo,
+        deleted_at: !implemento.ativo ? new Date().toISOString() : null,
+      })
       .eq('id', implemento.id)
 
     if (error) {
@@ -181,7 +163,8 @@ export function Implementos() {
   }
 
   const filteredImplementos = implementos.filter((implemento) =>
-    implemento.nome.toLowerCase().includes(searchTerm.toLowerCase())
+    implemento.nome.toLowerCase().includes(searchTerm.toLowerCase()) &&
+    (showInactive || implemento.ativo)
   )
 
   return (
@@ -198,6 +181,17 @@ export function Implementos() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full sm:max-w-xs border-gray-200 focus:border-accent h-10 text-sm"
             />
+            <button
+              type="button"
+              onClick={() => setShowInactive(!showInactive)}
+              className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 border-2 h-10 ${
+                showInactive
+                  ? 'bg-primary text-white border-primary hover:bg-primary/90'
+                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              {showInactive ? '✓ Mostrando Desativados' : 'Mostrar Desativados'}
+            </button>
             <Button onClick={() => setShowForm(true)} className="h-10 text-sm flex-1 sm:flex-none">Novo Implemento</Button>
           </div>
         </div>
@@ -265,29 +259,11 @@ export function Implementos() {
                 >
                   {implemento.ativo ? 'Desativar' : 'Ativar'}
                 </Button>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => handleDeleteClick(implemento.id)}
-                >
-                  Excluir
-                </Button>
               </div>
             </Card>
           ))}
         </div>
       ) : null}
-
-      <ConfirmModal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
-        onConfirm={handleDeleteConfirm}
-        title="Excluir Implemento"
-        message="Tem certeza que deseja excluir este implemento? Esta ação não pode ser desfeita."
-        confirmText="Excluir"
-        cancelText="Cancelar"
-        variant="danger"
-      />
     </div>
   )
 }

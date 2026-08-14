@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, ConfirmModal, CardItem } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, CardItem } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
@@ -42,8 +42,7 @@ export function Medicamentos() {
     dose_recomendada: '',
   })
   const [submitting, setSubmitting] = useState(false)
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
-  const [medicamentoToDelete, setMedicamentoToDelete] = useState<string | null>(null)
+  const [showInactive, setShowInactive] = useState(false)
   const [tiposDisponiveis, setTiposDisponiveis] = useState<string[]>(tiposComuns)
 
   useEffect(() => {
@@ -169,15 +168,10 @@ export function Medicamentos() {
     setShowForm(false)
   }
 
-  const handleDeleteClick = (id: string) => {
-    setMedicamentoToDelete(id)
-    setDeleteConfirmOpen(true)
-  }
-
   const handleToggleActive = async (medicamento: Medicamento) => {
     const { error } = await supabase
       .from('medicamentos')
-      .update({ ativo: !medicamento.ativo })
+      .update({ ativo: !medicamento.ativo, deleted_at: !medicamento.ativo ? new Date().toISOString() : null })
       .eq('id', medicamento.id)
 
     if (error) {
@@ -187,21 +181,10 @@ export function Medicamentos() {
     }
   }
 
-  const confirmDelete = async () => {
-    if (!medicamentoToDelete) return
-    const { error } = await supabase.from('medicamentos').delete().eq('id', medicamentoToDelete)
-    if (error) {
-      console.error('Erro ao excluir medicamento:', error)
-    } else {
-      loadMedicamentos()
-    }
-    setMedicamentoToDelete(null)
-    setDeleteConfirmOpen(false)
-  }
-
   const filteredMedicamentos = medicamentos.filter((medicamento) =>
-    medicamento.nome_comercial.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    medicamento.tipo.toLowerCase().includes(searchTerm.toLowerCase())
+    (showInactive || medicamento.ativo) &&
+    (medicamento.nome_comercial.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    medicamento.tipo.toLowerCase().includes(searchTerm.toLowerCase()))
   )
 
   if (loading) {
@@ -225,12 +208,25 @@ export function Medicamentos() {
       </div>
 
       {!showForm && (
-        <Input
-          placeholder="Buscar medicamentos..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-md"
-        />
+        <div className="flex gap-2 items-center">
+          <Input
+            placeholder="Buscar medicamentos..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-md"
+          />
+          <button
+            type="button"
+            onClick={() => setShowInactive(!showInactive)}
+            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 border-2 h-10 ${
+              showInactive
+                ? 'bg-primary text-white border-primary hover:bg-primary/90'
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            {showInactive ? '✓ Mostrando Desativados' : 'Mostrar Desativados'}
+          </button>
+        </div>
       )}
 
       {showForm && (
@@ -349,32 +345,12 @@ export function Medicamentos() {
                 >
                   Editar
                 </Button>
-                <Button
-                  variant="secondary"
-                  className="flex-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleDeleteClick(medicamento.id)
-                  }}
-                >
-                  Excluir
-                </Button>
               </div>
             </CardItem>
           ))}
         </div>
       ) : null}
 
-      <ConfirmModal
-        isOpen={deleteConfirmOpen}
-        onClose={() => setDeleteConfirmOpen(false)}
-        onConfirm={confirmDelete}
-        title="Excluir Medicamento"
-        message="Tem certeza que deseja excluir este medicamento? Esta ação não pode ser desfeita."
-        confirmText="Excluir"
-        cancelText="Cancelar"
-        variant="danger"
-      />
     </div>
   )
 }

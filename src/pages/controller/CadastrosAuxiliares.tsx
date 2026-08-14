@@ -582,10 +582,13 @@ export function CadastrosAuxiliares() {
     if (!itemToDelete) return
 
     const tab = tabs.find((t) => t.key === itemToDelete.tab)!
-    const { error } = await supabase.from(tab.table).delete().eq('id', itemToDelete.id)
+    const { error } = await supabase
+      .from(tab.table)
+      .update({ ativo: false, deleted_at: new Date().toISOString() })
+      .eq('id', itemToDelete.id)
 
     if (error) {
-      console.error(`Erro ao excluir ${tab.label}:`, error)
+      console.error(`Erro ao inativar ${tab.label}:`, error)
     } else {
       loadItems(itemToDelete.tab)
     }
@@ -1312,9 +1315,9 @@ export function CadastrosAuxiliares() {
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handleDeleteConfirm}
-        title="Excluir Registro"
-        message="Tem certeza que deseja excluir este registro? Esta ação não pode ser desfeita."
-        confirmText="Excluir"
+        title="Inativar Registro"
+        message="O registro será inativado e não aparecerá mais em novos lançamentos. O histórico é preservado."
+        confirmText="Inativar"
         cancelText="Cancelar"
         variant="danger"
       />

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, ConfirmModal, CardItem } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, CardItem } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
@@ -29,8 +29,7 @@ export function Funcionarios() {
     cargo: '',
   })
   const [submitting, setSubmitting] = useState(false)
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
-  const [funcionarioToDelete, setFuncionarioToDelete] = useState<string | null>(null)
+  const [showInactive, setShowInactive] = useState(false)
 
   useEffect(() => {
     loadFuncionarios()
@@ -144,24 +143,17 @@ export function Funcionarios() {
     setShowForm(false)
   }
 
-  const handleDelete = async (id: string) => {
-    setFuncionarioToDelete(id)
-    setDeleteConfirmOpen(true)
-  }
-
-  const handleDeleteConfirm = async () => {
-    if (!funcionarioToDelete) return
-
-    const { error } = await supabase.from('funcionarios').delete().eq('id', funcionarioToDelete)
+  const handleToggleActive = async (funcionario: Funcionario) => {
+    const { error } = await supabase
+      .from('funcionarios')
+      .update({ ativo: !funcionario.ativo })
+      .eq('id', funcionario.id)
 
     if (error) {
-      console.error('Erro ao excluir funcionário:', error)
+      console.error('Erro ao atualizar funcionário:', error)
     } else {
       loadFuncionarios()
     }
-
-    setDeleteConfirmOpen(false)
-    setFuncionarioToDelete(null)
   }
 
   const shortcuts = [
@@ -203,6 +195,17 @@ export function Funcionarios() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="max-w-xs border-gray-200 focus:border-accent h-10"
             />
+            <button
+              type="button"
+              onClick={() => setShowInactive(!showInactive)}
+              className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 border-2 h-10 ${
+                showInactive
+                  ? 'bg-primary text-white border-primary hover:bg-primary/90'
+                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              {showInactive ? '✓ Mostrando Desativados' : 'Mostrar Desativados'}
+            </button>
             <Button onClick={() => setShowForm(true)} className="h-10">Novo Funcionário</Button>
           </div>
         </div>
@@ -286,6 +289,7 @@ export function Funcionarios() {
         ) : !showForm ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {funcionarios
+              .filter((funcionario) => (showInactive || funcionario.ativo))
               .filter((funcionario) =>
                 funcionario.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 (funcionario.cargo && funcionario.cargo.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -329,10 +333,10 @@ export function Funcionarios() {
                     className="flex-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2"
                     onClick={(e) => {
                       e.stopPropagation()
-                      handleDelete(funcionario.id)
+                      handleToggleActive(funcionario)
                     }}
                   >
-                    Excluir
+                    {funcionario.ativo ? 'Desativar' : 'Ativar'}
                   </Button>
                 </div>
               </CardItem>
@@ -340,17 +344,6 @@ export function Funcionarios() {
           </div>
         ) : null}
       </div>
-
-      <ConfirmModal
-        isOpen={deleteConfirmOpen}
-        onClose={() => setDeleteConfirmOpen(false)}
-        onConfirm={handleDeleteConfirm}
-        title="Excluir Funcionário"
-        message="Tem certeza que deseja excluir este funcionário? Esta ação não pode ser desfeita."
-        confirmText="Excluir"
-        cancelText="Cancelar"
-        variant="danger"
-      />
     </>
   )
 }
