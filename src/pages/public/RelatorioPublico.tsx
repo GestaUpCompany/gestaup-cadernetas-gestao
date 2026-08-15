@@ -6,6 +6,7 @@ import logoManejus from '/images/manejus360.png'
 import { gerarPDFRelatorioAbastecimento } from '../../utils/relatorioAbastecimentoPDF'
 import { RelatorioConsumoPublico } from './RelatorioConsumoPublico'
 import { RelatorioTratosPublico } from './RelatorioTratosPublico'
+import { RelatorioMortePublico } from './RelatorioMortePublico'
 
 const CHART_NO_FOCUS_CSS = `
 .recharts-surface {
@@ -156,8 +157,8 @@ export function RelatorioPublico() {
         fazenda_logo_url: fazendaData?.logo_url,
       })
 
-      // Se for relatório de consumo ou tratos, o componente filho busca seus próprios dados
-      if (relData.tipo === 'consumo' || relData.tipo === 'tratos') {
+      // Se for relatório de consumo, tratos ou morte, o componente filho busca seus próprios dados
+      if (relData.tipo === 'consumo' || relData.tipo === 'tratos' || relData.tipo === 'morte') {
         setError(null)
         setLoading(false)
         return
@@ -501,6 +502,10 @@ export function RelatorioPublico() {
 
   if (relatorioInfo?.tipo === 'tratos') {
     return <RelatorioTratosPublico token={token!} relatorioInfo={relatorioInfo} />
+  }
+
+  if (relatorioInfo?.tipo === 'morte') {
+    return <RelatorioMortePublico token={token!} relatorioInfo={relatorioInfo} />
   }
 
   // Componente de popover multi-select
