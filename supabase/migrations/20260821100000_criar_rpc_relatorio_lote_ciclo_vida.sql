@@ -53,7 +53,7 @@ BEGIN
 
   -- 1. cadastro
   IF p_secoes IS NULL OR array_position(p_secoes, 'cadastro') IS NOT NULL THEN
-    SELECT to_jsonb(v_lote) - 'fazenda_id' - 'deleted_at' - 'updated_at'
+    SELECT to_jsonb(v_lote) - 'fazenda_id' - 'deleted_at' - 'updated_at' - 'n_cabecas' - 'numero_cabecas'
       || jsonb_build_object(
         'pasto_nome', p.nome,
         'pasto_area_ha', p.area_util_ha,
@@ -69,7 +69,11 @@ BEGIN
   -- 2. estado_atual
   IF p_secoes IS NULL OR array_position(p_secoes, 'estado_atual') IS NOT NULL THEN
     SELECT jsonb_build_object(
-      'cabecas_totais', COALESCE(v_lote.n_cabecas, 0),
+      'cabecas_totais', COALESCE((
+        SELECT SUM(COALESCE(lc.quant_atual, lc.quant_inicial, 0))
+        FROM lote_categorias lc
+        WHERE lc.lote_id = v_lote.id AND lc.ativo = true
+      ), 0),
       'categorias_ativas', COALESCE((
         SELECT jsonb_agg(jsonb_build_object(
           'categoria', lc.categoria,
@@ -487,7 +491,11 @@ BEGIN
         FROM lote_categorias lc
         WHERE lc.lote_id = l.id AND lc.ativo = true
       ), 0),
-      'categorias', l.categorias,
+      'categorias', COALESCE((
+        SELECT string_agg(DISTINCT lc.categoria, ', ')
+        FROM lote_categorias lc
+        WHERE lc.lote_id = l.id AND lc.ativo = true
+      ), null),
       'pasto_nome', p.nome,
       'data_criacao', to_char(l.created_at, 'YYYY-MM-DD'),
       'tem_movimentacao', EXISTS (

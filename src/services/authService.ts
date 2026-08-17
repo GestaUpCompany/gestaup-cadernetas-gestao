@@ -90,7 +90,7 @@ export async function signIn(email: string, password: string): Promise<Session |
     .from('usuarios')
     .select('*')
     .eq('email', email)
-    .single()
+    .maybeSingle()
 
   if (userError) {
     console.error('Erro ao buscar dados do usuário (DB):', userError)
