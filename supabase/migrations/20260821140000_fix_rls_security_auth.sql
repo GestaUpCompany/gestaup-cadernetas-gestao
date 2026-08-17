@@ -48,22 +48,77 @@ $$;
 GRANT EXECUTE ON FUNCTION public.autenticar_peao_app(text) TO anon, authenticated;
 
 -- =====================================================
+-- Funcoes helper SECURITY DEFINER para evitar recursao de RLS
+-- =====================================================
+
+-- Checa se o usuario atual (auth.uid()) e admin ou super_admin.
+-- SECURITY DEFINER bypassa RLS de usuarios, evitando recursao infinita.
+CREATE OR REPLACE FUNCTION public.is_admin_user()
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.usuarios u
+    WHERE u.id = auth.uid()
+      AND u.papel IN ('admin', 'super_admin')
+      AND u.ativo = true
+  );
+$$;
+
+GRANT EXECUTE ON FUNCTION public.is_admin_user() TO authenticated;
+
+-- Checa se o usuario atual tem vinculo ativo com uma fazenda especifica.
+-- SECURITY DEFINER bypassa RLS de usuario_fazenda e usuarios.
+CREATE OR REPLACE FUNCTION public.user_has_fazenda_access(p_fazenda_id uuid)
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.usuario_fazenda uf
+    JOIN public.usuarios u ON u.id = uf.usuario_id
+    WHERE uf.usuario_id = auth.uid()
+      AND uf.fazenda_id = p_fazenda_id
+      AND uf.ativo = true
+      AND u.ativo = true
+  );
+$$;
+
+GRANT EXECUTE ON FUNCTION public.user_has_fazenda_access(uuid) TO authenticated;
+
+-- Retorna o fazenda_id (uuid) do peao logado via auth.uid().
+-- Mapeia auth.uid() -> auth.users.email -> peoes.email -> peoes.fazenda_id -> fazendas.id
+CREATE OR REPLACE FUNCTION public.get_peao_fazenda_id()
+RETURNS uuid
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT f.id
+  FROM public.peoes p
+  JOIN auth.users au ON au.email = p.email
+  JOIN public.fazendas f ON f.acesso_id = p.fazenda_id
+  WHERE au.id = auth.uid()
+    AND p.ativo = true
+  LIMIT 1;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.get_peao_fazenda_id() TO authenticated;
+
+-- =====================================================
 -- B2: Remover "Allow public read access" de usuarios
 -- =====================================================
 
 DROP POLICY IF EXISTS "Allow public read access" ON public.usuarios;
 
--- Admins/super_admins podem ler todos os usuarios
+-- Admins/super_admins podem ler todos os usuarios (usa funcao helper, sem recursao)
 CREATE POLICY "Admins podem ler todos os usuarios" ON public.usuarios
   FOR SELECT TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.usuarios u
-      WHERE u.id = auth.uid()
-        AND u.papel IN ('admin', 'super_admin')
-        AND u.ativo = true
-    )
-  );
+  USING (public.is_admin_user());
 
 -- =====================================================
 -- B3: Tighten RLS de funcionarios para filtrar por fazenda
@@ -72,35 +127,15 @@ CREATE POLICY "Admins podem ler todos os usuarios" ON public.usuarios
 DROP POLICY IF EXISTS "Enable read access for all authenticated users" ON public.funcionarios;
 DROP POLICY IF EXISTS "Usuários autenticados podem ler funcionários" ON public.funcionarios;
 
--- Peao (PWA) pode ler funcionarios da sua fazenda
--- Mapeamento: auth.uid() -> auth.users.email -> peoes.email -> peoes.fazenda_id (acesso_id) -> fazendas.id
+-- Peao (PWA) pode ler funcionarios da sua fazenda (usa funcao helper)
 CREATE POLICY "Peao pode ler funcionarios da sua fazenda" ON public.funcionarios
   FOR SELECT TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1
-      FROM public.peoes p
-      JOIN auth.users au ON au.email = p.email
-      JOIN public.fazendas f ON f.acesso_id = p.fazenda_id
-      WHERE au.id = auth.uid()
-        AND f.id = funcionarios.fazenda_id
-    )
-  );
+  USING (public.get_peao_fazenda_id() = funcionarios.fazenda_id);
 
 -- Controller/Admin (Painel Web) pode ler funcionarios das fazendas vinculadas
 CREATE POLICY "Usuario vinculado pode ler funcionarios da fazenda" ON public.funcionarios
   FOR SELECT TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1
-      FROM public.usuario_fazenda uf
-      JOIN public.usuarios u ON u.id = uf.usuario_id
-      WHERE uf.usuario_id = auth.uid()
-        AND uf.fazenda_id = funcionarios.fazenda_id
-        AND uf.ativo = true
-        AND u.ativo = true
-    )
-  );
+  USING (public.user_has_fazenda_access(funcionarios.fazenda_id));
 
 -- =====================================================
 -- B4: Tighten RLS de usuario_fazenda
@@ -108,30 +143,13 @@ CREATE POLICY "Usuario vinculado pode ler funcionarios da fazenda" ON public.fun
 
 DROP POLICY IF EXISTS "Authenticated select usuario_fazenda" ON public.usuario_fazenda;
 
--- Admins podem ler todos os vinculos
+-- Admins podem ler todos os vinculos (usa funcao helper, sem recursao)
 CREATE POLICY "Admins podem ler todos os vinculos" ON public.usuario_fazenda
   FOR SELECT TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.usuarios u
-      WHERE u.id = auth.uid()
-        AND u.papel IN ('admin', 'super_admin')
-        AND u.ativo = true
-    )
-  );
+  USING (public.is_admin_user());
 
 -- Usuarios podem ler vinculos das fazendas as quais estao vinculados
 -- (mais amplo que apenas "meus vinculos", permite controller ver outros da mesma fazenda)
 CREATE POLICY "Usuarios podem ler vinculos das suas fazendas" ON public.usuario_fazenda
   FOR SELECT TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1
-      FROM public.usuario_fazenda uf2
-      JOIN public.usuarios u2 ON u2.id = uf2.usuario_id
-      WHERE uf2.usuario_id = auth.uid()
-        AND uf2.fazenda_id = usuario_fazenda.fazenda_id
-        AND uf2.ativo = true
-        AND u2.ativo = true
-    )
-  );
+  USING (public.user_has_fazenda_access(usuario_fazenda.fazenda_id));
