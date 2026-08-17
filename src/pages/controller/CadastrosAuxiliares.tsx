@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, ReactNode } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, ConfirmModal, CardItem, Modal } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, ConfirmModal, CardItem, Modal, MultiSelect } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { updateFazenda } from '../../services/fazendasService'
 import { hashPin } from '../../utils/pinHash'
@@ -189,6 +189,17 @@ const tabs: TabConfig[] = [
     icon: iconMaquina,
   },
   {
+    key: 'equipes',
+    label: 'Equipes',
+    table: 'equipes',
+    fields: [
+      { name: 'nome', label: 'Nome', required: true, placeholder: 'Nome da equipe' },
+    ],
+    searchPlaceholder: 'Buscar equipe...',
+    category: 'Operacional',
+    icon: iconOperacional,
+  },
+  {
     key: 'funcionarios',
     label: 'Funcionários',
     table: 'funcionarios',
@@ -306,6 +317,11 @@ export function CadastrosAuxiliares() {
   const [importError, setImportError] = useState<string | null>(null)
   const [importSuccess, setImportSuccess] = useState<string | null>(null)
   const [setores, setSetores] = useState<{id: string, nome: string}[]>([])
+  const [equipes, setEquipes] = useState<{id: string, nome: string}[]>([])
+  const [funcionariosComEquipe, setFuncionariosComEquipe] = useState<{id: string, nome: string, equipe_id: string | null, cargo: string | null, ativo: boolean}[]>([])
+  const [equipeEmEdicao, setEquipeEmEdicao] = useState<{id: string | null, nome: string, funcionario_ids: string[]} | null>(null)
+  const [salvandoEquipe, setSalvandoEquipe] = useState(false)
+  const [atribuindoFunc, setAtribuindoFunc] = useState<string | null>(null)
   const [funcionarioRbac, setFuncionarioRbac] = useState({
     acessa_app: false,
     pin: '',
@@ -328,9 +344,14 @@ export function CadastrosAuxiliares() {
   }, [user])
 
   useEffect(() => {
-    loadItems(activeTab)
+    if (activeTab !== 'equipes') {
+      loadItems(activeTab)
+    }
     if (activeTab === 'bebedouros') {
       loadSetores()
+    }
+    if (activeTab === 'funcionarios' || activeTab === 'equipes') {
+      loadEquipes()
     }
   }, [activeTab, user])
 
@@ -371,6 +392,138 @@ export function CadastrosAuxiliares() {
       console.error('Erro ao buscar setores:', error)
     } else {
       setSetores(data || [])
+    }
+  }
+
+  const loadEquipes = async () => {
+    const fazendaId = await getFazendaId()
+    if (!fazendaId) return
+
+    const { data, error } = await supabase
+      .from('equipes')
+      .select('id, nome')
+      .eq('fazenda_id', fazendaId)
+      .eq('ativo', true)
+      .is('deleted_at', null)
+      .order('nome', { ascending: true })
+
+    if (error) {
+      console.error('Erro ao buscar equipes:', error)
+    } else {
+      setEquipes(data || [])
+    }
+
+    // Carregar funcionarios com equipe_id
+    const { data: funcData, error: funcError } = await supabase
+      .from('funcionarios')
+      .select('id, nome, equipe_id, cargo, ativo')
+      .eq('fazenda_id', fazendaId)
+      .order('nome', { ascending: true })
+
+    if (funcError) {
+      console.error('Erro ao buscar funcionários com equipe:', funcError)
+    } else {
+      setFuncionariosComEquipe(funcData || [])
+    }
+  }
+
+  const handleSalvarEquipe = async () => {
+    if (!equipeEmEdicao?.nome.trim()) return
+    const fazendaId = await getFazendaId()
+    if (!fazendaId) return
+
+    setSalvandoEquipe(true)
+    try {
+      let equipeId = equipeEmEdicao.id
+
+      if (equipeId) {
+        // Editar
+        const { error } = await supabase
+          .from('equipes')
+          .update({ nome: equipeEmEdicao.nome.trim() })
+          .eq('id', equipeId)
+        if (error) throw error
+      } else {
+        // Criar
+        const { data, error } = await supabase
+          .from('equipes')
+          .insert({ fazenda_id: fazendaId, nome: equipeEmEdicao.nome.trim(), ativo: true })
+          .select('id')
+          .single()
+        if (error) throw error
+        equipeId = data.id
+      }
+
+      // Atribuir funcionarios selecionados
+      if (equipeId && equipeEmEdicao.funcionario_ids.length > 0) {
+        // Desvincular funcionarios que foram removidos (em edicao)
+        if (equipeEmEdicao.id) {
+          const membrosAtuais = funcionariosComEquipe.filter(
+            (f) => f.equipe_id === equipeId && f.ativo
+          )
+          const removidos = membrosAtuais
+            .filter((m) => !equipeEmEdicao.funcionario_ids.includes(m.id))
+            .map((m) => m.id)
+          for (const removidoId of removidos) {
+            await supabase
+              .from('funcionarios')
+              .update({ equipe_id: null })
+              .eq('id', removidoId)
+          }
+        }
+        // Atribuir os selecionados
+        for (const funcId of equipeEmEdicao.funcionario_ids) {
+          await supabase
+            .from('funcionarios')
+            .update({ equipe_id: equipeId })
+            .eq('id', funcId)
+        }
+      }
+
+      setEquipeEmEdicao(null)
+      await loadEquipes()
+    } catch (err) {
+      console.error('Erro ao salvar equipe:', err)
+      alert('Erro ao salvar equipe')
+    } finally {
+      setSalvandoEquipe(false)
+    }
+  }
+
+  const handleExcluirEquipe = async (equipeId: string) => {
+    if (!confirm('Excluir esta equipe? Os funcionários ficarão sem equipe.')) return
+    try {
+      // Desvincular funcionários
+      await supabase
+        .from('funcionarios')
+        .update({ equipe_id: null })
+        .eq('equipe_id', equipeId)
+      // Soft delete
+      await supabase
+        .from('equipes')
+        .update({ deleted_at: new Date().toISOString(), ativo: false })
+        .eq('id', equipeId)
+      await loadEquipes()
+    } catch (err) {
+      console.error('Erro ao excluir equipe:', err)
+      alert('Erro ao excluir equipe')
+    }
+  }
+
+  const handleAtribuirEquipe = async (funcionarioId: string, equipeId: string | null) => {
+    setAtribuindoFunc(funcionarioId)
+    try {
+      const { error } = await supabase
+        .from('funcionarios')
+        .update({ equipe_id: equipeId })
+        .eq('id', funcionarioId)
+      if (error) throw error
+      await loadEquipes()
+    } catch (err) {
+      console.error('Erro ao atribuir equipe:', err)
+      alert('Erro ao atribuir equipe')
+    } finally {
+      setAtribuindoFunc(null)
     }
   }
 
@@ -452,8 +605,8 @@ export function CadastrosAuxiliares() {
 
       if (funcionarioRbac.acessa_app) {
         const temPinAtual = !!state.editingItem?.pin_hash
-        if (!/^[0-9]{4,6}$/.test(funcionarioRbac.pin) && !temPinAtual) {
-          alert('PIN deve ter entre 4 e 6 dígitos numéricos')
+        if (!/^[0-9]{4}$/.test(funcionarioRbac.pin) && !temPinAtual) {
+          alert('PIN deve ter exatamente 4 dígitos numéricos')
           setTabStates((prev) => ({
             ...prev,
             [activeTab]: { ...prev[activeTab], submitting: false },
@@ -974,7 +1127,8 @@ export function CadastrosAuxiliares() {
           </div>
         )}
 
-        {/* Search + Add */}
+        {/* Search + Add (oculto na aba equipes, que tem UI própria) */}
+        {activeTab !== 'equipes' && (
         <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
           <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
             <Input
@@ -1025,6 +1179,7 @@ export function CadastrosAuxiliares() {
             </Button>
           </div>
         </div>
+        )}
 
         {/* Import Messages */}
         {importError && (
@@ -1040,8 +1195,168 @@ export function CadastrosAuxiliares() {
           </div>
         )}
 
-        {/* Form */}
-        {state.showForm && (
+        {/* UI customizada da aba Equipes */}
+        {activeTab === 'equipes' && (
+          <div className="space-y-4">
+            {/* Formulário inline de criar/editar equipe */}
+            {equipeEmEdicao && (
+              <Card className="bg-white p-4 border-0 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-800 mb-3">
+                  {equipeEmEdicao.id ? 'Editar Equipe' : 'Nova Equipe'}
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex gap-2">
+                    <Input
+                      type="text"
+                      value={equipeEmEdicao.nome}
+                      onChange={(e) => setEquipeEmEdicao({ ...equipeEmEdicao, nome: e.target.value })}
+                      placeholder="Nome da equipe"
+                      autoFocus
+                      className="border-gray-200 focus:border-accent"
+                    />
+                    <Button onClick={handleSalvarEquipe} disabled={salvandoEquipe || !equipeEmEdicao.nome.trim()} className="flex-shrink-0">
+                      {salvandoEquipe ? 'Salvando...' : 'Salvar'}
+                    </Button>
+                    <Button variant="secondary" onClick={() => setEquipeEmEdicao(null)} className="flex-shrink-0">
+                      Cancelar
+                    </Button>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Membros da equipe
+                    </label>
+                    <MultiSelect
+                      options={funcionariosComEquipe
+                        .filter((f) => f.ativo && (!f.equipe_id || f.equipe_id === equipeEmEdicao.id))
+                        .map((f) => ({ id: f.id, name: f.nome, category: f.cargo || undefined }))}
+                      value={equipeEmEdicao.funcionario_ids}
+                      onChange={(ids) => setEquipeEmEdicao({ ...equipeEmEdicao, funcionario_ids: ids })}
+                      placeholder="Selecione os funcionários desta equipe"
+                    />
+                    {equipeEmEdicao.funcionario_ids.length > 0 && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        {equipeEmEdicao.funcionario_ids.length} funcionário(s) selecionado(s)
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            {/* Lista de equipes com seus funcionários */}
+            {equipes.length === 0 && !equipeEmEdicao ? (
+              <Card className="bg-white p-8 border-0 shadow-sm text-center">
+                <p className="text-gray-600 mb-4">Nenhuma equipe cadastrada</p>
+                <Button onClick={() => setEquipeEmEdicao({ id: null, nome: '', funcionario_ids: [] })}>
+                  Criar Primeira Equipe
+                </Button>
+              </Card>
+            ) : (
+              <>
+                {equipes.map((equipe) => {
+                  const membros = funcionariosComEquipe.filter((f) => f.equipe_id === equipe.id && f.ativo)
+                  return (
+                    <Card key={equipe.id} className="bg-white p-4 border-0 shadow-sm">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                          </svg>
+                          <h3 className="font-semibold text-gray-800">{equipe.nome}</h3>
+                          <span className="text-xs text-gray-500">({membros.length} {membros.length === 1 ? 'membro' : 'membros'})</span>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setEquipeEmEdicao({
+                              id: equipe.id,
+                              nome: equipe.nome,
+                              funcionario_ids: funcionariosComEquipe
+                                .filter((f) => f.equipe_id === equipe.id && f.ativo)
+                                .map((f) => f.id),
+                            })}
+                            className="text-xs text-primary hover:underline"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => handleExcluirEquipe(equipe.id)}
+                            className="text-xs text-red-600 hover:underline"
+                          >
+                            Excluir
+                          </button>
+                        </div>
+                      </div>
+
+                      {membros.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {membros.map((m) => (
+                            <span key={m.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-gray-100 text-gray-700">
+                              {m.nome}
+                              {m.cargo && <span className="text-gray-400">· {m.cargo}</span>}
+                              <button
+                                onClick={() => handleAtribuirEquipe(m.id, null)}
+                                disabled={atribuindoFunc === m.id}
+                                className="text-gray-400 hover:text-red-500 ml-0.5"
+                                title="Remover da equipe"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-400 italic">Nenhum membro nesta equipe</p>
+                      )}
+                    </Card>
+                  )
+                })}
+
+                {/* Funcionários sem equipe */}
+                {(() => {
+                  const semEquipe = funcionariosComEquipe.filter((f) => !f.equipe_id && f.ativo)
+                  if (semEquipe.length === 0) return null
+                  return (
+                    <Card className="bg-white p-4 border-0 shadow-sm">
+                      <h3 className="font-semibold text-gray-800 mb-1">Funcionários sem equipe</h3>
+                      <p className="text-xs text-gray-500 mb-3">Atribua cada funcionário a uma equipe</p>
+                      <div className="space-y-2">
+                        {semEquipe.map((f) => (
+                          <div key={f.id} className="flex items-center justify-between gap-2 py-1.5 border-b border-gray-50 last:border-0">
+                            <div className="min-w-0">
+                              <span className="text-sm font-medium text-gray-800">{f.nome}</span>
+                              {f.cargo && <span className="text-xs text-gray-400 ml-2">{f.cargo}</span>}
+                            </div>
+                            <select
+                              value=""
+                              onChange={(e) => e.target.value && handleAtribuirEquipe(f.id, e.target.value)}
+                              disabled={atribuindoFunc === f.id}
+                              className="px-2 py-1 border border-gray-300 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-accent bg-white min-h-[36px]"
+                            >
+                              <option value="">Atribuir...</option>
+                              {equipes.map((eq) => (
+                                <option key={eq.id} value={eq.id}>{eq.nome}</option>
+                              ))}
+                            </select>
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+                  )
+                })()}
+
+                {/* Botão nova equipe */}
+                {!equipeEmEdicao && (
+                  <Button onClick={() => setEquipeEmEdicao({ id: null, nome: '', funcionario_ids: [] })}>
+                    Nova Equipe
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Form (não mostra para a aba equipes, que tem UI própria) */}
+        {state.showForm && activeTab !== 'equipes' && (
           <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm">
             <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-4">
               {state.editingItem ? `Editar ${currentTab.label}` : `Novo ${currentTab.label}`}
@@ -1121,13 +1436,13 @@ export function CadastrosAuxiliares() {
                             type="password"
                             inputMode="numeric"
                             pattern="[0-9]*"
-                            maxLength={6}
+                            maxLength={4}
                             value={funcionarioRbac.pin}
                             onChange={(e) => {
                               const value = e.target.value.replace(/\D/g, '')
                               setFuncionarioRbac({ ...funcionarioRbac, pin: value })
                             }}
-                            placeholder="4 a 6 dígitos"
+                            placeholder="4 dígitos"
                             autoComplete="new-password"
                             className="border-gray-200 focus:border-accent min-h-[44px]"
                           />
@@ -1184,21 +1499,21 @@ export function CadastrosAuxiliares() {
           </Card>
         )}
 
-        {/* Items Grid */}
-        {state.loading ? (
+        {/* Items Grid (oculto na aba equipes) */}
+        {activeTab !== 'equipes' && state.loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             <CardSkeleton />
             <CardSkeleton />
             <CardSkeleton />
           </div>
-        ) : !state.showForm && filteredItems.length === 0 ? (
+        ) : activeTab !== 'equipes' && !state.showForm && filteredItems.length === 0 ? (
           <Card className="bg-white p-8 sm:p-12 border-0 shadow-sm text-center">
             <p className="text-gray-600 mb-4 text-sm sm:text-base">Nenhum {currentTab.label.toLowerCase()} cadastrado</p>
             <Button onClick={() => setShowForm(true)} className="w-full sm:w-auto">
               Criar Primeiro {currentTab.label}
             </Button>
           </Card>
-        ) : !state.showForm ? (
+        ) : activeTab !== 'equipes' && !state.showForm ? (
           <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {itensPaginados.map((item) => (
@@ -1211,7 +1526,7 @@ export function CadastrosAuxiliares() {
                       .filter((f) => !['nome', 'nome_comercial'].includes(f.name) && item[f.name])
                       .map((f) => (
                         <span key={f.name}>
-                          {f.label}: {f.name === 'setor_id' 
+                          {f.label}: {f.name === 'setor_id'
                             ? setores.find(s => s.id === item[f.name])?.nome || item[f.name]
                             : item[f.name]
                           }

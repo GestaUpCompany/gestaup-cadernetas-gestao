@@ -74,33 +74,28 @@ export function FarmSwitcher() {
   }
 
   const handleSwitch = async () => {
-    if (!selectedFazenda || !user) return
+    if (!selectedFazenda || !user || !fazenda?.id) return
     setSwitching(true)
     setError('')
 
     try {
-      // Buscar o controller da fazenda de destino
-      const { data: vinculos } = await supabase
-        .from('usuario_fazenda')
-        .select('usuario_id')
-        .eq('fazenda_id', selectedFazenda.id)
-        .eq('ativo', true)
+      // Buscar o email do controller da fazenda de destino via RPC
+      // (bypassa RLS de usuario_fazenda, mas valida que as fazendas
+      // pertencem ao mesmo grupo)
+      const { data: controllerEmail, error: rpcError } = await supabase
+        .rpc('get_controller_email_fazenda_grupo', {
+          p_fazenda_origem_id: fazenda.id,
+          p_fazenda_destino_id: selectedFazenda.id,
+        })
 
-      if (!vinculos || vinculos.length === 0) {
-        setError('Nenhum controller encontrado para esta fazenda')
+      if (rpcError) {
+        setError('Erro ao buscar controller da fazenda')
         setSwitching(false)
         return
       }
 
-      // Buscar email do controller da fazenda de destino
-      const { data: userData } = await supabase
-        .from('usuarios')
-        .select('email')
-        .eq('id', vinculos[0].usuario_id)
-        .single()
-
-      if (!userData?.email) {
-        setError('Email do controller não encontrado')
+      if (!controllerEmail) {
+        setError('Nenhum controller encontrado para esta fazenda')
         setSwitching(false)
         return
       }
@@ -110,7 +105,7 @@ export function FarmSwitcher() {
       // fica contido no modal. Se estiver certa, o Supabase substitui a sessão
       // automaticamente.
       const { error: authError } = await supabase.auth.signInWithPassword({
-        email: userData.email,
+        email: controllerEmail,
         password: password,
       })
 

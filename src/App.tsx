@@ -49,6 +49,8 @@ import { Racas } from './pages/controller/Racas'
 import { CadastrosAuxiliares } from './pages/controller/CadastrosAuxiliares'
 import { Rotinas } from './pages/controller/Rotinas'
 import { AuditoriaRotinas } from './pages/controller/AuditoriaRotinas'
+import { Atividades } from './pages/controller/Atividades'
+import { MonitoramentoAtividades } from './pages/controller/MonitoramentoAtividades'
 import { Currais } from './pages/controller/Currais'
 import { ProgramacaoTratos } from './pages/controller/ProgramacaoTratos'
 import { HistoricoDietas } from './pages/controller/HistoricoDietas'
@@ -467,6 +469,26 @@ function App() {
             <ControllerRoute>
               <ControllerLayout>
                 <AuditoriaRotinas />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/atividades"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <Atividades />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/monitoramento-atividades"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <MonitoramentoAtividades />
               </ControllerLayout>
             </ControllerRoute>
           }
