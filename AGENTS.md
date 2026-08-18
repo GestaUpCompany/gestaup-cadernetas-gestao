@@ -277,6 +277,33 @@ A mudança de timezone não recalcula automaticamente os valores já armazenados
 - `recalcular_peso_vivo_lote` usa `(rs.data AT TIME ZONE 'America/Cuiaba')::date` para projeção de peso na data do registro.
 - `get_dados_relatorio_consumo` usa `AT TIME ZONE` em filtros de data, labels `to_char` e cálculo de dias desde `data_inicio` do plano.
 
+### Normalização de insumos em formulações (Opção C) — adicionado em 2026-08-23
+
+**Problema**: o JSONB `formulacoes.insumos` guardava `teor_ms` e `preco_ton_mn` de cada insumo como snapshot denormalizado no momento do salvamento. Editar um insumo atômico ou um premix não propagava para as formulações consumidoras, deixando custos e teores stale silenciosamente. O trigger `trigger_recalc_consumo_formulacao` só recalculava `registros_suplementacao`, não formulações consumidoras.
+
+**Solução implementada** (migration `20260823000000_formulacao_insumos_tabela_juncao.sql`):
+
+1. **Tabela `formulacao_insumos`**: tabela de junção normalizada `(formulacao_id, insumo_id, formula_teor_ms, ordem)` com PK composta, FKs com `ON DELETE CASCADE`, índice em `insumo_id` e RLS por fazenda. Substitui o JSONB `formulacoes.insumos` como fonte de verdade da composição. `teor_ms` e `preco_ton_mn` sempre lidos da tabela `insumos` via JOIN, nunca mais snapshot.
+
+2. **Backfill**: 300 linhas extraídas do JSONB existente usando `jsonb_array_elements() WITH ORDINALITY`, preservando `insumo_id`, `formula_teor_ms` (com fallback para `formula_ms_percent` de schemas antigos) e `ordem`.
+
+3. **Função `recalcular_formulacao(p_formulacao_id)`**: porta a lógica de `calcularFormulacao` do frontend para plpgsql. Usa loops em vez de temp table. Recalcula 7 campos derivados: `teor_ms_dieta`, `custo_total`, `custo_mn_tonelada`, `custo_ms_tonelada`, `consumo_ms_kg_cab_dia`, `consumo_mn_kg_cab_dia`, `custo_dieta_reais_cab_dia`. Para premix (`e_premix=true`), zera consumo/custo por cab/dia.
+
+4. **Triggers automáticos**:
+   - `trg_formulacao_insumos_recalc` (AFTER INSERT/UPDATE/DELETE em `formulacao_insumos`): recalcula a formulação afetada.
+   - `trigger_recalc_formulacoes_on_insumo` (AFTER UPDATE de `teor_ms`/`preco_ton_mn` em `insumos`): recalcula todas as formulações que usam o insumo. Resolve a cascata premix→TMR e insumo atômico→formulações.
+   - `trigger_recalc_formulacao_on_param` (AFTER UPDATE de `consumo_ms_percent_pv`/`peso_vivo_medio`/`e_premix` em `formulacoes`): recalcula a formulação quando parâmetros de entrada mudam sem mudar insumos.
+
+5. **Frontend `Formulacoes.tsx`**: `handleSubmit` parou de escrever `insumos` (JSONB) e campos derivados na linha de `formulacoes`. Agora escreve apenas campos de entrada em `formulacoes` e a relação de insumos em `formulacao_insumos` (DELETE + INSERT). O trigger recalcula os derivados. `handleEdit` busca insumos da tabela de junção com JOIN em `insumos`. `loadFormulacoes` busca contagem de insumos da tabela de junção.
+
+6. **Colunas físicas derivadas em `formulacoes` mantidas**: o PWA faz `select('*')` e lê `teor_ms_dieta`, `custo_mn_tonelada`, `custo_dieta_reais_cab_dia`, `consumo_ms_percent_pv` diretamente. Sem mudança no PWA.
+
+7. **Coluna JSONB `insumos` preservada**: não dropada por segurança. Não é mais escrita pelo app. Pode ser dropada depois de confirmar estabilidade.
+
+**Testado na fazenda de testes** (`d649c65e-16ab-4b77-a84b-df937aa41cc3`): formulação "Novilha" com 1 insumo "Farelo de Soja" (teor_ms=89%, preco=1450). Mudança de preco_ton_mn de 1450→1500 propagou custo_total de 1450→1500 automaticamente. Mudança de teor_ms de 89→90 propagou teor_ms_dieta de 89→90 automaticamente. Ambos revertidos com sucesso.
+
+Disparador: quando mencionar "formulacao_insumos", "tabela de junção de insumos", "propagação de custo de insumo", "insumo stale em formulação", ou retomar a discussão de consistência de formulações, ler esta seção.
+
 Disparador: quando mencionar fuso horário, timezone, UTC, Cuiabá, Mato Grosso, data adiantada, registro no dia errado, ou for corrigir o passivo de datas, ler esta seção.
 
 ### Relatórios públicos interativos (links compartilháveis) — adicionado em 2026-08-05

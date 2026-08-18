@@ -88,6 +88,7 @@ import { Individuos } from './pages/controller/Individuos'
 import { IndividuoNovo } from './pages/controller/IndividuoNovo'
 import { FaixasCategorias } from './pages/controller/FaixasCategorias'
 import { MapaFazenda } from './pages/controller/MapaFazenda'
+import { RastreioCadernetas } from './pages/controller/RastreioCadernetas'
 import { Notificacoes } from './pages/controller/Notificacoes'
 import { LeituraCocho } from './pages/controller/LeituraCocho'
 import { AcompanhamentoTratos } from './pages/controller/AcompanhamentoTratos'
@@ -1030,6 +1031,16 @@ function App() {
             <ControllerRoute>
               <ControllerLayout>
                 <MapaFazenda />
+              </ControllerLayout>
+            </ControllerRoute>
+          }
+        />
+        <Route
+          path="/controller/rastreio-cadernetas"
+          element={
+            <ControllerRoute>
+              <ControllerLayout>
+                <RastreioCadernetas />
               </ControllerLayout>
             </ControllerRoute>
           }

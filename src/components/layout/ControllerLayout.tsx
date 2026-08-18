@@ -46,6 +46,7 @@ const menuStructure: MenuItem[] = [
       { label: 'Cadastros Auxiliares', path: '/controller/cadastros-auxiliares' },
       { label: 'Faixas de Categorias', path: '/controller/faixas-categorias' },
       { label: 'Mapa da Fazenda', path: '/controller/mapa-fazenda' },
+      { label: 'Uso das Cadernetas', path: '/controller/rastreio-cadernetas' },
     ],
   },
   {

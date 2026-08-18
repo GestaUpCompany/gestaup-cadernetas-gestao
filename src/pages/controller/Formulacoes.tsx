@@ -505,7 +505,7 @@ export function Formulacoes() {
       .select(`
         formula_teor_ms,
         ordem,
-        insumo:insumos(id, nome, teor_ms, preco_ton_mn)
+        insumo:insumos!insumo_id(id, nome, teor_ms, preco_ton_mn)
       `)
       .eq('formulacao_id', dieta.id)
       .order('ordem', { ascending: true })
