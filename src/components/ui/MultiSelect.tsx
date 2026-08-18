@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 
 interface MultiSelectOption {
   id: string
@@ -15,6 +16,7 @@ interface MultiSelectProps {
   className?: string
   label?: string
   required?: boolean
+  compact?: boolean
 }
 
 // Function to remove accents from a string
@@ -30,12 +32,16 @@ export function MultiSelect({
   className = '',
   label,
   required = false,
+  compact = false,
 }: MultiSelectProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [dropUp, setDropUp] = useState(false)
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({})
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const portalRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
   // Filter options based on search term (accent-insensitive)
   const filteredOptions = options.filter(
@@ -47,28 +53,71 @@ export function MultiSelect({
   // Get selected options
   const selectedOptions = options.filter((opt) => value.includes(opt.id))
 
-  // Close dropdown when clicking outside and decide whether to open up or down
-  useEffect(() => {
-    if (isOpen && triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect()
-      const spaceBelow = window.innerHeight - rect.bottom
-      const spaceAbove = rect.top
-      const dropdownHeight = 260 // approx max height of dropdown + search
-      setDropUp(spaceBelow < dropdownHeight && spaceAbove > spaceBelow)
+  const updatePosition = useCallback(() => {
+    if (!triggerRef.current) return
+    const rect = triggerRef.current.getBoundingClientRect()
+    const spaceBelow = window.innerHeight - rect.bottom
+    const spaceAbove = rect.top
+    const dropdownHeight = Math.min(options.length * 40 + 62, 300)
+
+    if (spaceBelow >= dropdownHeight || spaceBelow >= spaceAbove) {
+      setDropUp(false)
+      setDropdownStyle({
+        position: 'fixed',
+        top: rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+        zIndex: 9999,
+      })
+    } else {
+      setDropUp(true)
+      setDropdownStyle({
+        position: 'fixed',
+        bottom: window.innerHeight - rect.top + 4,
+        left: rect.left,
+        width: rect.width,
+        zIndex: 9999,
+      })
     }
-  }, [isOpen])
+  }, [options.length])
+
+  useEffect(() => {
+    if (isOpen) {
+      updatePosition()
+      // Foca o input sem rolar a página (autoFocus causa scroll indesejado em portais fixed)
+      setTimeout(() => searchInputRef.current?.focus({ preventScroll: true }), 0)
+    }
+  }, [isOpen, updatePosition])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node
+      if (
+        triggerRef.current && !triggerRef.current.contains(target) &&
+        portalRef.current && !portalRef.current.contains(target)
+      ) {
         setIsOpen(false)
         setSearchTerm('')
       }
     }
 
+    const handleScroll = () => {
+      if (isOpen) updatePosition()
+    }
+
+    const handleResize = () => {
+      if (isOpen) updatePosition()
+    }
+
     document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+    window.addEventListener('scroll', handleScroll, true)
+    window.addEventListener('resize', handleResize)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      window.removeEventListener('scroll', handleScroll, true)
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [isOpen, updatePosition])
 
   const handleToggle = (optionId: string) => {
     if (value.includes(optionId)) {
@@ -84,7 +133,7 @@ export function MultiSelect({
   }
 
   return (
-    <div className="mb-4">
+    <div className={compact ? '' : 'mb-4'}>
       {label && (
         <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
           {label} {required && <span className="text-red-500">*</span>}
@@ -96,11 +145,11 @@ export function MultiSelect({
           ref={triggerRef}
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base text-left border-gray-300 border-gray-200 focus:border-accent bg-white ${className}`}
+          className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base text-left border-gray-200 focus:border-accent bg-white ${className}`}
         >
           {selectedOptions.length > 0 ? (
             <div className="flex flex-wrap gap-1">
-              {selectedOptions.slice(0, 3).map((opt) => (
+              {selectedOptions.slice(0, 6).map((opt) => (
                 <span
                   key={opt.id}
                   className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium"
@@ -127,18 +176,22 @@ export function MultiSelect({
           )}
         </button>
 
-        {/* Dropdown */}
-        {isOpen && (
-          <div className={`absolute z-50 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto ${dropUp ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
+        {/* Dropdown via portal */}
+        {isOpen && createPortal(
+          <div
+            ref={portalRef}
+            className={`bg-white border border-gray-200 rounded-lg shadow-lg max-h-72 overflow-auto ${dropUp ? 'mb-1' : 'mt-1'}`}
+            style={dropdownStyle}
+          >
             {/* Search input */}
             <div className="p-2 border-b border-gray-100 sticky top-0 bg-white">
               <input
+                ref={searchInputRef}
                 type="text"
                 placeholder="Buscar..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-accent text-sm"
-                autoFocus
               />
             </div>
 
@@ -160,8 +213,8 @@ export function MultiSelect({
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-4 h-4 rounded border flex items-center justify-center ${
-                        value.includes(item.id) 
-                          ? 'bg-blue-500 border-blue-500' 
+                        value.includes(item.id)
+                          ? 'bg-blue-500 border-blue-500'
                           : 'border-gray-300 bg-white'
                       }`}>
                         {value.includes(item.id) && (
@@ -181,7 +234,8 @@ export function MultiSelect({
                 ))}
               </div>
             )}
-          </div>
+          </div>,
+          document.body
         )}
       </div>
 

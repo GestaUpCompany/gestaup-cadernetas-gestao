@@ -183,7 +183,26 @@ export function Formulacoes() {
     if (error) {
       console.error('Erro ao buscar formulações:', error)
     } else {
-      setFormulacoes(data as Dieta[])
+      // Buscar contagem de insumos por formulação na tabela de junção
+      const formulacaoIds = (data || []).map((f: any) => f.id)
+      let insumoCounts: Record<string, number> = {}
+      if (formulacaoIds.length > 0) {
+        const { data: juncaoData } = await supabase
+          .from('formulacao_insumos')
+          .select('formulacao_id')
+          .in('formulacao_id', formulacaoIds)
+        if (juncaoData) {
+          insumoCounts = juncaoData.reduce((acc: Record<string, number>, row: any) => {
+            acc[row.formulacao_id] = (acc[row.formulacao_id] || 0) + 1
+            return acc
+          }, {})
+        }
+      }
+      const mapped = (data || []).map((f: any) => ({
+        ...f,
+        insumos: insumoCounts[f.id] ? Array(insumoCounts[f.id]).fill({}) : [],
+      })) as Dieta[]
+      setFormulacoes(mapped)
     }
     setLoading(false)
   }
@@ -353,14 +372,6 @@ export function Formulacoes() {
       peso_vivo_medio: formData.e_premix ? 0 : pesoVivo,
       gmd: formData.e_premix ? null : (gmd || null),
       sistema_producao: formData.e_premix ? null : (formData.sistema_producao || null),
-      insumos: recalculated as unknown as Record<string, unknown>[],
-      custo_total: custoTotal,
-      custo_dieta_reais_cab_dia: formData.e_premix ? 0 : custoDiarioTotal,
-      consumo_mn_kg_cab_dia: formData.e_premix ? 0 : consumoMNTotal,
-      teor_ms_dieta: teorMSDieta,
-      custo_ms_tonelada: custoMSTonelada,
-      custo_mn_tonelada: custoTotal,
-      consumo_ms_kg_cab_dia: formData.e_premix ? 0 : consumoMSTotal,
       ativo: formData.ativo,
       e_premix: formData.e_premix,
       categoria_inferida_automaticamente: false,
@@ -389,6 +400,30 @@ export function Formulacoes() {
     if (error) {
       console.error('Erro ao salvar formulação:', error)
     } else {
+      // Sincronizar insumos na tabela de junção (DELETE + INSERT)
+      // O trigger recalcula automaticamente os campos derivados de formulacoes
+      if (savedFormulacaoId) {
+        await supabase
+          .from('formulacao_insumos')
+          .delete()
+          .eq('formulacao_id', savedFormulacaoId)
+
+        if (recalculated.length > 0) {
+          const juncaoRows = recalculated.map((item, idx) => ({
+            formulacao_id: savedFormulacaoId,
+            insumo_id: item.insumo_id,
+            formula_teor_ms: item.formula_teor_ms,
+            ordem: idx,
+          }))
+          const { error: juncaoError } = await supabase
+            .from('formulacao_insumos')
+            .insert(juncaoRows)
+          if (juncaoError) {
+            console.error('Erro ao salvar insumos da formulação:', juncaoError)
+          }
+        }
+      }
+
       // Upsert do insumo gerado se a formulação é premix
       if (formData.e_premix && savedFormulacaoId) {
         const insumoData = {
@@ -448,7 +483,7 @@ export function Formulacoes() {
     setShowForm(true)
   }
 
-  const handleEdit = (dieta: Dieta) => {
+  const handleEdit = async (dieta: Dieta) => {
     loadInsumos()
     setEditingFormulacao(dieta)
     setFormData({
@@ -463,19 +498,27 @@ export function Formulacoes() {
       ativo: dieta.ativo,
       e_premix: dieta.e_premix ?? false,
     })
-    setSelectedInsumos(dieta.insumos?.map(i => ({
-      insumo_id: i.insumo_id,
-      nome: i.nome,
-      teor_ms: (i as any).teor_ms ?? (i as any).ms_percent ?? 0,
-      preco_ton_mn: (i as any).preco_ton_mn ?? (i as any).preco_ton ?? 0,
-      formula_teor_ms: (i as any).formula_teor_ms ?? (i as any).formula_ms_percent ?? 0,
-      formula_mn_bruta: (i as any).formula_mn_bruta ?? 0,
-      formula_mn_percent: (i as any).formula_mn_percent ?? 0,
-      custo_tonelada: (i as any).custo_tonelada ?? 0,
-      consumo_ms_kg_cab_dia: (i as any).consumo_ms_kg_cab_dia ?? 0,
-      consumo_mn_kg_cab_dia: (i as any).consumo_mn_kg_cab_dia ?? 0,
-      custo_dieta_reais_cab_dia: (i as any).custo_dieta_reais_cab_dia ?? 0,
-    })) || [])
+
+    // Buscar insumos da tabela de junção com JOIN em insumos
+    const { data: juncaoData } = await supabase
+      .from('formulacao_insumos')
+      .select(`
+        formula_teor_ms,
+        ordem,
+        insumo:insumos(id, nome, teor_ms, preco_ton_mn)
+      `)
+      .eq('formulacao_id', dieta.id)
+      .order('ordem', { ascending: true })
+
+    const insumosFromJuncao: DietaInsumoCalc[] = (juncaoData || []).map((row: any) => ({
+      insumo_id: row.insumo?.id || '',
+      nome: row.insumo?.nome || '',
+      teor_ms: row.insumo?.teor_ms || 0,
+      preco_ton_mn: row.insumo?.preco_ton_mn || 0,
+      formula_teor_ms: row.formula_teor_ms || 0,
+    }))
+
+    setSelectedInsumos(insumosFromJuncao)
     setShowForm(true)
   }
 
