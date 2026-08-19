@@ -183,6 +183,18 @@ export function RastreioCadernetas() {
     return usuarios.reduce((s, u) => s + u.total_registros, 0)
   }, [usuarios, usuarioSelecionado, cadernetaSelecionada, effectiveCadernetas])
 
+  // Total global do período (sem filtro de usuário), para cálculo de participação
+  const totalRegistrosPeriodo = useMemo(
+    () => usuarios.reduce((s, u) => s + u.total_registros, 0),
+    [usuarios]
+  )
+
+  // Percentual dos registros do usuário filtrado em relação ao total do período
+  const participacaoUsuarioPct = useMemo(() => {
+    if (!usuarioSelecionado || totalRegistrosPeriodo === 0) return null
+    return (totalRegistros / totalRegistrosPeriodo) * 100
+  }, [usuarioSelecionado, totalRegistros, totalRegistrosPeriodo])
+
   const cadernetasUsadasSet = useMemo(() => new Set(effectiveCadernetas.map((c) => c.caderneta)), [effectiveCadernetas])
   const totalCadernetasUsadas = cadernetasUsadasSet.size
 
@@ -492,6 +504,34 @@ export function RastreioCadernetas() {
             <div className="lg:col-span-1">
               <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-1">Usuários</h2>
               <p className="text-xs text-gray-400 mb-3">lista global, independente de filtros</p>
+
+              {/* Card de participação do usuário filtrado no total do período */}
+              {usuarioSelecionado && !loading && participacaoUsuarioPct !== null && (
+                <Card className="bg-white p-4 border-0 shadow-sm mb-3">
+                  <div className="flex items-center justify-between gap-4 flex-wrap">
+                    <div>
+                      <p className="text-sm text-gray-500 mb-1">Participação no período</p>
+                      <p className="text-sm text-gray-700">
+                        <strong className="text-gray-800">{usuarioSelecionado}</strong> representa
+                        {' '}<strong className="text-primary text-lg">{participacaoUsuarioPct.toFixed(1).replace('.', ',')}%</strong>
+                        {' '}dos registros do período
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {totalRegistros} de {totalRegistrosPeriodo} registros
+                        {usuarios.length > 1 ? ` · ${usuarios.length} usuários ativos no período` : ''}
+                      </p>
+                    </div>
+                    <div className="flex-1 min-w-[120px] max-w-[180px]">
+                      <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-primary rounded-full transition-all"
+                          style={{ width: `${Math.min(100, participacaoUsuarioPct)}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              )}
               <div className="space-y-2">
                 {regularidadeUsuarios.length === 0 ? (
                   <Card className="p-6 text-center text-gray-400 text-sm">Nenhum registro no período</Card>
