@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../services/supabaseClient'
@@ -168,6 +168,9 @@ export function Lotes() {
     data_embarque_prevista: '',
   })
   const [submitting, setSubmitting] = useState(false)
+  // Estado da verificação de nome duplicado em tempo real
+  // status: 'idle' (vazio/curto demais) | 'checking' (consultando) | 'available' | 'duplicated'
+  const [nomeCheck, setNomeCheck] = useState<{ status: 'idle' | 'checking' | 'available' | 'duplicated'; duplicataNome?: string }>({ status: 'idle' })
   const [showCategoryRemoveModal, setShowCategoryRemoveModal] = useState(false)
   const [originalAtivo, setOriginalAtivo] = useState(true)
   const [ocupacaoPorLote, setOcupacaoPorLote] = useState<Record<string, any>>({})
@@ -706,6 +709,74 @@ export function Lotes() {
     formData.categorias.map(cat => cat.quant_inicial).join(','),
   ])
 
+  // Normaliza nome de lote: lowercase + sem acentos (espelha lower(unaccent(nome)) no DB)
+  const normalizarNomeLote = useCallback((nome: string): string =>
+    nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(), [])
+
+  // Cache de lotes da fazenda para verificação de nome (evita query a cada tecla)
+  const lotesCacheRef = useRef<{ fazendaId: string; lotes: { id: string; nome: string }[]; ts: number } | null>(null)
+  const LOTES_CACHE_TTL = 30000 // 30s
+
+  // Busca lotes da fazenda com cache TTL
+  const buscarLotesFazenda = useCallback(async (fazendaId: string): Promise<{ id: string; nome: string }[]> => {
+    const cached = lotesCacheRef.current
+    if (cached && cached.fazendaId === fazendaId && Date.now() - cached.ts < LOTES_CACHE_TTL) {
+      return cached.lotes
+    }
+    const { data, error } = await supabase
+      .from('lotes')
+      .select('id, nome')
+      .eq('fazenda_id', fazendaId)
+      .is('deleted_at', null)
+    if (error) return []
+    lotesCacheRef.current = { fazendaId, lotes: data || [], ts: Date.now() }
+    return data || []
+  }, [])
+
+  // Verifica se já existe outro lote (não deletado) com o mesmo nome normalizado na fazenda.
+  // Retorna o nome do lote conflitante ou null se não houver conflito.
+  const verificarNomeDuplicado = useCallback(async (fazendaId: string, nome: string, loteIdAtual?: string): Promise<string | null> => {
+    const nomeNorm = normalizarNomeLote(nome)
+    if (!nomeNorm) return null
+    const lotes = await buscarLotesFazenda(fazendaId)
+    const duplicata = lotes.find(l =>
+      normalizarNomeLote(l.nome) === nomeNorm && l.id !== loteIdAtual
+    )
+    return duplicata ? duplicata.nome : null
+  }, [normalizarNomeLote, buscarLotesFazenda])
+
+  // Debounce de verificação de nome em tempo real
+  useEffect(() => {
+    // Só verifica quando o formulário está aberto
+    if (!showForm) {
+      setNomeCheck({ status: 'idle' })
+      return
+    }
+    const nome = formData.nome?.trim() || ''
+    if (nome.length < 2) {
+      setNomeCheck({ status: 'idle' })
+      return
+    }
+    // Se editando e o nome não mudou em relação ao original, não dispara
+    if (editingLote && normalizarNomeLote(nome) === normalizarNomeLote(editingLote.nome || '')) {
+      setNomeCheck({ status: 'available' })
+      return
+    }
+    const controller = new AbortController()
+    setNomeCheck({ status: 'checking' })
+    const timer = setTimeout(async () => {
+      const _fazendaId = await getFazendaIdForUser(user?.id || '')
+      if (!_fazendaId || controller.signal.aborted) return
+      const duplicata = await verificarNomeDuplicado(_fazendaId, nome, editingLote?.id)
+      if (controller.signal.aborted) return
+      setNomeCheck(duplicata ? { status: 'duplicated', duplicataNome: duplicata } : { status: 'available' })
+    }, 400)
+    return () => {
+      controller.abort()
+      clearTimeout(timer)
+    }
+  }, [formData.nome, showForm, editingLote, user, normalizarNomeLote, verificarNomeDuplicado])
+
   const loadLotes = async () => {
     if (!user) return
 
@@ -853,6 +924,14 @@ export function Lotes() {
         return
       }
 
+      // Validar nome único na fazenda (case-insensitive, sem acento)
+      const nomeDuplicado = await verificarNomeDuplicado(_fazendaId, formData.nome, editingLote?.id)
+      if (nomeDuplicado) {
+        alert(`Já existe um lote com o nome "${nomeDuplicado}" nesta fazenda. Nomes são comparados ignorando maiúsculas e acentos.`)
+        setSubmitting(false)
+        return
+      }
+
       const loteData = {
         fazenda_id: _fazendaId,
         nome: formData.nome,
@@ -949,6 +1028,14 @@ export function Lotes() {
 
     const fazendaId = vinculos[0].fazenda_id
 
+    // Validar nome único na fazenda (case-insensitive, sem acento)
+    const nomeDuplicado = await verificarNomeDuplicado(fazendaId, formData.nome, editingLote?.id)
+    if (nomeDuplicado) {
+      alert(`Já existe um lote com o nome "${nomeDuplicado}" nesta fazenda. Nomes são comparados ignorando maiúsculas e acentos.`)
+      setSubmitting(false)
+      return
+    }
+
     // Validar: lote em curral nao pode ter pasto
     if (formData.pasto_id && editingLote?.curral_id) {
       alert(`Este lote está vinculado ao curral "${editingLote.curral_nome}" e não pode ser alocado em um pasto simultaneamente. Remova-o do curral primeiro.`)
@@ -1019,6 +1106,11 @@ export function Lotes() {
 
     if (error) {
       console.error('Erro ao salvar lote:', error)
+      if (error.code === '23505' && error.message?.includes('lote com o nome')) {
+        alert(error.message)
+      } else {
+        alert('Erro ao salvar lote. Verifique o console para detalhes.')
+      }
       setSubmitting(false)
       return
     }
@@ -1328,6 +1420,8 @@ export function Lotes() {
       setShowForm(false)
       setEditingLote(null)
       setOriginalAtivo(true)
+      setNomeCheck({ status: 'idle' })
+      lotesCacheRef.current = null
       loadLotes()
       // Invalidar cache do Dashboard para atualizar KPIs
       if (user?.id) {
@@ -1564,6 +1658,7 @@ export function Lotes() {
     })
     setOriginalAtivo(true)
     setShowForm(false)
+    setNomeCheck({ status: 'idle' })
   }
 
   const handleToggleActive = async (lote: Lote) => {
@@ -1944,8 +2039,25 @@ export function Lotes() {
                     onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                     required
                     placeholder="Nome do lote"
-                    className="border-gray-200 focus:border-accent"
+                    className={`${
+                      nomeCheck.status === 'duplicated'
+                        ? 'border-red-400 focus:border-red-500'
+                        : nomeCheck.status === 'available'
+                        ? 'border-green-400 focus:border-green-500'
+                        : 'border-gray-200 focus:border-accent'
+                    }`}
                   />
+                  {nomeCheck.status === 'checking' && (
+                    <p className="text-xs text-gray-400 mt-1">Verificando…</p>
+                  )}
+                  {nomeCheck.status === 'available' && formData.nome?.trim().length >= 2 && (
+                    <p className="text-xs text-green-600 mt-1">Nome disponível</p>
+                  )}
+                  {nomeCheck.status === 'duplicated' && (
+                    <p className="text-xs text-red-600 mt-1">
+                      Já existe o lote “{nomeCheck.duplicataNome}” com esse nome (ignora maiúsculas e acentos)
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
