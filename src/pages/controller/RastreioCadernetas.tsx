@@ -85,6 +85,9 @@ export function RastreioCadernetas() {
   const [prevPeriodUsuarios, setPrevPeriodUsuarios] = useState<RastreioUsuario[]>([])
   const [loading, setLoading] = useState(true)
   const [usuarioSelecionado, setUsuarioSelecionado] = useState<string | null>(null)
+  const [cadernetaSelecionada, setCadernetaSelecionada] = useState<string | null>(null)
+  const [sortColumn, setSortColumn] = useState<'nome_usuario' | 'caderneta' | 'total_registros' | 'dias_ativos' | 'ultimo_registro'>('total_registros')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
 
   const loadFazenda = useCallback(async () => {
     if (!user) return
@@ -115,30 +118,31 @@ export function RastreioCadernetas() {
     })
   }, [fazendaId, dataInicio])
 
-  // Cross-filter: quando um usuario e selecionado, recarrega cadernetas e detalhe filtrados
+  // Cross-filter: quando um usuario e selecionado, filtra cadernetas do estado existente
+  // e recarrega apenas o detalhe diario (que e por usuario)
   const [filteredCadernetas, setFilteredCadernetas] = useState<RastreioCaderneta[]>([])
   const [filteredDailyDetalhe, setFilteredDailyDetalhe] = useState<RastreioDetalhe[]>([])
 
   useEffect(() => {
     if (!fazendaId) return
     if (usuarioSelecionado) {
-      Promise.all([
-        getRastreioCadernetas(fazendaId, dataInicio),
-        getRastreioCadernetasDetalhe(fazendaId, usuarioSelecionado, dataInicio),
-      ]).then(([c, d]) => {
-        setFilteredCadernetas(c.filter((row) => row.nome_usuario === usuarioSelecionado))
-        setFilteredDailyDetalhe(d)
-      })
+      setFilteredCadernetas(cadernetas.filter((row) => row.nome_usuario === usuarioSelecionado))
+      getRastreioCadernetasDetalhe(fazendaId, usuarioSelecionado, dataInicio).then(setFilteredDailyDetalhe)
     } else {
       setFilteredCadernetas(cadernetas)
       setFilteredDailyDetalhe(allDailyDetalhe)
     }
   }, [fazendaId, usuarioSelecionado, dataInicio, cadernetas, allDailyDetalhe])
 
-  // Carga auxiliar: usuarios all-time (para usuarios parados) e periodo anterior (para tendencia)
+  // Carga auxiliar: usuarios all-time (para usuarios parados) - independente do periodo
   useEffect(() => {
     if (!fazendaId) return
     getRastreioUsuarios(fazendaId).then(setAllTimeUsuarios)
+  }, [fazendaId])
+
+  // Carga auxiliar: periodo anterior (para tendencia) - depende do periodo
+  useEffect(() => {
+    if (!fazendaId) return
     if (dataInicioAnterior) {
       getRastreioUsuarios(fazendaId, dataInicioAnterior, dataFimAnterior).then(setPrevPeriodUsuarios)
     } else {
@@ -158,16 +162,26 @@ export function RastreioCadernetas() {
   // === Metricas derivadas (usam dados filtrados quando usuario selecionado) ===
 
   // Dados efetivos: filtrados quando usuario selecionado, globais caso contrario
-  const effectiveCadernetas = usuarioSelecionado ? filteredCadernetas : cadernetas
+  const effectiveCadernetas = useMemo(() => {
+    let base = usuarioSelecionado ? filteredCadernetas : cadernetas
+    if (cadernetaSelecionada) {
+      base = base.filter((c) => c.caderneta === cadernetaSelecionada)
+    }
+    return base
+  }, [usuarioSelecionado, filteredCadernetas, cadernetas, cadernetaSelecionada])
+
   const effectiveDailyDetalhe = usuarioSelecionado ? filteredDailyDetalhe : allDailyDetalhe
 
   const totalRegistros = useMemo(() => {
+    if (cadernetaSelecionada) {
+      return effectiveCadernetas.reduce((s, c) => s + c.total_registros, 0)
+    }
     if (usuarioSelecionado) {
       const u = usuarios.find((x) => x.nome_usuario === usuarioSelecionado)
       return u?.total_registros || 0
     }
     return usuarios.reduce((s, u) => s + u.total_registros, 0)
-  }, [usuarios, usuarioSelecionado])
+  }, [usuarios, usuarioSelecionado, cadernetaSelecionada, effectiveCadernetas])
 
   const cadernetasUsadasSet = useMemo(() => new Set(effectiveCadernetas.map((c) => c.caderneta)), [effectiveCadernetas])
   const totalCadernetasUsadas = cadernetasUsadasSet.size
@@ -207,14 +221,16 @@ export function RastreioCadernetas() {
       .sort((a, b) => (diasDesde(b.ultimo_registro) ?? 0) - (diasDesde(a.ultimo_registro) ?? 0))
   }, [allTimeUsuarios, usuarios, usuarioSelecionado])
 
-  // 5. Distribuição por dia da semana
+  // 5. Distribuição por dia da semana (média por ocorrência do dia)
   const distribuicaoSemana = useMemo(() => {
-    const counts = [0, 0, 0, 0, 0, 0, 0]
+    const sums = [0, 0, 0, 0, 0, 0, 0]
+    const occ = [0, 0, 0, 0, 0, 0, 0]
     effectiveDailyDetalhe.forEach((d) => {
       const diaSemana = new Date(d.dia + 'T12:00:00').getDay()
-      counts[diaSemana] += d.total
+      sums[diaSemana] += d.total
+      occ[diaSemana] += 1
     })
-    return counts
+    return sums.map((s, i) => occ[i] > 0 ? s / occ[i] : 0)
   }, [effectiveDailyDetalhe])
 
   const maxDiaSemana = useMemo(() => Math.max(1, ...distribuicaoSemana), [distribuicaoSemana])
@@ -232,10 +248,18 @@ export function RastreioCadernetas() {
     return ((totalRegistros - totalPeriodoAnterior) / totalPeriodoAnterior) * 100
   }, [totalRegistros, totalPeriodoAnterior])
 
+  // Estado estruturado da tendência para distinguir os casos:
+  // 'ok' = comparação válida, 'sem_anterior' = período anterior sem registros
+  const tendenciaStatus: 'ok' | 'sem_anterior' = useMemo(() => {
+    if (prevPeriodUsuarios.length === 0) return 'sem_anterior'
+    if (totalPeriodoAnterior === 0) return 'sem_anterior'
+    return 'ok'
+  }, [periodo, prevPeriodUsuarios.length, totalPeriodoAnterior])
+
   // Cadernetas do usuario selecionado
   const cadernetasDoUsuario = useMemo(() => {
     if (!usuarioSelecionado) return []
-    return effectiveCadernetas.sort((a, b) => b.total_registros - a.total_registros)
+    return [...effectiveCadernetas].sort((a, b) => b.total_registros - a.total_registros)
   }, [effectiveCadernetas, usuarioSelecionado])
 
   // Detalhe agregado por dia do usuario selecionado
@@ -249,6 +273,37 @@ export function RastreioCadernetas() {
   }, [detalhe])
 
   const maxDiaTotal = useMemo(() => Math.max(1, ...detalhePorDia.map((d) => d.total)), [detalhePorDia])
+
+  // Tabela "Registros por caderneta" ordenável
+  const sortedCadernetas = useMemo(() => {
+    const sorted = [...effectiveCadernetas]
+    sorted.sort((a, b) => {
+      let cmp = 0
+      switch (sortColumn) {
+        case 'nome_usuario': cmp = a.nome_usuario.localeCompare(b.nome_usuario); break
+        case 'caderneta': cmp = cadernetaLabel(a.caderneta).localeCompare(cadernetaLabel(b.caderneta)); break
+        case 'total_registros': cmp = a.total_registros - b.total_registros; break
+        case 'dias_ativos': cmp = a.dias_ativos - b.dias_ativos; break
+        case 'ultimo_registro': cmp = (a.ultimo_registro || '').localeCompare(b.ultimo_registro || ''); break
+      }
+      return sortDirection === 'asc' ? cmp : -cmp
+    })
+    return sorted
+  }, [effectiveCadernetas, sortColumn, sortDirection])
+
+  const toggleSort = (col: typeof sortColumn) => {
+    if (sortColumn === col) {
+      setSortDirection((d) => d === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortColumn(col)
+      setSortDirection('desc')
+    }
+  }
+
+  const sortIndicator = (col: typeof sortColumn) => {
+    if (sortColumn !== col) return ''
+    return sortDirection === 'asc' ? ' ↑' : ' ↓'
+  }
 
   if (!fazendaId && !loading) {
     return (
@@ -268,6 +323,7 @@ export function RastreioCadernetas() {
             <button
               key={p}
               onClick={() => setPeriodo(p)}
+              aria-pressed={periodo === p}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                 periodo === p
                   ? 'bg-primary text-white'
@@ -284,11 +340,26 @@ export function RastreioCadernetas() {
       {usuarioSelecionado && !loading && (
         <div className="flex items-center justify-between bg-primary/10 border border-primary/20 rounded-lg px-4 py-2">
           <span className="text-sm text-primary font-medium">
-            Filtrando por: <strong>{usuarioSelecionado}</strong> — todas as métricas abaixo refletem apenas este usuário
+            Filtrando por: <strong>{usuarioSelecionado}</strong>, todas as métricas abaixo refletem apenas este usuário
           </span>
           <button
             onClick={() => setUsuarioSelecionado(null)}
             className="text-xs text-primary hover:text-primary/80 font-medium"
+          >
+            ✕ limpar filtro
+          </button>
+        </div>
+      )}
+
+      {/* Banner de filtro por caderneta */}
+      {cadernetaSelecionada && !loading && (
+        <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
+          <span className="text-sm text-blue-700 font-medium">
+            Filtrando por caderneta: <strong>{cadernetaLabel(cadernetaSelecionada)}</strong>
+          </span>
+          <button
+            onClick={() => setCadernetaSelecionada(null)}
+            className="text-xs text-blue-700 hover:text-blue-500 font-medium"
           >
             ✕ limpar filtro
           </button>
@@ -302,9 +373,15 @@ export function RastreioCadernetas() {
       ) : (
         <>
           {/* Cards de resumo */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <p className="text-xs text-gray-400 mb-2">
+              {periodo === 'tudo' ? 'Todo o histórico' : `Últimos ${PERIODO_LABELS[periodo]}`}
+              {usuarioSelecionado ? ` · filtrado por ${usuarioSelecionado}` : ''}
+              {cadernetaSelecionada ? ` · caderneta ${cadernetaLabel(cadernetaSelecionada)}` : ''}
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card className="bg-white p-4 border-0 shadow-sm">
-              <p className="text-sm text-gray-500 mb-1">Usuários ativos</p>
+              <p className="text-sm text-gray-500 mb-1">{periodo === 'tudo' ? 'Usuários com histórico' : 'Usuários ativos no período'}</p>
               <p className="text-2xl font-bold text-gray-800">{usuarioSelecionado ? 1 : usuarios.length}</p>
             </Card>
             <Card className="bg-white p-4 border-0 shadow-sm">
@@ -324,28 +401,35 @@ export function RastreioCadernetas() {
             <Card className="bg-white p-4 border-0 shadow-sm">
               <p className="text-sm text-gray-500 mb-1">Usuários parados</p>
               <p className="text-2xl font-bold text-gray-800">{usuariosParados.length}</p>
-              <p className="text-xs text-gray-400 mt-1">com histórico, sem registro no período</p>
+              <p className="text-xs text-gray-400 mt-1">registraram antes, mas não neste período</p>
             </Card>
+            </div>
           </div>
 
           {/* Visão geral: distribuição semanal + tendência */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className={`grid grid-cols-1 gap-6 ${periodo === 'tudo' ? '' : 'lg:grid-cols-2'}`}>
             {/* Distribuicao por dia da semana */}
             <div>
               <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">
                 Distribuição por dia da semana
               </h2>
               <Card className="bg-white p-4 border-0 shadow-sm">
-                <div className="flex justify-between gap-3 h-40 px-2">
+                <p className="text-xs text-gray-400 mb-2">Média de registros por ocorrência do dia</p>
+                <div
+                  className="flex justify-between gap-3 h-40 px-2"
+                  role="img"
+                  aria-label={`Média de registros por dia da semana: ${DIAS_SEMANA.map((d, i) => `${d} ${distribuicaoSemana[i].toFixed(1).replace('.', ',')}`).join(', ')}`}
+                >
                   {distribuicaoSemana.map((total, idx) => {
                     const altura = Math.max(4, (total / maxDiaSemana) * 100)
+                    const display = total > 0 ? total.toFixed(1).replace('.', ',') : '0'
                     return (
                       <div
                         key={idx}
                         className="flex flex-col items-center gap-1.5 flex-1"
-                        title={`${DIAS_SEMANA[idx]}: ${total} registros`}
+                        title={`${DIAS_SEMANA[idx]}: média de ${display} registros`}
                       >
-                        <span className="text-xs font-semibold text-gray-700">{total}</span>
+                        <span className="text-xs font-semibold text-gray-700">{display}</span>
                         <div className="w-full flex-1 flex items-end">
                           <div
                             className="w-full bg-primary rounded-t-md transition-all hover:bg-primary/80"
@@ -360,23 +444,24 @@ export function RastreioCadernetas() {
               </Card>
             </div>
 
-            {/* Tendência semanal */}
+            {/* Tendência semanal - oculta no modo "tudo" */}
+            {periodo !== 'tudo' && (
             <div>
               <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">
                 Tendência vs período anterior
               </h2>
-              {periodo !== 'tudo' && prevPeriodUsuarios.length > 0 ? (
+              {tendenciaStatus === 'ok' ? (
                 <Card className="bg-white p-4 border-0 shadow-sm h-40 flex items-center">
                   <div className="grid grid-cols-3 gap-4 w-full">
                     <div>
-                      <p className="text-xs text-gray-400 mb-1">Período anterior</p>
-                      <p className="text-xl font-bold text-gray-700">{totalPeriodoAnterior}</p>
-                      <p className="text-xs text-gray-400">{prevPeriodUsuarios.length} usuários</p>
+                      <p className="text-xs text-gray-400 mb-1">{PERIODO_LABELS[periodo]} anteriores</p>
+                      <p className="text-xl font-bold text-gray-700">{totalPeriodoAnterior} <span className="text-xs font-normal text-gray-400">registros</span></p>
+                      <p className="text-xs text-gray-400">{usuarioSelecionado ? '1 usuário' : `${prevPeriodUsuarios.length} usuário${prevPeriodUsuarios.length !== 1 ? 's' : ''}`}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-400 mb-1">Período atual</p>
-                      <p className="text-xl font-bold text-gray-700">{totalRegistros}</p>
-                      <p className="text-xs text-gray-400">{usuarioSelecionado ? '1 usuário' : `${usuarios.length} usuários`}</p>
+                      <p className="text-xs text-gray-400 mb-1">Últimos {PERIODO_LABELS[periodo]}</p>
+                      <p className="text-xl font-bold text-gray-700">{totalRegistros} <span className="text-xs font-normal text-gray-400">registros</span></p>
+                      <p className="text-xs text-gray-400">{usuarioSelecionado ? '1 usuário' : `${usuarios.length} usuário${usuarios.length !== 1 ? 's' : ''}`}</p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-400 mb-1">Variação</p>
@@ -391,18 +476,22 @@ export function RastreioCadernetas() {
                 </Card>
               ) : (
                 <Card className="bg-white p-4 border-0 shadow-sm h-40 flex items-center justify-center">
-                  <p className="text-sm text-gray-400">
-                    {periodo === 'tudo' ? 'Selecione um período finito para ver a tendência' : 'Sem dados do período anterior'}
+                  <p className="text-sm text-gray-400 text-center">
+                    {allTimeUsuarios.length === 0
+                      ? 'Fazenda sem histórico suficiente para comparar'
+                      : 'Nenhum registro no período anterior'}
                   </p>
                 </Card>
               )}
             </div>
+            )}
           </div>
 
           {/* Lista de usuarios + detalhe */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-1">
-              <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">Usuários</h2>
+              <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-1">Usuários</h2>
+              <p className="text-xs text-gray-400 mb-3">lista global, independente de filtros</p>
               <div className="space-y-2">
                 {regularidadeUsuarios.length === 0 ? (
                   <Card className="p-6 text-center text-gray-400 text-sm">Nenhum registro no período</Card>
@@ -423,7 +512,8 @@ export function RastreioCadernetas() {
                       >
                         <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-2">
-                            <span className={`w-2 h-2 rounded-full ${ativo ? 'bg-green-500' : 'bg-gray-300'}`} />
+                            <span className={`w-2 h-2 rounded-full ${ativo ? 'bg-green-500' : 'bg-gray-300'}`} aria-hidden="true" />
+                            <span className="sr-only">{ativo ? 'ativo' : 'inativo'}</span>
                             <span className="font-semibold text-gray-800 text-sm">{u.nome_usuario}</span>
                           </div>
                           <span className="text-xs text-gray-400">{u.total_registros}</span>
@@ -446,16 +536,19 @@ export function RastreioCadernetas() {
               {!usuarioSelecionado ? (
                 <>
                   <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">
-                    Caderneta mais usada
+                    Caderneta mais usada no período
                   </h2>
                   {cadernetaMaisUsada && cadernetaMaisUsada.total > 0 ? (
                     <Card className="bg-white p-4 border-0 shadow-sm mb-4">
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="font-semibold text-gray-800">{cadernetaLabel(cadernetaMaisUsada.key)}</p>
-                          <p className="text-xs text-gray-400">{cadernetaMaisUsada.total} registros no período</p>
+                          <p className="text-xs text-gray-400">no período selecionado</p>
                         </div>
-                        <div className="text-3xl font-bold text-primary">{cadernetaMaisUsada.total}</div>
+                        <div className="text-right">
+                          <div className="text-3xl font-bold text-primary">{cadernetaMaisUsada.total}</div>
+                          <div className="text-xs text-gray-400">registros</div>
+                        </div>
                       </div>
                     </Card>
                   ) : null}
@@ -470,15 +563,15 @@ export function RastreioCadernetas() {
                       <table className="w-full text-sm">
                         <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
                           <tr>
-                            <th className="text-left px-4 py-3">Usuário</th>
-                            <th className="text-left px-4 py-3">Caderneta</th>
-                            <th className="text-right px-4 py-3">Total</th>
-                            <th className="text-right px-4 py-3">Dias</th>
-                            <th className="text-left px-4 py-3">Último</th>
+                            <th className="text-left px-4 py-3 cursor-pointer hover:text-gray-700" onClick={() => toggleSort('nome_usuario')}>Usuário{sortIndicator('nome_usuario')}</th>
+                            <th className="text-left px-4 py-3 cursor-pointer hover:text-gray-700" onClick={() => toggleSort('caderneta')}>Caderneta{sortIndicator('caderneta')}</th>
+                            <th className="text-right px-4 py-3 cursor-pointer hover:text-gray-700" onClick={() => toggleSort('total_registros')}>Total{sortIndicator('total_registros')}</th>
+                            <th className="text-right px-4 py-3 cursor-pointer hover:text-gray-700" onClick={() => toggleSort('dias_ativos')}>Dias{sortIndicator('dias_ativos')}</th>
+                            <th className="text-left px-4 py-3 cursor-pointer hover:text-gray-700" onClick={() => toggleSort('ultimo_registro')}>Último{sortIndicator('ultimo_registro')}</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                          {effectiveCadernetas.map((c, i) => (
+                          {sortedCadernetas.map((c, i) => (
                             <tr
                               key={`${c.nome_usuario}-${c.caderneta}-${i}`}
                               className="hover:bg-gray-50 cursor-pointer"
@@ -539,7 +632,12 @@ export function RastreioCadernetas() {
                         Atividade por dia
                       </h3>
                       <div className="bg-white rounded-lg shadow-sm p-4">
-                        <div className="flex gap-2 h-40 overflow-x-auto px-2">
+                        <p className="text-xs text-gray-400 mb-2">registros por dia</p>
+                        <div
+                          className="flex gap-2 h-40 overflow-x-auto px-2"
+                          role="img"
+                          aria-label={`Registros por dia: ${detalhePorDia.map((d) => `${formatData(d.dia)} ${d.total}`).join(', ')}`}
+                        >
                           {detalhePorDia.map((d) => {
                             const altura = Math.max(4, (d.total / maxDiaTotal) * 100)
                             return (
@@ -576,7 +674,13 @@ export function RastreioCadernetas() {
               <Card className="bg-white p-4 border-0 shadow-sm">
                 <div className="space-y-2">
                   {coberturaPorCaderneta.map((c) => (
-                    <div key={c.key} className="flex items-center gap-3">
+                    <button
+                      key={c.key}
+                      onClick={() => setCadernetaSelecionada(cadernetaSelecionada === c.key ? null : c.key)}
+                      className={`flex items-center gap-3 w-full text-left p-1 rounded transition-colors ${
+                        cadernetaSelecionada === c.key ? 'bg-primary/5' : 'hover:bg-gray-50'
+                      }`}
+                    >
                       <div className="w-32 text-xs text-gray-600 truncate flex-shrink-0">{c.label}</div>
                       <div className="flex-1 bg-gray-100 rounded-full h-5 relative overflow-hidden">
                         <div
@@ -585,7 +689,7 @@ export function RastreioCadernetas() {
                         />
                       </div>
                       <div className="w-10 text-xs text-right text-gray-500 flex-shrink-0">{c.total}</div>
-                    </div>
+                    </button>
                   ))}
                 </div>
               </Card>
@@ -632,6 +736,7 @@ export function RastreioCadernetas() {
                         <th className="text-right pb-2">Dias ativos</th>
                         <th className="text-left pb-2">Último registro</th>
                         <th className="text-right pb-2">Parado há</th>
+                        <th className="text-right pb-2"></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
@@ -648,6 +753,14 @@ export function RastreioCadernetas() {
                               <span className={`text-xs font-medium ${paradoHa !== null && paradoHa > 14 ? 'text-red-500' : 'text-orange-500'}`}>
                                 {paradoHa !== null ? `${paradoHa} dia${paradoHa !== 1 ? 's' : ''}` : '-'}
                               </span>
+                            </td>
+                            <td className="py-2 text-right">
+                              <button
+                                onClick={() => setUsuarioSelecionado(u.nome_usuario)}
+                                className="text-xs text-primary hover:text-primary/80 font-medium"
+                              >
+                                ver histórico
+                              </button>
                             </td>
                           </tr>
                         )
