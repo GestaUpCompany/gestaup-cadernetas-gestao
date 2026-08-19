@@ -528,3 +528,223 @@ export async function deleteAtividadeTemplate(id: string): Promise<boolean> {
 
   return true
 }
+
+// ============================================================
+// Sessoes de tempo (atividade_sessoes)
+// ============================================================
+
+export interface AtividadeSessao {
+  id: string
+  atividade_funcionario_id: string
+  inicio_at: string
+  fim_at: string | null
+  duracao_segundos: number | null
+  trabalhada: boolean
+  motivo_pausa: string | null
+  created_at: string
+  // Joined (via RPC)
+  funcionario_nome?: string | null
+  funcionario_id?: string | null
+  atividade_id?: string | null
+  atividade_titulo?: string | null
+}
+
+export async function getSessoesByAtividade(atividadeId: string): Promise<AtividadeSessao[]> {
+  const { data: afs, error: afError } = await supabase
+    .from('atividade_funcionarios')
+    .select('id, funcionario_id, funcionario:funcionarios(nome)')
+    .eq('atividade_id', atividadeId)
+
+  if (afError) {
+    console.error('[Atividades] Erro ao buscar afs para sessoes:', afError)
+    return []
+  }
+
+  if (!afs || afs.length === 0) return []
+
+  const afIds = afs.map((af) => af.id)
+  const nomeByAf: Record<string, { nome: string | null; fid: string | null }> = {}
+  for (const af of afs as any[]) {
+    nomeByAf[af.id] = { nome: af.funcionario?.nome || null, fid: af.funcionario_id || null }
+  }
+
+  const { data: sessoes, error: sError } = await supabase
+    .from('atividade_sessoes')
+    .select('*')
+    .in('atividade_funcionario_id', afIds)
+    .order('inicio_at', { ascending: true })
+
+  if (sError) {
+    console.error('[Atividades] Erro ao buscar sessoes:', sError)
+    return []
+  }
+
+  return (sessoes || []).map((s: any) => ({
+    ...s,
+    funcionario_nome: nomeByAf[s.atividade_funcionario_id]?.nome || null,
+    funcionario_id: nomeByAf[s.atividade_funcionario_id]?.fid || null,
+  })) as AtividadeSessao[]
+}
+
+export async function getSessoesAbertasByFazenda(fazendaId: string): Promise<AtividadeSessao[]> {
+  const { data, error } = await supabase
+    .rpc('get_sessoes_abertas_by_fazenda', { p_fazenda_id: fazendaId })
+
+  if (error) {
+    console.error('[Atividades] Erro ao buscar sessoes abertas:', error)
+    return []
+  }
+
+  return (data || []) as AtividadeSessao[]
+}
+
+// ============================================================
+// Imprevistos (atividade_imprevistos)
+// ============================================================
+
+export interface AtividadeImprevisto {
+  id: string
+  atividade_funcionario_id: string
+  tipo: string
+  descricao: string | null
+  ocorrido_at: string
+  impacto_minutos: number | null
+  created_at: string
+  // Joined (via RPC)
+  funcionario_nome?: string | null
+  funcionario_id?: string | null
+  atividade_id?: string | null
+  atividade_titulo?: string | null
+}
+
+export async function getImprevistosByAtividade(atividadeId: string): Promise<AtividadeImprevisto[]> {
+  const { data: afs, error: afError } = await supabase
+    .from('atividade_funcionarios')
+    .select('id, funcionario_id, funcionario:funcionarios(nome)')
+    .eq('atividade_id', atividadeId)
+
+  if (afError) {
+    console.error('[Atividades] Erro ao buscar afs para imprevistos:', afError)
+    return []
+  }
+
+  if (!afs || afs.length === 0) return []
+
+  const afIds = afs.map((af) => af.id)
+  const nomeByAf: Record<string, { nome: string | null; fid: string | null }> = {}
+  for (const af of afs as any[]) {
+    nomeByAf[af.id] = { nome: af.funcionario?.nome || null, fid: af.funcionario_id || null }
+  }
+
+  const { data: imprevistos, error: iError } = await supabase
+    .from('atividade_imprevistos')
+    .select('*')
+    .in('atividade_funcionario_id', afIds)
+    .order('ocorrido_at', { ascending: false })
+
+  if (iError) {
+    console.error('[Atividades] Erro ao buscar imprevistos:', iError)
+    return []
+  }
+
+  return (imprevistos || []).map((i: any) => ({
+    ...i,
+    funcionario_nome: nomeByAf[i.atividade_funcionario_id]?.nome || null,
+    funcionario_id: nomeByAf[i.atividade_funcionario_id]?.fid || null,
+  })) as AtividadeImprevisto[]
+}
+
+export async function getImprevistosRecentesByFazenda(
+  fazendaId: string,
+  dias = 7
+): Promise<AtividadeImprevisto[]> {
+  const dataInicio = new Date()
+  dataInicio.setDate(dataInicio.getDate() - dias)
+
+  const { data, error } = await supabase
+    .rpc('get_imprevistos_recentes_by_fazenda', {
+      p_fazenda_id: fazendaId,
+      p_data_inicio: dataInicio.toISOString(),
+    })
+
+  if (error) {
+    console.error('[Atividades] Erro ao buscar imprevistos recentes:', error)
+    return []
+  }
+
+  return (data || []) as AtividadeImprevisto[]
+}
+
+// ============================================================
+// Categorias de imprevisto (atividade_imprevisto_categorias)
+// ============================================================
+
+export interface ImprevistoCategoria {
+  id: string
+  nome: string
+  ativo: boolean
+}
+
+export async function getImprevistoCategorias(fazendaId: string): Promise<ImprevistoCategoria[]> {
+  const { data, error } = await supabase
+    .from('atividade_imprevisto_categorias')
+    .select('id, nome, ativo')
+    .eq('fazenda_id', fazendaId)
+    .order('nome', { ascending: true })
+
+  if (error) {
+    console.error('[Atividades] Erro ao buscar categorias de imprevisto:', error)
+    return []
+  }
+
+  return (data || []) as ImprevistoCategoria[]
+}
+
+export async function createImprevistoCategoria(
+  fazendaId: string,
+  nome: string
+): Promise<ImprevistoCategoria | null> {
+  const { data, error } = await supabase
+    .from('atividade_imprevisto_categorias')
+    .insert({ fazenda_id: fazendaId, nome: nome.trim() })
+    .select('id, nome, ativo')
+    .single()
+
+  if (error) {
+    console.error('[Atividades] Erro ao criar categoria de imprevisto:', error)
+    return null
+  }
+
+  return data as ImprevistoCategoria
+}
+
+export async function updateImprevistoCategoria(
+  id: string,
+  payload: Partial<{ nome: string; ativo: boolean }>
+): Promise<boolean> {
+  const { error } = await supabase
+    .from('atividade_imprevisto_categorias')
+    .update(payload)
+    .eq('id', id)
+
+  if (error) {
+    console.error('[Atividades] Erro ao atualizar categoria de imprevisto:', error)
+    return false
+  }
+
+  return true
+}
+
+export async function deleteImprevistoCategoria(id: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('atividade_imprevisto_categorias')
+    .update({ ativo: false })
+    .eq('id', id)
+
+  if (error) {
+    console.error('[Atividades] Erro ao desativar categoria de imprevisto:', error)
+    return false
+  }
+
+  return true
+}

@@ -8,9 +8,15 @@ import {
   getMonitoramentoData,
   getPrioridades,
   getFuncionariosComSetor,
+  getSessoesAbertasByFazenda,
+  getImprevistosRecentesByFazenda,
+  getSessoesByAtividade,
+  getImprevistosByAtividade,
   Atividade,
   PrioridadeAtividade,
   FuncionarioComSetor,
+  AtividadeSessao,
+  AtividadeImprevisto,
 } from '../../services/atividadesService'
 
 // === Constantes ===
@@ -109,6 +115,21 @@ function getCorBarra(taxa: number): string {
   return 'bg-red-500'
 }
 
+function formatarTempo(segundos: number): string {
+  if (segundos <= 0) return '0min'
+  const h = Math.floor(segundos / 3600)
+  const m = Math.floor((segundos % 3600) / 60)
+  const s = segundos % 60
+  if (h > 0) return `${h}h${String(m).padStart(2, '0')}min`
+  if (m > 0) return `${m}min${s > 0 ? ` ${s}s` : ''}`
+  return `${s}s`
+}
+
+function formatarHoraCurta(iso: string | null): string {
+  if (!iso) return ''
+  return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+}
+
 // === Componente ===
 
 export function MonitoramentoAtividades() {
@@ -119,6 +140,10 @@ export function MonitoramentoAtividades() {
   const [prioridades, setPrioridades] = useState<PrioridadeAtividade[]>([])
   const [funcionarios, setFuncionarios] = useState<FuncionarioComSetor[]>([])
   const [detalheAtividade, setDetalheAtividade] = useState<Atividade | null>(null)
+  const [sessoesAbertas, setSessoesAbertas] = useState<AtividadeSessao[]>([])
+  const [imprevistosRecentes, setImprevistosRecentes] = useState<AtividadeImprevisto[]>([])
+  const [sessoesDetalhe, setSessoesDetalhe] = useState<AtividadeSessao[]>([])
+  const [imprevistosDetalhe, setImprevistosDetalhe] = useState<AtividadeImprevisto[]>([])
   const [searchParams, setSearchParams] = useSearchParams()
   const atividadeParam = searchParams.get('atividade')
 
@@ -151,7 +176,21 @@ export function MonitoramentoAtividades() {
     loadPrioridades()
     loadFuncionarios()
     loadAtividades()
+    loadSessoesAbertas()
+    loadImprevistosRecentes()
   }, [fazendaId])
+
+  const loadSessoesAbertas = async () => {
+    if (!fazendaId) return
+    const data = await getSessoesAbertasByFazenda(fazendaId)
+    setSessoesAbertas(data)
+  }
+
+  const loadImprevistosRecentes = async () => {
+    if (!fazendaId) return
+    const data = await getImprevistosRecentesByFazenda(fazendaId, 7)
+    setImprevistosRecentes(data)
+  }
 
   const loadPrioridades = async () => {
     if (!fazendaId) return
@@ -258,16 +297,45 @@ export function MonitoramentoAtividades() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'atividade_funcionarios' },
-        () => loadAtividades(true)
+        () => { loadAtividades(true); loadSessoesAbertas() }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'atividades', filter: `fazenda_id=eq.${fazendaId}` },
         () => loadAtividades(true)
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'atividade_sessoes' },
+        () => { loadSessoesAbertas(); if (detalheAtividade) loadDetalheSessoesImprevistos(detalheAtividade.id) }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'atividade_imprevistos' },
+        () => { loadImprevistosRecentes(); if (detalheAtividade) loadDetalheSessoesImprevistos(detalheAtividade.id) }
+      )
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [fazendaId])
+  }, [fazendaId, detalheAtividade])
+
+  // Carregar sessoes e imprevistos ao abrir detalhe
+  const loadDetalheSessoesImprevistos = async (atividadeId: string) => {
+    const [s, i] = await Promise.all([
+      getSessoesByAtividade(atividadeId),
+      getImprevistosByAtividade(atividadeId),
+    ])
+    setSessoesDetalhe(s)
+    setImprevistosDetalhe(i)
+  }
+
+  useEffect(() => {
+    if (detalheAtividade) {
+      loadDetalheSessoesImprevistos(detalheAtividade.id)
+    } else {
+      setSessoesDetalhe([])
+      setImprevistosDetalhe([])
+    }
+  }, [detalheAtividade])
 
   // === Filtragem ===
   const atividadesFiltradas = useMemo(() => {
@@ -593,6 +661,45 @@ export function MonitoramentoAtividades() {
         })}
       </div>
 
+      {/* Agora: sessoes abertas em tempo real */}
+      {sessoesAbertas.length > 0 && (
+        <div>
+          <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
+            Trabalhando agora
+            <span className="text-sm font-normal text-gray-500">({sessoesAbertas.length})</span>
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {sessoesAbertas.map((s) => {
+              const decorrido = Math.floor((Date.now() - new Date(s.inicio_at).getTime()) / 1000)
+              return (
+                <Card
+                  key={s.id}
+                  className="bg-blue-50 border border-blue-100 p-3 shadow-sm cursor-pointer hover:shadow-md transition-all"
+                  onClick={() => {
+                    if (s.atividade_id) {
+                      const atv = atividades.find((a) => a.id === s.atividade_id)
+                      if (atv) setDetalheAtividade(atv)
+                    }
+                  }}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-gray-800 text-sm truncate">{s.atividade_titulo || 'Atividade'}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{s.funcionario_nome || 'Funcionário'}</p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-lg font-bold tabular-nums text-blue-700">{formatarTempo(decorrido)}</p>
+                      <p className="text-[10px] text-gray-400">desde {formatarHoraCurta(s.inicio_at)}</p>
+                    </div>
+                  </div>
+                </Card>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Conteudo: Lista ou Kanban */}
       {vista === 'lista' ? (
         <div>
@@ -717,6 +824,59 @@ export function MonitoramentoAtividades() {
         </div>
       )}
 
+      {/* Imprevistos recentes (ultimos 7 dias) */}
+      {imprevistosRecentes.length > 0 && (
+        <div>
+          <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+            <span className="text-amber-500 text-lg">⚠️</span>
+            Imprevistos recentes
+            <span className="text-sm font-normal text-gray-500">({imprevistosRecentes.length} nos últimos 7 dias)</span>
+          </h3>
+          <Card className="bg-white border-0 shadow-sm overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-3 px-4 font-medium text-gray-600">Quando</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600">Tipo</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600">Atividade</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600">Funcionário</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600">Descrição</th>
+                  <th className="text-center py-3 px-4 font-medium text-gray-600">Impacto</th>
+                </tr>
+              </thead>
+              <tbody>
+                {imprevistosRecentes.slice(0, 20).map((i) => (
+                  <tr
+                    key={i.id}
+                    className="border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50"
+                    onClick={() => {
+                      if (i.atividade_id) {
+                        const atv = atividades.find((a) => a.id === i.atividade_id)
+                        if (atv) setDetalheAtividade(atv)
+                      }
+                    }}
+                  >
+                    <td className="py-3 px-4 text-gray-500 whitespace-nowrap">{formatarDataHora(i.ocorrido_at)}</td>
+                    <td className="py-3 px-4">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-medium">
+                        <span className="text-xs">⚠️</span>
+                        {i.tipo}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-gray-700 truncate max-w-[180px]">{i.atividade_titulo || '-'}</td>
+                    <td className="py-3 px-4 text-gray-600">{i.funcionario_nome || '-'}</td>
+                    <td className="py-3 px-4 text-gray-500 truncate max-w-[200px]">{i.descricao || '-'}</td>
+                    <td className="py-3 px-4 text-center text-gray-600 whitespace-nowrap">
+                      {i.impacto_minutos != null ? `${i.impacto_minutos}min` : '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+        </div>
+      )}
+
       {/* Modal de detalhe */}
       {detalheAtividade && (() => {
         const totalFunc = detalheAtividade.funcionarios?.length || 0
@@ -792,35 +952,79 @@ export function MonitoramentoAtividades() {
               <div className="border-t border-gray-100 pt-4">
                 <p className="text-xs text-gray-500 font-medium mb-3">Status por Responsável</p>
                 <div className="space-y-3">
-                  {detalheAtividade.funcionarios?.map((af) => (
-                    <div key={af.id} className="py-2 border-b border-gray-50 last:border-0">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold ${getCorAvatar(af.funcionario_nome || '?')}`}>
-                            {getIniciais(af.funcionario_nome || '?')}
+                  {detalheAtividade.funcionarios?.map((af) => {
+                    const sessoesAf = sessoesDetalhe.filter((s) => s.atividade_funcionario_id === af.id)
+                    const imprevistosAf = imprevistosDetalhe.filter((i) => i.atividade_funcionario_id === af.id)
+                    const tempoProdutivo = sessoesAf
+                      .filter((s) => s.fim_at && s.trabalhada && s.duracao_segundos != null)
+                      .reduce((acc, s) => acc + (s.duracao_segundos || 0), 0)
+                    const temSessaoAberta = sessoesAf.some((s) => !s.fim_at)
+                    return (
+                      <div key={af.id} className="py-2 border-b border-gray-50 last:border-0">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold ${getCorAvatar(af.funcionario_nome || '?')}`}>
+                              {getIniciais(af.funcionario_nome || '?')}
+                            </div>
+                            <span className="text-sm font-medium text-gray-800">{af.funcionario_nome}</span>
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_BADGE_CORES[af.status_individual] || 'bg-gray-100 text-gray-600'}`}>
+                              {STATUS_BADGE_LABELS[af.status_individual] || af.status_individual}
+                            </span>
+                            {temSessaoAberta && (
+                              <span className="inline-flex items-center gap-1 text-xs text-blue-600 font-medium">
+                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                                gravando
+                              </span>
+                            )}
                           </div>
-                          <span className="text-sm font-medium text-gray-800">{af.funcionario_nome}</span>
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_BADGE_CORES[af.status_individual] || 'bg-gray-100 text-gray-600'}`}>
-                            {STATUS_BADGE_LABELS[af.status_individual] || af.status_individual}
-                          </span>
+                          <div className="text-xs text-gray-500 text-right">
+                            {tempoProdutivo > 0 && (
+                              <span className="font-medium text-gray-700">⏱ {formatarTempo(tempoProdutivo)}</span>
+                            )}
+                          </div>
                         </div>
-                        <div className="text-xs text-gray-500 text-right">
-                        </div>
+                        {(af.inicio_at || af.fim_at) && (
+                          <div className="text-xs text-gray-400 mt-1 ml-9">
+                            {af.inicio_at && <>Iniciou: {formatarDataHora(af.inicio_at)}</>}
+                            {af.inicio_at && af.fim_at && <> · </>}
+                            {af.fim_at && <>Concluiu: {formatarDataHora(af.fim_at)}</>}
+                          </div>
+                        )}
+                        {af.detalhamento && (
+                          <div className="mt-1 ml-9 text-xs text-gray-600 italic bg-gray-50 rounded px-2 py-1">
+                            "{af.detalhamento}"
+                          </div>
+                        )}
+                        {sessoesAf.length > 0 && (
+                          <div className="mt-2 ml-9 space-y-1">
+                            <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Sessões ({sessoesAf.length})</p>
+                            {sessoesAf.map((s) => (
+                              <div key={s.id} className="flex items-center gap-2 text-xs text-gray-500">
+                                <span className={`w-1.5 h-1.5 rounded-full ${s.trabalhada ? 'bg-green-400' : 'bg-amber-400'}`} />
+                                <span>{formatarHoraCurta(s.inicio_at)} → {s.fim_at ? formatarHoraCurta(s.fim_at) : '...'}</span>
+                                <span className="font-medium">{s.duracao_segundos != null ? formatarTempo(s.duracao_segundos) : 'em andamento'}</span>
+                                {s.motivo_pausa && <span className="text-gray-400">({s.motivo_pausa})</span>}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {imprevistosAf.length > 0 && (
+                          <div className="mt-2 ml-9 space-y-1">
+                            <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Imprevistos ({imprevistosAf.length})</p>
+                            {imprevistosAf.map((i) => (
+                              <div key={i.id} className="flex items-center gap-2 text-xs text-gray-500">
+                                <span className="text-xs text-amber-500">⚠️</span>
+                                <span className="font-medium">{i.tipo}</span>
+                                <span className="text-gray-400">· {formatarHoraCurta(i.ocorrido_at)}</span>
+                                {i.impacto_minutos != null && <span className="text-gray-400">({i.impacto_minutos}min)</span>}
+                                {i.descricao && <span className="text-gray-400 truncate">— {i.descricao}</span>}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      {(af.inicio_at || af.fim_at) && (
-                        <div className="text-xs text-gray-400 mt-1 ml-9">
-                          {af.inicio_at && <>Iniciou: {formatarDataHora(af.inicio_at)}</>}
-                          {af.inicio_at && af.fim_at && <> · </>}
-                          {af.fim_at && <>Concluiu: {formatarDataHora(af.fim_at)}</>}
-                        </div>
-                      )}
-                      {af.detalhamento && (
-                        <div className="mt-1 ml-9 text-xs text-gray-600 italic bg-gray-50 rounded px-2 py-1">
-                          "{af.detalhamento}"
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             </div>
