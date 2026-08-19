@@ -254,7 +254,6 @@ export function RastreioCadernetas() {
                             <th className="text-left px-4 py-3">Usuário</th>
                             <th className="text-left px-4 py-3">Caderneta</th>
                             <th className="text-right px-4 py-3">Total</th>
-                            <th className="text-right px-4 py-3">Ativos</th>
                             <th className="text-right px-4 py-3">Dias</th>
                             <th className="text-left px-4 py-3">Último</th>
                           </tr>
@@ -269,7 +268,6 @@ export function RastreioCadernetas() {
                               <td className="px-4 py-3 text-gray-800 font-medium">{c.nome_usuario}</td>
                               <td className="px-4 py-3 text-gray-600">{cadernetaLabel(c.caderneta)}</td>
                               <td className="px-4 py-3 text-right font-semibold text-gray-800">{c.total_registros}</td>
-                              <td className="px-4 py-3 text-right text-green-600">{c.registros_ativos}</td>
                               <td className="px-4 py-3 text-right text-gray-500">{c.dias_ativos}</td>
                               <td className="px-4 py-3 text-gray-500 text-xs">{formatDataHora(c.ultimo_registro)}</td>
                             </tr>
@@ -302,7 +300,6 @@ export function RastreioCadernetas() {
                             <p className="font-medium text-gray-800 text-sm">{cadernetaLabel(c.caderneta)}</p>
                             <div className="flex items-center gap-3 text-xs text-gray-400 mt-0.5">
                               <span>{c.total_registros} total</span>
-                              <span className="text-green-600">{c.registros_ativos} ativos</span>
                               <span>{c.dias_ativos} dias</span>
                             </div>
                           </div>
