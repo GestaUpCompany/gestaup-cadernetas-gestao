@@ -1,0 +1,13 @@
+ALTER TABLE registros_suplementacao 
+DROP COLUMN limpeza_cocho,
+DROP COLUMN limpeza_cocho_obs,
+DROP COLUMN cochos_condicoes,
+DROP COLUMN cochos_condicoes_obs,
+DROP COLUMN aterro_acesso_ideal,
+DROP COLUMN aterro_acesso_ideal_obs,
+DROP COLUMN espacamento_cocho_ideal,
+DROP COLUMN espacamento_cocho_ideal_obs,
+DROP COLUMN deposito_condicoes,
+DROP COLUMN deposito_condicoes_obs,
+DROP COLUMN estoque_deposito,
+DROP COLUMN estoque_deposito_obs;;

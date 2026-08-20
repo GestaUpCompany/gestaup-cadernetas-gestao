@@ -1,0 +1,1 @@
+ALTER TABLE lotes ALTER COLUMN gmd TYPE text;;

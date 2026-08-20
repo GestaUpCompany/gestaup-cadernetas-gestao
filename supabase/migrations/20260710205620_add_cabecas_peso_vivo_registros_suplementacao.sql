@@ -1,0 +1,4 @@
+ALTER TABLE registros_suplementacao 
+ADD COLUMN IF NOT EXISTS n_cabecas INTEGER,
+ADD COLUMN IF NOT EXISTS qtd_bezerros INTEGER,
+ADD COLUMN IF NOT EXISTS peso_vivo_kg NUMERIC(10,2);;

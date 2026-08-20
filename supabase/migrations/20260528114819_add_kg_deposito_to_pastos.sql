@@ -1,0 +1,1 @@
+ALTER TABLE pastos ADD COLUMN IF NOT EXISTS kg_deposito NUMERIC;;

@@ -1,0 +1,11 @@
+ALTER TABLE registros_bebedouros 
+DROP COLUMN agua_suficiente,
+DROP COLUMN agua_suficiente_obs,
+DROP COLUMN vazao_bebedouro_ideal,
+DROP COLUMN vazao_bebedouro_ideal_obs,
+DROP COLUMN aterro_acesso_bebedouro_ideal,
+DROP COLUMN aterro_acesso_bebedouro_ideal_obs,
+DROP COLUMN espacamento_bebedouro_ideal,
+DROP COLUMN espacamento_bebedouro_ideal_obs,
+DROP COLUMN boia_protecao_boas_condicoes,
+DROP COLUMN boia_protecao_boas_condicoes_obs;;

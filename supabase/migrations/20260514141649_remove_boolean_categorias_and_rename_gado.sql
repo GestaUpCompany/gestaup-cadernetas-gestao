@@ -1,0 +1,7 @@
+ALTER TABLE public.registros_suplementacao 
+DROP COLUMN IF EXISTS vaca,
+DROP COLUMN IF EXISTS touro,
+DROP COLUMN IF EXISTS bezerro,
+DROP COLUMN IF EXISTS boi,
+DROP COLUMN IF EXISTS garrote,
+DROP COLUMN IF EXISTS novilha;;

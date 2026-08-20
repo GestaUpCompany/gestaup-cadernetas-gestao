@@ -1,0 +1,3 @@
+ALTER TABLE registros_enfermaria 
+ADD COLUMN bicheira BOOLEAN DEFAULT NULL,
+ADD COLUMN bicheira_obs TEXT DEFAULT NULL;;

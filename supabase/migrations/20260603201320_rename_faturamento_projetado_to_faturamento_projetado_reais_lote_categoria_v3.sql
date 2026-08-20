@@ -1,0 +1,2 @@
+ALTER TABLE lote_categorias 
+RENAME COLUMN faturamento_projetado TO faturamento_projetado_reais_lote_categoria;;

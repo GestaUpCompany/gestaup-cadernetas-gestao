@@ -1,0 +1,1 @@
+ALTER TABLE registros_operacoes_maquinas RENAME COLUMN total_odometro TO total_odometro_horimetro;;

@@ -1,0 +1,2 @@
+ALTER TABLE lote_categorias 
+RENAME COLUMN preco_venda_sugerido_arroba TO preco_venda_projetado_reais_arroba;;
