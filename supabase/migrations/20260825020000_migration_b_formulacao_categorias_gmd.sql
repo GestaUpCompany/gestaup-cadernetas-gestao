@@ -44,7 +44,7 @@ CREATE POLICY formulacao_categorias_gmd_select_fazenda
       WHERE f.id = formulacao_id
         AND f.fazenda_id = (
           SELECT uf.fazenda_id FROM public.usuario_fazenda uf
-          WHERE uf.auth_id = auth.uid() LIMIT 1
+          WHERE uf.usuario_id = auth.uid() LIMIT 1
         )
     )
   );
@@ -59,7 +59,7 @@ CREATE POLICY formulacao_categorias_gmd_insert_fazenda
       WHERE f.id = formulacao_id
         AND f.fazenda_id = (
           SELECT uf.fazenda_id FROM public.usuario_fazenda uf
-          WHERE uf.auth_id = auth.uid() LIMIT 1
+          WHERE uf.usuario_id = auth.uid() LIMIT 1
         )
     )
   );
@@ -74,7 +74,7 @@ CREATE POLICY formulacao_categorias_gmd_update_fazenda
       WHERE f.id = formulacao_id
         AND f.fazenda_id = (
           SELECT uf.fazenda_id FROM public.usuario_fazenda uf
-          WHERE uf.auth_id = auth.uid() LIMIT 1
+          WHERE uf.usuario_id = auth.uid() LIMIT 1
         )
     )
   );
@@ -89,7 +89,7 @@ CREATE POLICY formulacao_categorias_gmd_delete_fazenda
       WHERE f.id = formulacao_id
         AND f.fazenda_id = (
           SELECT uf.fazenda_id FROM public.usuario_fazenda uf
-          WHERE uf.auth_id = auth.uid() LIMIT 1
+          WHERE uf.usuario_id = auth.uid() LIMIT 1
         )
     )
   );

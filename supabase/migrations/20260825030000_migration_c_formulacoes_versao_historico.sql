@@ -42,7 +42,7 @@ CREATE POLICY formulacoes_historico_select_fazenda
       WHERE f.id = formulacao_id
         AND f.fazenda_id = (
           SELECT uf.fazenda_id FROM public.usuario_fazenda uf
-          WHERE uf.auth_id = auth.uid() LIMIT 1
+          WHERE uf.usuario_id = auth.uid() LIMIT 1
         )
     )
   );
