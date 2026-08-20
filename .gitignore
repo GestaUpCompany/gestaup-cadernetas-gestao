@@ -27,3 +27,18 @@ dist-ssr
 .env
 .env.local
 .env.*.local
+.env.dev
+
+# Backups e artefatos temporarios
+backups/
+*.json.bak
+backup_*.json
+
+# Seeds e dumps locais
+*_seed.sql
+doc.kml
+*.kmz
+*.kml
+
+# Imagens temporarias
+*.webp
