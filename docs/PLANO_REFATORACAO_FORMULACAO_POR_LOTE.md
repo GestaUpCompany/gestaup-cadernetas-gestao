@@ -634,7 +634,7 @@ Os backfills das Migrations A, B, F e H podem ser re-executados na branch para v
 
 ### 10.1 Migrations na ordem exata de execução
 
-As 20 migrations abaixo devem ser aplicadas em produção nesta ordem. O `supabase db push` respeita a ordem alfabética do timestamp do arquivo, que já corresponde à sequência correta.
+As 21 migrations abaixo devem ser aplicadas em produção nesta ordem. O `supabase db push` respeita a ordem alfabética do timestamp do arquivo, que já corresponde à sequência correta.
 
 | # | Arquivo | Commit | O que faz |
 |---|---------|--------|-----------|
@@ -658,6 +658,7 @@ As 20 migrations abaixo devem ser aplicadas em produção nesta ordem. O `supaba
 | 18 | `20260825180000_migration_t_cron_skip_sem_plano.sql` | `48ee07b` | Cron so evolui peso de categorias com plano vigente (LEFT JOIN -> INNER JOIN) |
 | 19 | `20260825190000_migration_u_fix_data_ajuste_peso_cron_schedule.sql` | `2e529e4` | Fix dupla contagem com data_ajuste_peso + bezerros ao pe respeitam ajuste + agendamento cron |
 | 20 | `20260825200000_migration_v_fix_movimentacao_gmd_destino.sql` | `de9b4b3` | Movimentação que gera nova categoria usa GMD da formulação do lote destino, não do origem |
+| 21 | `20260825210000_migration_w_backfill_propagacao_gmd.sql` | `00a6e64` | Backfill de propagação GMD: garante que categorias ativas tenham GMD de `formulacao_categorias_gmd` mesmo se a trigger da Migration D não existia quando a Migration A setou `formulacao_id` |
 
 **Notas sobre sobreposição:**
 - A migration E (n. 5) cria a v1 do cron. A migration N (n. 13) reescreve o cron com personalização e interrupção de ganho. A migration T (n. 18) troca LEFT JOIN por INNER JOIN (só evolui com plano vigente). A migration U (n. 19) corrige dupla contagem com `data_ajuste_peso` e agenda o cron. Todas devem rodar em ordem; cada uma sobrescreve a anterior com `CREATE OR REPLACE`.
@@ -669,7 +670,7 @@ As 20 migrations abaixo devem ser aplicadas em produção nesta ordem. O `supaba
 ### 10.2 Passos para promover para produção
 
 1. Backup pontual de prod como rede de segurança.
-2. `git pull` na branch `refactor/formulacao-por-lote` (todas as 20 migrations estão commitadas).
+2. `git pull` na branch `refactor/formulacao-por-lote` (todas as 21 migrations estão commitadas).
 3. `supabase db push` na produção. O CLI aplica automaticamente apenas as migrations que ainda não existem em `supabase_migrations.schema_migrations`.
 4. Deploy do código frontend novo + PWA atualizado para prod.
 5. Monitorar as primeiras 24h em prod (sem janela de manutenção, mas com atenção).
