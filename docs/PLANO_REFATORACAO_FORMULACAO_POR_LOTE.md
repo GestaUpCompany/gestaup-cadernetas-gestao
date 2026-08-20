@@ -656,6 +656,7 @@ As 16 migrations abaixo devem ser aplicadas em produção nesta ordem. O `supaba
 | 16 | `20260825160000_migration_q_r_fix_unaccent_rpcs.sql` | `4e685f7` | Fix `unaccent` em `iniciar_plano_lote` e `encerrar_plano_lote`, remove `gmd_planejado` como fallback |
 | 17 | `20260825170000_migration_s_fix_unaccent_triggers.sql` | `bc14d72` | Fix `unaccent` em `sync_gmd_lote_categorias`, `repropagar_gmd_para_lotes`, `fn_set_gmd_bezerro_ao_pe`, `calculate_quant_atual`, `update_quant_atual_maternidade` |
 | 18 | `20260825180000_migration_t_cron_skip_sem_plano.sql` | `48ee07b` | Cron so evolui peso de categorias com plano vigente (LEFT JOIN -> INNER JOIN) |
+| 19 | `20260825190000_migration_u_fix_data_ajuste_peso_cron_schedule.sql` | `2e529e4` | Fix dupla contagem com data_ajuste_peso + bezerros ao pe respeitam ajuste + agendamento cron |
 
 **Notas sobre sobreposição:**
 - A migration E (n. 5) cria a v1 do cron. A migration N (n. 13) reescreve o cron com personalização e interrupção de ganho. Ambas devem rodar em ordem.
