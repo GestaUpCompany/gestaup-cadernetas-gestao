@@ -654,6 +654,7 @@ As 16 migrations abaixo devem ser aplicadas em produção nesta ordem. O `supaba
 | 14 | `20260825140000_migration_o_fix_criar_snapshot_entrada.sql` | `4e685f7` | Fix `criar_snapshot_entrada`: guard por `lote_id` (não `lote_categoria_id`), GMD de `formulacao_categorias_gmd` |
 | 15 | `20260825150000_migration_p_fix_migrar_plano_lote.sql` | `4e685f7` | Fix `migrar_plano_lote`: GMD de `formulacao_categorias_gmd`, `unaccent` |
 | 16 | `20260825160000_migration_q_r_fix_unaccent_rpcs.sql` | `4e685f7` | Fix `unaccent` em `iniciar_plano_lote` e `encerrar_plano_lote`, remove `gmd_planejado` como fallback |
+| 17 | `20260825170000_migration_s_fix_unaccent_triggers.sql` | `bc14d72` | Fix `unaccent` em `sync_gmd_lote_categorias`, `repropagar_gmd_para_lotes`, `fn_set_gmd_bezerro_ao_pe`, `calculate_quant_atual`, `update_quant_atual_maternidade` |
 
 **Notas sobre sobreposição:**
 - A migration E (n. 5) cria a v1 do cron. A migration N (n. 13) reescreve o cron com personalização e interrupção de ganho. Ambas devem rodar em ordem.
