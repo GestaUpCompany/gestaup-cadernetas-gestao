@@ -659,7 +659,7 @@ As 22 migrations abaixo devem ser aplicadas em produção nesta ordem. O `supaba
 | 19 | `20260825190000_migration_u_fix_data_ajuste_peso_cron_schedule.sql` | `2e529e4` | Fix dupla contagem com data_ajuste_peso + bezerros ao pe respeitam ajuste + agendamento cron |
 | 20 | `20260825200000_migration_v_fix_movimentacao_gmd_destino.sql` | `de9b4b3` | Movimentação que gera nova categoria usa GMD da formulação do lote destino, não do origem |
 | 21 | `20260825210000_migration_w_backfill_propagacao_gmd.sql` | `00a6e64` | Backfill de propagação GMD: garante que categorias ativas tenham GMD de `formulacao_categorias_gmd` mesmo se a trigger da Migration D não existia quando a Migration A setou `formulacao_id` |
-| 22 | `20260825220000_migration_x_fix_recategorizar_categoria_inativa.sql` | pendente | Fix `recategorizar_lote_categoria`: remove categoria inativa com mesmo nome antes do UPDATE in-place, evitando violação da constraint UNIQUE |
+| 22 | `20260825220000_migration_x_fix_recategorizar_categoria_inativa.sql` | `833c4f5` | Fix `recategorizar_lote_categoria`: remove categoria inativa com mesmo nome antes do UPDATE in-place, evitando violação da constraint UNIQUE |
 
 **Notas sobre sobreposição:**
 - A migration E (n. 5) cria a v1 do cron. A migration N (n. 13) reescreve o cron com personalização e interrupção de ganho. A migration T (n. 18) troca LEFT JOIN por INNER JOIN (só evolui com plano vigente). A migration U (n. 19) corrige dupla contagem com `data_ajuste_peso` e agenda o cron. Todas devem rodar em ordem; cada uma sobrescreve a anterior com `CREATE OR REPLACE`.
