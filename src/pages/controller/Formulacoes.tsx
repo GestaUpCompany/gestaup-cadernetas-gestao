@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input, CardSkeleton, CardItem } from '../../components/ui'
+import { Button, Card, Input, CardSkeleton, CardItem, ConfirmModal } from '../../components/ui'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
@@ -53,6 +53,19 @@ interface InsumoOption {
   preco_ton_mn?: number
   formulacao_origem_id?: string | null
 }
+
+interface FormulacaoCategoriaGmd {
+  id?: string
+  formulacao_id?: string
+  categoria: string
+  gmd: number
+  ordem: number
+}
+
+const CATEGORIAS_DISPONIVEIS = [
+  'vaca', 'touro', 'boi gordo', 'boi magro', 'garrote',
+  'bezerro', 'bezerra', 'novilha',
+]
 
 interface DietaInsumoCalc {
   insumo_id: string
@@ -144,6 +157,13 @@ export function Formulacoes() {
   const [submitting, setSubmitting] = useState(false)
   const [showInactive, setShowInactive] = useState(false)
   const [premixFilter, setPremixFilter] = useState<'todos' | 'tmr' | 'premix'>('todos')
+  const [categoriasGmd, setCategoriasGmd] = useState<FormulacaoCategoriaGmd[]>([])
+  const [deleteCatWarning, setDeleteCatWarning] = useState<{
+    isOpen: boolean
+    categoria: string
+    idx: number
+    lotes: { nome: string; categorias: string[] }[]
+  } | null>(null)
 
   useEffect(() => {
     loadFormulacoes()
@@ -339,7 +359,7 @@ export function Formulacoes() {
     const fazendaId = vinculos[0].fazenda_id
     const metaPV = parseFloat(parseFloat(formData.consumo_ms_percent_pv || '0').toFixed(2))
     const pesoVivo = parseFloat(parseFloat(formData.peso_vivo_medio || '0').toFixed(2))
-    const gmd = parseFloat(parseCommaDecimal(formData.gmd || '0').toFixed(3))
+    const gmd = null
 
     // Validação bloqueante: colisão de nome com insumo atômico ativo
     if (formData.e_premix) {
@@ -422,6 +442,29 @@ export function Formulacoes() {
             console.error('Erro ao salvar insumos da formulação:', juncaoError)
           }
         }
+
+        // Sincronizar categorias GMD (DELETE + INSERT)
+        if (!formData.e_premix) {
+          await supabase
+            .from('formulacao_categorias_gmd')
+            .delete()
+            .eq('formulacao_id', savedFormulacaoId)
+
+          if (categoriasGmd.length > 0) {
+            const fcgRows = categoriasGmd.map((cat, idx) => ({
+              formulacao_id: savedFormulacaoId,
+              categoria: cat.categoria.toLowerCase().trim(),
+              gmd: cat.gmd,
+              ordem: idx,
+            }))
+            const { error: fcgError } = await supabase
+              .from('formulacao_categorias_gmd')
+              .insert(fcgRows)
+            if (fcgError) {
+              console.error('Erro ao salvar categorias GMD:', fcgError)
+            }
+          }
+        }
       }
 
       // Upsert do insumo gerado se a formulação é premix
@@ -471,6 +514,7 @@ export function Formulacoes() {
         e_premix: false,
       })
       setSelectedInsumos([])
+      setCategoriasGmd([])
       setShowForm(false)
       setEditingFormulacao(null)
       await Promise.all([loadFormulacoes(), loadInsumos()])
@@ -519,6 +563,15 @@ export function Formulacoes() {
     }))
 
     setSelectedInsumos(insumosFromJuncao)
+
+    // Carregar categorias GMD da formulação
+    const { data: fcgData } = await supabase
+      .from('formulacao_categorias_gmd')
+      .select('id, formulacao_id, categoria, gmd, ordem')
+      .eq('formulacao_id', dieta.id)
+      .order('ordem', { ascending: true })
+    setCategoriasGmd((fcgData || []) as FormulacaoCategoriaGmd[])
+
     setShowForm(true)
   }
 
@@ -537,6 +590,7 @@ export function Formulacoes() {
       e_premix: false,
     })
     setSelectedInsumos([])
+    setCategoriasGmd([])
     setShowForm(false)
   }
 
@@ -756,20 +810,6 @@ export function Formulacoes() {
                   className="border-gray-200 focus:border-accent"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">GMD Planejado (kg/Cab/Dia)</label>
-                <Input
-                  type="text"
-                  inputMode="decimal"
-                  value={formData.gmd}
-                  onChange={(e) => {
-                    const value = e.target.value.replace('.', ',')
-                    setFormData({ ...formData, gmd: value })
-                  }}
-                  placeholder="Ex: 0,300"
-                  className="border-gray-200 focus:border-accent"
-                />
-              </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Sistema de Produção</label>
@@ -784,6 +824,114 @@ export function Formulacoes() {
                   <option value="Engorda">Engorda</option>
                 </select>
               </div>
+            </div>
+            )}
+
+            {/* Categorias GMD por formulação (TMR only) */}
+            {!formData.e_premix && (
+            <div className="border-t border-gray-200 pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <label className="block text-sm font-medium text-gray-700">GMD por Categoria</label>
+                <span className="text-xs text-gray-500">Define o GMD usado pelo cron para cada categoria do lote</span>
+              </div>
+
+              {categoriasGmd.length > 0 && (
+                <div className="space-y-2 mb-3">
+                  {categoriasGmd.map((cat, idx) => (
+                    <div key={idx} className="flex items-center gap-3 bg-gray-50 rounded-lg p-2">
+                      <span className="flex-1 text-sm font-medium text-gray-700 capitalize">{cat.categoria}</span>
+                      <div className="flex items-center gap-1">
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          value={cat.gmd.toFixed(3).replace('.', ',')}
+                          onChange={(e) => {
+                            const val = parseCommaDecimal(e.target.value)
+                            setCategoriasGmd(prev => prev.map((c, i) => i === idx ? { ...c, gmd: val } : c))
+                          }}
+                          className="w-24 text-right border-gray-200 focus:border-accent py-1"
+                        />
+                        <span className="text-xs text-gray-500">kg/dia</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const catName = cat.categoria.toLowerCase().trim()
+                          // Verificar se a formulação sendo editada está em uso por algum lote
+                          const editingId = editingFormulacao?.id
+                          if (!editingId) {
+                            setCategoriasGmd(prev => prev.filter((_, i) => i !== idx))
+                            return
+                          }
+                          // Buscar lotes que usam esta formulação como vigente
+                          const { data: lotesAfetados } = await supabase
+                            .from('lotes')
+                            .select('id, nome')
+                            .eq('formulacao_id', editingId)
+                            .eq('ativo', true)
+                          if (!lotesAfetados || lotesAfetados.length === 0) {
+                            setCategoriasGmd(prev => prev.filter((_, i) => i !== idx))
+                            return
+                          }
+                          // Para cada lote, verificar se tem a categoria ativa
+                          const lotesComCategoria: { nome: string; categorias: string[] }[] = []
+                          for (const lote of lotesAfetados) {
+                            const { data: catsLote } = await supabase
+                              .from('lote_categorias')
+                              .select('categoria')
+                              .eq('lote_id', lote.id)
+                              .eq('ativo', true)
+                              .eq('data_fim', null)
+                            const catsMatch = (catsLote || []).filter(c =>
+                              c.categoria.toLowerCase().trim() === catName
+                            ).map(c => c.categoria)
+                            if (catsMatch.length > 0) {
+                              lotesComCategoria.push({ nome: lote.nome, categorias: catsMatch })
+                            }
+                          }
+                          if (lotesComCategoria.length > 0) {
+                            setDeleteCatWarning({
+                              isOpen: true,
+                              categoria: cat.categoria,
+                              idx,
+                              lotes: lotesComCategoria,
+                            })
+                          } else {
+                            setCategoriasGmd(prev => prev.filter((_, i) => i !== idx))
+                          }
+                        }}
+                        className="text-red-400 hover:text-red-600 transition-colors p-1"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {categoriasGmd.length === 0 && (
+                <p className="text-sm text-gray-500 mb-3">Nenhuma categoria com GMD cadastrada. Adicione categorias abaixo.</p>
+              )}
+
+              <select
+                onChange={(e) => {
+                  if (e.target.value) {
+                    const cat = e.target.value
+                    if (!categoriasGmd.some(c => c.categoria.toLowerCase().trim() === cat.toLowerCase().trim())) {
+                      setCategoriasGmd(prev => [...prev, { categoria: cat, gmd: 0, ordem: prev.length }])
+                    }
+                    e.target.value = ''
+                  }
+                }}
+                className="w-full sm:max-w-md px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] bg-white text-sm"
+              >
+                <option value="">Adicionar categoria...</option>
+                {CATEGORIAS_DISPONIVEIS.map(cat => (
+                  <option key={cat} value={cat}>{capitalizeWords(cat)}</option>
+                ))}
+              </select>
             </div>
             )}
 
@@ -956,12 +1104,6 @@ export function Formulacoes() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">GMD Planejado (kg/Cab/Dia)</label>
-                  <div className="text-lg font-bold text-green-800">
-                    {fmt(parseCommaDecimal(formData.gmd || '0'), 3)}
-                  </div>
-                </div>
-                <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Sistema de Produção</label>
                   <div className="text-lg font-bold text-green-800">
                     {formData.sistema_producao || '—'}
@@ -1037,7 +1179,7 @@ export function Formulacoes() {
                     <p><span className="font-medium">PV Médio:</span> {fmt(dieta.peso_vivo_medio)} kg</p>
                   )}
                   {!dieta.e_premix && dieta.gmd != null && (
-                    <p><span className="font-medium">GMD Planejado:</span> {fmt(dieta.gmd, 3)} kg/Cab/Dia</p>
+                    <p><span className="font-medium">GMD Base:</span> {fmt(dieta.gmd, 3)} kg/Cab/Dia</p>
                   )}
                   {!dieta.e_premix && dieta.sistema_producao && (
                     <p><span className="font-medium">Sistema:</span> {dieta.sistema_producao}</p>
@@ -1084,6 +1226,27 @@ export function Formulacoes() {
             ))}
         </div>
       ) : null}
+
+      {/* Aviso ao excluir categoria de formulação em uso */}
+      <ConfirmModal
+        isOpen={deleteCatWarning?.isOpen ?? false}
+        title="Excluir categoria da formulação"
+        variant="danger"
+        message={
+          deleteCatWarning
+            ? `A categoria "${deleteCatWarning.categoria}" está em uso nos seguintes lotes:\n\n${deleteCatWarning.lotes
+                .map(l => `• ${l.nome} (categoria: ${l.categorias.join(', ')})`)
+                .join('\n')}\n\nRemover esta categoria fará com que essas categorias parem de evoluir peso (GMD ficará NULL). Deseja continuar?`
+            : ''
+        }
+        onConfirm={() => {
+          if (deleteCatWarning) {
+            setCategoriasGmd(prev => prev.filter((_, i) => i !== deleteCatWarning.idx))
+          }
+          setDeleteCatWarning(null)
+        }}
+        onClose={() => setDeleteCatWarning(null)}
+      />
     </div>
   )
 }

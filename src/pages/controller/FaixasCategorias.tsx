@@ -200,7 +200,9 @@ export function FaixasCategorias() {
   const [transicoes, setTransicoes] = useState<TransicaoHistorico[]>([])
   const [transicaoExpandidaId, setTransicaoExpandidaId] = useState<string | null>(null)
   const [formulacoesMap, setFormulacoesMap] = useState<Record<string, { nome: string; consumo_ms_percent_pv: number | null }>>({})
-
+  const [formulacaoLoteId, setFormulacaoLoteId] = useState<string | null>(null)
+  const [categoriasFormulacaoLote, setCategoriasFormulacaoLote] = useState<string[]>([])
+  const [totalCategoriasAtivasLote, setTotalCategoriasAtivasLote] = useState<number>(1)
   // Modal de recategorização
   const [recategorizando, setRecategorizando] = useState<LoteCategoriaCronologia | null>(null)
   const [novaCategoria, setNovaCategoria] = useState<string>('')
@@ -598,6 +600,31 @@ export function FaixasCategorias() {
     setManterFormulacao(true)
     setFormulacaoSelecionada('')
     setErroRecategorizacao(null)
+
+    // Carregar formulação vigente do lote e suas categorias cobertas
+    setFormulacaoLoteId(null)
+    setCategoriasFormulacaoLote([])
+    setTotalCategoriasAtivasLote(1)
+    const { data: loteData } = await supabase
+      .from('lotes')
+      .select('formulacao_id')
+      .eq('id', loteCategoria.lote_id)
+      .single()
+    if (loteData?.formulacao_id) {
+      setFormulacaoLoteId(loteData.formulacao_id)
+      const { data: fcgData } = await supabase
+        .from('formulacao_categorias_gmd')
+        .select('categoria')
+        .eq('formulacao_id', loteData.formulacao_id)
+      setCategoriasFormulacaoLote((fcgData || []).map((r: any) => (r.categoria as string).toLowerCase()))
+    }
+    // Contar categorias ativas do lote para decidir se troca de formulação é permitida
+    const { count } = await supabase
+      .from('lote_categorias')
+      .select('id', { count: 'exact', head: true })
+      .eq('lote_id', loteCategoria.lote_id)
+      .eq('ativo', true)
+    setTotalCategoriasAtivasLote(count ?? 1)
     setSucessoRecategorizacao(null)
     setFormulacoesDisponiveis([])
     // Pré-carregar formulações só quando usuário escolher "trocar"
@@ -1034,6 +1061,16 @@ export function FaixasCategorias() {
               </div>
             )}
 
+            {formulacaoLoteId && novaCategoria && !categoriasFormulacaoLote.includes(novaCategoria.toLowerCase()) && manterFormulacao && (
+              <div className="bg-red-50 border border-red-300 rounded-lg p-3 text-xs text-red-900">
+                <p className="font-semibold">A formulação vigente no lote não contempla essa nova categoria.</p>
+                <p className="mt-1">
+                  Não há GMD para essa categoria na formulação vigente do lote. A evolução de peso será interrompida para esta categoria.
+                  Para manter a evolução, troque para uma formulação que contemple a categoria destino.
+                </p>
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Formulação nutricional</label>
               <div className="space-y-2">
@@ -1045,15 +1082,22 @@ export function FaixasCategorias() {
                   />
                   Continuar com a formulação atual
                 </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    checked={!manterFormulacao}
-                    onChange={() => setManterFormulacao(false)}
-                  />
-                  Trocar formulação
-                </label>
+                {totalCategoriasAtivasLote <= 1 && (
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      checked={!manterFormulacao}
+                      onChange={() => setManterFormulacao(false)}
+                    />
+                    Trocar formulação
+                  </label>
+                )}
               </div>
+              {totalCategoriasAtivasLote > 1 && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Este lote tem {totalCategoriasAtivasLote} categorias ativas. A formulação não pode ser trocada para não afetar as outras categorias. Edite a formulação vigente para contemplar a nova categoria, se necessário.
+                </p>
+              )}
             </div>
 
             {!manterFormulacao && (

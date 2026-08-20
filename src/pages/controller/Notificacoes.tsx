@@ -22,6 +22,11 @@ interface Notificacao {
     percentual?: number
     dias_restantes?: number | null
     tipo_alerta?: string
+    lote_id?: string
+    categoria_destino?: string
+    peso_meta_kg?: number | null
+    periodo_dias?: number | null
+    formulacao_cobre?: boolean | null
   } | null
 }
 
@@ -556,6 +561,22 @@ export function Notificacoes() {
                       {notif.titulo}
                     </p>
                     <p className="text-sm text-gray-600 mt-0.5">{notif.mensagem}</p>
+                    {notif.dados_jsonb?.tipo_alerta === 'nova_categoria_movimentacao' && (
+                      <div className={`mt-2 p-2 rounded-lg border text-xs ${notif.dados_jsonb.formulacao_cobre ? 'bg-blue-50 border-blue-200 text-blue-900' : 'bg-red-50 border-red-300 text-red-900'}`}>
+                        <p className="font-semibold">
+                          {notif.dados_jsonb.formulacao_cobre ? 'Categoria adicionada à formulação do lote' : 'Formulação do lote não contempla esta categoria'}
+                        </p>
+                        <p>
+                          Categoria: <span className="font-medium">{notif.dados_jsonb.categoria_destino || notif.dados_jsonb.categoria}</span>
+                          {notif.dados_jsonb.lote_nome && ` • Lote: ${notif.dados_jsonb.lote_nome}`}
+                        </p>
+                        <p className="mt-1">
+                          {notif.dados_jsonb.formulacao_cobre
+                            ? 'A formulação vigente do lote já cobre esta categoria. A evolução de peso continua normalmente com o GMD da formulação.'
+                            : 'Não há GMD para essa categoria na formulação vigente do lote. A evolução de peso foi interrompida. Ajuste a formulação do lote ou recategorize para retomar a evolução.'}
+                        </p>
+                      </div>
+                    )}
                   </div>
                   <span className="text-xs text-gray-400 shrink-0">{formatTime(notif.created_at)}</span>
                 </div>
