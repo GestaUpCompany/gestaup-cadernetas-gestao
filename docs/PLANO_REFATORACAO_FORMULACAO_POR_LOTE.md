@@ -634,7 +634,7 @@ Os backfills das Migrations A, B, F e H podem ser re-executados na branch para v
 
 ### 10.1 Migrations na ordem exata de execução
 
-As 16 migrations abaixo devem ser aplicadas em produção nesta ordem. O `supabase db push` respeita a ordem alfabética do timestamp do arquivo, que já corresponde à sequência correta.
+As 19 migrations abaixo devem ser aplicadas em produção nesta ordem. O `supabase db push` respeita a ordem alfabética do timestamp do arquivo, que já corresponde à sequência correta.
 
 | # | Arquivo | Commit | O que faz |
 |---|---------|--------|-----------|
@@ -659,14 +659,16 @@ As 16 migrations abaixo devem ser aplicadas em produção nesta ordem. O `supaba
 | 19 | `20260825190000_migration_u_fix_data_ajuste_peso_cron_schedule.sql` | `2e529e4` | Fix dupla contagem com data_ajuste_peso + bezerros ao pe respeitam ajuste + agendamento cron |
 
 **Notas sobre sobreposição:**
-- A migration E (n. 5) cria a v1 do cron. A migration N (n. 13) reescreve o cron com personalização e interrupção de ganho. Ambas devem rodar em ordem.
+- A migration E (n. 5) cria a v1 do cron. A migration N (n. 13) reescreve o cron com personalização e interrupção de ganho. A migration T (n. 18) troca LEFT JOIN por INNER JOIN (só evolui com plano vigente). A migration U (n. 19) corrige dupla contagem com `data_ajuste_peso` e agenda o cron. Todas devem rodar em ordem; cada uma sobrescreve a anterior com `CREATE OR REPLACE`.
 - As migrations L (n. 12) e Q-R (n. 16) definem as mesmas funções (`iniciar_plano_lote`, `encerrar_plano_lote`) com a mesma lógica. Q-R é idempotente (`CREATE OR REPLACE`), não causa problema.
 - As migrations O (n. 14) e P (n. 15) corrigem `criar_snapshot_entrada` e `migrar_plano_lote` que foram criadas na K (n. 11). A ordem K → O → P deve ser respeitada.
+- A migration S (n. 17) corrige `unaccent` em 5 funções/triggers que foram criadas nas migrations D (n. 4) e em migrations anteriores do projeto. Deve rodar depois de D.
+- A migration U (n. 19) agenda o cron com `cron.schedule`. Se o cron já existir em produção (agendado manualmente), o guard `IF NOT EXISTS` evita duplicação.
 
 ### 10.2 Passos para promover para produção
 
 1. Backup pontual de prod como rede de segurança.
-2. `git pull` na branch `refactor/formulacao-por-lote` (todas as 16 migrations estão commitadas).
+2. `git pull` na branch `refactor/formulacao-por-lote` (todas as 19 migrations estão commitadas).
 3. `supabase db push` na produção. O CLI aplica automaticamente apenas as migrations que ainda não existem em `supabase_migrations.schema_migrations`.
 4. Deploy do código frontend novo + PWA atualizado para prod.
 5. Monitorar as primeiras 24h em prod (sem janela de manutenção, mas com atenção).
