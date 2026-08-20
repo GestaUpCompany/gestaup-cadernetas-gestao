@@ -632,16 +632,69 @@ Os backfills das Migrations A, B, F e H podem ser re-executados na branch para v
 
 ## 10. Ordem de execução recomendada (branch-first, tudo validado antes de promover)
 
-1. Criar branch do Supabase a partir do projeto prod.
-2. Aplicar migrations A, B, C, D, E, F, G, H na branch (todas de uma vez, já que a branch é isolada).
-3. Apontar painel novo (dev) e PWA (dev) para a URL da branch.
-4. Validar migrations e backfills (seção 9.2): verificar que cada migration fez o que deveria usando os dados reais do snapshot.
-5. Amostrar `peso_vivo_atual_kg_cab` antes/depois da Migration E dentro da branch.
-6. Simular backfills (seção 9.4): re-executar para verificar idempotência e criar edge cases.
-7. Testar features novas na fazenda de testes `d649c65e-...` dentro da branch (seção 9.3): usar lotes existentes do snapshot e criar novos conforme necessário.
-8. Corrigir e iterar dentro da branch até todos os critérios de sucesso (seção 9.5) passarem.
-9. Backup pontual de prod como rede de segurança.
-10. Promover migrations A–H para prod.
-11. Deploy do código frontend novo + PWA atualizado para prod.
-12. Monitorar as primeiras 24h em prod (sem janela de manutenção, mas com atenção).
-13. Fase de corte (seção 6) só depois de confirmada estabilidade.
+### 10.1 Migrations na ordem exata de execução
+
+As 16 migrations abaixo devem ser aplicadas em produção nesta ordem. O `supabase db push` respeita a ordem alfabética do timestamp do arquivo, que já corresponde à sequência correta.
+
+| # | Arquivo | Commit | O que faz |
+|---|---------|--------|-----------|
+| 1 | `20260825010000_migration_a_lotes_formulacao_id.sql` | `dea8424` | Adiciona `lotes.formulacao_id` + backfill a partir do plano vigente mais antigo |
+| 2 | `20260825020000_migration_b_formulacao_categorias_gmd.sql` | `dea8424` | Cria `formulacao_categorias_gmd` + backfill a partir de `lote_categorias.gmd` |
+| 3 | `20260825030000_migration_c_formulacoes_versao_historico.sql` | `dea8424` | Versionamento de formulações + `formulacoes_historico` + trigger de snapshot |
+| 4 | `20260825040000_migration_d_sync_gmd_lote_categorias.sql` | `dea8424` | Trigger `repropagar_gmd_para_lotes`: ao mudar `lotes.formulacao_id`, repropaga GMD para `lote_categorias` |
+| 5 | `20260825050000_migration_e_rewrite_cron_update_dados_lotes.sql` | `dea8424` | Cron reescrito v1 (JOIN por `lote_id`, lê `lc.gmd`). Sobrescrito pela migration N |
+| 6 | `20260825060000_migration_f_bezerros_ao_pe_gmd_padrao.sql` | `dea8424` | Backfill de GMD padrão (0.600/0.500) para bezerros/bezerras ao pé ativos sem GMD |
+| 7 | `20260825070000_migration_g_rewrite_rpc_recategorizar.sql` | `dea8424` | RPC `recategorizar_lote_categoria` reescrita: atualiza categoria in-place, não cria plano novo |
+| 8 | `20260825080000_migration_h_normalizacao_planos_lote.sql` | `dea8424` | Backfill: normaliza lotes com planos vigentes distintos (deixa apenas um vigente por lote) |
+| 9 | `20260825090000_migration_i_fix_encerrar_plano_nutricional_rc.sql` | `fd4e01d` | Fix `encerrar_plano_nutricional`: `rc_atual` inexistente → `rc_final` |
+| 10 | `20260825100000_migration_j_normalizacao_categorias.sql` | `5c0ac62` | Normalização de categorias (case + unicode) com triggers BEFORE INSERT/UPDATE |
+| 11 | `20260825110000_migration_k_planos_por_lote.sql` | `4e685f7` | Planos por lote: adiciona `planos_nutricionais.lote_id`, cria `plano_categoria_personalizacao`, cria RPCs `iniciar_plano_lote`/`encerrar_plano_lote`/`migrar_plano_lote` |
+| 12 | `20260825120000_migration_l_remove_gmd_base_fallback.sql` | `4e685f7` | Remove fallback `gmd_planejado`/`f.gmd`, GMD apenas de `formulacao_categorias_gmd`, `unaccent` na filtragem de bezerros ao pé |
+| 13 | `20260825130000_migration_n_cron_rewrite.sql` | `4e685f7` | Cron reescrito v2: JOIN por `lote_id`, LEFT JOIN com `plano_categoria_personalizacao`, interrompe ganho por período/peso meta, remove migração automática, `unaccent` |
+| 14 | `20260825140000_migration_o_fix_criar_snapshot_entrada.sql` | `4e685f7` | Fix `criar_snapshot_entrada`: guard por `lote_id` (não `lote_categoria_id`), GMD de `formulacao_categorias_gmd` |
+| 15 | `20260825150000_migration_p_fix_migrar_plano_lote.sql` | `4e685f7` | Fix `migrar_plano_lote`: GMD de `formulacao_categorias_gmd`, `unaccent` |
+| 16 | `20260825160000_migration_q_r_fix_unaccent_rpcs.sql` | `4e685f7` | Fix `unaccent` em `iniciar_plano_lote` e `encerrar_plano_lote`, remove `gmd_planejado` como fallback |
+
+**Notas sobre sobreposição:**
+- A migration E (n. 5) cria a v1 do cron. A migration N (n. 13) reescreve o cron com personalização e interrupção de ganho. Ambas devem rodar em ordem.
+- As migrations L (n. 12) e Q-R (n. 16) definem as mesmas funções (`iniciar_plano_lote`, `encerrar_plano_lote`) com a mesma lógica. Q-R é idempotente (`CREATE OR REPLACE`), não causa problema.
+- As migrations O (n. 14) e P (n. 15) corrigem `criar_snapshot_entrada` e `migrar_plano_lote` que foram criadas na K (n. 11). A ordem K → O → P deve ser respeitada.
+
+### 10.2 Passos para promover para produção
+
+1. Backup pontual de prod como rede de segurança.
+2. `git pull` na branch `refactor/formulacao-por-lote` (todas as 16 migrations estão commitadas).
+3. `supabase db push` na produção. O CLI aplica automaticamente apenas as migrations que ainda não existem em `supabase_migrations.schema_migrations`.
+4. Deploy do código frontend novo + PWA atualizado para prod.
+5. Monitorar as primeiras 24h em prod (sem janela de manutenção, mas com atenção).
+6. Fase de corte (seção 6) só depois de confirmada estabilidade.
+
+### 10.3 Validação pós-aplicação (queries de checagem)
+
+```sql
+-- 1. lotes.formulacao_id populada
+SELECT id, nome, formulacao_id FROM lotes WHERE ativo = true AND formulacao_id IS NOT NULL;
+
+-- 2. formulacao_categorias_gmd populada
+SELECT formulacao_id, categoria, gmd FROM formulacao_categorias_gmd ORDER BY formulacao_id, categoria;
+
+-- 3. planos_nutricionais.lote_id backfilled
+SELECT COUNT(*) AS total, COUNT(lote_id) AS com_lote FROM planos_nutricionais;
+
+-- 4. plano_categoria_personalizacao criada
+SELECT COUNT(*) FROM plano_categoria_personalizacao;
+
+-- 5. Cron sem erro
+SELECT update_dados_lotes();
+
+-- 6. Bezerros ao pé com GMD
+SELECT categoria, gmd FROM lote_categorias WHERE LOWER(unaccent(categoria)) ILIKE 'bezer% ao pe' AND ativo = true AND data_fim IS NULL;
+
+-- 7. Lotes com planos vigentes distintos (deve retornar vazio)
+SELECT l.id, l.nome, COUNT(DISTINCT pn.id) AS planos_vigentes
+FROM lotes l
+JOIN planos_nutricionais pn ON pn.lote_id = l.id AND pn.ativo = true AND pn.data_fim IS NULL
+WHERE l.ativo = true
+GROUP BY l.id, l.nome
+HAVING COUNT(DISTINCT pn.id) > 1;
+```
