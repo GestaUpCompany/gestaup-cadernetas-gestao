@@ -792,6 +792,15 @@ function CategoriaPersonalizacaoCard({
     setPesoMeta(personalizacao?.peso_meta_kg?.toString().replace('.', ',') || (planoPesoMetaKg != null ? planoPesoMetaKg.toString().replace('.', ',') : ''))
   }, [personalizacao, planoPeriodoDias, planoPesoMetaKg])
 
+  // Detectar se o usuário alterou os valores (comparação numérica normalizada)
+  const normalizeNum = (s: string): number | null => {
+    const n = parseFloat(s.replace(',', '.').trim())
+    return isNaN(n) ? null : n
+  }
+  const isDirty =
+    normalizeNum(periodo) !== normalizeNum(fallbackPeriodo) ||
+    normalizeNum(pesoMeta) !== normalizeNum(fallbackPesoMeta)
+
   const handleSave = async () => {
     if (!planoVigenteId) return
     setSaving(true)
@@ -845,7 +854,7 @@ function CategoriaPersonalizacaoCard({
           ? 'Personalização ativa. Se o período desta categoria terminar antes das outras, ela para de evoluir peso e aguarda o fim das demais.'
           : 'Valores do plano vigente. Edite para personalizar esta categoria. Se o período terminar antes das outras, ela para de evoluir peso e aguarda o fim das demais.'}
       </p>
-      {planoVigenteId && (
+      {planoVigenteId && isDirty && (
         <Button size="sm" className="mt-2" onClick={handleSave} disabled={saving}>
           {saving ? 'Salvando...' : 'Salvar Personalização'}
         </Button>

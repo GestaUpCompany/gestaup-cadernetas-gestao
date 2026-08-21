@@ -3,7 +3,6 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, NumericInput, CardSkeleton, ConfirmModal, CardItem } from '../../components/ui'
-import { PlanoNutricionalCategoriaModal } from '../../components/plano-nutricional/PlanoNutricionalCategoriaModal'
 import { PlanoNutricionalLoteModal } from '../../components/plano-nutricional/PlanoNutricionalLoteModal'
 import { PlanoNutricionalDraftModal, PlanoRascunho } from '../../components/plano-nutricional/PlanoNutricionalDraftModal'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
@@ -178,8 +177,6 @@ export function Lotes() {
   const [ocupacaoPorLote, setOcupacaoPorLote] = useState<Record<string, any>>({})
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
   const [showInactive, setShowInactive] = useState(false)
-  const [isPlanoModalOpen, setIsPlanoModalOpen] = useState(false)
-  const [selectedCategoriaForPlanos, setSelectedCategoriaForPlanos] = useState<{ loteCategoriaId?: string; categoria: string } | null>(null)
   const [isPlanoLoteModalOpen, setIsPlanoLoteModalOpen] = useState(false)
   const [isPlanoDraftModalOpen, setIsPlanoDraftModalOpen] = useState(false)
   const [selectedDraftCategoriaIndex, setSelectedDraftCategoriaIndex] = useState<number | null>(null)
@@ -901,20 +898,6 @@ export function Lotes() {
         console.error(`Erro ao sincronizar nutrição dos indivíduos da categoria ${cat.categoria}:`, syncError)
       }
     }
-  }
-
-  // Abrir modal da categoria (sem autosave)
-  const abrirPlanosCategoria = (catId: string, catIndex: number) => {
-    if (!editingLote) {
-      alert('Salve o lote antes de gerenciar planos.')
-      return
-    }
-    const cat = catId
-      ? formData.categorias.find((c) => c.id === catId)
-      : formData.categorias[catIndex]
-    if (!cat) return
-    setSelectedCategoriaForPlanos({ loteCategoriaId: cat.id, categoria: cat.categoria })
-    setIsPlanoModalOpen(true)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -2453,13 +2436,6 @@ export function Lotes() {
                                           Editar Formulação →
                                         </Button>
                                       )}
-                                      <Button
-                                        type="button"
-                                        size="sm"
-                                        onClick={() => abrirPlanosCategoria(cat.id || '', catIndex)}
-                                      >
-                                        {hasPlano ? 'Gerenciar Planos' : 'Criar Plano'}
-                                      </Button>
                                     </div>
                                   </div>
                                 </div>
@@ -3328,38 +3304,6 @@ export function Lotes() {
           confirmText="Confirmar alteração do peso atual"
           cancelText="Cancelar"
           variant="warning"
-        />
-      )}
-
-      {selectedCategoriaForPlanos && (
-        <PlanoNutricionalCategoriaModal
-          isOpen={isPlanoModalOpen}
-          onClose={() => {
-            setIsPlanoModalOpen(false)
-            setSelectedCategoriaForPlanos(null)
-            loadLotes()
-            if (editingLote) {
-              handleEdit(editingLote)
-            }
-          }}
-          loteCategoriaId={selectedCategoriaForPlanos.loteCategoriaId || ''}
-          categoria={selectedCategoriaForPlanos.categoria}
-          loteId={editingLote?.id}
-          loteNome={formData.nome}
-          formulacaoLoteId={formData.formulacao_lote_id || null}
-          onOpenLoteModal={() => {
-            setIsPlanoLoteModalOpen(true)
-          }}
-          onOpenFormulacao={(formulacaoId) => {
-            setSelectedCategoriaForPlanos(null)
-            window.location.href = `/controller/formulacoes?edit=${formulacaoId}`
-          }}
-          onPlanChanged={async () => {
-            await loadLotes()
-            if (editingLote) {
-              await handleEdit(editingLote)
-            }
-          }}
         />
       )}
 
