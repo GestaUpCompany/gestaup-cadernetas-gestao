@@ -23,6 +23,7 @@ interface Personalizacao {
   lote_categoria_id: string
   periodo_dias: number | null
   peso_meta_kg: number | null
+  peso_inicio_kg_cab: number | null
   ativo: boolean
 }
 
