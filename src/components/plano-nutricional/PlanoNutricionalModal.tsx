@@ -637,6 +637,7 @@ export function PlanoNutricionalModal({
           if (error) throw error
           await loadData()
           onPlanChanged?.()
+          setMessage('Plano encerrado. A formulação vigente do lote foi avançada para o próximo plano da fila, se houver.')
         } catch (error: any) {
           console.error('Erro ao encerrar plano:', error)
           setMessage(error.message || 'Erro ao encerrar plano')

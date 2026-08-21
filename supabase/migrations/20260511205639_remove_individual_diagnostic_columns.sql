@@ -1,0 +1,17 @@
+ALTER TABLE public.registros_rodeio
+  DROP COLUMN IF EXISTS escore_gado_ideal,
+  DROP COLUMN IF EXISTS escore_gado_ideal_obs,
+  DROP COLUMN IF EXISTS bebedouros_cochos,
+  DROP COLUMN IF EXISTS bebedouros_cochos_obs,
+  DROP COLUMN IF EXISTS pastagens_taxa_lotacao,
+  DROP COLUMN IF EXISTS pastagens_taxa_lotacao_obs,
+  DROP COLUMN IF EXISTS animais_machucados_doentes_bichados,
+  DROP COLUMN IF EXISTS animais_machucados_doentes_bichados_obs,
+  DROP COLUMN IF EXISTS cercas_cochos_porteiras,
+  DROP COLUMN IF EXISTS cercas_cochos_porteiras_obs,
+  DROP COLUMN IF EXISTS carrapatos_moscas,
+  DROP COLUMN IF EXISTS carrapatos_moscas_obs,
+  DROP COLUMN IF EXISTS animais_entrevero,
+  DROP COLUMN IF EXISTS animais_entrevero_obs,
+  DROP COLUMN IF EXISTS animal_morto,
+  DROP COLUMN IF EXISTS animal_morto_obs;;

@@ -1,0 +1,2 @@
+ALTER TABLE registros_rodeio RENAME COLUMN animais_doentes_bichados TO animais_machucados_doentes_bichados;
+ALTER TABLE registros_rodeio RENAME COLUMN animais_doentes_obs TO animais_machucados_doentes_bichados_obs;;

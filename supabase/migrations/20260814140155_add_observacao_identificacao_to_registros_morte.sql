@@ -1,0 +1,1 @@
+ALTER TABLE public.registros_morte ADD COLUMN IF NOT EXISTS observacao_identificacao text; COMMENT ON COLUMN public.registros_morte.observacao_identificacao IS 'Observacao sobre a razao do animal nao ter identificacao (brinco/chip), quando aplicavel.';;

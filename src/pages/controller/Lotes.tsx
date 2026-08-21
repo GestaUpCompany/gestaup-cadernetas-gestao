@@ -3,7 +3,8 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, NumericInput, CardSkeleton, ConfirmModal, CardItem } from '../../components/ui'
-import { PlanoNutricionalModal } from '../../components/plano-nutricional/PlanoNutricionalModal'
+import { PlanoNutricionalCategoriaModal } from '../../components/plano-nutricional/PlanoNutricionalCategoriaModal'
+import { PlanoNutricionalLoteModal } from '../../components/plano-nutricional/PlanoNutricionalLoteModal'
 import { PlanoNutricionalDraftModal, PlanoRascunho } from '../../components/plano-nutricional/PlanoNutricionalDraftModal'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
@@ -166,6 +167,7 @@ export function Lotes() {
     data_liberacao_sisbov: '',
     periodo_liberacao_sisbov: '',
     data_embarque_prevista: '',
+    formulacao_lote_id: '' as string,
   })
   const [submitting, setSubmitting] = useState(false)
   // Estado da verificação de nome duplicado em tempo real
@@ -178,10 +180,10 @@ export function Lotes() {
   const [showInactive, setShowInactive] = useState(false)
   const [isPlanoModalOpen, setIsPlanoModalOpen] = useState(false)
   const [selectedCategoriaForPlanos, setSelectedCategoriaForPlanos] = useState<{ loteCategoriaId?: string; categoria: string } | null>(null)
+  const [isPlanoLoteModalOpen, setIsPlanoLoteModalOpen] = useState(false)
   const [isPlanoDraftModalOpen, setIsPlanoDraftModalOpen] = useState(false)
   const [selectedDraftCategoriaIndex, setSelectedDraftCategoriaIndex] = useState<number | null>(null)
-  const [autoSaveToast, setAutoSaveToast] = useState<string | null>(null)
-  const [openingPlanos, setOpeningPlanos] = useState(false)
+
   const [originalPesos, setOriginalPesos] = useState<Record<string, number | undefined>>({})
   const [pesoEditModal, setPesoEditModal] = useState<{
     isOpen: boolean
@@ -901,111 +903,18 @@ export function Lotes() {
     }
   }
 
-  // Auto-save do lote antes de abrir o modal de planos
-  const abrirPlanosComAutoSave = async (catId: string, catIndex: number) => {
-    // Validações básicas
-    if (!formData.nome?.trim()) {
-      alert('Preencha o nome do lote antes de gerenciar planos.')
+  // Abrir modal da categoria (sem autosave)
+  const abrirPlanosCategoria = (catId: string, catIndex: number) => {
+    if (!editingLote) {
+      alert('Salve o lote antes de gerenciar planos.')
       return
     }
-    if (formData.categorias.length === 0) {
-      alert('Selecione pelo menos uma categoria antes de gerenciar planos.')
-      return
-    }
-
-    setSubmitting(true)
-    setOpeningPlanos(true)
-    try {
-      // Buscar fazenda vinculada
-      const _fazendaId = await getFazendaIdForUser(user?.id || '')
-      if (!_fazendaId) {
-        alert('Não foi possível determinar a fazenda vinculada.')
-        setSubmitting(false)
-        return
-      }
-
-      // Validar nome único na fazenda (case-insensitive, sem acento)
-      const nomeDuplicado = await verificarNomeDuplicado(_fazendaId, formData.nome, editingLote?.id)
-      if (nomeDuplicado) {
-        alert(`Já existe um lote com o nome "${nomeDuplicado}" nesta fazenda. Nomes são comparados ignorando maiúsculas e acentos.`)
-        setSubmitting(false)
-        return
-      }
-
-      const loteData = {
-        fazenda_id: _fazendaId,
-        nome: formData.nome,
-        n_cabecas: formData.numero_cabecas ? parseInt(formData.numero_cabecas) : null,
-        qtd_bezerros: formData.quantidade_bezerros ? parseInt(formData.quantidade_bezerros) : null,
-        ativo: formData.ativo,
-        pasto_id: formData.pasto_id || null,
-        sistema_producao: formData.sistema_producao || null,
-        destino: formData.destino || null,
-        meta_intervalo_rodeio_dias: formData.meta_intervalo_rodeio_dias ? parseInt(formData.meta_intervalo_rodeio_dias) : null,
-        produtor_rural: formData.produtor_rural || null,
-        propriedade_origem: formData.propriedade_origem || null,
-        numero_contrato: formData.numero_contrato || null,
-        mes_competencia: formData.mes_competencia || null,
-        data_liberacao_sisbov: formData.data_liberacao_sisbov || null,
-        periodo_liberacao_sisbov: formData.periodo_liberacao_sisbov || null,
-        data_embarque_prevista: formData.data_embarque_prevista || null,
-      }
-
-      let loteId: string
-      if (editingLote) {
-        const { error: updateError } = await supabase
-          .from('lotes')
-          .update(loteData)
-          .eq('id', editingLote.id)
-        if (updateError) throw updateError
-        loteId = editingLote.id
-      } else {
-        const { data: newLote, error: insertError } = await supabase
-          .from('lotes')
-          .insert(loteData)
-          .select()
-          .single()
-        if (insertError) throw insertError
-        loteId = newLote?.id || ''
-        // Atualiza editingLote para o lote recém-criado, evitando que um
-        // handleSubmit posterior faça um segundo insert e duplique o lote.
-        setEditingLote(newLote as any)
-      }
-
-      // Salvar categorias (inclui raça, peso, etc.)
-      const recalculatedCategorias = formData.categorias.map(recalcularCategoria)
-      await salvarCategorias(loteId, recalculatedCategorias)
-
-      // Buscar a categoria correta: priorizar ID (categoria já persistida),
-      // fallback por índice (categoria recém-criada neste save)
-      const { data: savedCats } = await supabase
-        .from('lote_categorias')
-        .select('id, categoria')
-        .eq('lote_id', loteId)
-        .eq('ativo', true)
-        .order('created_at', { ascending: true })
-
-      const savedCat = catId
-        ? savedCats?.find((c) => c.id === catId)
-        : savedCats?.[catIndex]
-      if (savedCat) {
-        setAutoSaveToast('Lote salvo automaticamente. Abrindo planos...')
-        setTimeout(() => setAutoSaveToast(null), 3000)
-        setSelectedCategoriaForPlanos({ loteCategoriaId: savedCat.id, categoria: savedCat.categoria })
-        setIsPlanoModalOpen(true)
-        // Recarregar lotes para refletir o save
-        await loadLotes()
-        if (editingLote) {
-          await handleEdit({ ...editingLote, id: loteId } as any)
-        }
-      }
-    } catch (error: any) {
-      console.error('Erro no auto-save:', error)
-      alert('Não foi possível salvar o lote. Verifique os campos obrigatórios e tente novamente.')
-    } finally {
-      setSubmitting(false)
-      setOpeningPlanos(false)
-    }
+    const cat = catId
+      ? formData.categorias.find((c) => c.id === catId)
+      : formData.categorias[catIndex]
+    if (!cat) return
+    setSelectedCategoriaForPlanos({ loteCategoriaId: cat.id, categoria: cat.categoria })
+    setIsPlanoModalOpen(true)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1078,6 +987,7 @@ export function Lotes() {
       data_liberacao_sisbov: formData.data_liberacao_sisbov || null,
       periodo_liberacao_sisbov: formData.periodo_liberacao_sisbov || null,
       data_embarque_prevista: formData.data_embarque_prevista || null,
+      formulacao_id: formData.formulacao_lote_id || null,
     }
 
     let loteId: string
@@ -1416,6 +1326,7 @@ export function Lotes() {
         data_liberacao_sisbov: '',
         periodo_liberacao_sisbov: '',
         data_embarque_prevista: '',
+        formulacao_lote_id: '',
       })
       setShowForm(false)
       setEditingLote(null)
@@ -1606,6 +1517,7 @@ export function Lotes() {
       data_liberacao_sisbov: lote.data_liberacao_sisbov || '',
       periodo_liberacao_sisbov: lote.periodo_liberacao_sisbov?.toString() || '',
       data_embarque_prevista: lote.data_embarque_prevista || '',
+      formulacao_lote_id: (lote as any).formulacao_id || '',
     })
     setOriginalAtivo(lote.ativo ?? true)
     setShowForm(true)
@@ -1655,6 +1567,7 @@ export function Lotes() {
       data_liberacao_sisbov: '',
       periodo_liberacao_sisbov: '',
       data_embarque_prevista: '',
+      formulacao_lote_id: '',
     })
     setOriginalAtivo(true)
     setShowForm(false)
@@ -2144,6 +2057,27 @@ export function Lotes() {
                 </div>
               </div>
 
+              {/* Formulação do Lote */}
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs text-blue-700">Formulação do lote</p>
+                  <p className="text-sm font-semibold text-blue-900 truncate">
+                    {formData.formulacao_lote_id
+                      ? nutritionalOptions.find((o) => o.id === formData.formulacao_lote_id)?.name || 'Formulação não encontrada'
+                      : 'Nenhuma'}
+                  </p>
+                </div>
+                {editingLote && (
+                  <button
+                    type="button"
+                    onClick={() => setIsPlanoLoteModalOpen(true)}
+                    className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                  >
+                    Gerenciar Planos →
+                  </button>
+                )}
+              </div>
+
               <div className="mt-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
                   Categorias <span className="text-red-500">*</span>
@@ -2396,6 +2330,7 @@ export function Lotes() {
                             </label>
 
                             {(() => {
+                              const isBezerroAope = ['bezerro ao pé', 'bezerro ao pe', 'bezerra ao pé', 'bezerra ao pe'].includes(cat.categoria.toLowerCase())
                               const hasPlano = !!(cat.formulacao_id || cat.planos_rascunho?.length || cat.planos_cadastrados?.length)
                               const formulacao = cat.formulacao_id ? nutritionalOptions.find(opt => opt.id === cat.formulacao_id) : null
                               const titulo = formulacao?.name || (cat.planos_cadastrados?.find(p => p.ativo)?.nome) || 'Plano Nutricional'
@@ -2405,34 +2340,126 @@ export function Lotes() {
                               const hasVigente = cat.planos_cadastrados?.some(p => p.ativo) || !!cat.formulacao_id
                               const planoVigenteData = cat.planos_cadastrados?.find(p => p.ativo)?.data_inicio || null
 
+                              if (isBezerroAope) {
+                                const gmdOriginal = editingLote
+                                  ? (editingLote as any).categorias?.find((c: any) => c.id === cat.id)?.gmd
+                                  : undefined
+                                const normalizeGmd = (v: string | null | undefined) =>
+                                  v ? v.replace('.', ',').replace(/,+/g, ',').replace(/0+$/, '').replace(/,$/, '') : ''
+                                const gmdMudou = cat.id && cat.gmd !== '' &&
+                                  normalizeGmd(cat.gmd) !== normalizeGmd(gmdOriginal)
+                                return (
+                                  <div className="rounded-lg p-3 bg-amber-50 border border-amber-300">
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                      <div className="text-sm">
+                                        <p className="font-medium text-amber-900">GMD de {cat.categoria}</p>
+                                        <p className="text-amber-700 text-xs mt-1">
+                                          Bezerros/bezerras ao pé usam GMD próprio (padrão: 0,600 / 0,500). Não há plano nutricional para esta categoria.
+                                        </p>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <label className="text-xs font-medium text-amber-900">GMD (kg/dia)</label>
+                                        <Input
+                                          type="text"
+                                          inputMode="decimal"
+                                          value={cat.gmd || ''}
+                                          onChange={(e) => {
+                                            const val = e.target.value.replace('.', ',')
+                                            const updatedCategorias = [...formData.categorias]
+                                            updatedCategorias[catIndex] = { ...cat, gmd: val }
+                                            setFormData({ ...formData, categorias: updatedCategorias })
+                                          }}
+                                          placeholder="0,600"
+                                          className="w-24 text-right border-amber-200 focus:border-amber-500 py-1"
+                                        />
+                                        {gmdMudou && (
+                                          <Button
+                                            type="button"
+                                            size="sm"
+                                            onClick={async () => {
+                                              if (!cat.id) return
+                                              try {
+                                                const { error } = await supabase
+                                                  .from('lote_categorias')
+                                                  .update({ gmd: cat.gmd })
+                                                  .eq('id', cat.id)
+                                                if (error) throw error
+                                                // Atualizar editingLote para refletir o save
+                                                if (editingLote) {
+                                                  const updatedCats = (editingLote as any).categorias?.map((c: any) =>
+                                                    c.id === cat.id ? { ...c, gmd: cat.gmd } : c
+                                                  )
+                                                  setEditingLote({ ...editingLote, categorias: updatedCats } as any)
+                                                }
+                                              } catch (err) {
+                                                console.error('Erro ao salvar GMD:', err)
+                                                alert('Erro ao salvar GMD. Tente novamente.')
+                                              }
+                                            }}
+                                          >
+                                            Salvar
+                                          </Button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )
+                              }
+
+                              const semGmd = hasVigente && (!gmdValor || gmdValor === 0)
                               return (
-                                <div className={`rounded-lg p-3 ${hasPlano ? (hasVigente ? 'bg-green-50 border border-green-200' : 'bg-blue-50 border border-blue-200') : 'bg-yellow-50 border border-yellow-200'}`}>
+                                <div className={`rounded-lg p-3 ${semGmd ? 'bg-amber-50 border border-amber-300' : hasPlano ? (hasVigente ? 'bg-green-50 border border-green-200' : 'bg-blue-50 border border-blue-200') : 'bg-yellow-50 border border-yellow-200'}`}>
+                                  {/* Formulação vigente do lote em destaque */}
+                                  {formData.formulacao_lote_id && (() => {
+                                    const formLote = nutritionalOptions.find(o => o.id === formData.formulacao_lote_id)
+                                    if (!formLote) return null
+                                    return (
+                                      <div className="mb-2 pb-2 border-b border-blue-200">
+                                        <p className="text-xs font-semibold text-blue-900 uppercase tracking-wide">Formulação Vigente do Lote</p>
+                                        <p className="text-sm font-medium text-blue-800">{formLote.name}</p>
+                                      </div>
+                                    )
+                                  })()}
                                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                                     {hasPlano ? (
                                       <div className="text-sm">
                                         <p className="font-medium text-gray-900">{titulo}</p>
-                                        <p className="text-gray-600">
-                                          {hasVigente && planoVigenteData ? ` • Início: ${new Date(planoVigenteData + 'T00:00:00').toLocaleDateString('pt-BR')}` : null}
-                                          {hasVigente && cat.peso_vivo_meta_kg_cab ? ` • Meta: ${Number(cat.peso_vivo_meta_kg_cab).toFixed(2).replace('.', ',')} kg/cab` : null}
-                                          {hasVigente && gmdValor ? ` • GMD: ${Number(gmdValor).toFixed(3).replace('.', ',')} kg/cab/dia` : null}
-                                          {hasVigente && consumoValor ? ` • Consumo MS: ${Number(consumoValor).toFixed(2).replace('.', ',')}% PV` : null}
-                                          {planosCount > 1 ? ` • ${planosCount} planos na sequência` : null}
-                                          {!hasVigente && planosCount > 0 ? ' • Nenhum vigente' : null}
-                                        </p>
+                                        {semGmd ? (
+                                          <p className="text-amber-700 text-xs mt-0.5">
+                                            Plano ativo, mas a formulação não contempla "{cat.categoria}". Esta categoria não evolui peso.
+                                          </p>
+                                        ) : (
+                                          <p className="text-gray-600">
+                                            {hasVigente && planoVigenteData ? ` • Início: ${new Date(planoVigenteData + 'T00:00:00').toLocaleDateString('pt-BR')}` : null}
+                                            {hasVigente && cat.peso_vivo_meta_kg_cab ? ` • Meta: ${Number(cat.peso_vivo_meta_kg_cab).toFixed(2).replace('.', ',')} kg/cab` : null}
+                                            {hasVigente && gmdValor ? ` • GMD: ${Number(gmdValor).toFixed(3).replace('.', ',')} kg/cab/dia` : null}
+                                            {hasVigente && consumoValor ? ` • Consumo MS: ${Number(consumoValor).toFixed(2).replace('.', ',')}% PV` : null}
+                                            {planosCount > 1 ? ` • ${planosCount} planos na fila` : null}
+                                            {!hasVigente && planosCount > 0 ? ' • Nenhum vigente' : null}
+                                          </p>
+                                        )}
                                       </div>
                                     ) : (
                                       <p className="text-sm text-yellow-800">Crie o plano nutricional para esta categoria</p>
                                     )}
                                     <div className="flex flex-col gap-1 items-end">
+                                      {semGmd && formData.formulacao_lote_id && (
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          variant="secondary"
+                                          onClick={() => { window.location.href = `/controller/formulacoes?edit=${formData.formulacao_lote_id}` }}
+                                        >
+                                          Editar Formulação →
+                                        </Button>
+                                      )}
                                       <Button
                                         type="button"
                                         size="sm"
-                                        disabled={openingPlanos}
-                                        onClick={() => abrirPlanosComAutoSave(cat.id || '', catIndex)}
+                                        onClick={() => abrirPlanosCategoria(cat.id || '', catIndex)}
                                       >
-                                        {openingPlanos ? 'Salvando...' : hasPlano ? 'Gerenciar Planos' : 'Criar Plano'}
+                                        {hasPlano ? 'Gerenciar Planos' : 'Criar Plano'}
                                       </Button>
-                                      <p className="text-[10px] text-gray-400">Salva o lote automaticamente</p>
                                     </div>
                                   </div>
                                 </div>
@@ -3304,26 +3331,8 @@ export function Lotes() {
         />
       )}
 
-      {autoSaveToast && (
-        <div className="fixed top-4 right-4 z-[80] max-w-sm bg-white border border-green-300 shadow-lg rounded-lg p-4 animate-in fade-in slide-in-from-top duration-300">
-          <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 w-5 h-5 rounded-full bg-green-100 flex items-center justify-center mt-0.5">
-              <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-            </div>
-            <p className="text-sm font-semibold text-gray-800">{autoSaveToast}</p>
-            <button
-              onClick={() => setAutoSaveToast(null)}
-              className="flex-shrink-0 text-gray-400 hover:text-gray-600"
-              aria-label="Fechar"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
-          </div>
-        </div>
-      )}
-
       {selectedCategoriaForPlanos && (
-        <PlanoNutricionalModal
+        <PlanoNutricionalCategoriaModal
           isOpen={isPlanoModalOpen}
           onClose={() => {
             setIsPlanoModalOpen(false)
@@ -3335,7 +3344,39 @@ export function Lotes() {
           }}
           loteCategoriaId={selectedCategoriaForPlanos.loteCategoriaId || ''}
           categoria={selectedCategoriaForPlanos.categoria}
-          fazendaId={editingLote?.fazenda_id}
+          loteId={editingLote?.id}
+          loteNome={formData.nome}
+          formulacaoLoteId={formData.formulacao_lote_id || null}
+          onOpenLoteModal={() => {
+            setIsPlanoLoteModalOpen(true)
+          }}
+          onOpenFormulacao={(formulacaoId) => {
+            setSelectedCategoriaForPlanos(null)
+            window.location.href = `/controller/formulacoes?edit=${formulacaoId}`
+          }}
+          onPlanChanged={async () => {
+            await loadLotes()
+            if (editingLote) {
+              await handleEdit(editingLote)
+            }
+          }}
+        />
+      )}
+
+      {editingLote && (
+        <PlanoNutricionalLoteModal
+          isOpen={isPlanoLoteModalOpen}
+          onClose={() => {
+            setIsPlanoLoteModalOpen(false)
+            loadLotes()
+            if (editingLote) {
+              handleEdit(editingLote)
+            }
+          }}
+          loteId={editingLote.id}
+          loteNome={formData.nome}
+          fazendaId={editingLote.fazenda_id}
+          formulacaoLoteId={formData.formulacao_lote_id || null}
           onPlanChanged={async () => {
             await loadLotes()
             if (editingLote) {

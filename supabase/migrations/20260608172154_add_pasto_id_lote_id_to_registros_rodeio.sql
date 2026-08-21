@@ -1,0 +1,2 @@
+ALTER TABLE registros_rodeio ADD COLUMN pasto_id UUID REFERENCES pastos(id) ON DELETE SET NULL;
+ALTER TABLE registros_rodeio ADD COLUMN lote_id UUID REFERENCES lotes(id) ON DELETE SET NULL;;

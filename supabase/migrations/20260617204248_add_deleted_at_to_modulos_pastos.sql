@@ -1,0 +1,1 @@
+ALTER TABLE modulos_pastos ADD COLUMN deleted_at TIMESTAMP WITH TIME ZONE;

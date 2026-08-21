@@ -1,0 +1,14 @@
+ALTER TABLE public.registros_morte DROP COLUMN IF EXISTS secrecao_orificios;
+ALTER TABLE public.registros_morte DROP COLUMN IF EXISTS secrecao_orificios_obs;
+ALTER TABLE public.registros_morte DROP COLUMN IF EXISTS sintomas_pneumonia;
+ALTER TABLE public.registros_morte DROP COLUMN IF EXISTS sintomas_pneumonia_obs;
+ALTER TABLE public.registros_morte DROP COLUMN IF EXISTS inchaco;
+ALTER TABLE public.registros_morte DROP COLUMN IF EXISTS inchaco_obs;
+ALTER TABLE public.registros_morte DROP COLUMN IF EXISTS incoordenacao_tremores;
+ALTER TABLE public.registros_morte DROP COLUMN IF EXISTS incoordenacao_tremores_obs;
+ALTER TABLE public.registros_morte DROP COLUMN IF EXISTS apatia_fraqueza;
+ALTER TABLE public.registros_morte DROP COLUMN IF EXISTS apatia_fraqueza_obs;
+ALTER TABLE public.registros_morte DROP COLUMN IF EXISTS presenca_sangue;
+ALTER TABLE public.registros_morte DROP COLUMN IF EXISTS presenca_sangue_obs;
+ALTER TABLE public.registros_morte DROP COLUMN IF EXISTS desordens_digestivas;
+ALTER TABLE public.registros_morte DROP COLUMN IF EXISTS desordens_digestivas_obs;;

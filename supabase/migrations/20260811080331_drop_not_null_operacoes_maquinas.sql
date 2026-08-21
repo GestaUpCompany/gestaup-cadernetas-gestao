@@ -1,0 +1,1 @@
+ALTER TABLE registros_operacoes_maquinas ALTER COLUMN implemento_utilizado DROP NOT NULL; ALTER TABLE registros_operacoes_maquinas ALTER COLUMN odometro_horimetro_inicial DROP NOT NULL; ALTER TABLE registros_operacoes_maquinas ALTER COLUMN odometro_horimetro_final DROP NOT NULL;;

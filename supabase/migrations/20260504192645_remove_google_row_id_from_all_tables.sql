@@ -1,0 +1,9 @@
+ALTER TABLE registros_bebedouros DROP COLUMN IF EXISTS google_row_id;
+ALTER TABLE registros_enfermaria DROP COLUMN IF EXISTS google_row_id;
+ALTER TABLE registros_entrada_insumos DROP COLUMN IF EXISTS google_row_id;
+ALTER TABLE registros_maternidade DROP COLUMN IF EXISTS google_row_id;
+ALTER TABLE registros_movimentacao DROP COLUMN IF EXISTS google_row_id;
+ALTER TABLE registros_pastagens DROP COLUMN IF EXISTS google_row_id;
+ALTER TABLE registros_rodeio DROP COLUMN IF EXISTS google_row_id;
+ALTER TABLE registros_saida_insumos DROP COLUMN IF EXISTS google_row_id;
+ALTER TABLE registros_suplementacao DROP COLUMN IF EXISTS google_row_id;;

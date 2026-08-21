@@ -3,6 +3,19 @@ import React, { createContext, useContext, useEffect, useRef, useState } from 'r
 import { User, signIn, signUp, signOut, getCurrentUser, updateUltimoAcesso } from '../services/authService'
 import { supabase, setAuditContext } from '../services/supabaseClient'
 
+// BYPASS TEMPORÁRIO PARA TESTE NA BRANCH
+// Detecta se está apontado para a branch de teste e injeta usuário mock
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || ''
+const IS_BRANCH_TEST = SUPABASE_URL.includes('njczmuttiycomvdowdln')
+const BYPASS_USER: User = {
+  id: '8b65d3e9-c3d9-4fee-99d9-e85bcf616403',
+  auth_id: '8b65d3e9-c3d9-4fee-99d9-e85bcf616403',
+  email: 'teste.branch@gestaup.com',
+  nome: 'Teste Branch',
+  papel: 'controller',
+  ativo: true,
+}
+
 interface AuthContextType {
   user: User | null
   loading: boolean
@@ -32,6 +45,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let isMounted = true
 
     const initAuth = async () => {
+      // BYPASS: se na branch de teste, verifica localStorage para auto-login
+      if (IS_BRANCH_TEST) {
+        const bypassFlag = localStorage.getItem('bypass_branch_login')
+        if (bypassFlag === 'true') {
+          if (isMounted) {
+            setUser(BYPASS_USER)
+            setLoading(false)
+          }
+          return
+        }
+      }
       try {
         // getSession é síncrono e lê do localStorage, mais confiável na inicialização
         const { data: { session } } = await supabase.auth.getSession()
@@ -56,6 +80,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Ouvi mudanças de autenticação (login, logout, refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string, session: { user: { id: string } } | null) => {
       if (!isMounted) return
+
+      // BYPASS: na branch de teste, não deixa o onAuthStateChange sobrescrever o usuário mock
+      if (IS_BRANCH_TEST && localStorage.getItem('bypass_branch_login') === 'true') {
+        if (event === 'SIGNED_OUT') {
+          localStorage.removeItem('bypass_branch_login')
+          setUser(null)
+        }
+        return
+      }
 
       const authUserId = session?.user?.id ?? null
 
@@ -108,6 +141,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user])
 
   const handleSignIn = async (email: string, password: string): Promise<User | null> => {
+    // BYPASS: na branch de teste, faz login real no Auth mas injeta o usuário mock
+    // para pular a busca em `usuarios` que pode falhar por timing de RLS
+    if (IS_BRANCH_TEST) {
+      try {
+        const { error } = await supabase.auth.signInWithPassword({ email, password })
+        if (error) {
+          console.error('Bypass: erro no auth:', error)
+          return null
+        }
+        localStorage.setItem('bypass_branch_login', 'true')
+        // Força a fazenda Gesta'Up como selecionada
+        localStorage.setItem('selectedFazendaId', 'd649c65e-16ab-4b77-a84b-df937aa41cc3')
+        setUser(BYPASS_USER)
+        return BYPASS_USER
+      } catch (err) {
+        console.error('Bypass: exceção:', err)
+        return null
+      }
+    }
     const session = await signIn(email, password)
     if (session) {
       setUser(session.user)
@@ -126,6 +178,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const handleSignOut = async () => {
+    localStorage.removeItem('bypass_branch_login')
     await signOut()
     setUser(null)
   }

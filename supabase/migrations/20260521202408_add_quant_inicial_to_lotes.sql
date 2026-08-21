@@ -1,0 +1,1 @@
+ALTER TABLE lotes ADD COLUMN IF NOT EXISTS quant_inicial INTEGER;;

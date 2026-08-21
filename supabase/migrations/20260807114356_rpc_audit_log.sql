@@ -1,0 +1,89 @@
+-- RPC para consultar auditoria com filtros
+CREATE OR REPLACE FUNCTION public.get_audit_log(
+  p_fazenda_id uuid DEFAULT NULL,
+  p_usuario_id uuid DEFAULT NULL,
+  p_tabela text DEFAULT NULL,
+  p_operacao text DEFAULT NULL,
+  p_data_inicio timestamptz DEFAULT NULL,
+  p_data_fim timestamptz DEFAULT NULL,
+  p_limite int DEFAULT 100,
+  p_offset int DEFAULT 0
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_result jsonb;
+BEGIN
+  SELECT jsonb_build_object(
+    'entries', COALESCE((
+      SELECT jsonb_agg(jsonb_build_object(
+        'id', a.id,
+        'createdAt', a.criado_em,
+        'usuarioId', a.usuario_id,
+        'usuarioEmail', a.usuario_email,
+        'usuarioNome', a.usuario_nome,
+        'fazendaId', a.fazenda_id,
+        'fazendaNome', f.nome,
+        'tabela', a.tabela,
+        'operacao', a.operacao,
+        'registroId', a.registro_id,
+        'valorAnterior', a.valor_anterior,
+        'valorNovo', a.valor_novo,
+        'alteracoes', a.alteracoes,
+        'isImpersonation', a.is_impersonation,
+        'impersonatedBy', a.impersonated_by
+      ) ORDER BY a.criado_em DESC)
+      FROM public.audit_log a
+      LEFT JOIN public.fazendas f ON f.id = a.fazenda_id
+      WHERE (p_fazenda_id IS NULL OR a.fazenda_id = p_fazenda_id)
+        AND (p_usuario_id IS NULL OR a.usuario_id = p_usuario_id)
+        AND (p_tabela IS NULL OR a.tabela = p_tabela)
+        AND (p_operacao IS NULL OR a.operacao = p_operacao)
+        AND (p_data_inicio IS NULL OR a.criado_em >= p_data_inicio)
+        AND (p_data_fim IS NULL OR a.criado_em <= p_data_fim)
+      LIMIT p_limite OFFSET p_offset
+    ), '[]'::jsonb),
+    'total', (
+      SELECT COUNT(*) FROM public.audit_log a
+      WHERE (p_fazenda_id IS NULL OR a.fazenda_id = p_fazenda_id)
+        AND (p_usuario_id IS NULL OR a.usuario_id = p_usuario_id)
+        AND (p_tabela IS NULL OR a.tabela = p_tabela)
+        AND (p_operacao IS NULL OR a.operacao = p_operacao)
+        AND (p_data_inicio IS NULL OR a.criado_em >= p_data_inicio)
+        AND (p_data_fim IS NULL OR a.criado_em <= p_data_fim)
+    ),
+    'tabelasAuditadas', COALESCE((
+      SELECT jsonb_agg(jsonb_build_object('tabela', tabela, 'count', cnt))
+      FROM (
+        SELECT tabela, COUNT(*) as cnt FROM public.audit_log
+        GROUP BY tabela ORDER BY cnt DESC
+      ) t
+    ), '[]'::jsonb)
+  ) INTO v_result;
+
+  RETURN v_result;
+END;
+$function$;
+
+REVOKE EXECUTE ON FUNCTION public.get_audit_log(uuid, uuid, text, text, timestamptz, timestamptz, int, int) FROM authenticated, anon;
+GRANT EXECUTE ON FUNCTION public.get_audit_log(uuid, uuid, text, text, timestamptz, timestamptz, int, int) TO authenticated;
+
+-- Cron para limpeza: remover auditoria com mais de 90 dias
+CREATE OR REPLACE FUNCTION public.cleanup_audit_log()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $function$
+BEGIN
+  DELETE FROM public.audit_log WHERE criado_em < now() - interval '90 days';
+END;
+$function$;
+
+SELECT cron.schedule(
+  'cleanup-audit-log',
+  '0 3 * * *',
+  'SELECT public.cleanup_audit_log();'
+);;

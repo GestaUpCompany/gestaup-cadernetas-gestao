@@ -1,0 +1,1 @@
+ALTER TABLE lote_categorias RENAME COLUMN custo_total_reais_cab TO custo_total_entrada_reais_cab;;
