@@ -292,6 +292,31 @@ A mudança de timezone não recalcula automaticamente os valores já armazenados
 4. **Triggers automáticos**:
    - `trg_formulacao_insumos_recalc` (AFTER INSERT/UPDATE/DELETE em `formulacao_insumos`): recalcula a formulação afetada.
    - `trigger_recalc_formulacoes_on_insumo` (AFTER UPDATE de `teor_ms`/`preco_ton_mn` em `insumos`): recalcula todas as formulações que usam o insumo. Resolve a cascata premix→TMR e insumo atômico→formulações.
+
+### Migration Z: peso_inicio_kg_cab por categoria em plano_categoria_personalizacao — adicionado em 2026-08-25
+
+**Contexto**: após o refactor de plano por lote, o plano nutricional passou a pertencer ao lote (não mais à categoria). O campo único `planos_nutricionais.peso_inicio_kg_cab` deixou de fazer sentido porque um lote pode conter categorias com pesos muito diferentes (ex: vaca 400kg vs bezerra 170kg). Cada categoria precisa ter seu próprio peso inicial capturado no momento em que o plano é iniciado, para que o cron evolua o peso de cada categoria independentemente a partir desse valor.
+
+**Migration**: `20260825240000_migration_z_pcp_peso_inicio.sql`
+
+**Mudança de schema**:
+- Adicionada coluna `peso_inicio_kg_cab numeric` em `public.plano_categoria_personalizacao` (nullable, sem default).
+
+**Backfill em 3 etapas** (para planos já vigentes no momento da migration):
+
+1. **Etapa 1 — peso_entrada_kg_cab como estimativa**: para toda `plano_categoria_personalizacao` com `peso_inicio_kg_cab IS NULL`, copia `lote_categorias.peso_entrada_kg_cab` da categoria correspondente. É a melhor estimativa quando o plano foi iniciado logo após a entrada da categoria no lote, sem evolução significativa.
+
+2. **Etapa 2 — reconstrução reversa**: para as que ainda ficaram NULL, reconstrói o peso inicial subtraindo `GMD × dias` do `peso_vivo_atual_kg_cab` atual. Fórmula: `peso_reconstruido = peso_vivo_atual_kg_cab - (NULLIF(gmd,'')::numeric × GREATEST(CURRENT_DATE - data_inicio::date, 0))`. Usa `NULLIF(lc.gmd, '')` para ignorar categorias sem GMD. Só aplica quando `peso_vivo_atual_kg_cab IS NOT NULL`, `data_inicio IS NOT NULL` e `gmd IS NOT NULL`.
+
+3. **Etapa 3 — fallback final**: para qualquer caso ainda NULL, usa `peso_vivo_atual_kg_cab` direto como peso inicial. É o menos preciso (assume que o peso atual é o peso inicial), mas evita deixar o campo NULL quebrando o cron.
+
+**Ordem de precedência do backfill**: peso_entrada → reconstrução reversa → peso_vivo_atual. Cada etapa só preenche o que a anterior não cobriu (todas filtram `peso_inicio_kg_cab IS NULL`).
+
+**Dependências**: esta migration deve rodar antes da Z2 (cron) e da Z3 (iniciar_plano_lote), pois ambas assumem que a coluna já existe. A Z2 reescreve o cron para usar `COALESCE(pcp.peso_inicio_kg_cab, lc.peso_entrada_kg_cab)` em vez de `COALESCE(pn.peso_inicio_kg_cab, lc.peso_entrada_kg_cab)`. A Z3 faz a RPC `iniciar_plano_lote` capturar `peso_vivo_atual_kg_cab` de cada categoria no momento da iniciação e gravar em `pcp.peso_inicio_kg_cab`.
+
+**Campos legados mantidos**: `planos_nutricionais.peso_inicio_kg_cab` permanece no schema para compatibilidade/histórico, mas não é mais usado como fonte ativa pelo cron. O PWA também foi corrigido para não usá-lo (commit `d0ce61d` no repo do PWA, função `getPlanoNutricionalAtivoByLoteId` reescrita).
+
+**Disparador**: quando mencionar "peso inicial por categoria", "backfill de peso_inicio", "migration Z", ou problemas com peso inicial de plano vigente após o refactor de lote, lembrar que o backfill foi feito em 3 etapas com precisão decrescente e que planos iniciados pós-migration capturam o peso real automaticamente via `iniciar_plano_lote`.
    - `trigger_recalc_formulacao_on_param` (AFTER UPDATE de `consumo_ms_percent_pv`/`peso_vivo_medio`/`e_premix` em `formulacoes`): recalcula a formulação quando parâmetros de entrada mudam sem mudar insumos.
 
 5. **Frontend `Formulacoes.tsx`**: `handleSubmit` parou de escrever `insumos` (JSONB) e campos derivados na linha de `formulacoes`. Agora escreve apenas campos de entrada em `formulacoes` e a relação de insumos em `formulacao_insumos` (DELETE + INSERT). O trigger recalcula os derivados. `handleEdit` busca insumos da tabela de junção com JOIN em `insumos`. `loadFormulacoes` busca contagem de insumos da tabela de junção.
