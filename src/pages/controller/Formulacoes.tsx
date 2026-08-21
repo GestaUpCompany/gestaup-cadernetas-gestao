@@ -14,11 +14,6 @@ function capitalizeWords(str: string): string {
   return str.split(/([ -])/).map(part => part.charAt(0).toLocaleUpperCase('pt-BR') + part.slice(1)).join('')
 }
 
-function parseCommaDecimal(val: string): number {
-  const cleaned = val.replace(/\./g, '').replace(',', '.')
-  return parseFloat(cleaned) || 0
-}
-
 interface Dieta {
   id: string
   fazenda_id: string
@@ -81,26 +76,28 @@ interface DietaInsumoCalc {
   custo_dieta_reais_cab_dia?: number
 }
 
-function FormulaMsInput({
+function DecimalInput({
   id,
   value,
   onChange,
   className,
+  decimals = 2,
 }: {
-  id: string
+  id?: string
   value: number
   onChange: (val: number) => void
   className?: string
+  decimals?: number
 }) {
-  const [raw, setRaw] = useState(value.toFixed(2).replace('.', ','))
+  const [raw, setRaw] = useState(value.toFixed(decimals).replace('.', ','))
 
   useEffect(() => {
-    const formatted = value.toFixed(2).replace('.', ',')
+    const formatted = value.toFixed(decimals).replace('.', ',')
     // Only sync from prop if user is not actively editing (avoids cursor jump)
-    if (document.activeElement !== document.getElementById(id)) {
+    if (document.activeElement !== document.getElementById(id || '')) {
       setRaw(formatted)
     }
-  }, [value, id])
+  }, [value, id, decimals])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let v = e.target.value.replace('.', ',')
@@ -116,7 +113,7 @@ function FormulaMsInput({
   const handleBlur = () => {
     const num = parseFloat(raw.replace(',', '.')) || 0
     onChange(num)
-    setRaw(num.toFixed(2).replace('.', ','))
+    setRaw(num.toFixed(decimals).replace('.', ','))
   }
 
   return (
@@ -158,11 +155,9 @@ export function Formulacoes() {
   const [showInactive, setShowInactive] = useState(false)
   const [premixFilter, setPremixFilter] = useState<'todos' | 'tmr' | 'premix'>('todos')
   const [categoriasGmd, setCategoriasGmd] = useState<FormulacaoCategoriaGmd[]>([])
-  const [deleteCatWarning, setDeleteCatWarning] = useState<{
-    isOpen: boolean
-    categoria: string
-    idx: number
-    lotes: { nome: string; categorias: string[] }[]
+  const [blockedCategorias, setBlockedCategorias] = useState<Record<string, { nome: string; categorias: string[] }[]>>({})
+  const [saveWarning, setSaveWarning] = useState<{
+    categoriasRemovidas: { categoria: string; lotes: { nome: string; categorias: string[] }[] }[]
   } | null>(null)
 
   useEffect(() => {
@@ -341,6 +336,10 @@ export function Formulacoes() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (saveWarning) {
+      // Segunda chamada: usuário confirmou, prosseguir com o save
+      setSaveWarning(null)
+    }
     setSubmitting(true)
 
     if (!user) {
@@ -377,6 +376,21 @@ export function Formulacoes() {
           `Já existe um insumo atômico chamado "${formData.nome}". ` +
           `Renomeie a formulação ou o insumo existente para evitar confusão no select de ingredientes.`
         )
+        setSubmitting(false)
+        return
+      }
+    }
+
+    // Verificar se categorias em uso por lotes ativos foram removidas
+    if (editingFormulacao && !formData.e_premix && !saveWarning) {
+      const categoriasAtuais = categoriasGmd.map(c => c.categoria.toLowerCase().trim())
+      const categoriasRemovidas = Object.keys(blockedCategorias).filter(cat => !categoriasAtuais.includes(cat))
+      if (categoriasRemovidas.length > 0) {
+        const detalhes = categoriasRemovidas.map(cat => ({
+          categoria: cat,
+          lotes: blockedCategorias[cat],
+        }))
+        setSaveWarning({ categoriasRemovidas: detalhes })
         setSubmitting(false)
         return
       }
@@ -515,6 +529,8 @@ export function Formulacoes() {
       })
       setSelectedInsumos([])
       setCategoriasGmd([])
+      setBlockedCategorias({})
+      setSaveWarning(null)
       setShowForm(false)
       setEditingFormulacao(null)
       await Promise.all([loadFormulacoes(), loadInsumos()])
@@ -524,6 +540,8 @@ export function Formulacoes() {
 
   const handleNewForm = () => {
     loadInsumos()
+    setBlockedCategorias({})
+    setSaveWarning(null)
     setShowForm(true)
   }
 
@@ -570,7 +588,53 @@ export function Formulacoes() {
       .select('id, formulacao_id, categoria, gmd, ordem')
       .eq('formulacao_id', dieta.id)
       .order('ordem', { ascending: true })
+
+    // Verificar quais categorias estão em uso por lotes ativos (bloquear remoção)
+    // Fazer todas as queries antes de setar estado para evitar race condition
+    const blockedMap: Record<string, { nome: string; categorias: string[] }[]> = {}
+    const { data: lotesAfetados } = await supabase
+      .from('lotes')
+      .select('id, nome')
+      .eq('formulacao_id', dieta.id)
+      .eq('ativo', true)
+
+    if (lotesAfetados && lotesAfetados.length > 0) {
+      // Buscar todas as categorias ativas de todos os lotes afetados em uma query
+      const loteIds = lotesAfetados.map(l => l.id)
+      const { data: allCats } = await supabase
+        .from('lote_categorias')
+        .select('lote_id, categoria')
+        .in('lote_id', loteIds)
+        .eq('ativo', true)
+        .is('data_fim', null)
+
+      // Indexar categorias por lote
+      const catsByLote: Record<string, string[]> = {}
+      for (const c of (allCats || [])) {
+        const key = c.lote_id
+        if (!catsByLote[key]) catsByLote[key] = []
+        catsByLote[key].push(c.categoria.toLowerCase().trim())
+      }
+
+      // Para cada categoria da formulação, verificar quais lotes a usam
+      for (const cat of (fcgData || [])) {
+        const catName = cat.categoria.toLowerCase().trim()
+        const lotesCom: { nome: string; categorias: string[] }[] = []
+        for (const lote of lotesAfetados) {
+          const loteCats = catsByLote[lote.id] || []
+          if (loteCats.includes(catName)) {
+            lotesCom.push({ nome: lote.nome, categorias: [cat.categoria] })
+          }
+        }
+        if (lotesCom.length > 0) {
+          blockedMap[catName] = lotesCom
+        }
+      }
+    }
+
+    // Setar todo o estado junto para evitar re-render com estado parcial
     setCategoriasGmd((fcgData || []) as FormulacaoCategoriaGmd[])
+    setBlockedCategorias(blockedMap)
 
     setShowForm(true)
   }
@@ -591,10 +655,25 @@ export function Formulacoes() {
     })
     setSelectedInsumos([])
     setCategoriasGmd([])
+    setBlockedCategorias({})
+    setSaveWarning(null)
     setShowForm(false)
   }
 
   const handleToggleActive = async (dieta: Dieta) => {
+    // Se está desativando, verificar se a formulação está em uso por lotes ativos
+    if (dieta.ativo) {
+      const { data: lotesUsando } = await supabase
+        .from('lotes')
+        .select('id, nome')
+        .eq('formulacao_id', dieta.id)
+        .eq('ativo', true)
+      if (lotesUsando && lotesUsando.length > 0) {
+        alert(`Não é possível desativar a formulação "${dieta.nome}" porque está em uso por ${lotesUsando.length} ${lotesUsando.length === 1 ? 'lote ativo' : 'lotes ativos'}: ${lotesUsando.map(l => l.nome).join(', ')}. Remova a formulação dos lotes antes de desativar.`)
+        return
+      }
+    }
+
     const updates: { ativo: boolean; deleted_at?: string | null } = { ativo: !dieta.ativo }
     if (!dieta.ativo) {
       // Reativando: limpa o deleted_at
@@ -832,82 +911,59 @@ export function Formulacoes() {
             <div className="border-t border-gray-200 pt-4">
               <div className="flex items-center justify-between mb-3">
                 <label className="block text-sm font-medium text-gray-700">GMD por Categoria</label>
-                <span className="text-xs text-gray-500">Define o GMD usado pelo cron para cada categoria do lote</span>
+                <span className="text-xs text-gray-500">Define o GMD usado para evolução de peso de cada categoria do lote</span>
               </div>
 
               {categoriasGmd.length > 0 && (
                 <div className="space-y-2 mb-3">
-                  {categoriasGmd.map((cat, idx) => (
-                    <div key={idx} className="flex items-center gap-3 bg-gray-50 rounded-lg p-2">
-                      <span className="flex-1 text-sm font-medium text-gray-700 capitalize">{cat.categoria}</span>
-                      <div className="flex items-center gap-1">
-                        <Input
-                          type="text"
-                          inputMode="decimal"
-                          value={cat.gmd.toFixed(3).replace('.', ',')}
-                          onChange={(e) => {
-                            const val = parseCommaDecimal(e.target.value)
-                            setCategoriasGmd(prev => prev.map((c, i) => i === idx ? { ...c, gmd: val } : c))
+                  {categoriasGmd.map((cat, idx) => {
+                    const catKey = cat.categoria.toLowerCase().trim()
+                    const blocked = blockedCategorias[catKey]
+                    return (
+                    <div key={idx} className="bg-gray-50 rounded-lg p-2">
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 flex items-center gap-2">
+                          <span className="text-sm font-medium text-gray-700 capitalize">{cat.categoria}</span>
+                          {blocked && (
+                            <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 text-xs rounded font-medium">
+                              em uso ({blocked.length} {blocked.length === 1 ? 'lote' : 'lotes'})
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <DecimalInput
+                            value={cat.gmd}
+                            onChange={(val) => {
+                              setCategoriasGmd(prev => prev.map((c, i) => i === idx ? { ...c, gmd: val } : c))
+                            }}
+                            decimals={3}
+                            className="w-24 text-right border-gray-200 focus:border-accent py-1"
+                          />
+                          <span className="text-xs text-gray-500">kg/dia</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCategoriasGmd(prev => prev.filter((_, i) => i !== idx))
                           }}
-                          className="w-24 text-right border-gray-200 focus:border-accent py-1"
-                        />
-                        <span className="text-xs text-gray-500">kg/dia</span>
+                          title={blocked ? 'Categoria em uso: confirmação será pedida ao salvar' : 'Remover categoria'}
+                          className={`transition-colors p-1 ${
+                            blocked ? 'text-amber-400 hover:text-amber-600' : 'text-red-400 hover:text-red-600'
+                          }`}
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          const catName = cat.categoria.toLowerCase().trim()
-                          // Verificar se a formulação sendo editada está em uso por algum lote
-                          const editingId = editingFormulacao?.id
-                          if (!editingId) {
-                            setCategoriasGmd(prev => prev.filter((_, i) => i !== idx))
-                            return
-                          }
-                          // Buscar lotes que usam esta formulação como vigente
-                          const { data: lotesAfetados } = await supabase
-                            .from('lotes')
-                            .select('id, nome')
-                            .eq('formulacao_id', editingId)
-                            .eq('ativo', true)
-                          if (!lotesAfetados || lotesAfetados.length === 0) {
-                            setCategoriasGmd(prev => prev.filter((_, i) => i !== idx))
-                            return
-                          }
-                          // Para cada lote, verificar se tem a categoria ativa
-                          const lotesComCategoria: { nome: string; categorias: string[] }[] = []
-                          for (const lote of lotesAfetados) {
-                            const { data: catsLote } = await supabase
-                              .from('lote_categorias')
-                              .select('categoria')
-                              .eq('lote_id', lote.id)
-                              .eq('ativo', true)
-                              .eq('data_fim', null)
-                            const catsMatch = (catsLote || []).filter(c =>
-                              c.categoria.toLowerCase().trim() === catName
-                            ).map(c => c.categoria)
-                            if (catsMatch.length > 0) {
-                              lotesComCategoria.push({ nome: lote.nome, categorias: catsMatch })
-                            }
-                          }
-                          if (lotesComCategoria.length > 0) {
-                            setDeleteCatWarning({
-                              isOpen: true,
-                              categoria: cat.categoria,
-                              idx,
-                              lotes: lotesComCategoria,
-                            })
-                          } else {
-                            setCategoriasGmd(prev => prev.filter((_, i) => i !== idx))
-                          }
-                        }}
-                        className="text-red-400 hover:text-red-600 transition-colors p-1"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
+                      {blocked && (
+                        <p className="text-xs text-amber-700 mt-1 pl-1">
+                          Em uso no {blocked.map(l => l.nome).join(', ')}. Remover fará essa categoria parar de evoluir peso. Confirmação será pedida ao salvar.
+                        </p>
+                      )}
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
 
@@ -1020,7 +1076,7 @@ export function Formulacoes() {
                           R$ {(item.preco_ton_mn || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                         <td className="p-2 text-right bg-green-50 w-28">
-                          <FormulaMsInput
+                          <DecimalInput
                             id={`formula-ms-${idx}`}
                             value={item.formula_teor_ms}
                             onChange={(val) => handleFormulaChange(idx, val)}
@@ -1227,25 +1283,22 @@ export function Formulacoes() {
         </div>
       ) : null}
 
-      {/* Aviso ao excluir categoria de formulação em uso */}
+      {/* Aviso ao salvar formulação com categoria removida em uso */}
       <ConfirmModal
-        isOpen={deleteCatWarning?.isOpen ?? false}
-        title="Excluir categoria da formulação"
+        isOpen={!!saveWarning}
+        title="Categorias em uso serão removidas"
         variant="danger"
         message={
-          deleteCatWarning
-            ? `A categoria "${deleteCatWarning.categoria}" está em uso nos seguintes lotes:\n\n${deleteCatWarning.lotes
-                .map(l => `• ${l.nome} (categoria: ${l.categorias.join(', ')})`)
-                .join('\n')}\n\nRemover esta categoria fará com que essas categorias parem de evoluir peso (GMD ficará NULL). Deseja continuar?`
+          saveWarning
+            ? `As seguintes categorias estão em uso por lotes ativos e serão removidas da formulação:\n\n${saveWarning.categoriasRemovidas
+                .map(c => `  • "${c.categoria}"\n      Lotes afetados: ${c.lotes.map(l => l.nome).join(', ')}`)
+                .join('\n\n')}\n\nEssas categorias pararão de evoluir peso (GMD ficará nulo). Deseja continuar?`
             : ''
         }
         onConfirm={() => {
-          if (deleteCatWarning) {
-            setCategoriasGmd(prev => prev.filter((_, i) => i !== deleteCatWarning.idx))
-          }
-          setDeleteCatWarning(null)
+          handleSubmit({ preventDefault: () => {} } as React.FormEvent)
         }}
-        onClose={() => setDeleteCatWarning(null)}
+        onClose={() => setSaveWarning(null)}
       />
     </div>
   )

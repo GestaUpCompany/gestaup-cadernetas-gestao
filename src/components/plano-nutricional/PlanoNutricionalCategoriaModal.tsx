@@ -39,6 +39,7 @@ interface PlanoNutricionalCategoriaModalProps {
   loteNome?: string
   formulacaoLoteId?: string | null
   onOpenLoteModal?: () => void
+  onOpenFormulacao?: (formulacaoId: string) => void
   onPlanChanged?: () => void
 }
 
@@ -51,6 +52,7 @@ export function PlanoNutricionalCategoriaModal({
   loteNome,
   formulacaoLoteId,
   onOpenLoteModal,
+  onOpenFormulacao,
   onPlanChanged,
 }: PlanoNutricionalCategoriaModalProps) {
   const [planoVigente, setPlanoVigente] = useState<PlanoNutricional | null>(null)
@@ -84,7 +86,7 @@ export function PlanoNutricionalCategoriaModal({
         .single()
 
       setPesoAtual(catData?.peso_vivo_atual_kg_cab ?? null)
-      setGmdCategoria(catData?.gmd ? parseFloat(catData.gmd) : null)
+      setGmdCategoria(catData?.gmd ? parseFloat(String(catData.gmd).replace(',', '.')) : null)
 
       const lId = loteId || catData?.lote_id
       if (!lId) return
@@ -225,6 +227,25 @@ export function PlanoNutricionalCategoriaModal({
                       {formulacaoLote && <span><span className="text-gray-500">Formulação:</span> <span className="font-medium text-gray-800">{formulacaoLote.nome}</span></span>}
                     </div>
                   </div>
+
+                  {/* Aviso: categoria não contemplada pela formulação */}
+                  {gmdCategoria == null && formulacaoLoteId && (
+                    <div className="bg-amber-50 border border-amber-300 rounded-lg p-3">
+                      <p className="text-sm font-medium text-amber-900">Categoria sem GMD</p>
+                      <p className="text-xs text-amber-700 mt-1">
+                        O plano está ativo, mas a formulação "{formulacaoLote?.nome || 'vigente'}" não contempla a categoria "{categoria}". Esta categoria não evolui peso.
+                      </p>
+                      {onOpenFormulacao && formulacaoLoteId && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenFormulacao(formulacaoLoteId)}
+                          className="mt-2 px-3 py-1.5 bg-amber-600 text-white text-xs font-medium rounded-lg hover:bg-amber-700 transition-colors"
+                        >
+                          Editar formulação e adicionar categoria →
+                        </button>
+                      )}
+                    </div>
+                  )}
 
                   {/* Campos de personalização */}
                   <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-3">

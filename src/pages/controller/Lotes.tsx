@@ -2058,25 +2058,22 @@ export function Lotes() {
               </div>
 
               {/* Formulação do Lote */}
-              <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <label className="block text-sm font-medium text-blue-900 mb-1">
-                  Formulação Vigente do Lote
-                </label>
-                <p className="text-xs text-blue-700 mb-2">
-                  A formulação vigente é definida pelo plano ativo do lote. Os GMDs por categoria são definidos na própria formulação.
-                </p>
-                <p className="text-base font-semibold text-blue-900">
-                  {formData.formulacao_lote_id
-                    ? nutritionalOptions.find((o) => o.id === formData.formulacao_lote_id)?.name || 'Formulação não encontrada'
-                    : 'Nenhuma formulação vigente'}
-                </p>
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs text-blue-700">Formulação do lote</p>
+                  <p className="text-sm font-semibold text-blue-900 truncate">
+                    {formData.formulacao_lote_id
+                      ? nutritionalOptions.find((o) => o.id === formData.formulacao_lote_id)?.name || 'Formulação não encontrada'
+                      : 'Nenhuma'}
+                  </p>
+                </div>
                 {editingLote && (
                   <button
                     type="button"
                     onClick={() => setIsPlanoLoteModalOpen(true)}
-                    className="mt-3 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                    className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
                   >
-                    Gerenciar Planos do Lote →
+                    Gerenciar Planos →
                   </button>
                 )}
               </div>
@@ -2409,8 +2406,9 @@ export function Lotes() {
                                 )
                               }
 
+                              const semGmd = hasVigente && (!gmdValor || gmdValor === 0)
                               return (
-                                <div className={`rounded-lg p-3 ${hasPlano ? (hasVigente ? 'bg-green-50 border border-green-200' : 'bg-blue-50 border border-blue-200') : 'bg-yellow-50 border border-yellow-200'}`}>
+                                <div className={`rounded-lg p-3 ${semGmd ? 'bg-amber-50 border border-amber-300' : hasPlano ? (hasVigente ? 'bg-green-50 border border-green-200' : 'bg-blue-50 border border-blue-200') : 'bg-yellow-50 border border-yellow-200'}`}>
                                   {/* Formulação vigente do lote em destaque */}
                                   {formData.formulacao_lote_id && (() => {
                                     const formLote = nutritionalOptions.find(o => o.id === formData.formulacao_lote_id)
@@ -2426,19 +2424,35 @@ export function Lotes() {
                                     {hasPlano ? (
                                       <div className="text-sm">
                                         <p className="font-medium text-gray-900">{titulo}</p>
-                                        <p className="text-gray-600">
-                                          {hasVigente && planoVigenteData ? ` • Início: ${new Date(planoVigenteData + 'T00:00:00').toLocaleDateString('pt-BR')}` : null}
-                                          {hasVigente && cat.peso_vivo_meta_kg_cab ? ` • Meta: ${Number(cat.peso_vivo_meta_kg_cab).toFixed(2).replace('.', ',')} kg/cab` : null}
-                                          {hasVigente && gmdValor ? ` • GMD: ${Number(gmdValor).toFixed(3).replace('.', ',')} kg/cab/dia` : null}
-                                          {hasVigente && consumoValor ? ` • Consumo MS: ${Number(consumoValor).toFixed(2).replace('.', ',')}% PV` : null}
-                                          {planosCount > 1 ? ` • ${planosCount} planos na fila` : null}
-                                          {!hasVigente && planosCount > 0 ? ' • Nenhum vigente' : null}
-                                        </p>
+                                        {semGmd ? (
+                                          <p className="text-amber-700 text-xs mt-0.5">
+                                            Plano ativo, mas a formulação não contempla "{cat.categoria}". Esta categoria não evolui peso.
+                                          </p>
+                                        ) : (
+                                          <p className="text-gray-600">
+                                            {hasVigente && planoVigenteData ? ` • Início: ${new Date(planoVigenteData + 'T00:00:00').toLocaleDateString('pt-BR')}` : null}
+                                            {hasVigente && cat.peso_vivo_meta_kg_cab ? ` • Meta: ${Number(cat.peso_vivo_meta_kg_cab).toFixed(2).replace('.', ',')} kg/cab` : null}
+                                            {hasVigente && gmdValor ? ` • GMD: ${Number(gmdValor).toFixed(3).replace('.', ',')} kg/cab/dia` : null}
+                                            {hasVigente && consumoValor ? ` • Consumo MS: ${Number(consumoValor).toFixed(2).replace('.', ',')}% PV` : null}
+                                            {planosCount > 1 ? ` • ${planosCount} planos na fila` : null}
+                                            {!hasVigente && planosCount > 0 ? ' • Nenhum vigente' : null}
+                                          </p>
+                                        )}
                                       </div>
                                     ) : (
                                       <p className="text-sm text-yellow-800">Crie o plano nutricional para esta categoria</p>
                                     )}
                                     <div className="flex flex-col gap-1 items-end">
+                                      {semGmd && formData.formulacao_lote_id && (
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          variant="secondary"
+                                          onClick={() => { window.location.href = `/controller/formulacoes?edit=${formData.formulacao_lote_id}` }}
+                                        >
+                                          Editar Formulação →
+                                        </Button>
+                                      )}
                                       <Button
                                         type="button"
                                         size="sm"
@@ -3335,6 +3349,10 @@ export function Lotes() {
           formulacaoLoteId={formData.formulacao_lote_id || null}
           onOpenLoteModal={() => {
             setIsPlanoLoteModalOpen(true)
+          }}
+          onOpenFormulacao={(formulacaoId) => {
+            setSelectedCategoriaForPlanos(null)
+            window.location.href = `/controller/formulacoes?edit=${formulacaoId}`
           }}
           onPlanChanged={async () => {
             await loadLotes()

@@ -105,14 +105,14 @@ export function PlanoNutricionalLoteModal({
   const [formVisible, setFormVisible] = useState(false)
   const [formScrollTrigger, setFormScrollTrigger] = useState(0)
   const formRef = useRef<HTMLDivElement>(null)
+  const [formMode, setFormMode] = useState<'closed' | 'create' | 'edit'>('closed')
 
   useEffect(() => {
     if (!isOpen || !loteId) return
     loadData()
   }, [isOpen, loteId])
 
-  // Auto-scroll + destaque quando o formulário abre
-  const isFormOpen = editingPlano !== null || formData.nome !== '' || formData.formulacao_id !== ''
+  const isFormOpen = formMode !== 'closed'
   useEffect(() => {
     if (isFormOpen && !formVisible) {
       setFormVisible(true)
@@ -225,6 +225,7 @@ export function PlanoNutricionalLoteModal({
 
   const resetForm = () => {
     setEditingPlano(null)
+    setFormMode('closed')
     setFormData({
       nome: '',
       formulacao_id: '',
@@ -238,6 +239,7 @@ export function PlanoNutricionalLoteModal({
 
   const handleEdit = (plano: PlanoNutricional) => {
     setEditingPlano(plano)
+    setFormMode('edit')
     setFormScrollTrigger((n) => n + 1)
     setFormData({
       nome: plano.nome,
@@ -251,6 +253,7 @@ export function PlanoNutricionalLoteModal({
 
   const handleAddPlano = () => {
     setEditingPlano(null)
+    setFormMode('create')
     setFormScrollTrigger((n) => n + 1)
     setFormData({
       nome: '',
@@ -600,9 +603,22 @@ export function PlanoNutricionalLoteModal({
 
             {/* Nenhum plano */}
             {planos.length === 0 && (
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
-                <p className="text-sm text-gray-600">Nenhum plano cadastrado para este lote.</p>
-                <Button size="sm" className="mt-2" onClick={handleAddPlano}>+ Criar Primeiro Plano</Button>
+              <div className="space-y-3">
+                {formulacaoLoteId && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-xs text-blue-700 mb-0.5">Formulação salva no lote</p>
+                    <p className="text-sm font-semibold text-blue-900">
+                      {formulacoes.find((f) => f.id === formulacaoLoteId)?.nome || 'Formulação não encontrada'}
+                    </p>
+                    <p className="text-xs text-blue-600 mt-1">
+                      Os GMDs por categoria já estão definidos, mas o peso só evolui após criar e iniciar um plano.
+                    </p>
+                  </div>
+                )}
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
+                  <p className="text-sm text-gray-600">Nenhum plano cadastrado para este lote.</p>
+                  <Button size="sm" className="mt-2" onClick={handleAddPlano}>+ Criar Primeiro Plano</Button>
+                </div>
               </div>
             )}
           </div>
@@ -623,6 +639,8 @@ export function PlanoNutricionalLoteModal({
                   categoria={cat}
                   personalizacao={pers ?? null}
                   planoVigenteId={planoVigente?.id}
+                  planoPeriodoDias={planoVigente?.periodo_dias}
+                  planoPesoMetaKg={planoVigente?.peso_meta_kg}
                   onSaved={async () => { await loadData(); onPlanChanged?.() }}
                 />
               )
@@ -750,21 +768,28 @@ function CategoriaPersonalizacaoCard({
   categoria,
   personalizacao,
   planoVigenteId,
+  planoPeriodoDias,
+  planoPesoMetaKg,
   onSaved,
 }: {
   categoria: LoteCategoriaInfo
   personalizacao: Personalizacao | null
   planoVigenteId?: string
+  planoPeriodoDias?: number | null
+  planoPesoMetaKg?: number | null
   onSaved: () => Promise<void>
 }) {
-  const [periodo, setPeriodo] = useState<string>(personalizacao?.periodo_dias?.toString() || '')
-  const [pesoMeta, setPesoMeta] = useState<string>(personalizacao?.peso_meta_kg?.toString().replace('.', ',') || '')
+  // Fallback: se não há personalização, usa os valores do plano vigente
+  const fallbackPeriodo = personalizacao?.periodo_dias?.toString() || planoPeriodoDias?.toString() || ''
+  const fallbackPesoMeta = personalizacao?.peso_meta_kg?.toString().replace('.', ',') || (planoPesoMetaKg != null ? planoPesoMetaKg.toString().replace('.', ',') : '')
+  const [periodo, setPeriodo] = useState<string>(fallbackPeriodo)
+  const [pesoMeta, setPesoMeta] = useState<string>(fallbackPesoMeta)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    setPeriodo(personalizacao?.periodo_dias?.toString() || '')
-    setPesoMeta(personalizacao?.peso_meta_kg?.toString().replace('.', ',') || '')
-  }, [personalizacao])
+    setPeriodo(personalizacao?.periodo_dias?.toString() || planoPeriodoDias?.toString() || '')
+    setPesoMeta(personalizacao?.peso_meta_kg?.toString().replace('.', ',') || (planoPesoMetaKg != null ? planoPesoMetaKg.toString().replace('.', ',') : ''))
+  }, [personalizacao, planoPeriodoDias, planoPesoMetaKg])
 
   const handleSave = async () => {
     if (!planoVigenteId) return
@@ -815,7 +840,9 @@ function CategoriaPersonalizacaoCard({
         </div>
       </div>
       <p className="text-xs text-gray-500 mt-1">
-        Se o período desta categoria terminar antes das outras, ela para de evoluir peso e aguarda o fim das demais.
+        {personalizacao
+          ? 'Personalização ativa. Se o período desta categoria terminar antes das outras, ela para de evoluir peso e aguarda o fim das demais.'
+          : 'Valores do plano vigente. Edite para personalizar esta categoria. Se o período terminar antes das outras, ela para de evoluir peso e aguarda o fim das demais.'}
       </p>
       {planoVigenteId && (
         <Button size="sm" className="mt-2" onClick={handleSave} disabled={saving}>

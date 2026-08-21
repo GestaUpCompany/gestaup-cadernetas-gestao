@@ -164,7 +164,7 @@ export function ConfirmModal({
           <span className="text-2xl">{style.icon}</span>
         </div>
         <div className="flex-1">
-          <p className="text-gray-700">{message}</p>
+          <p className="text-gray-700 whitespace-pre-line">{message}</p>
         </div>
       </div>
       <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6">
