@@ -203,6 +203,7 @@ export function Lotes() {
     if (formData.destino === 'corte') {
       return [...baseCategorias, 'boi magro', 'boi gordo', 'vaca', 'tropa']
     }
+    // enfermaria ou sem destino: todas as categorias
     return [...baseCategorias, 'boi magro', 'boi gordo', 'tourinho', 'touro', 'vaca', 'tropa']
   }, [formData.destino])
 
@@ -2024,6 +2025,7 @@ export function Lotes() {
                     <option value="">Selecione</option>
                     <option value="corte">Abate</option>
                     <option value="reprodução">Reprodução</option>
+                    <option value="enfermaria">Enfermaria</option>
                   </select>
                 </div>
                 <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">

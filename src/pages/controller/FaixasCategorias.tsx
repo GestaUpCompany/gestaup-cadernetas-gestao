@@ -191,7 +191,7 @@ export function FaixasCategorias() {
   const [loadingFaixas, setLoadingFaixas] = useState(true)
   const [savingAll, setSavingAll] = useState(false)
   const [sexoFiltro, setSexoFiltro] = useState<'M' | 'F'>('M')
-  const [destinoFiltro, setDestinoFiltro] = useState<'corte' | 'reprodução'>('corte')
+  const [destinoFiltro, setDestinoFiltro] = useState<'corte' | 'reprodução' | 'enfermaria'>('corte')
 
   // Cronologia dos lotes
   const [lotesCategorias, setLotesCategorias] = useState<LoteCategoriaCronologia[]>([])
@@ -512,7 +512,7 @@ export function FaixasCategorias() {
 
   const faixasDoSexo = faixas.filter(f =>
     f.sexo === sexoFiltro &&
-    (f.destino === null || f.destino === destinoFiltro)
+    (destinoFiltro === 'enfermaria' || f.destino === null || f.destino === destinoFiltro)
   )
 
   const handleFaixaChange = (id: string, campo: 'peso_min' | 'peso_max' | 'cor', valor: string) => {
@@ -548,11 +548,12 @@ export function FaixasCategorias() {
       const cat = lotesCategorias.find(lc => lc.lote_id === lid && lc.data_fim === null && lc.ativo)
       if (!cat || cat.peso_vivo_atual_kg_cab == null) return false
       const sexoNorm = cat.sexo === 'fêmea' || cat.sexo === 'F' ? 'F' : 'M'
+      const isEnfermaria = cat.lote_destino === 'enfermaria'
       const faixa = faixas.find(f =>
         f.ativo &&
         f.sexo === sexoNorm &&
         f.nome.toLowerCase() === cat.categoria.toLowerCase() &&
-        (f.destino === null || f.destino === cat.lote_destino)
+        (isEnfermaria || f.destino === null || f.destino === cat.lote_destino)
       )
       if (!faixa) return false
       return cat.peso_vivo_atual_kg_cab < faixa.peso_min || cat.peso_vivo_atual_kg_cab > faixa.peso_max
@@ -583,8 +584,9 @@ export function FaixasCategorias() {
   // Sugerir próxima categoria baseado nas faixas, sexo e destino do lote
   const sugerirProximaCategoria = (categoriaAtual: string, sexo: string | null, destino: string | null): string => {
     const sexoNormalizado = sexo === 'fêmea' || sexo === 'F' ? 'F' : 'M'
+    const isEnfermaria = destino === 'enfermaria'
     const faixasSexo = faixas
-      .filter(f => f.sexo === sexoNormalizado && f.ativo && (f.destino === null || f.destino === destino))
+      .filter(f => f.sexo === sexoNormalizado && f.ativo && (isEnfermaria || f.destino === null || f.destino === destino))
       .sort((a, b) => a.ordem - b.ordem)
     const idxAtual = faixasSexo.findIndex(f => f.nome.toLowerCase() === categoriaAtual.toLowerCase())
     if (idxAtual >= 0 && idxAtual < faixasSexo.length - 1) {
@@ -659,7 +661,12 @@ export function FaixasCategorias() {
   }, [manterFormulacao, novaCategoria, recategorizando])
 
   // Validação: peso fora da faixa da categoria destino
-  const faixaDestino = faixas.find(f => f.nome.toLowerCase() === novaCategoria.toLowerCase() && f.sexo === (recategorizando?.sexo === 'fêmea' || recategorizando?.sexo === 'F' ? 'F' : 'M'))
+  const isEnfermariaRecat = recategorizando?.lote_destino === 'enfermaria'
+  const faixaDestino = faixas.find(f =>
+    f.nome.toLowerCase() === novaCategoria.toLowerCase() &&
+    f.sexo === (recategorizando?.sexo === 'fêmea' || recategorizando?.sexo === 'F' ? 'F' : 'M') &&
+    (isEnfermariaRecat || f.destino === null || f.destino === recategorizando?.lote_destino)
+  )
   const pesoAtual = recategorizando?.peso_vivo_atual_kg_cab
   const pesoForaDaFaixa = faixaDestino && pesoAtual != null && (pesoAtual < faixaDestino.peso_min || pesoAtual > faixaDestino.peso_max)
 
@@ -770,6 +777,13 @@ export function FaixasCategorias() {
                 </button>
               </>
             )}
+            <span className="w-px bg-gray-200 mx-1" />
+            <button
+              onClick={() => setDestinoFiltro('enfermaria')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${destinoFiltro === 'enfermaria' ? 'bg-amber-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+            >
+              Enfermaria
+            </button>
           </div>
         </div>
 
@@ -857,7 +871,7 @@ export function FaixasCategorias() {
               className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary"
             >
               {lotesDisponiveis.map(l => (
-                <option key={l.id} value={l.id}>{l.nome} ({l.destino === 'corte' ? 'Abate' : l.destino === 'reprodução' ? 'Reprodução' : 'Sem destino'})</option>
+                <option key={l.id} value={l.id}>{l.nome} ({l.destino === 'corte' ? 'Abate' : l.destino === 'reprodução' ? 'Reprodução' : l.destino === 'enfermaria' ? 'Enfermaria' : 'Sem destino'})</option>
               ))}
             </select>
           )}
@@ -909,7 +923,7 @@ export function FaixasCategorias() {
                       Peso atual: {categoriaAtiva.peso_vivo_atual_kg_cab != null ? `${categoriaAtiva.peso_vivo_atual_kg_cab} kg` : 'não informado'}
                       {categoriaAtiva.quant_atual != null && ` • ${categoriaAtiva.quant_atual} cabeças`}
                       {categoriaAtiva.sexo && ` • Sexo: ${categoriaAtiva.sexo}`}
-                      {categoriaAtiva.lote_destino && ` • Destino: ${categoriaAtiva.lote_destino === 'corte' ? 'Abate' : 'Reprodução'}`}
+                      {categoriaAtiva.lote_destino && ` • Destino: ${categoriaAtiva.lote_destino === 'corte' ? 'Abate' : categoriaAtiva.lote_destino === 'reprodução' ? 'Reprodução' : categoriaAtiva.lote_destino === 'enfermaria' ? 'Enfermaria' : categoriaAtiva.lote_destino}`}
                     </p>
                   </div>
                   <Button
@@ -1028,7 +1042,7 @@ export function FaixasCategorias() {
               <p><span className="text-gray-500">Peso atual:</span> <span className="font-medium">{recategorizando.peso_vivo_atual_kg_cab ?? 'não informado'} kg</span></p>
               <p><span className="text-gray-500">Cabeças:</span> <span className="font-medium">{recategorizando.quant_atual ?? 'não informado'}</span></p>
               {recategorizando.lote_destino && (
-                <p><span className="text-gray-500">Destino:</span> <span className="font-medium">{recategorizando.lote_destino === 'corte' ? 'Abate' : 'Reprodução'}</span></p>
+                <p><span className="text-gray-500">Destino:</span> <span className="font-medium">{recategorizando.lote_destino === 'corte' ? 'Abate' : recategorizando.lote_destino === 'reprodução' ? 'Reprodução' : recategorizando.lote_destino === 'enfermaria' ? 'Enfermaria' : recategorizando.lote_destino}</span></p>
               )}
             </div>
 
@@ -1041,11 +1055,12 @@ export function FaixasCategorias() {
               >
                 <option value="">Selecione a nova categoria...</option>
                 {faixas
-                  .filter(f =>
-                    f.sexo === (recategorizando.sexo === 'fêmea' || recategorizando.sexo === 'F' ? 'F' : 'M') &&
-                    f.ativo &&
-                    (f.destino === null || f.destino === recategorizando.lote_destino)
-                  )
+                  .filter(f => {
+                    const sexoMatch = f.sexo === (recategorizando.sexo === 'fêmea' || recategorizando.sexo === 'F' ? 'F' : 'M')
+                    if (!sexoMatch || !f.ativo) return false
+                    const isEnfermaria = recategorizando.lote_destino === 'enfermaria'
+                    return isEnfermaria || f.destino === null || f.destino === recategorizando.lote_destino
+                  })
                   .sort((a, b) => a.ordem - b.ordem)
                   .map(f => (
                     <option key={f.id} value={f.nome}>
