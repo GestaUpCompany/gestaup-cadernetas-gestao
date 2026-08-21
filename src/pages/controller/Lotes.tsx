@@ -178,6 +178,7 @@ export function Lotes() {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
   const [showInactive, setShowInactive] = useState(false)
   const [isPlanoLoteModalOpen, setIsPlanoLoteModalOpen] = useState(false)
+  const [avisoEnfermariaFechado, setAvisoEnfermariaFechado] = useState(false)
   const [isPlanoDraftModalOpen, setIsPlanoDraftModalOpen] = useState(false)
   const [selectedDraftCategoriaIndex, setSelectedDraftCategoriaIndex] = useState<number | null>(null)
 
@@ -1331,6 +1332,7 @@ export function Lotes() {
 
   const handleEdit = async (lote: Lote) => {
     setEditingLote(lote)
+    setAvisoEnfermariaFechado(false)
 
     const fazendaId = lote.fazenda_id
 
@@ -1872,6 +1874,7 @@ export function Lotes() {
             <Button onClick={() => {
               setShowForm(true)
               setEditingLote(null)
+              setAvisoEnfermariaFechado(false)
               setMovimentacaoData([])
               setMaternidadeData([])
               setMorteData([])
@@ -2027,6 +2030,26 @@ export function Lotes() {
                     <option value="reprodução">Reprodução</option>
                     <option value="enfermaria">Enfermaria</option>
                   </select>
+                  {formData.destino === 'enfermaria' && !avisoEnfermariaFechado && (
+                    <div className="mt-2 p-3 rounded-lg bg-amber-50 border border-amber-300 text-xs text-amber-900 relative pr-8">
+                      <button
+                        type="button"
+                        onClick={() => setAvisoEnfermariaFechado(true)}
+                        className="absolute top-2 right-2 text-amber-700 hover:text-amber-900 transition-colors"
+                        aria-label="Fechar aviso"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                      <p className="font-semibold mb-1">GMD reduzido em 50%</p>
+                      <p>
+                        Lotes de enfermaria têm o GMD de todas as categorias reduzido pela metade automaticamente.
+                        Ex: se a formulação tem boi magro com GMD 0,800, na enfermaria ele evolui com GMD 0,400.
+                        Bezerro ao pé e bezerra ao pé não são afetados (GMD próprio).
+                      </p>
+                    </div>
+                  )}
                 </div>
                 <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
@@ -3164,6 +3187,7 @@ export function Lotes() {
           <Button onClick={() => {
             setShowForm(true)
             setEditingLote(null)
+            setAvisoEnfermariaFechado(false)
             setMovimentacaoData([])
             setMaternidadeData([])
             setMorteData([])
@@ -3321,6 +3345,7 @@ export function Lotes() {
           }}
           loteId={editingLote.id}
           loteNome={formData.nome}
+          loteDestino={formData.destino}
           fazendaId={editingLote.fazenda_id}
           formulacaoLoteId={formData.formulacao_lote_id || null}
           onPlanChanged={async () => {

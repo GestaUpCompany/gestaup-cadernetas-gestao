@@ -57,6 +57,7 @@ interface PlanoNutricionalLoteModalProps {
   onClose: () => void
   loteId: string
   loteNome?: string
+  loteDestino?: string | null
   fazendaId?: string
   formulacaoLoteId?: string | null
   onPlanChanged?: () => void
@@ -68,6 +69,7 @@ export function PlanoNutricionalLoteModal({
   onClose,
   loteId,
   loteNome,
+  loteDestino,
   fazendaId: fazendaIdProp,
   formulacaoLoteId,
   onPlanChanged,
@@ -567,6 +569,15 @@ export function PlanoNutricionalLoteModal({
         </div>
       ) : (
         <div className="space-y-4">
+          {loteDestino === 'enfermaria' && (
+            <div className="p-3 rounded-lg bg-amber-50 border border-amber-300 text-xs text-amber-900">
+              <p className="font-semibold mb-1">Lote de Enfermaria — GMD reduzido em 50%</p>
+              <p>
+                Os GMDs exibidos abaixo já têm o desconto de 50% aplicado automaticamente.
+                Bezerro ao pé e bezerra ao pé não são afetados.
+              </p>
+            </div>
+          )}
           {/* Abas */}
           <div className="flex gap-1 border-b border-gray-200">
             <button

@@ -70,10 +70,10 @@ interface DietaInsumoCalc {
   formula_teor_ms: number
   formula_mn_bruta?: number
   formula_mn_percent?: number
-  custo_tonelada?: number
-  consumo_ms_kg_cab_dia?: number
-  consumo_mn_kg_cab_dia?: number
-  custo_dieta_reais_cab_dia?: number
+  custo_kg_mn?: number
+  custo_kg_ms?: number
+  consumo_kg_mn_por_kg_pv?: number
+  consumo_kg_ms_por_kg_pv?: number
 }
 
 function DecimalInput({
@@ -242,10 +242,6 @@ export function Formulacoes() {
 
   // Calculate all derived fields
   const calcularFormulacao = (items: DietaInsumoCalc[]): DietaInsumoCalc[] => {
-    const metaPV = parseFloat(formData.consumo_ms_percent_pv) || 0
-    const pesoVivo = parseFloat(formData.peso_vivo_medio) || 0
-    const consumoMSTotal = pesoVivo * (metaPV / 100)
-
     // Step 1: Calculate formula_mn_bruta for each item (keep full precision)
     const withBruta = items.map(item => {
       const ms = item.teor_ms / 100
@@ -260,43 +256,41 @@ export function Formulacoes() {
       return { ...item, formula_mn_percent: mnPercent }
     })
 
-    // Step 3: Calculate costs and consumptions (keep full precision, round only at display)
+    // Step 3: Calculate costs and consumption per kg of PV (independent of categoria)
+    const metaPV = parseFloat(formData.consumo_ms_percent_pv) || 0
+    const consumoMSBase = (metaPV / 100)
     return withNormalized.map(item => {
       const ms = item.teor_ms / 100
       const custoTonelada = (item.formula_mn_percent || 0) * item.preco_ton_mn / 100
-      const consumoMS = consumoMSTotal * (item.formula_teor_ms / 100)
-      const consumoMN = ms > 0 ? consumoMS / ms : 0
-      const precoKg = item.preco_ton_mn / 1000
-      const custoDieta = consumoMN * precoKg
+      const custoKgMN = custoTonelada / 1000
+      const custoKgMS = ms > 0 ? custoKgMN / ms : 0
+      // Consumo por kg de peso vivo (kg de MS/MN por kg de PV/dia)
+      const consumoMNporKgPV = consumoMSBase * ((item.formula_mn_percent || 0) / 100)
+      const consumoMSporKgPV = consumoMNporKgPV * ms
       return {
         ...item,
-        custo_tonelada: custoTonelada,
-        consumo_ms_kg_cab_dia: consumoMS,
-        consumo_mn_kg_cab_dia: consumoMN,
-        custo_dieta_reais_cab_dia: custoDieta,
+        custo_kg_mn: custoKgMN,
+        custo_kg_ms: custoKgMS,
+        consumo_kg_mn_por_kg_pv: consumoMNporKgPV,
+        consumo_kg_ms_por_kg_pv: consumoMSporKgPV,
       }
     })
   }
 
   const recalculated = useMemo(
     () => calcularFormulacao(selectedInsumos),
-    [selectedInsumos, formData.consumo_ms_percent_pv, formData.peso_vivo_medio]
+    [selectedInsumos, formData.consumo_ms_percent_pv]
   )
 
   // Compute totals from exact (unrounded) values
-  const custoTotalExact = recalculated.reduce((sum, i) => sum + (i.custo_tonelada || 0), 0)
-  const consumoMSTotalExact = recalculated.reduce((sum, i) => sum + (i.consumo_ms_kg_cab_dia || 0), 0)
-  const consumoMNTotalExact = recalculated.reduce((sum, i) => sum + (i.consumo_mn_kg_cab_dia || 0), 0)
-  const custoDiarioTotalExact = recalculated.reduce((sum, i) => sum + (i.custo_dieta_reais_cab_dia || 0), 0)
+  const custoTotalExact = recalculated.reduce((sum, i) => sum + ((i.custo_kg_mn || 0) * 1000), 0)
   const teorMSDietaExact = recalculated.reduce((sum, i) => sum + ((i.formula_mn_percent || 0) * i.teor_ms), 0) / 100
 
   const custoTotal = parseFloat(custoTotalExact.toFixed(2))
-  const consumoMSTotal = parseFloat(consumoMSTotalExact.toFixed(3))
-  const consumoMNTotal = parseFloat(consumoMNTotalExact.toFixed(3))
-  const custoDiarioTotal = parseFloat(custoDiarioTotalExact.toFixed(2))
   const teorMSDieta = parseFloat(teorMSDietaExact.toFixed(2))
-  const custoMSToneladaRaw = teorMSDieta > 0 ? custoTotalExact / (teorMSDietaExact / 100) : 0
-  const custoMSTonelada = parseFloat(custoMSToneladaRaw.toFixed(2))
+  // Custo por kg (independente de categoria e peso vivo)
+  const custoKgMN = parseFloat((custoTotalExact / 1000).toFixed(4))
+  const custoKgMS = parseFloat((custoTotalExact / (teorMSDietaExact / 100) / 1000).toFixed(4))
 
   // Detecta se há um premix (insumo gerado) selecionado como ingrediente
   const temPremixSelecionado = selectedInsumos.some(s => {
@@ -357,7 +351,6 @@ export function Formulacoes() {
 
     const fazendaId = vinculos[0].fazenda_id
     const metaPV = parseFloat(parseFloat(formData.consumo_ms_percent_pv || '0').toFixed(2))
-    const pesoVivo = parseFloat(parseFloat(formData.peso_vivo_medio || '0').toFixed(2))
     const gmd = null
 
     // Validação bloqueante: colisão de nome com insumo atômico ativo
@@ -401,11 +394,8 @@ export function Formulacoes() {
       nome: formData.nome,
       descricao: formData.descricao || null,
       tipo: formData.tipo || null,
-      categoria: formData.e_premix ? null : (formData.categoria || null),
       consumo_ms_percent_pv: formData.e_premix ? 0 : metaPV,
-      peso_vivo_medio: formData.e_premix ? 0 : pesoVivo,
       gmd: formData.e_premix ? null : (gmd || null),
-      sistema_producao: formData.e_premix ? null : (formData.sistema_producao || null),
       ativo: formData.ativo,
       e_premix: formData.e_premix,
       categoria_inferida_automaticamente: false,
@@ -819,55 +809,6 @@ export function Formulacoes() {
               </div>
               {!formData.e_premix && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Categoria *</label>
-                {editingFormulacao?.categoria_inferida_automaticamente && (
-                  <div className="mb-2 p-3 rounded-lg bg-amber-50 border border-amber-300 text-xs text-amber-900">
-                    <p className="font-semibold mb-1">Categoria preenchida automaticamente</p>
-                    <p>
-                      A categoria desta formulação foi inferida automaticamente a partir do nome e parâmetros. É fortemente recomendado que você confirme manualmente o valor correto abaixo.
-                    </p>
-                    {editingFormulacao.categoria_inferida_observacao && (
-                      <p className="mt-2 italic">Observação: {editingFormulacao.categoria_inferida_observacao}</p>
-                    )}
-                  </div>
-                )}
-                <select
-                  value={formData.categoria}
-                  onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
-                  required
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base border-gray-200 focus:border-accent bg-white"
-                >
-                  <option value="">Selecione...</option>
-                  <option value="vaca">Vaca</option>
-                  <option value="touro">Touro</option>
-                  <option value="boi gordo">Boi Gordo</option>
-                  <option value="boi magro">Boi Magro</option>
-                  <option value="garrote">Garrote</option>
-                  <option value="bezerro">Bezerro</option>
-                  <option value="bezerro ao pé">Bezerro ao Pé</option>
-                  <option value="bezerra">Bezerra</option>
-                  <option value="bezerra ao pé">Bezerra ao Pé</option>
-                  <option value="novilha">Novilha</option>
-                  <option value="tropa">Tropa</option>
-                </select>
-              </div>
-              )}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Descrição</label>
-                <Input
-                  type="text"
-                  value={formData.descricao}
-                  onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
-                  placeholder="Descrição opcional"
-                  className="border-gray-200 focus:border-accent"
-                />
-              </div>
-            </div>
-
-            {/* Parameters (TMR only) */}
-            {!formData.e_premix && (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Meta Consumo MS (%PV)</label>
                 <Input
                   type="number"
@@ -878,33 +819,24 @@ export function Formulacoes() {
                   className="border-gray-200 focus:border-accent"
                 />
               </div>
+              )}
+              {/* Categoria oculta: custo por categoria será calculado futuramente */}
+            </div>
+
+            {/* Descrição */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Peso Vivo Médio (kg)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Descrição</label>
                 <Input
-                  type="number"
-                  step="0.01"
-                  value={formData.peso_vivo_medio}
-                  onChange={(e) => setFormData({ ...formData, peso_vivo_medio: e.target.value })}
-                  placeholder="Ex: 435"
+                  type="text"
+                  value={formData.descricao}
+                  onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
+                  placeholder="Descrição opcional"
                   className="border-gray-200 focus:border-accent"
                 />
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Sistema de Produção</label>
-                <select
-                  value={formData.sistema_producao}
-                  onChange={(e) => setFormData({ ...formData, sistema_producao: e.target.value })}
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base border-gray-200 focus:border-accent bg-white"
-                >
-                  <option value="">Selecione...</option>
-                  <option value="Cria">Cria</option>
-                  <option value="Recria">Recria</option>
-                  <option value="Engorda">Engorda</option>
-                </select>
-              </div>
+              {/* Peso Vivo Médio e Sistema de Produção ocultos: custo por categoria será calculado futuramente */}
             </div>
-            )}
 
             {/* Categorias GMD por formulação (TMR only) */}
             {!formData.e_premix && (
@@ -1055,46 +987,40 @@ export function Formulacoes() {
                 <table className="w-full text-sm border-collapse">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-200">
-                      <th className="text-left p-2 font-medium text-gray-700">Insumos</th>
-                      <th className="text-right p-2 font-medium text-gray-700">Teor MS (%)</th>
-                      <th className="text-right p-2 font-medium text-gray-700">Preço (R$/Ton/MN)</th>
-                      <th className="text-right p-2 font-medium text-gray-700 bg-green-50 w-28">Form. MS (%)</th>
-                      <th className="text-right p-2 font-medium text-gray-700">Form. MN (%)</th>
-                      <th className="text-right p-2 font-medium text-gray-700">Custo Dieta (R$/Ton)</th>
-                      {!formData.e_premix && <th className="text-right p-2 font-medium text-gray-700">Consumo MS (kg/Cab/Dia)</th>}
-                      {!formData.e_premix && <th className="text-right p-2 font-medium text-gray-700">Consumo MN (kg/Cab/Dia)</th>}
-                      {!formData.e_premix && <th className="text-right p-2 font-medium text-gray-700">Custo Dieta (R$/Cab/Dia)</th>}
+                      <th className="text-center p-2 font-medium text-gray-700">Insumos</th>
+                      <th className="text-center p-2 font-medium text-gray-700">Teor MS (%)</th>
+                      <th className="text-center p-2 font-medium text-gray-700">Preço (R$/Ton/MN)</th>
+                      <th className="text-center p-2 font-medium text-gray-700 bg-green-50">Form. MS (%)</th>
+                      <th className="text-center p-2 font-medium text-gray-700">Form. MN (%)</th>
+                      <th className="text-center p-2 font-medium text-gray-700">Custo (R$/kg MN)</th>
+                      <th className="text-center p-2 font-medium text-gray-700">Custo (R$/kg MS)</th>
                       <th className="p-2 w-8"></th>
                     </tr>
                   </thead>
                   <tbody>
                     {recalculated.map((item, idx) => (
                       <tr key={item.insumo_id + idx} className="border-b border-gray-100 hover:bg-gray-50">
-                        <td className="p-2 font-medium text-gray-800">{item.nome}</td>
-                        <td className="p-2 text-right text-gray-600">{fmt(item.teor_ms)}%</td>
-                        <td className="p-2 text-right text-gray-600">
+                        <td className="p-2 text-center font-medium text-gray-800">{item.nome}</td>
+                        <td className="p-2 text-center text-gray-600">{fmt(item.teor_ms)}%</td>
+                        <td className="p-2 text-center text-gray-600">
                           R$ {(item.preco_ton_mn || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
-                        <td className="p-2 text-right bg-green-50 w-28">
+                        <td className="p-2 text-center bg-green-50">
                           <DecimalInput
                             id={`formula-ms-${idx}`}
                             value={item.formula_teor_ms}
                             onChange={(val) => handleFormulaChange(idx, val)}
-                            className="w-20 text-right border-gray-200 focus:border-accent py-1"
+                            className="w-20 text-center border-gray-200 focus:border-accent py-1"
                           />
                         </td>
-                        <td className="p-2 text-right text-gray-600">{fmt(item.formula_mn_percent || 0)}%</td>
-                        <td className="p-2 text-right text-gray-600">
-                          R$ {(item.custo_tonelada || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        <td className="p-2 text-center text-gray-600">{fmt(item.formula_mn_percent || 0)}%</td>
+                        <td className="p-2 text-center text-gray-600">
+                          R$ {(item.custo_kg_mn || 0).toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
                         </td>
-                        {!formData.e_premix && <td className="p-2 text-right text-gray-600">{fmt(item.consumo_ms_kg_cab_dia || 0, 3)}</td>}
-                        {!formData.e_premix && <td className="p-2 text-right text-gray-600">{fmt(item.consumo_mn_kg_cab_dia || 0, 3)}</td>}
-                        {!formData.e_premix && (
-                        <td className="p-2 text-right text-gray-600">
-                          R$ {(item.custo_dieta_reais_cab_dia || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        <td className="p-2 text-center text-gray-600">
+                          R$ {(item.custo_kg_ms || 0).toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
                         </td>
-                        )}
-                        <td className="p-2">
+                        <td className="p-2 text-center">
                           <button
                             type="button"
                             onClick={() => handleRemoveInsumo(idx)}
@@ -1109,34 +1035,24 @@ export function Formulacoes() {
                     ))}
                     {/* Total row */}
                     <tr className="border-t-2 border-gray-300 bg-gray-50 font-semibold">
-                      <td className="p-2 text-gray-800">Total</td>
-                      <td className="p-2 text-right text-gray-800 relative" title="Teor de Matéria Seca da Dieta">
+                      <td className="p-2 text-center text-gray-800">Total</td>
+                      <td className="p-2 text-center text-gray-800 relative" title="Teor de Matéria Seca da Dieta">
                         {fmt(teorMSDieta)}%
                         <span className="absolute bottom-0 right-0 w-0 h-0 border-l-[6px] border-l-transparent border-b-[6px] border-b-yellow-400"></span>
                       </td>
                       <td className="p-2"></td>
-                      <td className={`p-2 text-right ${Math.abs(formulaMsTotal - 100) < 0.01 ? 'text-green-700' : 'text-amber-600'}`}>
+                      <td className={`p-2 text-center ${Math.abs(formulaMsTotal - 100) < 0.01 ? 'text-green-700' : 'text-amber-600'}`}>
                         {fmt(formulaMsTotal)}%
                       </td>
-                      <td className="p-2 text-right text-gray-800">
+                      <td className="p-2 text-center text-gray-800">
                         {fmt(recalculated.reduce((s, i) => s + (i.formula_mn_percent || 0), 0))}%
                       </td>
-                      <td className="p-2 text-right text-gray-800">
-                        <div>
-                          R$ {custoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </div>
-                        <div className="text-gray-800 font-medium relative" title="Custo da dieta na MS">
-                          R$ {custoMSTonelada.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          <span className="absolute bottom-0 right-0 w-0 h-0 border-l-[6px] border-l-transparent border-b-[6px] border-b-yellow-400"></span>
-                        </div>
+                      <td className="p-2 text-center text-gray-800">
+                        R$ {custoKgMN.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
                       </td>
-                      {!formData.e_premix && <td className="p-2 text-right text-gray-800">{fmt(consumoMSTotal, 3)}</td>}
-                      {!formData.e_premix && <td className="p-2 text-right text-gray-800">{fmt(consumoMNTotal, 3)}</td>}
-                      {!formData.e_premix && (
-                      <td className="p-2 text-right text-gray-800">
-                        R$ {custoDiarioTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      <td className="p-2 text-center text-gray-800">
+                        R$ {custoKgMS.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
                       </td>
-                      )}
                       <td className="p-2"></td>
                     </tr>
                   </tbody>
@@ -1144,35 +1060,7 @@ export function Formulacoes() {
               </div>
             )}
 
-            {/* Summary parameters (TMR only) */}
-            {selectedInsumos.length > 0 && !formData.e_premix && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 bg-green-50 p-4 rounded-lg">
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Meta Consumo MS (%PV)</label>
-                  <div className="text-lg font-bold text-green-800">
-                    {fmt(parseFloat(formData.consumo_ms_percent_pv || '0'))}%
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Peso Vivo Médio (kg)</label>
-                  <div className="text-lg font-bold text-green-800">
-                    {fmt(parseFloat((formData.peso_vivo_medio || '0').replace(',', '.')))}
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Sistema de Produção</label>
-                  <div className="text-lg font-bold text-green-800">
-                    {formData.sistema_producao || '—'}
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Consumo MS (kg/cab/dia)</label>
-                  <div className="text-lg font-bold text-green-800">
-                    {fmt(consumoMSTotal, 3)}
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* Banner de resumo removido: custo por categoria será calculado futuramente */}
 
             <div className="flex gap-2">
               <Button type="submit" disabled={submitting}>
@@ -1220,9 +1108,7 @@ export function Formulacoes() {
                 subtitle={
                   dieta.e_premix
                     ? `Premix • ${capitalizeWords(dieta.tipo || 'Sem tipo')}`
-                    : (dieta.categoria
-                        ? `${capitalizeWords(dieta.tipo || 'Sem tipo')} • ${capitalizeWords(dieta.categoria)}`
-                        : (dieta.tipo ? capitalizeWords(dieta.tipo) : undefined))
+                    : (dieta.tipo ? capitalizeWords(dieta.tipo) : undefined)
                 }
                 status={dieta.ativo}
                 onClick={() => handleEdit(dieta)}
@@ -1231,23 +1117,14 @@ export function Formulacoes() {
                   {!dieta.e_premix && dieta.consumo_ms_percent_pv != null && (
                     <p><span className="font-medium">Meta MS (%PV):</span> {fmt(dieta.consumo_ms_percent_pv)}%</p>
                   )}
-                  {!dieta.e_premix && dieta.peso_vivo_medio != null && (
-                    <p><span className="font-medium">PV Médio:</span> {fmt(dieta.peso_vivo_medio)} kg</p>
-                  )}
                   {!dieta.e_premix && dieta.gmd != null && (
                     <p><span className="font-medium">GMD Base:</span> {fmt(dieta.gmd, 3)} kg/Cab/Dia</p>
                   )}
-                  {!dieta.e_premix && dieta.sistema_producao && (
-                    <p><span className="font-medium">Sistema:</span> {dieta.sistema_producao}</p>
+                  {dieta.custo_mn_tonelada != null && (
+                    <p><span className="font-medium">Custo MN:</span> R$ {(dieta.custo_mn_tonelada / 1000).toFixed(4)}/kg</p>
                   )}
-                  {dieta.teor_ms_dieta != null && (
-                    <p><span className="font-medium">Teor MS:</span> {fmt(dieta.teor_ms_dieta)}%</p>
-                  )}
-                  {!dieta.e_premix && dieta.consumo_ms_kg_cab_dia != null && (
-                    <p><span className="font-medium">Consumo MS:</span> {fmt(dieta.consumo_ms_kg_cab_dia, 3)} kg</p>
-                  )}
-                  {!dieta.e_premix && dieta.custo_dieta_reais_cab_dia != null && (
-                    <p><span className="font-medium">Custo/dia:</span> R$ {dieta.custo_dieta_reais_cab_dia.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                  {dieta.custo_ms_tonelada != null && (
+                    <p><span className="font-medium">Custo MS:</span> R$ {(dieta.custo_ms_tonelada / 1000).toFixed(4)}/kg</p>
                   )}
                   {dieta.insumos && dieta.insumos.length > 0 && (
                     <p><span className="font-medium">Insumos:</span> {dieta.insumos.length}</p>
