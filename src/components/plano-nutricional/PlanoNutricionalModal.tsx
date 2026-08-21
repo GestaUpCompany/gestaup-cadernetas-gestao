@@ -396,6 +396,16 @@ export function PlanoNutricionalModal({
             })
             .eq('id', loteCategoriaId)
 
+          // Salvar peso_inicio_kg_cab na personalização da categoria
+          await supabase
+            .from('plano_categoria_personalizacao')
+            .upsert({
+              plano_id: primeiroPlano.id,
+              lote_categoria_id: loteCategoriaId,
+              peso_inicio_kg_cab: catData?.peso_vivo_atual_kg_cab ?? null,
+              ativo: true,
+            }, { onConflict: 'plano_id,lote_categoria_id' })
+
           // Criar registro de entrada do plano
           await supabase.rpc('criar_snapshot_entrada', {
             p_plano_id: primeiroPlano.id,
@@ -514,7 +524,17 @@ export function PlanoNutricionalModal({
             .eq('id', loteCategoriaId)
           if (catError) throw catError
 
-          // 3. Criar snapshot de entrada
+          // 3. Salvar peso_inicio_kg_cab na personalização da categoria
+          await supabase
+            .from('plano_categoria_personalizacao')
+            .upsert({
+              plano_id: planoParaIniciar!.id,
+              lote_categoria_id: loteCategoriaId,
+              peso_inicio_kg_cab: pesoEntrada,
+              ativo: true,
+            }, { onConflict: 'plano_id,lote_categoria_id' })
+
+          // 4. Criar snapshot de entrada
           await supabase.rpc('criar_snapshot_entrada', {
             p_plano_id: planoParaIniciar!.id,
             p_lote_categoria_id: loteCategoriaId,
