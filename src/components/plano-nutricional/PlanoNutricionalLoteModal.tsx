@@ -108,6 +108,16 @@ export function PlanoNutricionalLoteModal({
   const formRef = useRef<HTMLDivElement>(null)
   const [formMode, setFormMode] = useState<'closed' | 'create' | 'edit'>('closed')
 
+  // Modal de início retroativo
+  const [retroativoModal, setRetroativoModal] = useState<{
+    isOpen: boolean
+    plano: PlanoNutricional | null
+    preview: { categoria: string; dataPesagem: string | null; pesoEntrada: number | null; gmd: number | null; dias: number; pesoProjetado: number | null; semDataPesagem: boolean; semPesoEntrada: boolean }[]
+    loading: boolean
+    submitting: boolean
+    erro: string | null
+  }>({ isOpen: false, plano: null, preview: [], loading: false, submitting: false, erro: null })
+
   useEffect(() => {
     if (!isOpen || !loteId) return
     loadData()
@@ -366,6 +376,99 @@ export function PlanoNutricionalLoteModal({
     })
   }
 
+  const handleIniciarPlanoRetroativo = async (plano: PlanoNutricional) => {
+    setRetroativoModal({ isOpen: true, plano, preview: [], loading: true, submitting: false, erro: null })
+
+    try {
+      // Buscar categorias ativas com data_pesagem e peso_entrada
+      const { data: catsData, error: catsError } = await supabase
+        .from('lote_categorias')
+        .select('id, categoria, sexo, peso_entrada_kg_cab, data_pesagem')
+        .eq('lote_id', loteId)
+        .eq('ativo', true)
+        .is('data_fim', null)
+        .order('categoria', { ascending: true })
+
+      if (catsError) throw catsError
+
+      // Filtrar bezerro/bezerra ao pé
+      const catsRetroativas = (catsData || []).filter(c => {
+        const cat = c.categoria.toLowerCase()
+        return !cat.includes('bezerro ao p') && !cat.includes('bezerra ao p')
+      })
+
+      // Buscar GMDs da formulação do plano
+      const { data: gmdsData } = await supabase
+        .from('formulacao_categorias_gmd')
+        .select('categoria, gmd')
+        .eq('formulacao_id', plano.formulacao_id)
+
+      const gmdMap: Record<string, number> = {}
+      ;(gmdsData || []).forEach((g: any) => {
+        gmdMap[g.categoria.toLowerCase().trim()] = g.gmd
+      })
+
+      // Montar preview usando data_pesagem de cada categoria
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const preview = catsRetroativas.map(c => {
+        const gmd = gmdMap[c.categoria.toLowerCase().trim()] ?? null
+        const semDataPesagem = !c.data_pesagem
+        const semPesoEntrada = c.peso_entrada_kg_cab == null
+        let dias = 0
+        let pesoProjetado: number | null = null
+        if (c.data_pesagem && c.peso_entrada_kg_cab != null && gmd != null) {
+          const dataPesagemDate = new Date(c.data_pesagem + 'T00:00:00')
+          dias = Math.max(Math.ceil((today.getTime() - dataPesagemDate.getTime()) / (1000 * 60 * 60 * 24)), 0)
+          pesoProjetado = c.peso_entrada_kg_cab + (gmd * dias)
+        }
+        return {
+          categoria: c.categoria,
+          dataPesagem: c.data_pesagem ?? null,
+          pesoEntrada: c.peso_entrada_kg_cab ?? null,
+          gmd,
+          dias,
+          pesoProjetado,
+          semDataPesagem,
+          semPesoEntrada,
+        }
+      })
+
+      setRetroativoModal(prev => ({
+        ...prev,
+        loading: false,
+        preview,
+      }))
+    } catch (error: any) {
+      setRetroativoModal(prev => ({
+        ...prev,
+        loading: false,
+        erro: error.message || 'Erro ao carregar dados para preview',
+      }))
+    }
+  }
+
+  const confirmarInicioRetroativo = async () => {
+    const { plano } = retroativoModal
+    if (!plano) return
+
+    setRetroativoModal(prev => ({ ...prev, submitting: true, erro: null }))
+    try {
+      const { error } = await supabase.rpc('iniciar_plano_lote', {
+        p_lote_id: loteId,
+        p_plano_id: plano.id,
+        p_retroativo: true,
+      })
+      if (error) throw error
+      await loadData()
+      onPlanChanged?.()
+      setMessage(`Plano "${plano.nome}" iniciado retroativamente. Categorias com data de pesagem tiveram o peso projetado; categorias sem dados começam a evoluir a partir de hoje.`)
+      setRetroativoModal({ isOpen: false, plano: null, preview: [], loading: false, submitting: false, erro: null })
+    } catch (error: any) {
+      setRetroativoModal(prev => ({ ...prev, submitting: false, erro: error.message || 'Erro ao iniciar plano retroativo' }))
+    }
+  }
+
   const handleEncerrarPlano = () => {
     if (!planoVigente) return
     setConfirmModal({
@@ -536,7 +639,10 @@ export function PlanoNutricionalLoteModal({
                 <p className="text-sm text-yellow-800 mb-2">Nenhum plano vigente. Inicie um plano para o lote.</p>
                 <div className="flex flex-wrap gap-2">
                   {planosFila.map((p) => (
-                    <Button key={p.id} size="sm" onClick={() => handleIniciarPlano(p)}>Iniciar "{p.nome}"</Button>
+                    <div key={p.id} className="flex gap-2">
+                      <Button size="sm" onClick={() => handleIniciarPlano(p)}>Iniciar "{p.nome}"</Button>
+                      <Button size="sm" variant="secondary" onClick={() => handleIniciarPlanoRetroativo(p)}>Iniciar Retroativo "{p.nome}"</Button>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -760,6 +866,102 @@ export function PlanoNutricionalLoteModal({
         onConfirm={() => { confirmModal.onConfirm(); setConfirmModal((prev) => ({ ...prev, isOpen: false })) }}
         onClose={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
       />
+
+      {/* Modal de início retroativo */}
+      <Modal
+        isOpen={retroativoModal.isOpen}
+        onClose={() => { if (!retroativoModal.submitting) setRetroativoModal({ isOpen: false, plano: null, preview: [], loading: false, submitting: false, erro: null }) }}
+        title="Iniciar Plano Retroativo"
+      >
+        {retroativoModal.loading ? (
+          <p className="text-sm text-gray-500">Carregando dados das categorias...</p>
+        ) : retroativoModal.plano ? (
+          <div className="space-y-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-900">
+              <p className="font-semibold mb-1">O que será feito:</p>
+              <ul className="list-disc list-inside space-y-1 text-xs">
+                <li>O plano <strong>"{retroativoModal.plano.nome}"</strong> será iniciado retroativamente.</li>
+                <li><strong>Categorias com data de pesagem e peso de entrada:</strong> o peso atual será projetado retroativamente (peso de entrada + GMD × dias desde a data de pesagem) e a evolução continua a partir da projeção.</li>
+                <li><strong>Categorias sem data de pesagem ou peso de entrada:</strong> mantêm o peso atual e passam a evoluir a partir de hoje, sem retroatividade. Depois que você cadastrar esses dados, a evolução segue normalmente.</li>
+                <li>Bezerro ao pé e bezerra ao pé não são afetados.</li>
+              </ul>
+            </div>
+
+            {retroativoModal.preview.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">Projeção por categoria:</p>
+                <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                  <table className="w-full text-xs">
+                    <thead className="bg-gray-50">
+                      <tr className="text-left text-gray-500">
+                        <th className="py-2 px-2 font-medium">Categoria</th>
+                        <th className="py-2 px-2 font-medium">Data Pesagem</th>
+                        <th className="py-2 px-2 font-medium">Peso Entrada</th>
+                        <th className="py-2 px-2 font-medium">GMD</th>
+                        <th className="py-2 px-2 font-medium">Dias</th>
+                        <th className="py-2 px-2 font-medium">Peso Projetado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {retroativoModal.preview.map((p, idx) => (
+                        <tr key={idx} className="border-t border-gray-100">
+                          <td className="py-2 px-2 font-medium text-gray-800 capitalize">{p.categoria}</td>
+                          <td className="py-2 px-2 text-gray-600">
+                            {p.semDataPesagem ? <span className="text-red-600">sem data</span> : new Date(p.dataPesagem! + 'T00:00:00').toLocaleDateString('pt-BR')}
+                          </td>
+                          <td className="py-2 px-2 text-gray-600">
+                            {p.semPesoEntrada ? <span className="text-red-600">sem peso</span> : `${p.pesoEntrada?.toFixed(2).replace('.', ',')} kg`}
+                          </td>
+                          <td className="py-2 px-2 text-gray-600">
+                            {p.gmd != null ? `${p.gmd.toFixed(3).replace('.', ',')} kg/dia` : <span className="text-amber-600">sem GMD</span>}
+                          </td>
+                          <td className="py-2 px-2 text-gray-600">{p.dias}</td>
+                          <td className="py-2 px-2 font-semibold text-gray-900">
+                            {p.pesoProjetado != null ? `${p.pesoProjetado.toFixed(2).replace('.', ',')} kg` : <span className="text-amber-600">não projeta</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {retroativoModal.preview.some(p => p.semDataPesagem || p.semPesoEntrada) && (
+                  <p className="text-xs text-red-600 mt-2">
+                    Categorias marcadas em vermelho não têm data de pesagem ou peso de entrada. Elas manterão o peso atual e evoluirão a partir de hoje, sem retroatividade. Cadastre esses dados no formulário do lote para que a evolução funcione com a retroatividade.
+                  </p>
+                )}
+                {retroativoModal.preview.some(p => p.gmd == null) && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    Categorias sem GMD na formulação não terão peso projetado. O peso atual será mantido e a evolução será interrompida até que a formulação contemple a categoria.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {retroativoModal.erro && (
+              <div className="bg-red-50 border border-red-300 rounded-lg p-3 text-sm text-red-700">
+                {retroativoModal.erro}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="secondary"
+                onClick={() => setRetroativoModal({ isOpen: false, plano: null, preview: [], loading: false, submitting: false, erro: null })}
+                disabled={retroativoModal.submitting}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={confirmarInicioRetroativo}
+                disabled={retroativoModal.submitting}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {retroativoModal.submitting ? 'Iniciando...' : 'Confirmar Início Retroativo'}
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </Modal>
     </Modal>
   )
 }
