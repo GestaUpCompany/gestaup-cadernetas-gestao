@@ -1,4 +1,4 @@
--- Atividades recorrentes (templates)
+-- Atividades padrão (templates)
 -- Modelos pre-definidos que podem ser usados para criar atividades rapidamente
 
 CREATE TABLE IF NOT EXISTS atividade_templates (

@@ -46,6 +46,12 @@ const RELATORIOS_DISPONIVEIS: RelatorioDisponivel[] = [
     descricao: 'Mortes por causa, categoria, sexo e período, com frequência de diagnósticos.',
     icone: '⚰️',
   },
+  {
+    tipo: 'atividades',
+    titulo: 'Atividades',
+    descricao: 'Produtividade por funcionário, tempo produtivo, taxa de conclusão, atividades não previstas e imprevistos por período.',
+    icone: '📋',
+  },
 ]
 
 export function Relatorios() {
@@ -421,7 +427,7 @@ export function Relatorios() {
           </h2>
           <p className="text-xs text-gray-500 mb-3">
             Preço por kg vivo usado no cálculo de impacto financeiro do relatório de mortalidade.
-            Defaults baseados em cotações de agosto/2026 (Scot Consultoria, CEPEA/ESALQ, Agrifatto, FarmNews).
+            Padrões baseados em cotações de agosto/2026 (Scot Consultoria, CEPEA/ESALQ, Agrifatto, FarmNews).
           </p>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <table className="min-w-full text-sm">

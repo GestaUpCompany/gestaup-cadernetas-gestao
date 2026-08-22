@@ -9,7 +9,6 @@ import {
   createAtividade,
   updateAtividade,
   deleteAtividade,
-  iniciarAtividade,
   getPrioridades,
   updatePrioridade,
   getFuncionariosComSetor,
@@ -34,14 +33,91 @@ const STATUS_CORES: Record<string, string> = {
   pendente: 'bg-gray-100 text-gray-700',
   em_andamento: 'bg-blue-100 text-blue-700',
   concluido: 'bg-green-100 text-green-700',
-  atrasado: 'bg-red-100 text-red-700',
 }
 
 const STATUS_LABELS: Record<string, string> = {
   pendente: 'Pendente',
   em_andamento: 'Em Andamento',
   concluido: 'Concluído',
-  atrasado: 'Atrasado',
+}
+
+const LOCAL_TIPO_LABELS: Record<string, string> = {
+  livre: 'Livre',
+  pasto: 'Pasto',
+  curral: 'Curral',
+  local: 'Local',
+  maquina: 'Máquina',
+}
+
+interface LocalPickerProps {
+  localTipo: string
+  localId: string
+  localNome: string
+  pastos: { id: string; nome: string }[]
+  currais: { id: string; nome: string }[]
+  locais: { id: string; nome: string }[]
+  maquinas: { id: string; nome: string }[]
+  onChange: (patch: { local_tipo: string; local_id: string; local: string }) => void
+  compact?: boolean
+}
+
+function LocalPicker({ localTipo, localId, localNome, pastos, currais, locais, maquinas, onChange, compact }: LocalPickerProps) {
+  const opcoesPorTipo: Record<string, { id: string; nome: string }[]> = {
+    pasto: pastos,
+    curral: currais,
+    local: locais,
+    maquina: maquinas,
+  }
+
+  const handleTipoChange = (tipo: string) => {
+    if (tipo === 'livre') {
+      onChange({ local_tipo: 'livre', local_id: '', local: '' })
+    } else {
+      onChange({ local_tipo: tipo, local_id: '', local: '' })
+    }
+  }
+
+  const handleEntidadeChange = (id: string) => {
+    const lista = opcoesPorTipo[localTipo] || []
+    const entidade = lista.find((e) => e.id === id)
+    onChange({ local_tipo: localTipo, local_id: id, local: entidade?.nome || '' })
+  }
+
+  return (
+    <div className={compact ? 'flex gap-1' : 'space-y-2'}>
+      <select
+        value={localTipo}
+        onChange={(e) => handleTipoChange(e.target.value)}
+        className="px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent min-h-[44px] bg-white"
+      >
+        <option value="livre">Livre</option>
+        <option value="pasto">Pasto</option>
+        <option value="curral">Curral</option>
+        <option value="local">Local</option>
+        <option value="maquina">Máquina</option>
+      </select>
+      {localTipo === 'livre' ? (
+        <input
+          type="text"
+          value={localNome}
+          onChange={(e) => onChange({ local_tipo: 'livre', local_id: '', local: e.target.value })}
+          placeholder="Digite o local..."
+          className="flex-1 px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent min-h-[44px]"
+        />
+      ) : (
+        <select
+          value={localId}
+          onChange={(e) => handleEntidadeChange(e.target.value)}
+          className="flex-1 px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent min-h-[44px] bg-white"
+        >
+          <option value="">-</option>
+          {(opcoesPorTipo[localTipo] || []).map((e) => (
+            <option key={e.id} value={e.id}>{e.nome}</option>
+          ))}
+        </select>
+      )}
+    </div>
+  )
 }
 
 // === Tipos do formulario de criacao em lote ===
@@ -51,13 +127,14 @@ interface FormRow {
   titulo: string
   descricao: string
   local: string
+  local_tipo: string
+  local_id: string
   setor_id: string
   funcionario_ids: string[]
   tipo_data: 'periodo' | 'dia'
   data_inicio: string
   data_fim: string
   prioridade: number
-  inicio_automatico: boolean
 }
 
 interface TemplateFormRow {
@@ -65,6 +142,8 @@ interface TemplateFormRow {
   titulo: string
   descricao: string
   local: string
+  local_tipo: string
+  local_id: string
   setor_id: string
   funcionario_ids: string[]
   prioridade: number
@@ -76,6 +155,8 @@ function emptyTemplateRow(): TemplateFormRow {
     titulo: '',
     descricao: '',
     local: '',
+    local_tipo: 'livre',
+    local_id: '',
     setor_id: '',
     funcionario_ids: [],
     prioridade: 3,
@@ -87,13 +168,14 @@ interface EditFormData {
   titulo: string
   descricao: string
   local: string
+  local_tipo: string
+  local_id: string
   setor_id: string
   funcionario_ids: string[]
   tipo_data: 'periodo' | 'dia'
   data_inicio: string
   data_fim: string
   prioridade: number
-  inicio_automatico: boolean
 }
 
 function uid(): string {
@@ -106,13 +188,14 @@ function emptyRow(): FormRow {
     titulo: '',
     descricao: '',
     local: '',
+    local_tipo: 'livre',
+    local_id: '',
     setor_id: '',
     funcionario_ids: [],
     tipo_data: 'dia',
     data_inicio: '',
     data_fim: '',
     prioridade: 3,
-    inicio_automatico: true,
   }
 }
 
@@ -218,6 +301,10 @@ export function Atividades() {
   const [setores, setSetores] = useState<{ id: string; nome: string }[]>([])
   const [funcionarios, setFuncionarios] = useState<FuncionarioComSetor[]>([])
   const [prioridades, setPrioridades] = useState<PrioridadeAtividade[]>([])
+  const [pastos, setPastos] = useState<{ id: string; nome: string }[]>([])
+  const [currais, setCurrais] = useState<{ id: string; nome: string }[]>([])
+  const [locais, setLocais] = useState<{ id: string; nome: string }[]>([])
+  const [maquinas, setMaquinas] = useState<{ id: string; nome: string }[]>([])
 
   const [filtroSemana, setFiltroSemana] = useState<string>('')
   const [filtroStatus, setFiltroStatus] = useState<string>('')
@@ -227,8 +314,8 @@ export function Atividades() {
   const [prioridadeNomes, setPrioridadeNomes] = useState<Record<number, string>>({})
   const [salvandoPrioridades, setSalvandoPrioridades] = useState(false)
 
-  // === Templates (Recorrentes) ===
-  const [abaMode, setAbaMode] = useState<'atividades' | 'recorrentes'>('atividades')
+  // === Templates (Atividades Padrão) ===
+  const [abaMode, setAbaMode] = useState<'atividades' | 'padroes'>('atividades')
   const [templates, setTemplates] = useState<AtividadeTemplate[]>([])
   const [templatesLoading, setTemplatesLoading] = useState(false)
   const [showBulkTemplateForm, setShowBulkTemplateForm] = useState(false)
@@ -256,6 +343,10 @@ export function Atividades() {
     loadSetores()
     loadFuncionarios()
     loadPrioridades()
+    loadPastos()
+    loadCurrais()
+    loadLocais()
+    loadMaquinas()
     loadAtividades()
     loadTemplates()
   }, [fazendaId])
@@ -283,6 +374,58 @@ export function Atividades() {
     if (!fazendaId) return
     const data = await getFuncionariosComSetor(fazendaId)
     setFuncionarios(data.filter((f) => f.ativo))
+  }
+
+  const loadPastos = async () => {
+    if (!fazendaId) return
+    const { data, error } = await supabase
+      .from('pastos')
+      .select('id, nome')
+      .eq('fazenda_id', fazendaId)
+      .eq('ativo', true)
+      .is('deleted_at', null)
+      .order('nome', { ascending: true })
+    if (error) { console.error('Erro ao buscar pastos:', error) }
+    else { setPastos(data || []) }
+  }
+
+  const loadCurrais = async () => {
+    if (!fazendaId) return
+    const { data, error } = await supabase
+      .from('currais')
+      .select('id, nome')
+      .eq('fazenda_id', fazendaId)
+      .eq('ativo', true)
+      .is('deleted_at', null)
+      .order('nome', { ascending: true })
+    if (error) { console.error('Erro ao buscar currais:', error) }
+    else { setCurrais(data || []) }
+  }
+
+  const loadLocais = async () => {
+    if (!fazendaId) return
+    const { data, error } = await supabase
+      .from('locais')
+      .select('id, nome')
+      .eq('fazenda_id', fazendaId)
+      .eq('ativo', true)
+      .is('deleted_at', null)
+      .order('nome', { ascending: true })
+    if (error) { console.error('Erro ao buscar locais:', error) }
+    else { setLocais(data || []) }
+  }
+
+  const loadMaquinas = async () => {
+    if (!fazendaId) return
+    const { data, error } = await supabase
+      .from('maquinas_veiculos')
+      .select('id, nome')
+      .eq('fazenda_id', fazendaId)
+      .eq('ativo', true)
+      .is('deleted_at', null)
+      .order('nome', { ascending: true })
+    if (error) { console.error('Erro ao buscar máquinas:', error) }
+    else { setMaquinas(data || []) }
   }
 
   const loadPrioridades = async () => {
@@ -394,11 +537,12 @@ export function Atividades() {
           titulo: row.titulo.trim(),
           descricao: row.descricao.trim() || null,
           local: row.local.trim() || null,
+          local_tipo: row.local_tipo || 'livre',
+          local_id: row.local_id || null,
           setor_id: row.setor_id || null,
           data_inicio: row.data_inicio,
           data_fim: dataFim,
           prioridade: row.prioridade,
-          inicio_automatico: row.inicio_automatico,
           status: 'pendente' as const,
           ativo: true,
           created_by: user?.id || null,
@@ -425,13 +569,14 @@ export function Atividades() {
       titulo: atividade.titulo,
       descricao: atividade.descricao || '',
       local: atividade.local || '',
+      local_tipo: atividade.local_tipo || 'livre',
+      local_id: atividade.local_id || '',
       setor_id: atividade.setor_id || '',
       funcionario_ids: atividade.funcionarios?.map((af) => af.funcionario_id) || [],
       tipo_data: isSingleDay ? 'dia' : 'periodo',
       data_inicio: atividade.data_inicio,
       data_fim: atividade.data_fim,
       prioridade: atividade.prioridade,
-      inicio_automatico: atividade.inicio_automatico,
     })
     setEditingAtividade(atividade)
   }
@@ -449,11 +594,12 @@ export function Atividades() {
         titulo: editForm.titulo.trim(),
         descricao: editForm.descricao.trim() || null,
         local: editForm.local.trim() || null,
+        local_tipo: editForm.local_tipo || 'livre',
+        local_id: editForm.local_id || null,
         setor_id: editForm.setor_id || null,
         data_inicio: editForm.data_inicio,
         data_fim: dataFim,
         prioridade: editForm.prioridade,
-        inicio_automatico: editForm.inicio_automatico,
         funcionario_ids: editForm.funcionario_ids,
       })
       setEditingAtividade(null)
@@ -464,15 +610,6 @@ export function Atividades() {
       alert('Erro ao salvar alterações')
     } finally {
       setEditSubmitting(false)
-    }
-  }
-
-  const handleIniciarAtividade = async (atividadeId: string) => {
-    const ok = await iniciarAtividade(atividadeId)
-    if (ok) {
-      loadAtividades()
-    } else {
-      alert('Erro ao iniciar atividade')
     }
   }
 
@@ -504,7 +641,7 @@ export function Atividades() {
     }))
   }, [funcionarios])
 
-  // === Funcoes de Template (Recorrentes) ===
+  // === Funcoes de Template (Atividades Padrão) ===
 
   const loadTemplates = async () => {
     if (!fazendaId) return
@@ -535,11 +672,27 @@ export function Atividades() {
     setTemplateRows((prev) => prev.length > 1 ? prev.filter((r) => r.id !== rowId) : prev)
   }
 
+  const duplicateTemplateRow = (rowId: string) => {
+    setTemplateRows((prev) => {
+      const idx = prev.findIndex((r) => r.id === rowId)
+      if (idx === -1) return prev
+      const original = prev[idx]
+      const copy: TemplateFormRow = {
+        ...original,
+        id: uid(),
+        funcionario_ids: [...original.funcionario_ids],
+      }
+      const next = [...prev]
+      next.splice(idx + 1, 0, copy)
+      return next
+    })
+  }
+
   const handleSalvarBulkTemplates = async () => {
     if (!fazendaId) return
     const validRows = templateRows.filter((r) => r.titulo.trim())
     if (validRows.length === 0) {
-      alert('Adicione pelo menos uma recorrente com nome')
+      alert('Adicione pelo menos uma atividade padrão com nome')
       return
     }
 
@@ -550,20 +703,22 @@ export function Atividades() {
           fazenda_id: fazendaId,
           titulo: row.titulo.trim(),
           descricao: null,
-          local: null,
-          setor_id: null,
+          local: row.local || null,
+          local_tipo: row.local_tipo || 'livre',
+          local_id: row.local_id || null,
+          setor_id: row.setor_id === 'todos' ? null : (row.setor_id || null),
           prioridade: row.prioridade,
           ativo: true,
           created_by: user?.id || null,
-          funcionario_ids: [],
+          funcionario_ids: row.funcionario_ids,
         })
       }
       setTemplateRows([emptyTemplateRow()])
       setShowBulkTemplateForm(false)
       loadTemplates()
     } catch (err) {
-      console.error('Erro ao salvar recorrentes:', err)
-      alert('Erro ao salvar uma ou mais recorrentes')
+      console.error('Erro ao salvar atividades padrão:', err)
+      alert('Erro ao salvar uma ou mais atividades padrão')
     } finally {
       setTemplateSubmitting(false)
     }
@@ -571,13 +726,18 @@ export function Atividades() {
 
   const handleEditarTemplate = (t: AtividadeTemplate) => {
     setEditingTemplate(t)
+    const fids = t.funcionario_ids || []
+    const todosIds = funcionarios.map((f) => f.id)
+    const ehTodos = fids.length > 0 && todosIds.length === fids.length && todosIds.every((id) => fids.includes(id))
     setEditTemplateForm({
       id: t.id,
       titulo: t.titulo,
       descricao: t.descricao || '',
       local: t.local || '',
-      setor_id: t.setor_id || '',
-      funcionario_ids: t.funcionario_ids || [],
+      local_tipo: t.local_tipo || 'livre',
+      local_id: t.local_id || '',
+      setor_id: ehTodos ? 'todos' : (t.setor_id || ''),
+      funcionario_ids: fids,
       prioridade: t.prioridade,
     })
   }
@@ -590,12 +750,17 @@ export function Atividades() {
     try {
       await updateAtividadeTemplate(editingTemplate.id, {
         titulo: editTemplateForm.titulo.trim(),
+        local: editTemplateForm.local || null,
+        local_tipo: editTemplateForm.local_tipo || 'livre',
+        local_id: editTemplateForm.local_id || null,
+        setor_id: editTemplateForm.setor_id === 'todos' ? null : (editTemplateForm.setor_id || null),
+        funcionario_ids: editTemplateForm.funcionario_ids,
       })
       setEditingTemplate(null)
       setEditTemplateForm(null)
       loadTemplates()
     } catch (err) {
-      console.error('Erro ao editar recorrente:', err)
+      console.error('Erro ao editar atividade padrão:', err)
       alert('Erro ao salvar alterações')
     } finally {
       setEditTemplateSubmitting(false)
@@ -618,13 +783,14 @@ export function Atividades() {
       titulo: t.titulo,
       descricao: t.descricao || '',
       local: t.local || '',
+      local_tipo: t.local_tipo || 'livre',
+      local_id: t.local_id || '',
       setor_id: t.setor_id || '',
       funcionario_ids: t.funcionario_ids || [],
       tipo_data: 'dia' as const,
       data_inicio: getHoje(),
       data_fim: '',
       prioridade: t.prioridade,
-      inicio_automatico: true,
     }))
     const todas = [...rows, ...novasLinhas]
     setRows(todas)
@@ -674,15 +840,15 @@ export function Atividades() {
               </Button>
             </>
           )}
-          {abaMode === 'recorrentes' && (
+          {abaMode === 'padroes' && (
             <Button onClick={handleOpenBulkTemplateForm} disabled={!controleAcessoHabilitado} className="h-10">
-              Nova Recorrente
+              Nova Atividade Padrão
             </Button>
           )}
         </div>
       </div>
 
-      {/* Toggle Atividades / Recorrentes */}
+      {/* Toggle Atividades / Atividades Padrão */}
       <div className="flex gap-1 bg-gray-100 rounded-lg p-1 w-fit">
         <button
           onClick={() => setAbaMode('atividades')}
@@ -693,22 +859,22 @@ export function Atividades() {
           Atividades
         </button>
         <button
-          onClick={() => setAbaMode('recorrentes')}
+          onClick={() => setAbaMode('padroes')}
           className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            abaMode === 'recorrentes' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            abaMode === 'padroes' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'
           }`}
         >
-          Recorrentes
+          Atividades Padrão
         </button>
       </div>
 
-      {/* === Seção Recorrentes === */}
-      {abaMode === 'recorrentes' && (
+      {/* === Seção Atividades Padrão === */}
+      {abaMode === 'padroes' && (
         <div className="space-y-4">
           {!controleAcessoHabilitado && (
             <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg">
               <p className="text-sm font-medium">
-                Ative o controle de acesso por funcionário em Cadastros Auxiliares para criar atividades recorrentes.
+                Ative o controle de acesso por funcionário em Cadastros Auxiliares para criar atividades padrão.
               </p>
             </div>
           )}
@@ -717,18 +883,23 @@ export function Atividades() {
             <CardSkeleton />
           ) : templates.length === 0 ? (
             <Card className="bg-white p-8 border-0 shadow-sm text-center">
-              <p className="text-gray-600 mb-4">Nenhuma atividade recorrente cadastrada</p>
+              <p className="text-gray-600 mb-4">Nenhuma atividade padrão cadastrada</p>
               <Button onClick={handleOpenBulkTemplateForm} disabled={!controleAcessoHabilitado}>
-                Criar Primeira Recorrente
+                Criar Primeira Atividade Padrão
               </Button>
             </Card>
           ) : (
             <>
               <p className="text-sm text-gray-500">
-                {templates.length} recorrente(s) cadastrada(s). Ao criar uma atividade, você pode selecionar uma recorrente para preencher automaticamente.
+                {templates.length} atividade(s) padrão cadastrada(s). Ao criar uma atividade, você pode selecionar uma atividade padrão para preencher automaticamente.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {templates.map((t) => {
+                  const fids = t.funcionario_ids || []
+                  const todosIds = funcionarios.map((f) => f.id)
+                  const ehTodos = fids.length > 0 && todosIds.length === fids.length && todosIds.every((id) => fids.includes(id))
+                  const setorLabel = ehTodos ? 'Todos' : (t.setor_nome || (fids.length > 0 ? 'Personalizado' : '-'))
+                  const nomesResp = fids.map((fid) => funcionarios.find((f) => f.id === fid)?.nome).filter(Boolean) as string[]
                   return (
                     <Card key={t.id} className="bg-white p-4 border-0 shadow-sm">
                       <div className="flex items-start justify-between">
@@ -749,6 +920,26 @@ export function Atividades() {
                           >
                             Excluir
                           </button>
+                        </div>
+                      </div>
+                      <div className="mt-2 space-y-1 text-xs text-gray-500">
+                        {t.local && (
+                          <div>
+                            <span className="font-medium text-gray-600">Local:</span>{' '}
+                            {t.local_tipo && t.local_tipo !== 'livre' ? `${LOCAL_TIPO_LABELS[t.local_tipo] || t.local_tipo}: ` : ''}
+                            {t.local}
+                          </div>
+                        )}
+                        <div>
+                          <span className="font-medium text-gray-600">Setor:</span> {setorLabel}
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-600">Responsáveis:</span>{' '}
+                          {nomesResp.length > 0
+                            ? nomesResp.length <= 3
+                              ? nomesResp.join(', ')
+                              : `${nomesResp.slice(0, 3).join(', ')} +${nomesResp.length - 3}`
+                            : 'Nenhum'}
                         </div>
                       </div>
                     </Card>
@@ -786,7 +977,7 @@ export function Atividades() {
             </div>
           )}
 
-          {/* Botão Usar Recorrente */}
+          {/* Botão Usar Atividade Padrão */}
           {templates.length > 0 && (
             <div className="mb-3">
               <Button
@@ -794,7 +985,7 @@ export function Atividades() {
                 onClick={() => { setSelectedTemplateIds([]); setShowTemplatePicker(true) }}
                 className="h-9 text-sm"
               >
-                Usar Recorrente
+                Usar Atividade Padrão
               </Button>
             </div>
           )}
@@ -812,7 +1003,6 @@ export function Atividades() {
                   <th className="text-left py-2 px-2 w-28">Quando</th>
                   <th className="text-left py-2 px-2 w-44">Data *</th>
                   <th className="text-left py-2 px-2 w-40">Prioridade</th>
-                  <th className="text-center py-2 px-2 w-24">Início Auto</th>
                   <th className="text-center py-2 px-2 w-20">Ações</th>
                 </tr>
               </thead>
@@ -840,12 +1030,16 @@ export function Atividades() {
                         />
                       </td>
                       <td className="py-2 px-2">
-                        <textarea
-                          value={row.local}
-                          onChange={(e) => updateRow(row.id, { local: e.target.value })}
-                          placeholder="Pasto, curral..."
-                          rows={1}
-                          className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent min-h-[44px] resize-none"
+                        <LocalPicker
+                          localTipo={row.local_tipo}
+                          localId={row.local_id}
+                          localNome={row.local}
+                          pastos={pastos}
+                          currais={currais}
+                          locais={locais}
+                          maquinas={maquinas}
+                          onChange={(patch) => updateRow(row.id, patch)}
+                          compact
                         />
                       </td>
                       <td className="py-2 px-2">
@@ -940,15 +1134,6 @@ export function Atividades() {
                         </select>
                       </td>
                       <td className="py-2 px-2 text-center">
-                        <button
-                          onClick={() => updateRow(row.id, { inicio_automatico: !row.inicio_automatico })}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${row.inicio_automatico ? 'bg-primary' : 'bg-gray-300'}`}
-                          title={row.inicio_automatico ? 'Início automático ativado' : 'Início automático desativado'}
-                        >
-                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${row.inicio_automatico ? 'translate-x-6' : 'translate-x-1'}`} />
-                        </button>
-                      </td>
-                      <td className="py-2 px-2 text-center">
                         <div className="flex items-center justify-center">
                           <button
                             onClick={() => handleRemoveRow(row.id)}
@@ -1012,7 +1197,6 @@ export function Atividades() {
           <option value="pendente">Pendente</option>
           <option value="em_andamento">Em Andamento</option>
           <option value="concluido">Concluído</option>
-          <option value="atrasado">Atrasado</option>
         </select>
         <select
           value={filtroPrioridade}
@@ -1054,9 +1238,16 @@ export function Atividades() {
                     )}
                   </div>
                 </div>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${STATUS_CORES[atividade.status] || 'bg-gray-100'}`}>
-                  {STATUS_LABELS[atividade.status] || atividade.status}
-                </span>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_CORES[atividade.status] || 'bg-gray-100'}`}>
+                    {STATUS_LABELS[atividade.status] || atividade.status}
+                  </span>
+                  {atividade.atrasada && (
+                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                      Atrasada
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="flex flex-wrap gap-2 text-xs text-gray-500 mb-3">
@@ -1076,12 +1267,6 @@ export function Atividades() {
                   <span className="inline-flex items-center gap-1">
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                     {atividade.local}
-                  </span>
-                )}
-                {atividade.inicio_automatico && (
-                  <span className="inline-flex items-center gap-1 text-primary">
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                    Início automático
                   </span>
                 )}
               </div>
@@ -1105,14 +1290,6 @@ export function Atividades() {
               )}
 
               <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
-                {!atividade.inicio_automatico && atividade.status === 'pendente' && (
-                  <Button
-                    onClick={() => handleIniciarAtividade(atividade.id)}
-                    className="h-8 text-xs px-3"
-                  >
-                    Iniciar
-                  </Button>
-                )}
                 <Button variant="secondary" onClick={() => handleEdit(atividade)} className="h-8 text-xs px-3">
                   Editar
                 </Button>
@@ -1168,12 +1345,15 @@ export function Atividades() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Local</label>
-              <Input
-                type="text"
-                value={editForm.local}
-                onChange={(e) => setEditForm({ ...editForm, local: e.target.value })}
-                placeholder="Pasto, curral, etc. (opcional)"
-                className="border-gray-200 focus:border-accent"
+              <LocalPicker
+                localTipo={editForm.local_tipo}
+                localId={editForm.local_id}
+                localNome={editForm.local}
+                pastos={pastos}
+                currais={currais}
+                locais={locais}
+                maquinas={maquinas}
+                onChange={(patch) => setEditForm({ ...editForm, ...patch })}
               />
             </div>
 
@@ -1289,24 +1469,6 @@ export function Atividades() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Início automático</label>
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setEditForm({ ...editForm, inicio_automatico: !editForm.inicio_automatico })}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${editForm.inicio_automatico ? 'bg-primary' : 'bg-gray-300'}`}
-                >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${editForm.inicio_automatico ? 'translate-x-6' : 'translate-x-1'}`} />
-                </button>
-                <span className="text-sm text-gray-600">
-                  {editForm.inicio_automatico
-                    ? 'A atividade inicia sozinha (Status = Em Andamento) quando a data chegar'
-                    : 'O responsável inicia manualmente no app'}
-                </span>
-              </div>
-            </div>
-
             <div className="flex gap-3 pt-4 border-t border-gray-100">
               <Button onClick={handleSubmitEdit} disabled={editSubmitting} className="flex-1">
                 {editSubmitting ? 'Salvando...' : 'Salvar Alterações'}
@@ -1367,20 +1529,23 @@ export function Atividades() {
         </>
       )}
 
-      {/* === Modal: Criar Recorrentes em Lote (planilha) === */}
+      {/* === Modal: Criar Atividades Padrão em Lote (planilha) === */}
       {showBulkTemplateForm && (
         <Modal
           isOpen={showBulkTemplateForm}
           onClose={handleCloseBulkTemplateForm}
-          title="Nova Atividade Recorrente"
+          title="Nova Atividade Padrão"
           size="full"
         >
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm min-w-[1100px]">
               <thead>
                 <tr className="border-b-2 border-gray-200 text-xs text-gray-500 uppercase tracking-wider">
                   <th className="text-left py-2 px-2 w-8">#</th>
                   <th className="text-left py-2 px-2">Atividade *</th>
+                  <th className="text-left py-2 px-2 w-56">Local</th>
+                  <th className="text-left py-2 px-2 w-48">Setor</th>
+                  <th className="text-left py-2 px-2 w-64">Responsáveis</th>
                   <th className="text-center py-2 px-2 w-20">Ações</th>
                 </tr>
               </thead>
@@ -1397,17 +1562,91 @@ export function Atividades() {
                         className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent min-h-[44px] resize-none"
                       />
                     </td>
-                    <td className="py-2 px-2 text-center">
-                      <button
-                        onClick={() => removeTemplateRow(row.id)}
-                        disabled={templateRows.length === 1}
-                        className="text-red-500 hover:text-red-700 disabled:text-gray-300 disabled:cursor-not-allowed"
-                        title="Remover linha"
+                    <td className="py-2 px-2">
+                      <LocalPicker
+                        localTipo={row.local_tipo}
+                        localId={row.local_id}
+                        localNome={row.local}
+                        pastos={pastos}
+                        currais={currais}
+                        locais={locais}
+                        maquinas={maquinas}
+                        onChange={(patch) => updateTemplateRow(row.id, patch)}
+                        compact
+                      />
+                    </td>
+                    <td className="py-2 px-2">
+                      <select
+                        value={row.setor_id}
+                        onChange={(e) => {
+                          const setorId = e.target.value
+                          let membros: string[]
+                          if (setorId === 'todos') {
+                            membros = funcionarios.map((f) => f.id)
+                          } else if (setorId) {
+                            membros = funcionarios.filter((f) => f.setor_id === setorId).map((f) => f.id)
+                          } else {
+                            membros = []
+                          }
+                          updateTemplateRow(row.id, { setor_id: setorId, funcionario_ids: membros })
+                        }}
+                        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent min-h-[44px] bg-white"
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3" />
-                        </svg>
-                      </button>
+                        <option value="">-</option>
+                        <option value="todos">Todos</option>
+                        {setores.map((s) => (
+                          <option key={s.id} value={s.id}>{s.nome}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="py-2 px-2 align-top">
+                      <MultiSelect
+                        options={funcionarioOptionsAll}
+                        value={row.funcionario_ids}
+                        onChange={(ids) => {
+                          let novoSetor = row.setor_id
+                          if (row.setor_id === 'todos') {
+                            const todosIds = funcionarios.map((f) => f.id)
+                            const aindaTodos = todosIds.length === ids.length && todosIds.every((id) => ids.includes(id))
+                            if (!aindaTodos) novoSetor = ''
+                          } else if (row.setor_id) {
+                            const membrosSetor = funcionarios.filter((f) => f.setor_id === row.setor_id).map((f) => f.id)
+                            const aindaIgualSetor = membrosSetor.length > 0 &&
+                              membrosSetor.length === ids.length &&
+                              membrosSetor.every((id) => ids.includes(id))
+                            if (!aindaIgualSetor) novoSetor = ''
+                          }
+                          updateTemplateRow(row.id, {
+                            funcionario_ids: ids,
+                            setor_id: novoSetor,
+                          })
+                        }}
+                        placeholder="Selecionar..."
+                        compact
+                      />
+                    </td>
+                    <td className="py-2 px-2 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={() => duplicateTemplateRow(row.id)}
+                          className="text-gray-400 hover:text-primary"
+                          title="Copiar linha"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => removeTemplateRow(row.id)}
+                          disabled={templateRows.length === 1}
+                          className="text-red-500 hover:text-red-700 disabled:text-gray-300 disabled:cursor-not-allowed"
+                          title="Remover linha"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3" />
+                          </svg>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -1424,19 +1663,19 @@ export function Atividades() {
                 Cancelar
               </Button>
               <Button onClick={handleSalvarBulkTemplates} disabled={templateSubmitting} className="h-10">
-                {templateSubmitting ? 'Salvando...' : 'Salvar Recorrentes'}
+                {templateSubmitting ? 'Salvando...' : 'Salvar Atividades Padrão'}
               </Button>
             </div>
           </div>
         </Modal>
       )}
 
-      {/* === Modal: Editar Recorrente === */}
+      {/* === Modal: Editar Atividade Padrão === */}
       {editingTemplate && editTemplateForm && (
         <Modal
           isOpen={!!editingTemplate}
           onClose={() => { setEditingTemplate(null); setEditTemplateForm(null) }}
-          title="Editar Recorrente"
+          title="Editar Atividade Padrão"
         >
           <div className="space-y-4">
             <div>
@@ -1448,6 +1687,67 @@ export function Atividades() {
                 placeholder="Ex: Vacinação do rebanho"
                 className="border-gray-200 focus:border-accent"
                 autoFocus
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Local</label>
+              <LocalPicker
+                localTipo={editTemplateForm.local_tipo}
+                localId={editTemplateForm.local_id}
+                localNome={editTemplateForm.local}
+                pastos={pastos}
+                currais={currais}
+                locais={locais}
+                maquinas={maquinas}
+                onChange={(patch) => setEditTemplateForm({ ...editTemplateForm, ...patch })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Setor</label>
+              <select
+                value={editTemplateForm.setor_id}
+                onChange={(e) => {
+                  const setorId = e.target.value
+                  let membros: string[]
+                  if (setorId === 'todos') {
+                    membros = funcionarios.map((f) => f.id)
+                  } else if (setorId) {
+                    membros = funcionarios.filter((f) => f.setor_id === setorId).map((f) => f.id)
+                  } else {
+                    membros = []
+                  }
+                  setEditTemplateForm({ ...editTemplateForm, setor_id: setorId, funcionario_ids: membros })
+                }}
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent min-h-[44px] bg-white"
+              >
+                <option value="">-</option>
+                <option value="todos">Todos</option>
+                {setores.map((s) => (
+                  <option key={s.id} value={s.id}>{s.nome}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Responsáveis</label>
+              <MultiSelect
+                options={funcionarioOptionsAll}
+                value={editTemplateForm.funcionario_ids}
+                onChange={(ids) => {
+                  let novoSetor = editTemplateForm.setor_id
+                  if (editTemplateForm.setor_id === 'todos') {
+                    const todosIds = funcionarios.map((f) => f.id)
+                    const aindaTodos = todosIds.length === ids.length && todosIds.every((id) => ids.includes(id))
+                    if (!aindaTodos) novoSetor = ''
+                  } else if (editTemplateForm.setor_id) {
+                    const membrosSetor = funcionarios.filter((f) => f.setor_id === editTemplateForm.setor_id).map((f) => f.id)
+                    const aindaIgualSetor = membrosSetor.length > 0 &&
+                      membrosSetor.length === ids.length &&
+                      membrosSetor.every((id) => ids.includes(id))
+                    if (!aindaIgualSetor) novoSetor = ''
+                  }
+                  setEditTemplateForm({ ...editTemplateForm, funcionario_ids: ids, setor_id: novoSetor })
+                }}
+                placeholder="Selecionar..."
               />
             </div>
             <div className="flex gap-3 pt-4 border-t border-gray-100">
@@ -1471,21 +1771,21 @@ export function Atividades() {
         isOpen={showTemplateDeleteModal}
         onClose={() => setShowTemplateDeleteModal(false)}
         onConfirm={handleExcluirTemplate}
-        title="Excluir Recorrente"
-        message="Tem certeza que deseja excluir esta atividade recorrente? Esta ação não pode ser desfeita."
+        title="Excluir Atividade Padrão"
+        message="Tem certeza que deseja excluir esta atividade padrão? Esta ação não pode ser desfeita."
         confirmText="Excluir"
       />
 
-      {/* === Modal: Selecionar Recorrente (no form em lote) === */}
+      {/* === Modal: Selecionar Atividade Padrão (no form em lote) === */}
       {showTemplatePicker && (
         <Modal
           isOpen={showTemplatePicker}
           onClose={() => setShowTemplatePicker(false)}
-          title="Usar Atividade Recorrente"
+          title="Usar Atividade Padrão"
         >
           {templates.length === 0 ? (
             <div className="text-center py-6">
-              <p className="text-gray-600 mb-4">Nenhuma recorrente cadastrada</p>
+              <p className="text-gray-600 mb-4">Nenhuma atividade padrão cadastrada</p>
               <Button variant="secondary" onClick={() => setShowTemplatePicker(false)}>
                 Fechar
               </Button>
@@ -1494,7 +1794,7 @@ export function Atividades() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-gray-500">
-                  Selecione uma ou mais recorrentes para preencher novas linhas. Você poderá ajustar a data e outros campos depois.
+                  Selecione uma ou mais atividades padrão para preencher novas linhas. Você poderá ajustar a data e outros campos depois.
                 </p>
               </div>
               <div className="flex items-center gap-2 pb-2 border-b border-gray-100">

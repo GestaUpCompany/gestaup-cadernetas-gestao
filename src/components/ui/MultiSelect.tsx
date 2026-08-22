@@ -191,6 +191,14 @@ export function MultiSelect({
                 placeholder="Buscar..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && filteredOptions.length > 0) {
+                    e.preventDefault()
+                    const first = filteredOptions[0]
+                    handleToggle(first.id)
+                    setSearchTerm('')
+                  }
+                }}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-accent text-sm"
               />
             </div>

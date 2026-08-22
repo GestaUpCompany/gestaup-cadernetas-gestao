@@ -1248,7 +1248,7 @@ export function RelatorioMortePublico({ token, relatorioInfo }: Props) {
                 <p className="text-xs font-medium text-gray-700 mb-2">Fontes dos preços de referência</p>
                 <div className="space-y-2 text-xs text-gray-500 leading-relaxed">
                   <p>
-                    Defaults baseados em cotações de agosto/2026, convertidas para R$/kg vivo
+                    Padrões baseados em cotações de agosto/2026, convertidas para R$/kg vivo
                     (R$/arroba &divide; 15 kg &times; rendimento de carca&ccedil;a ~50%).
                   </p>
                   <ul className="space-y-1 pl-3">

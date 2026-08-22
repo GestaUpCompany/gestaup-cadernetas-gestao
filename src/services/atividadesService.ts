@@ -6,12 +6,15 @@ export interface Atividade {
   titulo: string
   descricao: string | null
   local: string | null
+  local_tipo: string | null
+  local_id: string | null
   setor_id: string | null
   data_inicio: string
   data_fim: string
   prioridade: number
   status: string
-  inicio_automatico: boolean
+  atrasada: boolean
+  nao_prevista: boolean
   ativo: boolean
   created_by: string | null
   created_at: string
@@ -54,7 +57,8 @@ export interface FuncionarioComSetor {
 
 export async function getAtividades(
   fazendaId: string,
-  filtros?: { semanaInicio?: string; status?: string; prioridade?: number; setorId?: string }
+  filtros?: { semanaInicio?: string; status?: string; prioridade?: number; setorId?: string },
+  incluirNaoPrevistas = false
 ): Promise<Atividade[]> {
   let query = supabase
     .from('atividades')
@@ -67,8 +71,16 @@ export async function getAtividades(
     .order('data_inicio', { ascending: false })
     .order('prioridade', { ascending: true })
 
+  if (!incluirNaoPrevistas) {
+    query = query.eq('nao_prevista', false)
+  }
+
   if (filtros?.semanaInicio) {
-    query = query.eq('data_inicio', filtros.semanaInicio)
+    // semanaInicio é uma segunda-feira; filtrar da segunda ao domingo (6 dias depois)
+    const fim = new Date(filtros.semanaInicio + 'T00:00:00')
+    fim.setDate(fim.getDate() + 6)
+    const fimStr = fim.toISOString().split('T')[0]
+    query = query.gte('data_inicio', filtros.semanaInicio).lte('data_inicio', fimStr)
   }
   if (filtros?.status) {
     query = query.eq('status', filtros.status)
@@ -127,7 +139,7 @@ export async function getAtividades(
 }
 
 export async function createAtividade(
-  payload: Omit<Atividade, 'id' | 'created_at' | 'updated_at' | 'deleted_at' | 'setor_nome' | 'funcionarios'> & {
+  payload: Omit<Atividade, 'id' | 'created_at' | 'updated_at' | 'deleted_at' | 'setor_nome' | 'funcionarios' | 'atrasada' | 'nao_prevista'> & {
     funcionario_ids: string[]
   }
 ): Promise<Atividade | null> {
@@ -167,7 +179,7 @@ export async function createAtividade(
 
 export async function updateAtividade(
   id: string,
-  payload: Partial<Omit<Atividade, 'id' | 'created_at' | 'updated_at' | 'deleted_at' | 'setor_nome' | 'funcionarios'>> & {
+  payload: Partial<Omit<Atividade, 'id' | 'created_at' | 'updated_at' | 'deleted_at' | 'setor_nome' | 'funcionarios' | 'atrasada' | 'nao_prevista'>> & {
     funcionario_ids?: string[]
   }
 ): Promise<Atividade | null> {
@@ -255,35 +267,6 @@ export async function deleteAtividade(id: string): Promise<boolean> {
   return true
 }
 
-export async function iniciarAtividade(id: string): Promise<boolean> {
-  const now = new Date().toISOString()
-
-  // 1. Marcar todos os funcionarios pendentes como em_andamento
-  const { error: afError } = await supabase
-    .from('atividade_funcionarios')
-    .update({ status_individual: 'em_andamento', inicio_at: now })
-    .eq('atividade_id', id)
-    .eq('status_individual', 'pendente')
-
-  if (afError) {
-    console.error('[Atividades] Erro ao iniciar funcionarios:', afError)
-    return false
-  }
-
-  // 2. Marcar a atividade como em_andamento
-  const { error: atvError } = await supabase
-    .from('atividades')
-    .update({ status: 'em_andamento' })
-    .eq('id', id)
-
-  if (atvError) {
-    console.error('[Atividades] Erro ao iniciar atividade:', atvError)
-    return false
-  }
-
-  return true
-}
-
 export async function getPrioridades(fazendaId: string): Promise<PrioridadeAtividade[]> {
   const { data, error } = await supabase
     .from('prioridades_atividades')
@@ -351,7 +334,7 @@ export async function getMonitoramentoData(
   fazendaId: string,
   semanaInicio?: string
 ): Promise<Atividade[]> {
-  return getAtividades(fazendaId, { semanaInicio })
+  return getAtividades(fazendaId, { semanaInicio }, true)
 }
 
 export async function getControleAcessoHabilitado(fazendaId: string): Promise<boolean> {
@@ -369,7 +352,7 @@ export async function getControleAcessoHabilitado(fazendaId: string): Promise<bo
   return !!data?.controle_acesso_habilitado
 }
 
-// === Atividade Templates (Recorrentes) ===
+// === Atividade Templates (Padrão) ===
 
 export interface AtividadeTemplate {
   id: string
@@ -377,9 +360,10 @@ export interface AtividadeTemplate {
   titulo: string
   descricao: string | null
   local: string | null
+  local_tipo: string | null
+  local_id: string | null
   setor_id: string | null
   prioridade: number
-  inicio_automatico?: boolean
   ativo: boolean
   created_by: string | null
   created_at: string

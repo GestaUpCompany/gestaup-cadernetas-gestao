@@ -1,9 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input } from '../../components/ui'
-import { GroupedSelect } from '../../components/ui/GroupedSelect'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
 interface LinhaConfinamento {
@@ -49,18 +47,7 @@ interface LoteInfo {
   gmd_medio: number | null
   estrategias: string[]
   categorias: CategoriaInfo[]
-}
-
-interface Formulacao {
-  id: string
-  nome: string
-  tipo?: string
-}
-
-interface FormulacaoOption {
-  id: string
-  name: string
-  category: string
+  formulacao_nome: string | null
 }
 
 function formatCategoria(texto: string): string {
@@ -71,12 +58,10 @@ function formatCategoria(texto: string): string {
 }
 
 export function Currais() {
-  const navigate = useNavigate()
   const { user } = useAuth()
   const [linhas, setLinhas] = useState<LinhaConfinamento[]>([])
   const [currais, setCurrais] = useState<Curral[]>([])
   const [lotes, setLotes] = useState<Lote[]>([])
-  const [formulacoes, setFormulacoes] = useState<Formulacao[]>([])
   const [loading, setLoading] = useState(true)
   const [showInactive, setShowInactive] = useState(false)
 
@@ -97,8 +82,6 @@ export function Currais() {
   const [curralFormData, setCurralFormData] = useState({
     nome: '',
     lote_id: '',
-    formulacao_id: '',
-    formulacao_nome: '',
     linha_id: '',
   })
   const [loteInfo, setLoteInfo] = useState<LoteInfo | null>(null)
@@ -107,16 +90,6 @@ export function Currais() {
 
   // Expanded linha accordion
   const [expandedLinha, setExpandedLinha] = useState<string | null>(null)
-
-  const formulacaoOptions: FormulacaoOption[] = useMemo(
-    () =>
-      formulacoes.map((f) => ({
-        id: f.id,
-        name: f.nome,
-        category: f.tipo || 'Formulações',
-      })),
-    [formulacoes]
-  )
 
   const linhasFiltradas = useMemo(() => {
     return linhas.filter((linha) => {
@@ -154,7 +127,7 @@ export function Currais() {
 
     const fazendaId = vinculos[0].fazenda_id
 
-    const [linhasData, curraisData, lotesData, formulacoesData] = await Promise.all([
+    const [linhasData, curraisData, lotesData] = await Promise.all([
       supabase
         .from('linhas_confinamento')
         .select('*')
@@ -163,12 +136,11 @@ export function Currais() {
         .order('nome', { ascending: true }),
       supabase
         .from('currais')
-        .select('*, lotes(nome), formulacoes(nome)')
+        .select('*, lotes(nome)')
         .eq('fazenda_id', fazendaId)
         .is('deleted_at', null)
         .order('nome', { ascending: true }),
       supabase.from('lotes').select('id, nome, n_cabecas, pasto_id').eq('fazenda_id', fazendaId).eq('ativo', true).is('deleted_at', null).order('nome'),
-      supabase.from('formulacoes').select('id, nome, tipo, e_premix').eq('fazenda_id', fazendaId).eq('ativo', true).eq('e_premix', false).is('deleted_at', null).order('nome'),
     ])
 
     if (linhasData.error) {
@@ -177,28 +149,47 @@ export function Currais() {
       setLinhas(linhasData.data || [])
     }
 
+    let curraisMapeados: Curral[] = []
     if (curraisData.error) {
       console.error('Erro ao buscar currais:', curraisData.error)
     } else {
-      setCurrais(
-        (curraisData.data || []).map((c: any) => ({
-          ...c,
-          lote_nome: c.lotes?.nome || null,
-          formulacao_nome: c.formulacoes?.nome || null,
-        }))
-      )
+      curraisMapeados = (curraisData.data || []).map((c: any) => ({
+        ...c,
+        lote_nome: c.lotes?.nome || null,
+        formulacao_nome: null,
+      }))
     }
+
+    // Buscar formulação ativa do plano nutricional vigente de cada lote vinculado
+    const lotesComCurral = curraisMapeados
+      .filter((c) => c.lote_id)
+      .map((c) => c.lote_id as string)
+    if (lotesComCurral.length > 0) {
+      const { data: planosData } = await supabase
+        .from('planos_nutricionais')
+        .select('lote_id, formulacao_id, formulacoes!inner(nome)')
+        .in('lote_id', lotesComCurral)
+        .is('data_fim', null)
+      if (planosData) {
+        const formulacoesPorLote: Record<string, string> = {}
+        for (const p of planosData as any[]) {
+          if (p.lote_id && p.formulacoes?.nome && !formulacoesPorLote[p.lote_id]) {
+            formulacoesPorLote[p.lote_id] = p.formulacoes.nome
+          }
+        }
+        curraisMapeados = curraisMapeados.map((c) =>
+          c.lote_id && formulacoesPorLote[c.lote_id]
+            ? { ...c, formulacao_nome: formulacoesPorLote[c.lote_id] }
+            : c
+        )
+      }
+    }
+    setCurrais(curraisMapeados)
 
     if (lotesData.error) {
       console.error('Erro ao buscar lotes:', lotesData.error)
     } else {
       setLotes(lotesData.data || [])
-    }
-
-    if (formulacoesData.error) {
-      console.error('Erro ao buscar formulacoes:', formulacoesData.error)
-    } else {
-      setFormulacoes(formulacoesData.data || [])
     }
 
     setLoading(false)
@@ -215,13 +206,21 @@ export function Currais() {
     }
     setFetchingLoteInfo(true)
     try {
-      const [loteData, categoriasData] = await Promise.all([
+      const [loteData, categoriasData, planoData] = await Promise.all([
         supabase.from('lotes').select('n_cabecas').eq('id', loteId).single(),
         supabase
           .from('lote_categorias')
           .select('categoria, quant_atual, peso_vivo_atual_kg_cab, gmd, estrategia_nutricional')
           .eq('lote_id', loteId)
           .eq('ativo', true),
+        supabase
+          .from('planos_nutricionais')
+          .select('formulacao_id, formulacoes!inner(nome)')
+          .eq('lote_id', loteId)
+          .is('data_fim', null)
+          .order('data_inicio', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
       ])
 
       const categorias: CategoriaInfo[] = (categoriasData.data || []).map((c: any) => ({
@@ -254,6 +253,7 @@ export function Currais() {
         gmd_medio: totalCabecas > 0 ? gmdTotal / totalCabecas : null,
         estrategias,
         categorias,
+        formulacao_nome: (planoData.data as any)?.formulacoes?.nome ?? null,
       })
     } catch {
       setLoteInfo(null)
@@ -379,7 +379,6 @@ export function Currais() {
       fazenda_id: fazendaId,
       nome: curralFormData.nome,
       lote_id: curralFormData.lote_id || null,
-      formulacao_id: curralFormData.formulacao_id || null,
       linha_id: curralFormData.linha_id || null,
     }
 
@@ -395,7 +394,7 @@ export function Currais() {
     if (error) {
       console.error('Erro ao salvar curral:', error)
     } else {
-      setCurralFormData({ nome: '', lote_id: '', formulacao_id: '', formulacao_nome: '', linha_id: '' })
+      setCurralFormData({ nome: '', lote_id: '', linha_id: '' })
       setLoteInfo(null)
       setEditingCurral(null)
       setShowCurralForm(false)
@@ -410,8 +409,6 @@ export function Currais() {
     setCurralFormData({
       nome: curral.nome,
       lote_id: curral.lote_id || '',
-      formulacao_id: curral.formulacao_id || '',
-      formulacao_nome: curral.formulacao_nome || '',
       linha_id: curral.linha_id || '',
     })
     if (curral.lote_id) fetchLoteInfo(curral.lote_id)
@@ -421,7 +418,7 @@ export function Currais() {
 
   const handleCurralCancel = () => {
     setEditingCurral(null)
-    setCurralFormData({ nome: '', lote_id: '', formulacao_id: '', formulacao_nome: '', linha_id: '' })
+    setCurralFormData({ nome: '', lote_id: '', linha_id: '' })
     setLoteInfo(null)
     setShowCurralForm(false)
   }
@@ -446,14 +443,14 @@ export function Currais() {
 
   const openNewCurralInLinha = (linhaId: string) => {
     setEditingCurral(null)
-    setCurralFormData({ nome: '', lote_id: '', formulacao_id: '', formulacao_nome: '', linha_id: linhaId })
+    setCurralFormData({ nome: '', lote_id: '', linha_id: linhaId })
     setLoteInfo(null)
     setShowCurralForm(true)
   }
 
   const resetCurralForm = () => {
     setEditingCurral(null)
-    setCurralFormData({ nome: '', lote_id: '', formulacao_id: '', formulacao_nome: '', linha_id: '' })
+    setCurralFormData({ nome: '', lote_id: '', linha_id: '' })
     setLoteInfo(null)
     setShowCurralForm(true)
   }
@@ -691,31 +688,6 @@ export function Currais() {
                   </p>
                 )}
               </div>
-              <div>
-                <div className="flex justify-between items-center mb-1">
-                  <label className="block text-sm font-medium text-gray-700">Formulação</label>
-                  <button
-                    type="button"
-                    onClick={() => navigate('/controller/formulacoes')}
-                    className="text-xs text-primary hover:text-primary/80 font-medium underline-offset-2 hover:underline"
-                  >
-                    Gerenciar
-                  </button>
-                </div>
-                <GroupedSelect
-                  options={formulacaoOptions}
-                  value={curralFormData.formulacao_nome}
-                  onChange={(value) => {
-                    const selected = formulacaoOptions.find((opt) => opt.name === value)
-                    setCurralFormData({
-                      ...curralFormData,
-                      formulacao_nome: value,
-                      formulacao_id: selected?.id || '',
-                    })
-                  }}
-                  placeholder="Selecione..."
-                />
-              </div>
             </div>
 
             {/* Info on-the-fly do lote */}
@@ -731,6 +703,12 @@ export function Currais() {
                         loteInfo.categorias.reduce((sum, c) => sum + (c.quant_atual ?? 0), 0) ??
                         '-'}
                     </span>
+                    {loteInfo.formulacao_nome && (
+                      <span>
+                        <span className="font-medium">Formulação ativa:</span>{' '}
+                        {loteInfo.formulacao_nome}
+                      </span>
+                    )}
                     {loteInfo.peso_vivo_medio != null && loteInfo.peso_vivo_medio > 0 && (
                       <span>
                         <span className="font-medium">PV médio:</span>{' '}
