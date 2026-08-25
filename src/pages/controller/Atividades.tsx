@@ -45,8 +45,8 @@ const LOCAL_TIPO_LABELS: Record<string, string> = {
   livre: 'Livre',
   pasto: 'Pasto',
   curral: 'Curral',
-  local: 'Local',
-  maquina: 'Máquina',
+  local: 'Infraestrutura',
+  maquina: 'Máquina/Equipamento',
 }
 
 interface LocalPickerProps {
@@ -90,11 +90,9 @@ function LocalPicker({ localTipo, localId, localNome, pastos, currais, locais, m
         onChange={(e) => handleTipoChange(e.target.value)}
         className="px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent min-h-[44px] bg-white"
       >
-        <option value="livre">Livre</option>
-        <option value="pasto">Pasto</option>
-        <option value="curral">Curral</option>
-        <option value="local">Local</option>
-        <option value="maquina">Máquina</option>
+        {Object.entries(LOCAL_TIPO_LABELS).map(([value, label]) => (
+          <option key={value} value={value}>{label}</option>
+        ))}
       </select>
       {localTipo === 'livre' ? (
         <input

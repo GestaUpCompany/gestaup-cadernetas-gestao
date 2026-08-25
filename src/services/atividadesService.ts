@@ -125,12 +125,27 @@ export async function getAtividades(
     return atividades
   }
 
+  // Fallback: se o join voltar null (RLS no join aninhado), buscar nomes separadamente
+  const funcIdsSemNome = (afs || []).filter((af: any) => !af.funcionario?.nome).map((af: any) => af.funcionario_id)
+  let nomesByFuncId: Record<string, { nome: string; setor_nome: string | null }> = {}
+  if (funcIdsSemNome.length > 0) {
+    const uniqueIds = [...new Set(funcIdsSemNome)]
+    const { data: funcs } = await supabase
+      .from('funcionarios')
+      .select('id, nome, setor:setores(nome)')
+      .in('id', uniqueIds)
+    for (const f of funcs || []) {
+      nomesByFuncId[f.id] = { nome: f.nome, setor_nome: (f as any).setor?.nome || null }
+    }
+  }
+
   const afsByAtividade: Record<string, AtividadeFuncionario[]> = {}
   for (const af of afs || []) {
+    const fallback = nomesByFuncId[af.funcionario_id]
     const mapped: AtividadeFuncionario = {
       ...af,
-      funcionario_nome: af.funcionario?.nome || null,
-      setor_nome: af.funcionario?.setor?.nome || null,
+      funcionario_nome: af.funcionario?.nome || fallback?.nome || null,
+      setor_nome: af.funcionario?.setor?.nome || fallback?.setor_nome || null,
     }
     if (!afsByAtividade[af.atividade_id]) afsByAtividade[af.atividade_id] = []
     afsByAtividade[af.atividade_id].push(mapped)
