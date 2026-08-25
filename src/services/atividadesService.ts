@@ -34,6 +34,10 @@ export interface AtividadeFuncionario {
   fim_at: string | null
   detalhamento: string | null
   tempo_gasto_segundos: number | null
+  foto_url: string | null
+  latitude: number | null
+  longitude: number | null
+  gps_accuracy: number | null
   // Joined
   funcionario_nome?: string | null
   setor_nome?: string | null

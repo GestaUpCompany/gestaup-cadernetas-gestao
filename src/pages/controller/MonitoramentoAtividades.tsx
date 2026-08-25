@@ -262,6 +262,7 @@ export function MonitoramentoAtividades() {
           funcionarios:atividade_funcionarios(
             id, atividade_id, funcionario_id, status_individual,
             inicio_at, fim_at, detalhamento, tempo_gasto_segundos,
+            foto_url, latitude, longitude, gps_accuracy,
             funcionario:funcionarios(nome, setor:setores(nome))
           )
         `)
@@ -1086,6 +1087,22 @@ export function MonitoramentoAtividades() {
                         {af.detalhamento && (
                           <div className="mt-1 ml-9 text-xs text-gray-600 italic bg-gray-50 rounded px-2 py-1">
                             "{af.detalhamento}"
+                          </div>
+                        )}
+                        {af.foto_url && (
+                          <div className="mt-2 ml-9 flex flex-col gap-1">
+                            <img
+                              src={af.foto_url}
+                              alt="Foto da conclusão"
+                              className="w-full max-w-[240px] rounded-lg border border-gray-200"
+                              loading="lazy"
+                            />
+                            {af.latitude !== null && af.longitude !== null && (
+                              <p className="text-[10px] text-gray-500 inline-flex items-center gap-1">
+                                📍 {af.latitude?.toFixed(5)}, {af.longitude?.toFixed(5)}
+                                {af.gps_accuracy ? ` (±${Math.round(af.gps_accuracy)}m)` : ''}
+                              </p>
+                            )}
                           </div>
                         )}
                         {sessoesAf.length > 0 && (
