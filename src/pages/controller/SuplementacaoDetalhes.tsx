@@ -65,12 +65,19 @@ export function SuplementacaoDetalhes() {
   const [editForm, setEditForm] = useState<EditForm | null>(null)
   const [lotes, setLotes] = useState<{ id: string; nome: string }[]>([])
   const [formulacoes, setFormulacoes] = useState<{ nome: string }[]>([])
+  const [fazendaId, setFazendaId] = useState<string | null>(null)
   const [leituraDropdownOpen, setLeituraDropdownOpen] = useState(false)
   const [escoreDropdownOpen, setEscoreDropdownOpen] = useState(false)
   const leituraDropdownRef = useRef<HTMLDivElement>(null)
   const escoreDropdownRef = useRef<HTMLDivElement>(null)
 
   const canDelete = user && (user.papel === 'admin' || user.papel === 'super_admin' || user.papel === 'controller')
+
+  const FAZENDAS_HABILITADAS = [
+    'f8be22c5-12e9-4bda-a813-fae8cb3d47ec', // Guanabara
+    'f5d64d63-838e-42cc-9fe3-60f3ea7bb692', // Brilhante
+  ]
+  const featureHabilitada = fazendaId ? FAZENDAS_HABILITADAS.includes(fazendaId) : false
 
   const capitalizeWords = (str: string) => {
     return str.split(', ').map(word => {
@@ -131,6 +138,8 @@ export function SuplementacaoDetalhes() {
     const _fazendaId = await getFazendaIdForUser(user.id)
 
     if (!_fazendaId) return
+
+    setFazendaId(_fazendaId)
 
     const { data, error } = await supabase
       .from('registros_suplementacao')
@@ -288,10 +297,12 @@ export function SuplementacaoDetalhes() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
         <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Detalhes do Registro de Suplementação</h2>
         <div className="flex gap-2">
-          <Button variant="primary" onClick={handleStartEdit} className="text-sm">
-            Editar
-          </Button>
-          {canDelete && (
+          {featureHabilitada && (
+            <Button variant="primary" onClick={handleStartEdit} className="text-sm">
+              Editar
+            </Button>
+          )}
+          {featureHabilitada && canDelete && (
             <Button
               variant="danger"
               onClick={() => setIsDeleteConfirmOpen(true)}
