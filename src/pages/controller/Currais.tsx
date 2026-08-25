@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
-import { Button, Card, Input } from '../../components/ui'
+import { Button, Card, Input, ConfirmModal } from '../../components/ui'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 
 interface LinhaConfinamento {
@@ -90,6 +90,9 @@ export function Currais() {
 
   // Expanded linha accordion
   const [expandedLinha, setExpandedLinha] = useState<string | null>(null)
+
+  // Confirmação de exclusão
+  const [deleteTarget, setDeleteTarget] = useState<{ type: 'linha' | 'curral'; id: string; nome: string } | null>(null)
 
   const linhasFiltradas = useMemo(() => {
     return linhas.filter((linha) => {
@@ -337,6 +340,8 @@ export function Currais() {
   }
 
   const handleLinhaDelete = async (id: string) => {
+    // Desassociar todos os currais da linha antes de excluir
+    await supabase.from('currais').update({ linha_id: null, lote_id: null }).eq('linha_id', id)
     const { error } = await supabase.from('linhas_confinamento').update({ deleted_at: new Date().toISOString() }).eq('id', id)
     if (error) {
       console.error('Erro ao excluir linha:', error)
@@ -424,7 +429,12 @@ export function Currais() {
   }
 
   const handleCurralToggleActive = async (curral: Curral) => {
-    const { error } = await supabase.from('currais').update({ ativo: !curral.ativo }).eq('id', curral.id)
+    // Ao desativar, desassociar o lote do curral automaticamente
+    const updates: { ativo: boolean; lote_id?: null } = { ativo: !curral.ativo }
+    if (curral.ativo && curral.lote_id) {
+      updates.lote_id = null
+    }
+    const { error } = await supabase.from('currais').update(updates).eq('id', curral.id)
     if (error) {
       console.error('Erro ao atualizar curral:', error)
     } else {
@@ -433,7 +443,7 @@ export function Currais() {
   }
 
   const handleCurralDelete = async (id: string) => {
-    const { error } = await supabase.from('currais').update({ deleted_at: new Date().toISOString() }).eq('id', id)
+    const { error } = await supabase.from('currais').update({ deleted_at: new Date().toISOString(), lote_id: null }).eq('id', id)
     if (error) {
       console.error('Erro ao excluir curral:', error)
     } else {
@@ -485,12 +495,14 @@ export function Currais() {
         <Button size="sm" variant="secondary" className="flex-1 min-w-[70px]" onClick={() => handleCurralEdit(curral)}>
           Editar
         </Button>
-        <Button size="sm" variant="secondary" className="flex-1 min-w-[70px] text-red-600 hover:text-red-700" onClick={() => handleCurralToggleActive(curral)}>
+        <Button size="sm" variant="secondary" className="flex-1 min-w-[70px]" onClick={() => handleCurralToggleActive(curral)}>
           {curral.ativo ? 'Desativar' : 'Ativar'}
         </Button>
-        <Button size="sm" variant="secondary" className="flex-1 min-w-[70px] text-red-600 hover:text-red-700" onClick={() => handleCurralDelete(curral.id)}>
-          Excluir
-        </Button>
+        {!curral.ativo && (
+          <Button size="sm" variant="secondary" className="flex-1 min-w-[70px] text-red-600 hover:text-red-700" onClick={() => setDeleteTarget({ type: 'curral', id: curral.id, nome: curral.nome })}>
+            Excluir
+          </Button>
+        )}
       </div>
     </Card>
   )
@@ -803,12 +815,14 @@ export function Currais() {
                     <Button size="sm" variant="secondary" className="flex-1 min-w-[70px]" onClick={() => openNewCurralInLinha(linha.id)}>
                       + Curral
                     </Button>
-                    <Button size="sm" variant="secondary" className="flex-1 min-w-[70px] text-red-600 hover:text-red-700" onClick={() => handleLinhaToggleActive(linha)}>
+                    <Button size="sm" variant="secondary" className="flex-1 min-w-[70px]" onClick={() => handleLinhaToggleActive(linha)}>
                       {linha.ativo ? 'Desativar' : 'Ativar'}
                     </Button>
-                    <Button size="sm" variant="secondary" className="flex-1 min-w-[70px] text-red-600 hover:text-red-700" onClick={() => handleLinhaDelete(linha.id)}>
-                      Excluir
-                    </Button>
+                    {!linha.ativo && (
+                      <Button size="sm" variant="secondary" className="flex-1 min-w-[70px] text-red-600 hover:text-red-700" onClick={() => setDeleteTarget({ type: 'linha', id: linha.id, nome: linha.nome })}>
+                        Excluir
+                      </Button>
+                    )}
                   </div>
                 </div>
 
@@ -870,6 +884,22 @@ export function Currais() {
           )}
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={() => {
+          if (!deleteTarget) return
+          if (deleteTarget.type === 'linha') handleLinhaDelete(deleteTarget.id)
+          else handleCurralDelete(deleteTarget.id)
+          setDeleteTarget(null)
+        }}
+        title={`Excluir ${deleteTarget?.type === 'linha' ? 'linha' : 'curral'}`}
+        message={`Tem certeza que deseja excluir "${deleteTarget?.nome}"? Esta ação é permanente e o item não aparecerá mais na lista, mesmo com o filtro de desativados ativado.`}
+        confirmText="Excluir definitivamente"
+        cancelText="Cancelar"
+        variant="danger"
+      />
     </div>
   )
 }

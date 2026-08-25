@@ -154,6 +154,7 @@ export function Formulacoes() {
   const [submitting, setSubmitting] = useState(false)
   const [showInactive, setShowInactive] = useState(false)
   const [premixFilter, setPremixFilter] = useState<'todos' | 'tmr' | 'premix'>('todos')
+  const [sistemaFilter, setSistemaFilter] = useState<'todos' | 'pasto' | 'confinamento'>('todos')
   const [categoriasGmd, setCategoriasGmd] = useState<FormulacaoCategoriaGmd[]>([])
   const [blockedCategorias, setBlockedCategorias] = useState<Record<string, { nome: string; categorias: string[] }[]>>({})
   const [saveWarning, setSaveWarning] = useState<{
@@ -398,6 +399,7 @@ export function Formulacoes() {
       gmd: formData.e_premix ? null : (gmd || null),
       ativo: formData.ativo,
       e_premix: formData.e_premix,
+      sistema_producao: formData.sistema_producao || null,
       categoria_inferida_automaticamente: false,
       categoria_inferida_observacao: null,
     }
@@ -761,6 +763,29 @@ export function Formulacoes() {
         </div>
       </div>
 
+      {!showForm && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setSistemaFilter('todos')}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${sistemaFilter === 'todos' ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+          >
+            Todos <span className="opacity-60 ml-1">{formulacoes.filter(d => (showInactive || d.ativo) && (premixFilter === 'todos' || (premixFilter === 'premix' && d.e_premix) || (premixFilter === 'tmr' && !d.e_premix)) && (d.nome.toLowerCase().includes(searchTerm.toLowerCase()) || (d.tipo && d.tipo.toLowerCase().includes(searchTerm.toLowerCase())))).length}</span>
+          </button>
+          <button
+            onClick={() => setSistemaFilter('pasto')}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${sistemaFilter === 'pasto' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+          >
+            Pasto <span className="opacity-60 ml-1">{formulacoes.filter(d => (showInactive || d.ativo) && (premixFilter === 'todos' || (premixFilter === 'premix' && d.e_premix) || (premixFilter === 'tmr' && !d.e_premix)) && d.sistema_producao !== 'Confinamento' && (d.nome.toLowerCase().includes(searchTerm.toLowerCase()) || (d.tipo && d.tipo.toLowerCase().includes(searchTerm.toLowerCase())))).length}</span>
+          </button>
+          <button
+            onClick={() => setSistemaFilter('confinamento')}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${sistemaFilter === 'confinamento' ? 'bg-amber-700 text-white border-amber-700' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+          >
+            Confinamento <span className="opacity-60 ml-1">{formulacoes.filter(d => (showInactive || d.ativo) && (premixFilter === 'todos' || (premixFilter === 'premix' && d.e_premix) || (premixFilter === 'tmr' && !d.e_premix)) && d.sistema_producao === 'Confinamento' && (d.nome.toLowerCase().includes(searchTerm.toLowerCase()) || (d.tipo && d.tipo.toLowerCase().includes(searchTerm.toLowerCase())))).length}</span>
+          </button>
+        </div>
+      )}
+
       {showForm && (
         <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm">
           <div className="flex justify-between items-start mb-4">
@@ -835,7 +860,19 @@ export function Formulacoes() {
                   className="border-gray-200 focus:border-accent"
                 />
               </div>
-              {/* Peso Vivo Médio e Sistema de Produção ocultos: custo por categoria será calculado futuramente */}
+              {/* Peso Vivo Médio oculto: custo por categoria será calculado futuramente */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">Sistema de Produção</label>
+                <select
+                  value={formData.sistema_producao}
+                  onChange={(e) => setFormData({ ...formData, sistema_producao: e.target.value })}
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary input-focus min-h-[44px] text-sm sm:text-base border-gray-200 focus:border-accent bg-white"
+                >
+                  <option value="">Ambos</option>
+                  <option value="Pasto">Pasto</option>
+                  <option value="Confinamento">Confinamento</option>
+                </select>
+              </div>
             </div>
 
             {/* Categorias GMD por formulação (TMR only) */}
@@ -1098,6 +1135,9 @@ export function Formulacoes() {
               (premixFilter === 'todos' ||
                (premixFilter === 'premix' && dieta.e_premix) ||
                (premixFilter === 'tmr' && !dieta.e_premix)) &&
+              (sistemaFilter === 'todos' ||
+               (sistemaFilter === 'pasto' && dieta.sistema_producao !== 'Confinamento') ||
+               (sistemaFilter === 'confinamento' && dieta.sistema_producao === 'Confinamento')) &&
               (dieta.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
               (dieta.tipo && dieta.tipo.toLowerCase().includes(searchTerm.toLowerCase())))
             )
@@ -1114,6 +1154,14 @@ export function Formulacoes() {
                 onClick={() => handleEdit(dieta)}
               >
                 <div className="space-y-1 mb-4 text-sm text-gray-600">
+                  {dieta.sistema_producao && (
+                    <p>
+                      <span className="font-medium">Sistema:</span>{' '}
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${dieta.sistema_producao === 'Confinamento' ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
+                        {dieta.sistema_producao === 'Confinamento' ? 'Confinamento' : 'Pasto'}
+                      </span>
+                    </p>
+                  )}
                   {!dieta.e_premix && dieta.consumo_ms_percent_pv != null && (
                     <p><span className="font-medium">Meta MS (%PV):</span> {fmt(dieta.consumo_ms_percent_pv)}%</p>
                   )}

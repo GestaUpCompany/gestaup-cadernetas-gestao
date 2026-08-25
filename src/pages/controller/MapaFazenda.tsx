@@ -1988,8 +1988,8 @@ export function MapaFazenda() {
 
       {/* Toolbar (overlay compacto em tela cheia) */}
       <div className={modoTelaCheia
-        ? 'absolute top-2 left-2 right-2 z-10 flex items-center gap-1.5 flex-wrap bg-white/95 p-2 rounded-lg border border-gray-200 shadow-lg'
-        : 'flex items-center gap-1.5 flex-wrap bg-white p-3 rounded-lg border border-gray-200'
+        ? 'absolute top-2 left-2 right-2 z-10 flex flex-col gap-2 bg-white/95 p-2 rounded-lg border border-gray-200 shadow-lg'
+        : 'flex flex-col gap-2 bg-white p-3 rounded-lg border border-gray-200'
       }>
         <input
           ref={fileInputRef}
@@ -1999,7 +1999,8 @@ export function MapaFazenda() {
           className="hidden"
         />
 
-        {/* Toggle Modo Edição / Visualização */}
+        {/* Linha 1: botoes de acao */}
+        <div className="flex items-center gap-1.5 flex-wrap">
         <Button
           variant={modoEdicao ? 'primary' : 'secondary'}
           size="sm"
@@ -2238,8 +2239,34 @@ export function MapaFazenda() {
         {/* Divider */}
         <div className="w-px h-8 bg-gray-300 mx-1" />
 
-        {/* Grupo 4: Visualização (camadas + tela cheia) */}
-        <div className="flex items-center gap-2 bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-200">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => setModoTelaCheia((v) => !v)}
+          className="bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300"
+        >
+          <span className="flex items-center gap-2">
+            {modoTelaCheia ? (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
+                </svg>
+                Sair Tela Cheia
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+                </svg>
+                Tela Cheia
+              </>
+            )}
+          </span>
+        </Button>
+        </div>
+
+        {/* Linha 2: camadas + contador */}
+        <div className="flex items-center gap-2 flex-wrap bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-200">
           <label className="flex items-center gap-1.5 cursor-pointer text-sm">
             <input
               type="checkbox"
@@ -2369,30 +2396,6 @@ export function MapaFazenda() {
             </div>
           )}
         </div>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => setModoTelaCheia((v) => !v)}
-          className="bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300"
-        >
-          <span className="flex items-center gap-2">
-            {modoTelaCheia ? (
-              <>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
-                </svg>
-                Sair Tela Cheia
-              </>
-            ) : (
-              <>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
-                </svg>
-                Tela Cheia
-              </>
-            )}
-          </span>
-        </Button>
         <div className="ml-auto text-sm text-gray-500">
           {pastos.filter((p) => p.geometria_geojson).length} pastos ·{' '}
           {bebedouros.filter((b) => b.geometria_geojson).length} bebedouros ·{' '}

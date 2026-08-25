@@ -119,6 +119,7 @@ export function Lotes() {
   const [editingLote, setEditingLote] = useState<Lote | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [pastos, setPastos] = useState<{id: string, nome: string}[]>([])
+  const [currais, setCurrais] = useState<{id: string, nome: string, linha_id: string | null}[]>([])
   const [racas, setRacas] = useState<{id: string, nome: string}[]>([])
   const [nutritionalOptions, setNutritionalOptions] = useState<{id: string, name: string, category: string, categoria?: string, consumo_meta?: number, gmd?: number}[]>([])
   const [movimentacaoData, setMovimentacaoData] = useState<any[]>([])
@@ -146,6 +147,7 @@ export function Lotes() {
     quant_atual: '',
     ativo: true,
     pasto_id: '',
+    curral_id: '',
     sistema_producao: '',
     destino: '',
     meta_intervalo_rodeio_dias: '',
@@ -177,6 +179,7 @@ export function Lotes() {
   const [ocupacaoPorLote, setOcupacaoPorLote] = useState<Record<string, any>>({})
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
   const [showInactive, setShowInactive] = useState(false)
+  const [filtroLocal, setFiltroLocal] = useState<'todos' | 'pasto' | 'confinamento'>('todos')
   const [isPlanoLoteModalOpen, setIsPlanoLoteModalOpen] = useState(false)
   const [avisoEnfermariaFechado, setAvisoEnfermariaFechado] = useState(false)
   const [isPlanoDraftModalOpen, setIsPlanoDraftModalOpen] = useState(false)
@@ -258,13 +261,15 @@ export function Lotes() {
 
       const fazendaId = vinculos[0].fazenda_id
 
-      const [pastosData, racasData, formulacoesData] = await Promise.all([
+      const [pastosData, racasData, formulacoesData, curraisData] = await Promise.all([
         supabase.from('pastos').select('id, nome').eq('fazenda_id', fazendaId).eq('ativo', true).is('deleted_at', null),
         supabase.from('racas').select('id, nome').eq('fazenda_id', fazendaId).eq('ativo', true).is('deleted_at', null).order('nome'),
         supabase.from('formulacoes').select('id, nome, tipo, categoria, consumo_ms_percent_pv, gmd, e_premix').eq('fazenda_id', fazendaId).eq('ativo', true).eq('e_premix', false).is('deleted_at', null).order('nome'),
+        supabase.from('currais').select('id, nome, linha_id').eq('fazenda_id', fazendaId).eq('ativo', true).is('deleted_at', null).order('nome'),
       ])
 
       if (pastosData.data) setPastos(pastosData.data)
+      if (curraisData.data) setCurrais(curraisData.data)
       if (racasData.data) setRacas(racasData.data)
 
       if (formulacoesData.data) {
@@ -930,9 +935,15 @@ export function Lotes() {
       return
     }
 
-    // Validar: lote em curral nao pode ter pasto
-    if (formData.pasto_id && editingLote?.curral_id) {
-      alert(`Este lote está vinculado ao curral "${editingLote.curral_nome}" e não pode ser alocado em um pasto simultaneamente. Remova-o do curral primeiro.`)
+    // Validar: lote de confinamento precisa de curral, lote de pasto precisa de pasto
+    const isConfinamento = formData.sistema_producao === 'Confinamento'
+    if (isConfinamento && !formData.curral_id) {
+      alert('Selecione um curral para o lote de confinamento.')
+      setSubmitting(false)
+      return
+    }
+    if (!isConfinamento && !formData.pasto_id) {
+      alert('Selecione um pasto para o lote.')
       setSubmitting(false)
       return
     }
@@ -944,24 +955,13 @@ export function Lotes() {
       return
     }
 
-    // Validação de plano nutricional desativada para testes internos
-    // const categoriasSemPlano = formData.categorias.filter(
-    //   cat => !cat.planos_rascunho?.length && !cat.formulacao_id
-    // )
-    // if (categoriasSemPlano.length > 0) {
-    //   const nomes = categoriasSemPlano.map(cat => cat.categoria).join(', ')
-    //   alert(`As seguintes categorias precisam de um plano nutricional completo (formulação, período e peso meta): ${nomes}`)
-    //   setSubmitting(false)
-    //   return
-    // }
-
     const loteData = {
       fazenda_id: fazendaId,
       nome: formData.nome,
       n_cabecas: formData.numero_cabecas ? parseInt(formData.numero_cabecas) : null,
       qtd_bezerros: formData.quantidade_bezerros ? parseInt(formData.quantidade_bezerros) : null,
       ativo: formData.ativo,
-      pasto_id: formData.pasto_id || null,
+      pasto_id: isConfinamento ? null : (formData.pasto_id || null),
       sistema_producao: formData.sistema_producao || null,
       destino: formData.destino || null,
       meta_intervalo_rodeio_dias: formData.meta_intervalo_rodeio_dias ? parseInt(formData.meta_intervalo_rodeio_dias) : null,
@@ -1008,6 +1008,16 @@ export function Lotes() {
       }
       setSubmitting(false)
       return
+    }
+
+    // Gerenciar associação do lote com curral
+    // Desvincular curral anterior se existir
+    if (editingLote?.curral_id) {
+      await supabase.from('currais').update({ lote_id: null }).eq('id', editingLote.curral_id)
+    }
+    // Vincular novo curral se for confinamento
+    if (isConfinamento && formData.curral_id) {
+      await supabase.from('currais').update({ lote_id: loteId }).eq('id', formData.curral_id)
     }
 
     // Recalculate all categories to ensure calculated fields are up-to-date before saving
@@ -1291,6 +1301,7 @@ export function Lotes() {
         quant_atual: '',
         ativo: true,
         pasto_id: '',
+        curral_id: '',
         sistema_producao: '',
         destino: '',
         meta_intervalo_rodeio_dias: '',
@@ -1483,6 +1494,7 @@ export function Lotes() {
       quant_atual: '',
       ativo: lote.ativo ?? true,
       pasto_id: lote.pasto_id || '',
+      curral_id: lote.curral_id || '',
       sistema_producao: lote.sistema_producao || '',
       destino: lote.destino || '',
       meta_intervalo_rodeio_dias: lote.meta_intervalo_rodeio_dias?.toString() || '',
@@ -1533,6 +1545,7 @@ export function Lotes() {
       quant_atual: '',
       ativo: true,
       pasto_id: '',
+      curral_id: '',
       sistema_producao: '',
       destino: '',
       meta_intervalo_rodeio_dias: '',
@@ -1563,12 +1576,15 @@ export function Lotes() {
   const handleToggleActive = async (lote: Lote) => {
     const newAtivo = !lote.ativo
     const updateData: any = { ativo: newAtivo }
-    
-    // Desvincular lote do pasto ao desativar
+
+    // Desvincular lote do pasto e do curral ao desativar
     if (!newAtivo) {
       updateData.pasto_id = null
+      if (lote.curral_id) {
+        await supabase.from('currais').update({ lote_id: null }).eq('id', lote.curral_id)
+      }
     }
-    
+
     const { error } = await supabase
       .from('lotes')
       .update(updateData)
@@ -1961,24 +1977,32 @@ export function Lotes() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
-                    Pasto <span className="text-red-500">*</span>
+                    {formData.sistema_producao === 'Confinamento' ? 'Curral' : 'Pasto'} <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    value={formData.pasto_id}
-                    onChange={(e) => setFormData({ ...formData, pasto_id: e.target.value })}
-                    required
-                    disabled={!!editingLote?.curral_id}
-                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-gray-200 rounded-lg focus:outline-none focus:border-accent disabled:bg-gray-100 disabled:cursor-not-allowed"
-                  >
-                    <option value="">Selecione</option>
-                    {pastos.map((pasto) => (
-                      <option key={pasto.id} value={pasto.id}>{pasto.nome}</option>
-                    ))}
-                  </select>
-                  {editingLote?.curral_id && (
-                    <p className="text-xs text-red-500 mt-1">
-                      Este lote está no curral "{editingLote.curral_nome}". Remova-o do curral antes de alocar em um pasto.
-                    </p>
+                  {formData.sistema_producao === 'Confinamento' ? (
+                    <select
+                      value={formData.curral_id}
+                      onChange={(e) => setFormData({ ...formData, curral_id: e.target.value, pasto_id: '' })}
+                      required
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-gray-200 rounded-lg focus:outline-none focus:border-accent"
+                    >
+                      <option value="">Selecione</option>
+                      {currais.map((curral) => (
+                        <option key={curral.id} value={curral.id}>{curral.nome}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <select
+                      value={formData.pasto_id}
+                      onChange={(e) => setFormData({ ...formData, pasto_id: e.target.value, curral_id: '' })}
+                      required
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-gray-200 rounded-lg focus:outline-none focus:border-accent"
+                    >
+                      <option value="">Selecione</option>
+                      {pastos.map((pasto) => (
+                        <option key={pasto.id} value={pasto.id}>{pasto.nome}</option>
+                      ))}
+                    </select>
                   )}
                 </div>
                 <div className="col-span-1 sm:col-span-1 lg:col-span-2 xl:col-span-2">
@@ -1987,7 +2011,7 @@ export function Lotes() {
                   </label>
                   <select
                     value={formData.sistema_producao}
-                    onChange={(e) => setFormData({ ...formData, sistema_producao: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, sistema_producao: e.target.value, pasto_id: '', curral_id: '' })}
                     required
                     className="w-full px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] border border-gray-200 rounded-lg focus:outline-none focus:border-accent"
                   >
@@ -3194,24 +3218,59 @@ export function Lotes() {
           }}>Criar Primeiro Lote</Button>
         </Card>
       ) : !showForm ? (
+        <div className="space-y-4">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setFiltroLocal('todos')}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${filtroLocal === 'todos' ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+          >
+            Todos <span className="opacity-60 ml-1">{lotes.filter(l => (showInactive || l.ativo) && l.nome.toLowerCase().includes(searchTerm.toLowerCase())).length}</span>
+          </button>
+          <button
+            onClick={() => setFiltroLocal('pasto')}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${filtroLocal === 'pasto' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+          >
+            Pasto <span className="opacity-60 ml-1">{lotes.filter(l => (showInactive || l.ativo) && l.nome.toLowerCase().includes(searchTerm.toLowerCase()) && l.sistema_producao !== 'Confinamento').length}</span>
+          </button>
+          <button
+            onClick={() => setFiltroLocal('confinamento')}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${filtroLocal === 'confinamento' ? 'bg-amber-700 text-white border-amber-700' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+          >
+            Confinamento <span className="opacity-60 ml-1">{lotes.filter(l => (showInactive || l.ativo) && l.nome.toLowerCase().includes(searchTerm.toLowerCase()) && l.sistema_producao === 'Confinamento').length}</span>
+          </button>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
-          {lotes
+        {(() => {
+          const lotesFiltrados = lotes
             .filter((lote) =>
               (showInactive || lote.ativo) &&
               lote.nome.toLowerCase().includes(searchTerm.toLowerCase())
             )
-            .map((lote) => (
+            .filter((lote) =>
+              filtroLocal === 'todos' ? true :
+              filtroLocal === 'pasto' ? lote.sistema_producao !== 'Confinamento' :
+              lote.sistema_producao === 'Confinamento'
+            )
+          const renderCard = (lote: any) => (
               <CardItem
                 key={lote.id}
                 title={lote.nome}
                 subtitle={(() => {
-                  const total = lote.categorias?.reduce((sum, cat) => sum + (cat.quant_atual ?? cat.quant_inicial ?? 0), 0) || lote.n_cabecas || 0
+                  const total = lote.categorias?.reduce((sum: number, cat: any) => sum + (cat.quant_atual ?? cat.quant_inicial ?? 0), 0) || lote.n_cabecas || 0
                   return total > 0 ? `${total} cabeças` : undefined
                 })()}
                 status={lote.ativo ?? undefined}
                 onClick={() => handleEdit(lote)}
               >
                 <div className="space-y-2 mb-4 flex-1">
+                  {lote.sistema_producao && (
+                    <p className="text-sm text-gray-500">
+                      <span className="font-medium">Sistema:</span>{' '}
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${lote.sistema_producao === 'Confinamento' ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
+                        {lote.sistema_producao === 'Confinamento' ? 'Confinamento' : 'Pasto'}
+                      </span>
+                    </p>
+                  )}
                   {lote.peso_vivo_atual_kg_cab && (
                     <p className="text-sm text-gray-500">
                       <span className="font-medium">Peso Vivo:</span> {lote.peso_vivo_atual_kg_cab} kg
@@ -3221,6 +3280,12 @@ export function Lotes() {
                   {lote.pasto_nome && (
                     <p className="text-sm text-gray-500">
                       <span className="font-medium">Pasto:</span> {lote.pasto_nome}
+                    </p>
+                  )}
+
+                  {lote.curral_nome && (
+                    <p className="text-sm text-gray-500">
+                      <span className="font-medium">Curral:</span> {lote.curral_nome}
                     </p>
                   )}
 
@@ -3286,7 +3351,17 @@ export function Lotes() {
                   </button>
                 </div>
               </CardItem>
-            ))}
+          )
+          return (
+            <>
+              {lotesFiltrados.map(renderCard)}
+              {lotesFiltrados.length === 0 && (
+                <div className="col-span-full text-center text-gray-400 py-8">Nenhum lote encontrado.</div>
+              )}
+            </>
+          )
+        })()}
+        </div>
         </div>
       ) : null}
 
