@@ -670,7 +670,7 @@ export async function gerarRelatorioBebedourosPDF(dados: DadosPDFBebedouros): Pr
   setTextColor(doc, DARK_TEXT)
   const tituloSecao1 = dados.ehDiaUnico && dados.diaUnico
     ? `1. Bebedouros limpos em ${formatarData(dados.diaUnico)}`
-    : '1. Os bebedouros estão sendo limpos dentro da meta?'
+    : '1. Status de limpeza dos bebedouros'
   doc.text(tituloSecao1, margin, 40)
   doc.setFont('helvetica', 'normal')
 
@@ -709,7 +709,7 @@ export async function gerarRelatorioBebedourosPDF(dados: DadosPDFBebedouros): Pr
   doc.setFontSize(12)
   doc.setFont('helvetica', 'bold')
   setTextColor(doc, DARK_TEXT)
-  doc.text('2. Os checklists respondidos possuem muitas respostas negativas?', margin, 40)
+  doc.text('2. Pontos de atenção nos bebedouros', margin, 40)
   doc.setFont('helvetica', 'normal')
 
   y = 46

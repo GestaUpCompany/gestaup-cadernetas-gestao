@@ -664,8 +664,7 @@ export function RelatorioBebedourosPublico({ relatorioInfo }: Props) {
           }}
         />
 
-        <Secao titulo="1. Os bebedouros estão sendo limpos dentro da meta?">
-          <LegendaStatus diaUnico={ehDiaUnico} />
+        <Secao titulo="1. Status de limpeza dos bebedouros">
           {ehDiaUnico ? (
             <>
               <KPIsLimpezaDia limpezas={limpezasDoDia} data={diaUnicoEfetivo} />
@@ -679,7 +678,7 @@ export function RelatorioBebedourosPublico({ relatorioInfo }: Props) {
           )}
         </Secao>
 
-        <Secao titulo="2. Os checklists respondidos possuem muitas respostas negativas?">
+        <Secao titulo="2. Pontos de atenção nos bebedouros">
           <KPIsChecklist kpis={checklistKPIs} />
           <GraficoProblemas ranking={checklistKPIs.itensRanking} />
           <TabelaOcorrencias ocorrencias={ocorrenciasNegativas} />
@@ -704,12 +703,12 @@ function LegendaStatus({ diaUnico }: { diaUnico: boolean }) {
         { cor: '#6B7280', label: 'Sem registro', desc: 'nenhuma limpeza registrada' },
       ]
   return (
-    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+    <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-gray-500 bg-gray-50 rounded-lg p-2.5 border border-gray-100">
       {itens.map((i) => (
-        <span key={i.label} className="inline-flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: i.cor }} />
+        <span key={i.label} className="inline-flex items-center gap-2">
+          <span className="w-3.5 h-3.5 rounded-full shrink-0" style={{ backgroundColor: i.cor }} />
           <span className="font-medium text-gray-700">{i.label}</span>
-          <span className="hidden sm:inline">({i.desc})</span>
+          <span className="hidden sm:inline text-gray-400">({i.desc})</span>
         </span>
       ))}
     </div>
@@ -899,7 +898,7 @@ function Filtros({
 
 function KPIsLimpeza({ kpis, maisAtrasado }: { kpis: LimpezaKPIs; maisAtrasado: StatusLimpeza | null }) {
   const cards = [
-    { label: 'Bebedouros analisados', valor: kpis.total, cor: '#111827' },
+    { label: 'Bebedouros cadastrados', valor: kpis.total, cor: '#111827' },
     { label: 'Dentro da meta', valor: kpis.emDia, subtitulo: `${kpis.pctEmDia}%`, cor: '#22C55E' },
     { label: 'Atrasados', valor: kpis.atrasado, cor: '#F59E0B' },
     { label: 'Atraso crítico', valor: kpis.critico, cor: '#EF4444' },
@@ -1028,8 +1027,9 @@ function GraficoLimpezaDia({ limpezas, onSelecionar, onSelecionarToggle }: { lim
 
   return (
     <div>
+      <LegendaStatus diaUnico={true} />
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold text-gray-700">Intervalo desde a limpeza anterior</h3>
+        <h3 className="text-sm font-semibold text-gray-700 mt-2">Intervalo desde a limpeza anterior</h3>
         <p className="text-xs text-gray-500">
           {temMeta ? 'Marca verde tracejada = meta individual' : 'Sem meta configurada'} · Ctrl+click para selecionar múltiplos
         </p>
@@ -1148,8 +1148,9 @@ function GraficoLimpeza({ status, onSelecionar, onSelecionarToggle, dataReferenc
 
   return (
     <div>
+      <LegendaStatus diaUnico={false} />
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold text-gray-700">Dias desde a última limpeza por bebedouro</h3>
+        <h3 className="text-sm font-semibold text-gray-700 mt-2">Dias desde a última limpeza por bebedouro</h3>
         <p className="text-xs text-gray-500">
           {temMeta ? 'Marca verde tracejada = meta individual de cada bebedouro' : 'Sem meta configurada'} · Referência: {dataReferencia === 'hoje' ? 'hoje' : formatarData(dataReferencia)} · Ctrl+click para selecionar múltiplos
         </p>
