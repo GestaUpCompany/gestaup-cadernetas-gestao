@@ -1016,9 +1016,10 @@ function GraficoLimpezaDia({ limpezas, onSelecionar, onSelecionarToggle }: { lim
     return <g>{elements}</g>
   }
 
-  const handleClick = (d: any, e: any) => {
-    const id = d.id
-    if (e?.ctrlKey || e?.metaKey) {
+  const handleClick = (d: any, _idx: number, e: any) => {
+    const id = d.id ?? d.payload?.id
+    const isMulti = !!(e?.ctrlKey || e?.metaKey)
+    if (isMulti) {
       onSelecionarToggle(id)
     } else {
       onSelecionar([id])
@@ -1190,11 +1191,13 @@ function GraficoLimpeza({ status, onSelecionar, onSelecionarToggle, dataReferenc
                 )
               }}
             />
-            <Bar dataKey="dias" shape={renderBarraComMeta} onClick={(d: any, e: any) => {
-              if (e?.ctrlKey || e?.metaKey) {
-                onSelecionarToggle(d.id)
+            <Bar dataKey="dias" shape={renderBarraComMeta} onClick={(d: any, _idx: number, e: any) => {
+              const id = d.id ?? d.payload?.id
+              const isMulti = !!(e?.ctrlKey || e?.metaKey)
+              if (isMulti) {
+                onSelecionarToggle(id)
               } else {
-                onSelecionar([d.id])
+                onSelecionar([id])
               }
             }} cursor="pointer">
               {dados.map((d, i) => (

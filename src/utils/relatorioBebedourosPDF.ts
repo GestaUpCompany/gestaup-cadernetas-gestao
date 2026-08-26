@@ -174,10 +174,10 @@ function renderKPIsLimpeza(ctx: RenderContext, y: number, kpis: LimpezaKPIsPDF):
   const gapX = 3
   const n = 5
   const cardW = (pageW - margin * 2 - gapX * (n - 1)) / n
-  const cardH = 14
+  const cardH = 15
 
   const items = [
-    { label: 'Analisados', valor: String(kpis.total), cor: DARK_TEXT },
+    { label: 'Cadastrados', valor: String(kpis.total), cor: DARK_TEXT },
     { label: 'Dentro da meta', valor: `${kpis.emDia} (${kpis.pctEmDia}%)`, cor: '#22C55E' },
     { label: 'Atrasados', valor: String(kpis.atrasado), cor: '#F59E0B' },
     { label: 'Atraso crítico', valor: String(kpis.critico), cor: '#EF4444' },
@@ -192,15 +192,15 @@ function renderKPIsLimpeza(ctx: RenderContext, y: number, kpis: LimpezaKPIsPDF):
     setFillColor(doc, items[i].cor)
     doc.rect(x, y, 1.5, cardH, 'F')
 
-    doc.setFontSize(6)
+    doc.setFontSize(7)
     setTextColor(doc, MEDIUM_TEXT)
     doc.setFont('helvetica', 'normal')
-    doc.text(items[i].label, x + 3, y + 4)
+    doc.text(items[i].label, x + 3, y + 4.5)
 
-    doc.setFontSize(10)
+    doc.setFontSize(11)
     doc.setFont('helvetica', 'bold')
     setTextColor(doc, items[i].cor)
-    doc.text(items[i].valor, x + 3, y + 9)
+    doc.text(items[i].valor, x + 3, y + 10)
   }
 
   return y + cardH
@@ -212,7 +212,7 @@ function renderKPIsLimpezaDia(ctx: RenderContext, y: number, kpis: LimpezaDiaKPI
   const gapX = 3
   const n = 4
   const cardW = (pageW - margin * 2 - gapX * (n - 1)) / n
-  const cardH = 14
+  const cardH = 15
 
   const items = [
     { label: 'Limpos no dia', valor: String(kpis.limposNoDia), cor: DARK_TEXT },
@@ -229,15 +229,15 @@ function renderKPIsLimpezaDia(ctx: RenderContext, y: number, kpis: LimpezaDiaKPI
     setFillColor(doc, items[i].cor)
     doc.rect(x, y, 1.5, cardH, 'F')
 
-    doc.setFontSize(6)
+    doc.setFontSize(7)
     setTextColor(doc, MEDIUM_TEXT)
     doc.setFont('helvetica', 'normal')
-    doc.text(items[i].label, x + 3, y + 4)
+    doc.text(items[i].label, x + 3, y + 4.5)
 
-    doc.setFontSize(10)
+    doc.setFontSize(11)
     doc.setFont('helvetica', 'bold')
     setTextColor(doc, items[i].cor)
-    doc.text(items[i].valor, x + 3, y + 9)
+    doc.text(items[i].valor, x + 3, y + 10)
   }
 
   // Pills de info adicional
@@ -265,7 +265,7 @@ function renderKPIsChecklist(ctx: RenderContext, y: number, kpis: DadosPDFBebedo
   const gapX = 3
   const n = 3
   const cardW = (pageW - margin * 2 - gapX * (n - 1)) / n
-  const cardH = 14
+  const cardH = 15
 
   const items = [
     { label: 'Registros no período', valor: String(kpis.totalRegistros), cor: DARK_TEXT },
@@ -281,15 +281,15 @@ function renderKPIsChecklist(ctx: RenderContext, y: number, kpis: DadosPDFBebedo
     setFillColor(doc, items[i].cor)
     doc.rect(x, y, 1.5, cardH, 'F')
 
-    doc.setFontSize(6)
+    doc.setFontSize(7)
     setTextColor(doc, MEDIUM_TEXT)
     doc.setFont('helvetica', 'normal')
-    doc.text(items[i].label, x + 3, y + 4)
+    doc.text(items[i].label, x + 3, y + 4.5)
 
-    doc.setFontSize(10)
+    doc.setFontSize(11)
     doc.setFont('helvetica', 'bold')
     setTextColor(doc, items[i].cor)
-    doc.text(items[i].valor, x + 3, y + 9)
+    doc.text(items[i].valor, x + 3, y + 10)
   }
 
   let nextY = y + cardH + 3

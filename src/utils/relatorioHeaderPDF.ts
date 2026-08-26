@@ -102,12 +102,20 @@ export function renderRelatorioHeader(ctx: HeaderContext, opts: HeaderOptions) {
   const manejUsW = doc.getTextWidth("Manej'Us ")
   setTextColor(doc, YELLOW)
   doc.text('360', nextX + manejUsW, logoY + 11)
+  const manejusTotalW = manejUsW + doc.getTextWidth('360')
 
   // Card branco do título central
   doc.setFontSize(11)
   doc.setFont('helvetica', 'bold')
-  const titleW = Math.min(220, Math.max(doc.getTextWidth(titulo), subtitulo ? doc.getTextWidth(subtitulo) : 0) + 24)
-  const titleCardX = pageW / 2 - titleW / 2
+
+  const pillW = 50
+  const pillX = pillLabel ? pageW - pillW - 10 : pageW - 10
+  const leftEnd = nextX + manejusTotalW + 8
+  const rightStart = pillLabel ? pillX - 8 : pageW - 10
+  const availableTitleW = Math.max(80, rightStart - leftEnd)
+
+  const titleW = Math.min(availableTitleW, Math.max(doc.getTextWidth(titulo), subtitulo ? doc.getTextWidth(subtitulo) : 0) + 24)
+  const titleCardX = Math.max(pageW / 2 - titleW / 2, leftEnd)
   const titleCardY = 7
   const titleCardH = subtitulo ? 17 : 14
 
@@ -117,12 +125,12 @@ export function renderRelatorioHeader(ctx: HeaderContext, opts: HeaderOptions) {
   doc.roundedRect(titleCardX, titleCardY, titleW, titleCardH, 7, 7, 'F')
   doc.setFontSize(12)
   setTextColor(doc, GREEN_DARK)
-  doc.text(titulo, pageW / 2, titleCardY + 8, { align: 'center' })
+  doc.text(titulo, titleCardX + titleW / 2, titleCardY + 8, { align: 'center' })
   if (subtitulo) {
     doc.setFontSize(9)
     setTextColor(doc, MEDIUM_TEXT)
     doc.setFont('helvetica', 'normal')
-    doc.text(subtitulo, pageW / 2, titleCardY + 14, { align: 'center' })
+    doc.text(subtitulo, titleCardX + titleW / 2, titleCardY + 14, { align: 'center' })
   }
 
   // Pill do canto direito (opcional)
