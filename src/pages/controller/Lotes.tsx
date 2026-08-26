@@ -175,6 +175,8 @@ export function Lotes() {
   // status: 'idle' (vazio/curto demais) | 'checking' (consultando) | 'available' | 'duplicated'
   const [nomeCheck, setNomeCheck] = useState<{ status: 'idle' | 'checking' | 'available' | 'duplicated'; duplicataNome?: string }>({ status: 'idle' })
   const [showCategoryRemoveModal, setShowCategoryRemoveModal] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; nome: string } | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const [originalAtivo, setOriginalAtivo] = useState(true)
   const [ocupacaoPorLote, setOcupacaoPorLote] = useState<Record<string, any>>({})
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
@@ -1595,6 +1597,63 @@ export function Lotes() {
     } else {
       loadLotes()
     }
+  }
+
+  // Soft-delete do lote: marca deleted_at e encerra categorias/planos ativos
+  // para o cron update_dados_lotes parar de projetar peso e disparar notificações.
+  // Preserva auditoria (lote_categorias_transicoes, planos_nutricionais_snapshots,
+  // registros de movimentação/morte/maternidade) via FKs SET NULL/CASCADE intactas.
+  const handleDelete = async (id: string) => {
+    setDeleting(true)
+    try {
+      const nowIso = new Date().toISOString()
+
+      // 1. Encerrar planos nutricionais ativos do lote
+      const { error: planoError } = await supabase
+        .from('planos_nutricionais')
+        .update({ ativo: false, data_fim: nowIso })
+        .eq('lote_id', id)
+        .eq('ativo', true)
+      if (planoError) {
+        console.error('Erro ao encerrar planos do lote:', planoError)
+        alert('Erro ao encerrar planos nutricionais do lote. Exclusão cancelada.')
+        setDeleting(false)
+        return
+      }
+
+      // 2. Encerrar lote_categorias ativas (ativo=false + data_fim=now)
+      // Evita que fiquem órfãs e que o cron continue projetando peso.
+      const { error: catError } = await supabase
+        .from('lote_categorias')
+        .update({ ativo: false, data_fim: nowIso })
+        .eq('lote_id', id)
+        .eq('ativo', true)
+      if (catError) {
+        console.error('Erro ao encerrar categorias do lote:', catError)
+        alert('Erro ao encerrar categorias do lote. Exclusão cancelada.')
+        setDeleting(false)
+        return
+      }
+
+      // 3. Soft-delete do lote (deleted_at=now)
+      const { error: loteError } = await supabase
+        .from('lotes')
+        .update({ deleted_at: nowIso })
+        .eq('id', id)
+      if (loteError) {
+        console.error('Erro ao excluir lote:', loteError)
+        alert('Erro ao excluir lote.')
+        setDeleting(false)
+        return
+      }
+
+      setDeleteTarget(null)
+      loadLotes()
+    } catch (err) {
+      console.error('Erro inesperado ao excluir lote:', err)
+      alert('Erro inesperado ao excluir lote.')
+    }
+    setDeleting(false)
   }
 
   const shortcuts = [
@@ -3349,6 +3408,17 @@ export function Lotes() {
                   >
                     {lote.ativo ? 'Desativar' : 'Ativar'}
                   </button>
+                  {!lote.ativo && (
+                    <button
+                      className="rounded-lg font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 hover-scale-sm button-press whitespace-nowrap min-h-[44px] px-3 py-2 text-sm bg-red-600 text-white focus:ring-red-500 hover:shadow-md hover:bg-red-700 flex-1"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setDeleteTarget({ id: lote.id, nome: lote.nome })
+                      }}
+                    >
+                      Excluir
+                    </button>
+                  )}
                 </div>
               </CardItem>
           )
@@ -3374,6 +3444,17 @@ export function Lotes() {
         confirmText="Entendi"
         cancelText="Cancelar"
         variant="warning"
+      />
+
+      <ConfirmModal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={() => deleteTarget && handleDelete(deleteTarget.id)}
+        title="Excluir lote"
+        message={`Tem certeza que deseja excluir o lote "${deleteTarget?.nome}"? Ele sairá da lista de lotes da fazenda. Categorias e planos nutricionais ativos serão encerrados. O histórico (movimentações, mortes, maternidade, cronologia nutricional e auditoria de recategorização) será preservado para consulta futura.`}
+        confirmText={deleting ? 'Excluindo...' : 'Excluir'}
+        cancelText="Cancelar"
+        variant="danger"
       />
 
       {pesoEditModal?.isOpen && (
