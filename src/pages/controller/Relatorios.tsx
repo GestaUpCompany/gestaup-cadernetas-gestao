@@ -52,6 +52,12 @@ const RELATORIOS_DISPONIVEIS: RelatorioDisponivel[] = [
     descricao: 'Produtividade por funcionário, tempo produtivo, taxa de conclusão, atividades não previstas e imprevistos por período.',
     icone: '📋',
   },
+  {
+    tipo: 'bebedouros',
+    titulo: 'Bebedouros',
+    descricao: 'Status de limpeza, histórico e qualidade da água por bebedouro e período.',
+    icone: '💧',
+  },
 ]
 
 export function Relatorios() {

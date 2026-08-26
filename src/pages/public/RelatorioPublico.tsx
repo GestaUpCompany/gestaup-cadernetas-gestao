@@ -8,6 +8,7 @@ import { RelatorioConsumoPublico } from './RelatorioConsumoPublico'
 import { RelatorioTratosPublico } from './RelatorioTratosPublico'
 import { RelatorioMortePublico } from './RelatorioMortePublico'
 import { RelatorioAtividadesPublico } from './RelatorioAtividadesPublico'
+import { RelatorioBebedourosPublico } from './RelatorioBebedourosPublico'
 
 const CHART_NO_FOCUS_CSS = `
 .recharts-surface {
@@ -159,7 +160,7 @@ export function RelatorioPublico() {
       })
 
       // Se for relatório de consumo, tratos ou morte, o componente filho busca seus próprios dados
-      if (relData.tipo === 'consumo' || relData.tipo === 'tratos' || relData.tipo === 'morte' || relData.tipo === 'atividades') {
+      if (relData.tipo === 'consumo' || relData.tipo === 'tratos' || relData.tipo === 'morte' || relData.tipo === 'atividades' || relData.tipo === 'bebedouros') {
         setError(null)
         setLoading(false)
         return
@@ -511,6 +512,10 @@ export function RelatorioPublico() {
 
   if (relatorioInfo?.tipo === 'atividades') {
     return <RelatorioAtividadesPublico token={token!} relatorioInfo={relatorioInfo} />
+  }
+
+  if (relatorioInfo?.tipo === 'bebedouros') {
+    return <RelatorioBebedourosPublico relatorioInfo={relatorioInfo} />
   }
 
   // Componente de popover multi-select
