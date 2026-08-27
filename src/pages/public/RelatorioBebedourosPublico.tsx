@@ -668,12 +668,12 @@ export function RelatorioBebedourosPublico({ relatorioInfo }: Props) {
           {ehDiaUnico ? (
             <>
               <KPIsLimpezaDia limpezas={limpezasDoDia} data={diaUnicoEfetivo} />
-              <GraficoLimpezaDia limpezas={limpezasDoDia} onSelecionar={setBebedourosSelecionados} onSelecionarToggle={toggleBebedouro} />
+              <GraficoLimpezaDia limpezas={limpezasDoDia} onSelecionar={setBebedourosSelecionados} />
             </>
           ) : (
             <>
               <KPIsLimpeza kpis={limpezaKPIs} maisAtrasado={maisAtrasado} />
-              <GraficoLimpeza status={statusPorBebedouro} onSelecionar={setBebedourosSelecionados} onSelecionarToggle={toggleBebedouro} dataReferencia={diaUnico || dataFim || 'hoje'} />
+              <GraficoLimpeza status={statusPorBebedouro} onSelecionar={setBebedourosSelecionados} dataReferencia={diaUnico || dataFim || 'hoje'} />
             </>
           )}
         </Secao>
@@ -962,7 +962,7 @@ function KPIsLimpezaDia({ limpezas, data }: { limpezas: LimpezaDoDia[]; data: st
   )
 }
 
-function GraficoLimpezaDia({ limpezas, onSelecionar, onSelecionarToggle }: { limpezas: LimpezaDoDia[]; onSelecionar: (ids: string[]) => void; onSelecionarToggle: (id: string) => void }) {
+function GraficoLimpezaDia({ limpezas, onSelecionar }: { limpezas: LimpezaDoDia[]; onSelecionar: (ids: string[]) => void }) {
   if (limpezas.length === 0) {
     return (
       <div className="text-center text-gray-400 py-8 bg-gray-50 rounded-lg">
@@ -1016,14 +1016,9 @@ function GraficoLimpezaDia({ limpezas, onSelecionar, onSelecionarToggle }: { lim
     return <g>{elements}</g>
   }
 
-  const handleClick = (d: any, _idx: number, e: any) => {
+  const handleClick = (d: any) => {
     const id = d.id ?? d.payload?.id
-    const isMulti = !!(e?.ctrlKey || e?.metaKey)
-    if (isMulti) {
-      onSelecionarToggle(id)
-    } else {
-      onSelecionar([id])
-    }
+    onSelecionar([id])
   }
 
   return (
@@ -1032,7 +1027,7 @@ function GraficoLimpezaDia({ limpezas, onSelecionar, onSelecionarToggle }: { lim
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-sm font-semibold text-gray-700 mt-2">Intervalo desde a limpeza anterior</h3>
         <p className="text-xs text-gray-500">
-          {temMeta ? 'Marca verde tracejada = meta individual' : 'Sem meta configurada'} · Ctrl+click para selecionar múltiplos
+          {temMeta ? 'Marca verde tracejada = meta individual' : 'Sem meta configurada'}
         </p>
       </div>
       <div style={{ width: '100%', height: Math.max(220, dados.length * 38) }}>
@@ -1066,12 +1061,12 @@ function GraficoLimpezaDia({ limpezas, onSelecionar, onSelecionarToggle }: { lim
                     {d.dataLimpezaAnterior && <p className="text-gray-600">Limpeza anterior: <span className="font-medium">{formatarData(d.dataLimpezaAnterior)}</span></p>}
                     {d.responsavel && <p className="text-gray-600">Responsável: <span className="font-medium">{d.responsavel}</span></p>}
                     {d.observacao && <p className="text-gray-600">Obs: {d.observacao}</p>}
-                    <p className="text-gray-400 italic mt-1">Clique para filtrar · Ctrl+click para adicionar</p>
+                    <p className="text-gray-400 italic mt-1">Clique na barra para filtrar</p>
                   </div>
                 )
               }}
             />
-            <Bar dataKey="intervalo" shape={renderBarraComMeta} onClick={handleClick} cursor="pointer">
+            <Bar dataKey="intervalo" shape={renderBarraComMeta} activeBar={false} cursor="pointer" onClick={handleClick}>
               {dados.map((d, i) => (
                 <Cell key={i} fill={d.cor} />
               ))}
@@ -1092,7 +1087,7 @@ function GraficoLimpezaDia({ limpezas, onSelecionar, onSelecionarToggle }: { lim
   )
 }
 
-function GraficoLimpeza({ status, onSelecionar, onSelecionarToggle, dataReferencia }: { status: StatusLimpeza[]; onSelecionar: (ids: string[]) => void; onSelecionarToggle: (id: string) => void; dataReferencia: string }) {
+function GraficoLimpeza({ status, onSelecionar, dataReferencia }: { status: StatusLimpeza[]; onSelecionar: (ids: string[]) => void; dataReferencia: string }) {
   if (status.length === 0) {
     return (
       <div className="text-center text-gray-400 py-8 bg-gray-50 rounded-lg">
@@ -1153,7 +1148,7 @@ function GraficoLimpeza({ status, onSelecionar, onSelecionarToggle, dataReferenc
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-sm font-semibold text-gray-700 mt-2">Dias desde a última limpeza por bebedouro</h3>
         <p className="text-xs text-gray-500">
-          {temMeta ? 'Marca verde tracejada = meta individual de cada bebedouro' : 'Sem meta configurada'} · Referência: {dataReferencia === 'hoje' ? 'hoje' : formatarData(dataReferencia)} · Ctrl+click para selecionar múltiplos
+          {temMeta ? 'Marca verde tracejada = meta individual de cada bebedouro' : 'Sem meta configurada'} · Referência: {dataReferencia === 'hoje' ? 'hoje' : formatarData(dataReferencia)}
         </p>
       </div>
       <div style={{ width: '100%', height: Math.max(220, dados.length * 38) }}>
@@ -1191,15 +1186,10 @@ function GraficoLimpeza({ status, onSelecionar, onSelecionarToggle, dataReferenc
                 )
               }}
             />
-            <Bar dataKey="dias" shape={renderBarraComMeta} onClick={(d: any, _idx: number, e: any) => {
+            <Bar dataKey="dias" shape={renderBarraComMeta} activeBar={false} cursor="pointer" onClick={(d: any) => {
               const id = d.id ?? d.payload?.id
-              const isMulti = !!(e?.ctrlKey || e?.metaKey)
-              if (isMulti) {
-                onSelecionarToggle(id)
-              } else {
-                onSelecionar([id])
-              }
-            }} cursor="pointer">
+              onSelecionar([id])
+            }}>
               {dados.map((d, i) => (
                 <Cell key={i} fill={d.cor} />
               ))}
