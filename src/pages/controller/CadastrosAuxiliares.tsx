@@ -1448,9 +1448,28 @@ export function CadastrosAuxiliares() {
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Cadernetas permitidas *
-                          </label>
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="block text-sm font-medium text-gray-700">
+                              Cadernetas permitidas *
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setFuncionarioRbac({
+                                  ...funcionarioRbac,
+                                  cadernetas_permitidas:
+                                    funcionarioRbac.cadernetas_permitidas.length === CADERNETAS.length
+                                      ? []
+                                      : CADERNETAS.map((c) => c.id),
+                                })
+                              }
+                              className="text-xs text-primary hover:underline"
+                            >
+                              {funcionarioRbac.cadernetas_permitidas.length === CADERNETAS.length
+                                ? 'Limpar seleção'
+                                : 'Selecionar todas'}
+                            </button>
+                          </div>
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                             {CADERNETAS.map((caderneta) => (
                               <label
