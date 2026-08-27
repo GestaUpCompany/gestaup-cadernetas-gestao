@@ -350,6 +350,9 @@ async function renderizarGraficoLimpeza(
   const ctx2d = canvas.getContext('2d')
   if (!ctx2d) return null
 
+  const n = status.length
+  const baseFont = n > 18 ? 8 : 10
+
   const labels = status.map((s) => s.nome)
   const valores = status.map((s) => s.dias ?? 0)
   const cores = status.map((s) => s.cor)
@@ -364,6 +367,7 @@ async function renderizarGraficoLimpeza(
         backgroundColor: cores,
         borderRadius: 4,
         borderSkipped: false,
+        minBarLength: 20,
         barPercentage: 0.7,
         categoryPercentage: 0.8,
       }],
@@ -382,11 +386,11 @@ async function renderizarGraficoLimpeza(
         x: {
           beginAtZero: true,
           grid: { color: '#E5E7EB' },
-          ticks: { color: '#6B7280', font: { size: 10 } },
+          ticks: { color: '#6B7280', font: { size: baseFont } },
         },
         y: {
           grid: { display: false },
-          ticks: { color: '#374151', font: { size: 10 } },
+          ticks: { color: '#374151', font: { size: baseFont }, autoSkip: false },
         },
       },
     },
@@ -396,7 +400,7 @@ async function renderizarGraficoLimpeza(
         const ctx = chart.ctx
         const dataset = chart.getDatasetMeta(0)
         ctx.save()
-        ctx.font = '10px Arial'
+        ctx.font = `${baseFont}px Arial`
         ctx.fillStyle = '#6B7280'
         ctx.textAlign = 'left'
         ctx.textBaseline = 'middle'
@@ -692,10 +696,76 @@ export async function gerarRelatorioBebedourosPDF(dados: DadosPDFBebedouros): Pr
       y = renderAlertMaiorAtraso(ctx, y, dados.maisAtrasado) + 4
     }
 
+    const comRegistro = dados.statusPorBebedouro
+      .filter((s) => s.dias !== null)
+      .sort((a, b) => b.dias! - a.dias!)
+
+    const semRegistro = dados.statusPorBebedouro
+      .filter((s) => s.dias === null)
+      .sort((a, b) => a.nome.localeCompare(b.nome))
+
     const chartW = pageW - margin * 2
-    const chartH = Math.max(60, Math.min(dados.statusPorBebedouro.length * 12 + 10, pageH - y - 12))
-    const chartBase64 = await renderizarGraficoLimpeza(dados.statusPorBebedouro, chartW - 4, chartH - 4)
-    await renderChartCard(ctx, chartBase64, margin, y, chartW, chartH, 'Dias desde a última limpeza por bebedouro', 'Nenhum bebedouro cadastrado.')
+    const barH = 9
+    const innerPad = 10
+    const minChartH = 60
+
+    let i = 0
+    let isFirstPage = true
+    let ultimoPageTop = y
+    let ultimoCardH = 0
+    while (i < comRegistro.length) {
+      const pageTop = isFirstPage ? y : 46
+      const maxPerPage = Math.max(1, Math.floor((pageH - pageTop - 12 - innerPad - 4) / barH))
+      const chunkSize = Math.min(comRegistro.length - i, maxPerPage)
+      const chunk = comRegistro.slice(i, i + chunkSize)
+
+      const cardH = Math.max(minChartH, chunk.length * barH + innerPad + 4)
+      const chartBase64 = await renderizarGraficoLimpeza(chunk, chartW - 4, cardH - 4)
+      const titulo = isFirstPage
+        ? 'Dias desde a última limpeza por bebedouro'
+        : 'Dias desde a última limpeza por bebedouro (continuação)'
+      await renderChartCard(ctx, chartBase64, margin, pageTop, chartW, cardH, titulo, 'Nenhum bebedouro cadastrado.')
+
+      ultimoPageTop = pageTop
+      ultimoCardH = cardH
+      i += chunkSize
+      if (i < comRegistro.length) {
+        doc.addPage()
+        setFillColor(doc, LIGHT_BG)
+        doc.rect(0, 0, pageW, pageH, 'F')
+        renderHeader(ctx, dados.titulo, true)
+        renderPeriodo(ctx, dados.dataInicio, dados.dataFim, false)
+      }
+      isFirstPage = false
+    }
+
+    if (semRegistro.length > 0) {
+      const titulo = 'Bebedouros sem registros:'
+      const nomes = semRegistro.map((s) => s.nome).join(', ')
+      doc.setFontSize(9)
+
+      doc.setFont('helvetica', 'normal')
+      const linhasNomes = doc.splitTextToSize(nomes, pageW - margin * 2)
+      const altura = (linhasNomes.length + 1) * 5 + 2
+
+      let listY = ultimoPageTop + 2 + ultimoCardH + 6
+      if (listY + altura > pageH - 10) {
+        doc.addPage()
+        setFillColor(doc, LIGHT_BG)
+        doc.rect(0, 0, pageW, pageH, 'F')
+        renderHeader(ctx, dados.titulo, true)
+        renderPeriodo(ctx, dados.dataInicio, dados.dataFim, false)
+        listY = 46
+      }
+
+      setTextColor(doc, DARK_TEXT)
+      doc.setFont('helvetica', 'bold')
+      doc.text(titulo, margin, listY)
+      doc.setFont('helvetica', 'normal')
+      for (let j = 0; j < linhasNomes.length; j++) {
+        doc.text(linhasNomes[j], margin, listY + 5 + j * 5)
+      }
+    }
   }
 
   // === Página 2: Seção 2 ===

@@ -1096,7 +1096,7 @@ function GraficoLimpeza({ status, onSelecionar, dataReferencia }: { status: Stat
     )
   }
 
-  const dados = status
+  const todos = status
     .map((s) => ({
       nome: s.bebedouro.nome,
       dias: s.diasDesdeUltima ?? 0,
@@ -1110,6 +1110,9 @@ function GraficoLimpeza({ status, onSelecionar, dataReferencia }: { status: Stat
       id: s.bebedouro.id,
     }))
     .sort((a, b) => b.dias - a.dias)
+
+  const dados = todos.filter((d) => !d.semRegistro)
+  const semRegistro = todos.filter((d) => d.semRegistro)
 
   const metas = dados.filter((d) => d.meta && d.meta > 0)
   const temMeta = metas.length > 0
@@ -1196,16 +1199,23 @@ function GraficoLimpeza({ status, onSelecionar, dataReferencia }: { status: Stat
               <LabelList
                 dataKey="dias"
                 position="right"
-                formatter={((v: any, _entry: any, props: any) => {
-                  const d = dados[props?.index ?? 0]
-                  return d?.semRegistro ? 'sem reg.' : `${v}d`
-                }) as any}
+                formatter={((v: any) => `${v}d`) as any}
                 style={{ fontSize: 10, fill: '#6B7280' }}
               />
             </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>
+      {semRegistro.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-gray-600">
+          <span className="font-medium text-gray-700">Bebedouros sem registros:</span>
+          {semRegistro.map((d) => (
+            <span key={d.id} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+              {d.nome}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
