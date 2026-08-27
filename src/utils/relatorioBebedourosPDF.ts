@@ -356,6 +356,10 @@ async function renderizarGraficoLimpeza(
   const labels = status.map((s) => s.nome)
   const valores = status.map((s) => s.dias ?? 0)
   const cores = status.map((s) => s.cor)
+  const metas = status.map((s) => s.meta)
+
+  const maxDias = Math.max(...valores, ...metas.map((m) => m ?? 0), 1)
+  const limiteX = Math.ceil(maxDias * 1.15)
 
   const chart = new Chart(ctx2d, {
     type: 'bar',
@@ -385,6 +389,7 @@ async function renderizarGraficoLimpeza(
       scales: {
         x: {
           beginAtZero: true,
+          max: limiteX,
           grid: { color: '#E5E7EB' },
           ticks: { color: '#6B7280', font: { size: baseFont } },
         },
@@ -410,6 +415,33 @@ async function renderizarGraficoLimpeza(
           const label = value === 0 && status[i].dias === null ? 'sem reg.' : `${value}d`
           ctx.fillText(label, bar.x + 4, bar.y)
         }
+        ctx.restore()
+      },
+    }, {
+      id: 'metaLinha',
+      afterDatasetsDraw: (chart: any) => {
+        const ctx = chart.ctx
+        const xScale = chart.scales.x
+        const dataset = chart.getDatasetMeta(0)
+        ctx.save()
+        for (let i = 0; i < dataset.data.length; i++) {
+          const meta = metas[i]
+          if (!meta || meta <= 0) continue
+          const bar = dataset.data[i]
+          const barValue = valores[i]
+          if (barValue <= 0) continue
+          const metaX = xScale.getPixelForValue(meta)
+          const yTop = bar.y - bar.height / 2 - 3
+          const yBot = bar.y + bar.height / 2 + 3
+          ctx.strokeStyle = '#0F6437'
+          ctx.lineWidth = 1.5
+          ctx.setLineDash([4, 3])
+          ctx.beginPath()
+          ctx.moveTo(metaX, yTop)
+          ctx.lineTo(metaX, yBot)
+          ctx.stroke()
+        }
+        ctx.setLineDash([])
         ctx.restore()
       },
     }],
@@ -440,6 +472,10 @@ async function renderizarGraficoLimpezaDia(
   const labels = limpezas.map((l) => l.nome)
   const valores = limpezas.map((l) => l.intervalo ?? 0)
   const cores = limpezas.map((l) => l.cor)
+  const metas = limpezas.map((l) => l.meta)
+
+  const maxIntervalo = Math.max(...valores, ...metas.map((m) => m ?? 0), 1)
+  const limiteX = Math.ceil(maxIntervalo * 1.15)
 
   const chart = new Chart(ctx2d, {
     type: 'bar',
@@ -468,6 +504,7 @@ async function renderizarGraficoLimpezaDia(
       scales: {
         x: {
           beginAtZero: true,
+          max: limiteX,
           grid: { color: '#E5E7EB' },
           ticks: { color: '#6B7280', font: { size: 10 } },
         },
@@ -494,6 +531,33 @@ async function renderizarGraficoLimpezaDia(
           const label = l.intervalo === null ? '1ª' : `${value}d`
           ctx.fillText(label, bar.x + 4, bar.y)
         }
+        ctx.restore()
+      },
+    }, {
+      id: 'metaLinhaDia',
+      afterDatasetsDraw: (chart: any) => {
+        const ctx = chart.ctx
+        const xScale = chart.scales.x
+        const dataset = chart.getDatasetMeta(0)
+        ctx.save()
+        for (let i = 0; i < dataset.data.length; i++) {
+          const meta = metas[i]
+          if (!meta || meta <= 0) continue
+          const bar = dataset.data[i]
+          const barValue = valores[i]
+          if (barValue <= 0) continue
+          const metaX = xScale.getPixelForValue(meta)
+          const yTop = bar.y - bar.height / 2 - 3
+          const yBot = bar.y + bar.height / 2 + 3
+          ctx.strokeStyle = '#0F6437'
+          ctx.lineWidth = 1.5
+          ctx.setLineDash([4, 3])
+          ctx.beginPath()
+          ctx.moveTo(metaX, yTop)
+          ctx.lineTo(metaX, yBot)
+          ctx.stroke()
+        }
+        ctx.setLineDash([])
         ctx.restore()
       },
     }],
@@ -600,16 +664,24 @@ async function renderChartCard(
   w: number,
   h: number,
   titulo: string,
-  semDadosMsg: string
+  semDadosMsg: string,
+  legenda?: string
 ) {
-  const { doc } = ctx
+  const { doc, pageW } = ctx
 
-  // Título
+  // Título + legenda
   doc.setFontSize(10)
   doc.setFont('helvetica', 'bold')
   setTextColor(doc, DARK_TEXT)
   doc.text(titulo, x, y)
   doc.setFont('helvetica', 'normal')
+
+  if (legenda) {
+    doc.setFontSize(7)
+    setTextColor(doc, MEDIUM_TEXT)
+    const legendaW = doc.getTextWidth(legenda)
+    doc.text(legenda, pageW - 8 - legendaW, y)
+  }
 
   // Card
   const cardY = y + 2
@@ -640,6 +712,15 @@ export async function gerarRelatorioBebedourosPDF(dados: DadosPDFBebedouros): Pr
   const pageW = 297
   const pageH = 210
   const margin = 8
+
+  const dataHoraGeracao = new Date()
+  const dataHoraFormatada = dataHoraGeracao.toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 
   let logoGestaoBase64 = ''
   try {
@@ -687,7 +768,7 @@ export async function gerarRelatorioBebedourosPDF(dados: DadosPDFBebedouros): Pr
     const chartW = pageW - margin * 2
     const chartH = Math.max(60, Math.min(dados.limpezasDoDia.length * 12 + 10, pageH - y - 12))
     const chartBase64 = await renderizarGraficoLimpezaDia(dados.limpezasDoDia, chartW - 4, chartH - 4)
-    await renderChartCard(ctx, chartBase64, margin, y, chartW, chartH, 'Intervalo desde a limpeza anterior', 'Nenhum bebedouro foi limpo neste dia.')
+    await renderChartCard(ctx, chartBase64, margin, y, chartW, chartH, 'Intervalo desde a limpeza anterior', 'Nenhum bebedouro foi limpo neste dia.', `Marca verde tracejada = meta individual · Referência: ${dataHoraFormatada}`)
   } else if (dados.limpezaKPIs && dados.statusPorBebedouro) {
     // Modo normal
     y = renderKPIsLimpeza(ctx, y, dados.limpezaKPIs) + 4
@@ -724,7 +805,10 @@ export async function gerarRelatorioBebedourosPDF(dados: DadosPDFBebedouros): Pr
       const titulo = isFirstPage
         ? 'Dias desde a última limpeza por bebedouro'
         : 'Dias desde a última limpeza por bebedouro (continuação)'
-      await renderChartCard(ctx, chartBase64, margin, pageTop, chartW, cardH, titulo, 'Nenhum bebedouro cadastrado.')
+      const legenda = isFirstPage
+        ? `Marca verde tracejada = meta individual de cada bebedouro · Referência: ${dataHoraFormatada}`
+        : undefined
+      await renderChartCard(ctx, chartBase64, margin, pageTop, chartW, cardH, titulo, 'Nenhum bebedouro cadastrado.', legenda)
 
       ultimoPageTop = pageTop
       ultimoCardH = cardH
@@ -841,6 +925,16 @@ export async function gerarRelatorioBebedourosPDF(dados: DadosPDFBebedouros): Pr
     setFillColor(doc, '#F0FDF4')
     doc.roundedRect(margin, y, pageW - margin * 2, 12, 2, 2, 'F')
     doc.text('Nenhuma ocorrência negativa nos checklists do período.', pageW / 2, y + 7.5, { align: 'center' })
+  }
+
+  // === Footer em todas as páginas ===
+  const totalPages = doc.getNumberOfPages()
+  for (let p = 1; p <= totalPages; p++) {
+    doc.setPage(p)
+    doc.setFontSize(7)
+    setTextColor(doc, MEDIUM_TEXT)
+    doc.setFont('helvetica', 'normal')
+    doc.text(`Relatório gerado em: ${dataHoraFormatada}`, pageW - margin, pageH - 6, { align: 'right' })
   }
 
   return doc.output('blob')
