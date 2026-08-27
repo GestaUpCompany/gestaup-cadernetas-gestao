@@ -504,6 +504,23 @@ export function Atividades() {
     })
   }
 
+  const duplicateRow = (rowId: string) => {
+    setRows((prev) => {
+      const idx = prev.findIndex((r) => r.id === rowId)
+      if (idx === -1) return prev
+      const original = prev[idx]
+      const copy: FormRow = {
+        ...original,
+        id: uid(),
+        funcionario_ids: [...original.funcionario_ids],
+      }
+      const next = [...prev]
+      next.splice(idx + 1, 0, copy)
+      saveDraft(next)
+      return next
+    })
+  }
+
   const handleSalvarLote = async () => {
     if (!fazendaId) return
 
@@ -1132,7 +1149,16 @@ export function Atividades() {
                         </select>
                       </td>
                       <td className="py-2 px-2 text-center">
-                        <div className="flex items-center justify-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={() => duplicateRow(row.id)}
+                            className="text-gray-400 hover:text-primary p-1"
+                            title="Copiar linha"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </button>
                           <button
                             onClick={() => handleRemoveRow(row.id)}
                             className="text-gray-400 hover:text-red-500 p-1"
