@@ -965,7 +965,7 @@ export function Atividades() {
         <Modal
           isOpen={showBulkForm}
           onClose={handleCloseBulkForm}
-          title="Nova Atividades"
+          title="Nova Atividade"
           size="full"
         >
           {/* Aviso de draft */}

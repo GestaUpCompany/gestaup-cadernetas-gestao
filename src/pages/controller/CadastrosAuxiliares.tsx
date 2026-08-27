@@ -329,14 +329,16 @@ export function CadastrosAuxiliares() {
 
   // Setores ordenados: primeiro os que têm funcionários, depois os vazios
   const setoresOrdenados = useMemo(() => {
-    const comMembros = setores.filter((s) =>
+    const term = tabStates.setores?.searchTerm?.toLowerCase() || ''
+    const filtrados = setores.filter((s) => s.nome.toLowerCase().includes(term))
+    const comMembros = filtrados.filter((s) =>
       funcionariosComSetor.some((f) => f.setor_id === s.id && f.ativo)
     )
-    const semMembros = setores.filter((s) =>
+    const semMembros = filtrados.filter((s) =>
       !funcionariosComSetor.some((f) => f.setor_id === s.id && f.ativo)
     )
     return [...comMembros, ...semMembros]
-  }, [setores, funcionariosComSetor])
+  }, [setores, funcionariosComSetor, tabStates.setores?.searchTerm])
 
   useEffect(() => {
     loadFazendaVinculada()
@@ -1126,8 +1128,8 @@ export function CadastrosAuxiliares() {
           </div>
         )}
 
-        {/* Search + Add (oculto na aba equipes, que tem UI própria) */}
-        {activeTab !== 'equipes' && (
+        {/* Search + Add (oculto nas abas com UI própria: equipes e setores) */}
+        {activeTab !== 'equipes' && activeTab !== 'setores' && (
         <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
           <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
             <Input
@@ -1197,6 +1199,25 @@ export function CadastrosAuxiliares() {
         {/* UI customizada da aba Setores (com gestão de membros) */}
         {activeTab === 'setores' && (
           <div className="space-y-4">
+            {/* Header com busca + botão Novo Setor */}
+            {!setorEmEdicao && (
+              <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
+                <Input
+                  type="text"
+                  placeholder="Buscar setor..."
+                  value={state.searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full sm:max-w-xs border-gray-200 focus:border-accent h-10"
+                />
+                <Button
+                  onClick={() => setSetorEmEdicao({ id: null, nome: '', funcionario_ids: [] })}
+                  className="h-10 min-h-[44px] flex-1 sm:flex-none"
+                >
+                  Novo Setor
+                </Button>
+              </div>
+            )}
+
             {/* Formulário inline de criar/editar setor */}
             {setorEmEdicao && (
               <Card className="bg-white p-4 border-0 shadow-sm">
@@ -1342,13 +1363,6 @@ export function CadastrosAuxiliares() {
                     </Card>
                   )
                 })()}
-
-                {/* Botão novo setor */}
-                {!setorEmEdicao && (
-                  <Button onClick={() => setSetorEmEdicao({ id: null, nome: '', funcionario_ids: [] })}>
-                    Novo Setor
-                  </Button>
-                )}
               </>
             )}
           </div>
@@ -1524,15 +1538,14 @@ export function CadastrosAuxiliares() {
             <CardSkeleton />
             <CardSkeleton />
           </div>
-        ) : activeTab !== 'equipes' && !state.showForm && filteredItems.length === 0 ? (
+        ) : activeTab !== 'equipes' && activeTab !== 'setores' && !state.showForm && filteredItems.length === 0 ? (
           <Card className="bg-white p-8 sm:p-12 border-0 shadow-sm text-center">
             <p className="text-gray-600 mb-4 text-sm sm:text-base">Nenhum {currentTab.label.toLowerCase()} cadastrado</p>
             <Button onClick={() => setShowForm(true)} className="w-full sm:w-auto">
               Criar Primeiro {currentTab.label}
             </Button>
           </Card>
-        ) : activeTab !== 'equipes' && !state.showForm ? (
-          <>
+        ) : activeTab !== 'equipes' && activeTab !== 'setores' && !state.showForm ? (          <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {itensPaginados.map((item) => (
               <CardItem
