@@ -367,11 +367,6 @@ export function RelatorioTratosPublico({ token, relatorioInfo }: Props) {
               <div className="bg-white rounded-lg p-1 flex items-center justify-center">
                 <img src={logoManejus} alt="Manej'Us 360" className="h-8 w-auto" />
               </div>
-              {relatorioInfo?.fazenda_logo_url && (
-                <div className="bg-white rounded-lg p-1 flex items-center justify-center">
-                  <img src={relatorioInfo.fazenda_logo_url} alt={relatorioInfo?.fazenda_nome || 'Fazenda'} className="h-8 w-auto max-w-[80px] object-contain" />
-                </div>
-              )}
               <h1 className="text-sm sm:text-base font-bold text-white hidden sm:block">
                 Manej'Us <span className="text-yellow-500">360</span>
               </h1>
@@ -387,6 +382,11 @@ export function RelatorioTratosPublico({ token, relatorioInfo }: Props) {
             </div>
 
             <div className="flex items-center gap-2">
+              {relatorioInfo?.fazenda_logo_url && (
+                <div className="bg-white rounded-lg p-1 flex items-center justify-center">
+                  <img src={relatorioInfo.fazenda_logo_url} alt={relatorioInfo?.fazenda_nome || 'Fazenda'} className="h-8 w-auto max-w-[80px] object-contain" />
+                </div>
+              )}
               <button
                 onClick={exportarPDF}
                 disabled={exportandoPDF || resumosFiltrados.length === 0}

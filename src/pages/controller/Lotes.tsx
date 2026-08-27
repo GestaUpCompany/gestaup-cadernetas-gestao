@@ -129,7 +129,6 @@ export function Lotes() {
     nome: '',
     numero_cabecas: '',
     categorias: [] as LoteCategoria[],
-    categoria_outros: '',
     peso_vivo_atual_kg_cab: '',
     peso_vivo_meta_kg_cab: '',
     data_meta_projetada: '',
@@ -1285,7 +1284,6 @@ export function Lotes() {
         nome: '',
         numero_cabecas: '',
         categorias: [] as LoteCategoria[],
-        categoria_outros: '',
         peso_vivo_atual_kg_cab: '',
         peso_vivo_meta_kg_cab: '',
         data_meta_projetada: '',
@@ -1478,7 +1476,6 @@ export function Lotes() {
       nome: lote.nome,
       numero_cabecas: lote.n_cabecas?.toString() || '',
       categorias: categoriasWithMeta,
-      categoria_outros: '',
       peso_vivo_atual_kg_cab: lote.peso_vivo_atual_kg_cab?.toString() || '',
       peso_vivo_meta_kg_cab: lote.peso_vivo_meta_kg_cab?.toString() || '',
       data_meta_projetada: lote.data_meta_projetada || '',
@@ -1529,7 +1526,6 @@ export function Lotes() {
       nome: '',
       numero_cabecas: '',
       categorias: [],
-      categoria_outros: '',
       peso_vivo_atual_kg_cab: '',
       peso_vivo_meta_kg_cab: '',
       data_meta_projetada: '',
@@ -2197,19 +2193,6 @@ export function Lotes() {
                     )
                   })}
                 </div>
-              </div>
-
-              <div className="w-1/4 mt-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
-                  Outra Categoria
-                </label>
-                <Input
-                  type="text"
-                  value={formData.categoria_outros}
-                  onChange={(e) => setFormData({ ...formData, categoria_outros: e.target.value })}
-                  placeholder="Digite outra categoria (opcional)"
-                  className="border-gray-200 focus:border-accent"
-                />
               </div>
 
               {/* Dados Específicos por Categoria */}

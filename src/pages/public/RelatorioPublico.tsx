@@ -600,16 +600,11 @@ export function RelatorioPublico() {
       <header className="sticky top-0 z-10" style={{ backgroundColor: GREEN_DARK }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
           <div className="flex items-center justify-between gap-3">
-            {/* Logos + nome do sistema */}
+            {/* Logo GestaUp + nome do sistema */}
             <div className="flex items-center gap-2">
               <div className="bg-white rounded-lg p-1 flex items-center justify-center">
                 <img src={logoManejus} alt="Manej'Us 360" className="h-8 w-auto" />
               </div>
-              {relatorioInfo?.fazenda_logo_url && (
-                <div className="bg-white rounded-lg p-1 flex items-center justify-center">
-                  <img src={relatorioInfo.fazenda_logo_url} alt={relatorioInfo?.fazenda_nome || 'Fazenda'} className="h-8 w-auto max-w-[80px] object-contain" />
-                </div>
-              )}
               <h1 className="text-sm sm:text-base font-bold text-white hidden sm:block">
                 Manej'Us <span className="text-yellow-500">360</span>
               </h1>
@@ -625,8 +620,13 @@ export function RelatorioPublico() {
               )}
             </div>
 
-            {/* Botão PDF */}
+            {/* Logo da fazenda + botão PDF */}
             <div className="flex items-center gap-2">
+              {relatorioInfo?.fazenda_logo_url && (
+                <div className="bg-white rounded-lg p-1 flex items-center justify-center">
+                  <img src={relatorioInfo.fazenda_logo_url} alt={relatorioInfo?.fazenda_nome || 'Fazenda'} className="h-8 w-auto max-w-[80px] object-contain" />
+                </div>
+              )}
               <button
                 onClick={exportarPDF}
                 disabled={exportandoPDF || totalRegistros === 0}

@@ -47,9 +47,8 @@ export interface HeaderOptions {
 
 // === Header compartilhado (padrão Manejus 360) ===
 //
-// Estrutura fixa: barra verde full-width, logo GestaUp, logo fazenda,
-// nome do sistema "Manej'Us 360", título central em card branco.
-// Personalizável: título, subtítulo opcional, pill de canto direito opcional.
+// Estrutura: barra verde full-width, logo GestaUp + nome do sistema à esquerda,
+// título central em card branco, logo da fazenda (e pill opcional) à direita.
 
 export function renderRelatorioHeader(ctx: HeaderContext, opts: HeaderOptions) {
   const { doc, pageW, logoGestaoBase64, logoFazendaBase64 } = ctx
@@ -59,7 +58,7 @@ export function renderRelatorioHeader(ctx: HeaderContext, opts: HeaderOptions) {
   setFillColor(doc, GREEN_DARK)
   doc.rect(0, 0, pageW, 28, 'F')
 
-  // Logo GestaUp em card branco
+  // === Lado esquerdo: logo GestaUp + nome do sistema ===
   const logoSize = 16
   const logoX = 10
   const logoY = 6
@@ -73,27 +72,6 @@ export function renderRelatorioHeader(ctx: HeaderContext, opts: HeaderOptions) {
     doc.addImage(logoGestaoBase64, formato, logoX + logoMargin, logoY + logoMargin, logoSize - logoMargin * 2, logoSize - logoMargin * 2)
   }
 
-  // Logo da fazenda em card branco
-  if (logoFazendaBase64) {
-    const formato = logoFazendaBase64.toLowerCase().includes('data:image/png') ? 'PNG' : 'JPEG'
-    try {
-      const props = doc.getImageProperties(logoFazendaBase64)
-      const maxFazendaH = 16
-      const maxFazendaW = 40
-      const fazendaH = Math.min(maxFazendaH, (maxFazendaW * props.height) / props.width)
-      const fazendaW = (fazendaH * props.width) / props.height
-      const fazendaY = logoY + (logoSize - fazendaH) / 2
-      const radius = Math.min(2, Math.min(fazendaW, fazendaH) / 4)
-
-      setFillColor(doc, CARD_BG)
-      doc.roundedRect(nextX, fazendaY, fazendaW, fazendaH, radius, radius, 'F')
-      doc.addImage(logoFazendaBase64, formato, nextX + logoMargin, fazendaY + logoMargin, fazendaW - logoMargin * 2, fazendaH - logoMargin * 2)
-      nextX += fazendaW + 5
-    } catch {
-      // Ignora se não conseguir carregar
-    }
-  }
-
   // Nome do sistema "Manej'Us 360" (360 em amarelo)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(13)
@@ -103,19 +81,62 @@ export function renderRelatorioHeader(ctx: HeaderContext, opts: HeaderOptions) {
   setTextColor(doc, YELLOW)
   doc.text('360', nextX + manejUsW, logoY + 11)
   const manejusTotalW = manejUsW + doc.getTextWidth('360')
+  const leftEnd = nextX + manejusTotalW + 8
 
-  // Card branco do título central
+  // === Lado direito: pill opcional + logo da fazenda ===
+  const pillW = 50
+  const pillH = 14
+  const pillY = 7
+  let rightStart = pageW - 10
+
+  // Logo da fazenda no canto direito
+  let fazendaW = 0
+  let fazendaH = 0
+  if (logoFazendaBase64) {
+    const formato = logoFazendaBase64.toLowerCase().includes('data:image/png') ? 'PNG' : 'JPEG'
+    try {
+      const props = doc.getImageProperties(logoFazendaBase64)
+      const maxFazendaH = 16
+      const maxFazendaW = 40
+      fazendaH = Math.min(maxFazendaH, (maxFazendaW * props.height) / props.width)
+      fazendaW = (fazendaH * props.width) / props.height
+      const fazendaX = pageW - fazendaW - 10
+      const fazendaYPos = logoY + (logoSize - fazendaH) / 2
+      const radius = Math.min(2, Math.min(fazendaW, fazendaH) / 4)
+
+      setFillColor(doc, CARD_BG)
+      doc.roundedRect(fazendaX, fazendaYPos, fazendaW, fazendaH, radius, radius, 'F')
+      doc.addImage(logoFazendaBase64, formato, fazendaX + logoMargin, fazendaYPos + logoMargin, fazendaW - logoMargin * 2, fazendaH - logoMargin * 2)
+      rightStart = fazendaX - 6
+    } catch {
+      // Ignora se não conseguir carregar
+    }
+  }
+
+  // Pill à esquerda da logo da fazenda (opcional)
+  if (pillLabel) {
+    const pillX = rightStart - pillW
+    setFillColor(doc, SHADOW_COLOR)
+    doc.roundedRect(pillX + 0.5, pillY + 0.5, pillW, pillH, 7, 7, 'F')
+    setFillColor(doc, CARD_BG)
+    doc.roundedRect(pillX, pillY, pillW, pillH, 7, 7, 'F')
+    doc.setFontSize(8)
+    setTextColor(doc, MEDIUM_TEXT)
+    doc.setFont('helvetica', 'normal')
+    doc.text(pillTitulo, pillX + pillW / 2, pillY + 5, { align: 'center' })
+    doc.setFontSize(10)
+    setTextColor(doc, DARK_TEXT)
+    doc.setFont('helvetica', 'bold')
+    doc.text(pillLabel, pillX + pillW / 2, pillY + 11, { align: 'center' })
+    rightStart = pillX - 6
+  }
+
+  // === Centro: título em card branco, centralizado na página ===
   doc.setFontSize(11)
   doc.setFont('helvetica', 'bold')
-
-  const pillW = 50
-  const pillX = pillLabel ? pageW - pillW - 10 : pageW - 10
-  const leftEnd = nextX + manejusTotalW + 8
-  const rightStart = pillLabel ? pillX - 8 : pageW - 10
   const availableTitleW = Math.max(80, rightStart - leftEnd)
-
   const titleW = Math.min(availableTitleW, Math.max(doc.getTextWidth(titulo), subtitulo ? doc.getTextWidth(subtitulo) : 0) + 24)
-  const titleCardX = Math.max(pageW / 2 - titleW / 2, leftEnd)
+  const titleCardX = pageW / 2 - titleW / 2
   const titleCardY = 7
   const titleCardH = subtitulo ? 17 : 14
 
@@ -131,26 +152,5 @@ export function renderRelatorioHeader(ctx: HeaderContext, opts: HeaderOptions) {
     setTextColor(doc, MEDIUM_TEXT)
     doc.setFont('helvetica', 'normal')
     doc.text(subtitulo, titleCardX + titleW / 2, titleCardY + 14, { align: 'center' })
-  }
-
-  // Pill do canto direito (opcional)
-  if (pillLabel) {
-    const pillW = 50
-    const pillH = 14
-    const pillX = pageW - pillW - 10
-    const pillY = 7
-
-    setFillColor(doc, SHADOW_COLOR)
-    doc.roundedRect(pillX + 0.5, pillY + 0.5, pillW, pillH, 7, 7, 'F')
-    setFillColor(doc, CARD_BG)
-    doc.roundedRect(pillX, pillY, pillW, pillH, 7, 7, 'F')
-    doc.setFontSize(8)
-    setTextColor(doc, MEDIUM_TEXT)
-    doc.setFont('helvetica', 'normal')
-    doc.text(pillTitulo, pillX + pillW / 2, pillY + 5, { align: 'center' })
-    doc.setFontSize(10)
-    setTextColor(doc, DARK_TEXT)
-    doc.setFont('helvetica', 'bold')
-    doc.text(pillLabel, pillX + pillW / 2, pillY + 11, { align: 'center' })
   }
 }
