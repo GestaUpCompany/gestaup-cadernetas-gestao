@@ -958,7 +958,7 @@ export function Lotes() {
 
     const loteData = {
       fazenda_id: fazendaId,
-      nome: formData.nome,
+      nome: formData.nome.trim(),
       n_cabecas: formData.numero_cabecas ? parseInt(formData.numero_cabecas) : null,
       qtd_bezerros: formData.quantidade_bezerros ? parseInt(formData.quantidade_bezerros) : null,
       ativo: formData.ativo,

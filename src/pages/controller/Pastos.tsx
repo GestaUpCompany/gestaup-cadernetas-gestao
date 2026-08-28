@@ -212,7 +212,7 @@ export function Pastos() {
 
     const data = {
       fazenda_id: fazendaId,
-      nome: formData.nome,
+      nome: formData.nome.trim(),
       setor: formData.setor || null,
       tipo: formData.tipo || null,
       metragem_cocho_m: formData.metragem_cocho_m ? parseFloat(formData.metragem_cocho_m) : null,
