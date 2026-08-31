@@ -1,0 +1,3 @@
+-- Placeholder para migration remota 20260831132320
+-- Conteudo identico a 20260831170000_funcionario_setor_nn.sql
+-- Aplicada via MCP apply_migration em sessao anterior
