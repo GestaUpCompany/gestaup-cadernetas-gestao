@@ -449,3 +449,17 @@ Caso real (Fazenda Estrela, 13/08/2026): fazenda originalmente "Transcal" (`aces
 Correção estrutural aplicada (migration `sync_peoes_fazenda_id_on_acesso_id_update`): trigger `trg_sync_peoes_fazenda_id_on_acesso_id_update` AFTER UPDATE OF acesso_id ON fazendas, executa `sync_peoes_fazenda_id_on_acesso_id_update()` (SECURITY DEFINER, plpgsql). Quando `NEW.acesso_id IS DISTINCT FROM OLD.acesso_id`, faz `UPDATE peoes SET fazenda_id = NEW.acesso_id WHERE fazenda_id = OLD.acesso_id`. Testada na fazenda de testes (`d649c65e`): rename `gestaup` → `gestauptesttrigger` propagou para `peoes.fazenda_id`, e o rename reverso propagou de volta.
 
 Disparador: quando mencionar "renomear acesso_id", "peão não consegue logar após renomear fazenda", "peoes.fazenda_id stale", "login do peão quebrado", ou problemas com login do peão após mudança de `acesso_id`, ler esta seção.
+
+### Fluxo de migrations estruturais (obrigatório) — adicionado em 2026-08-31
+
+Migrations estruturais (CREATE/ALTER TABLE, triggers, policies, índices, functions) devem seguir este fluxo rigorosamente:
+
+1. Escrever o arquivo local em `supabase/migrations/<timestamp>_<nome>.sql`.
+2. Rodar `supabase db push` para aplicar e registrar em `schema_migrations`.
+3. Commitar e pushar o arquivo.
+
+NÃO usar `apply_migration` do MCP para migrations estruturais. O MCP aplica o SQL no banco mas registra com timestamp de execução (não o do nome do arquivo), criando divergência entre local e remoto que quebra o `db push` em execuções futuras. Se `db push` falhar com "Remote migration versions not found in local migrations directory", criar placeholder local com o version remoto e rodar `supabase migration repair --status applied <version>` para os que já estão no banco.
+
+Migrations pontuais (dados operacionais: resets, backfills, deletes por fazenda) continuam sendo aplicadas via MCP sem arquivo local, conforme regra existente.
+
+Disparador: antes de criar ou aplicar qualquer migration estrutural, ler esta seção.
