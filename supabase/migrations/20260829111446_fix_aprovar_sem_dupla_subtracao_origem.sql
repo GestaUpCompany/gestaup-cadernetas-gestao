@@ -1,0 +1,3 @@
+-- Migration applied remotely via MCP
+-- fix_aprovar_sem_dupla_subtracao_origem
+-- Placeholder to reconcile migration history

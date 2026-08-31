@@ -1,0 +1,3 @@
+-- Migration applied remotely via MCP
+-- fix_calculate_quant_atual_exclui_novo_lote
+-- Placeholder to reconcile migration history

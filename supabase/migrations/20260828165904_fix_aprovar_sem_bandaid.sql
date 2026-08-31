@@ -1,0 +1,3 @@
+-- Migration applied remotely via MCP
+-- fix_aprovar_sem_bandaid
+-- Placeholder to reconcile migration history

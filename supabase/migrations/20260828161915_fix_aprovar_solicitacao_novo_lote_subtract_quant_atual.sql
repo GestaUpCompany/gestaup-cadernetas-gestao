@@ -1,0 +1,3 @@
+-- Migration applied remotely via MCP
+-- fix_aprovar_solicitacao_novo_lote_subtract_quant_atual
+-- Placeholder to reconcile migration history

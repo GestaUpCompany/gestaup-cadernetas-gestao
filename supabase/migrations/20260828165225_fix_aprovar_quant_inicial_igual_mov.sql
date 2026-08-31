@@ -1,0 +1,3 @@
+-- Migration applied remotely via MCP
+-- fix_aprovar_quant_inicial_igual_mov
+-- Placeholder to reconcile migration history
