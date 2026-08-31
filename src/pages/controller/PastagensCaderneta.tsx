@@ -89,7 +89,8 @@ export function PastagensCaderneta() {
       (registro.boi_magro && registro.boi_magro.toString().includes(searchTerm.toLowerCase())) ||
       (registro.garrote && registro.garrote.toString().includes(searchTerm.toLowerCase())) ||
       (registro.novilha && registro.novilha.toString().includes(searchTerm.toLowerCase())) ||
-      totalAnimais.toString().includes(searchTerm.toLowerCase())
+      totalAnimais.toString().includes(searchTerm.toLowerCase()) ||
+      (registro.nome_usuario && registro.nome_usuario.toLowerCase().includes(searchTerm.toLowerCase()))
 
     const matchesDataInicio = !dataInicio || new Date(registro.data) >= new Date(dataInicio)
     const matchesDataFim = !dataFim || new Date(registro.data) <= new Date(dataFim + 'T23:59:59')
@@ -211,6 +212,10 @@ export function PastagensCaderneta() {
                   </div>
                   <div className="space-y-2 text-xs sm:text-sm">
                     <div className="flex justify-between">
+                      <span className="text-gray-500">Usuário:</span>
+                      <span className="text-gray-800 font-medium">{registro.nome_usuario || '-'}</span>
+                    </div>
+                    <div className="flex justify-between">
                       <span className="text-gray-500">Manejador:</span>
                       <span className="text-gray-800 font-medium">{registro.manejador || '-'}</span>
                     </div>
@@ -255,6 +260,7 @@ export function PastagensCaderneta() {
                   >
                     Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
                   </th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuário</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Manejador</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lote</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pasto Saída</th>
@@ -277,6 +283,7 @@ export function PastagensCaderneta() {
                       <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                         {formatDate(registro.data)}
                       </td>
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">{registro.nome_usuario || '-'}</td>
                       <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                         {registro.manejador || '-'}
                       </td>

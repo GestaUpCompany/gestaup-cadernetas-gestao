@@ -78,7 +78,8 @@ export function RegistrosLimpeza() {
       (registro.numero_equipe && registro.numero_equipe.toString().includes(searchTerm.toLowerCase())) ||
       (registro.hora_inicio && registro.hora_inicio.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.hora_final && registro.hora_final.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.observacao && registro.observacao.toLowerCase().includes(searchTerm.toLowerCase()))
+      (registro.observacao && registro.observacao.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.nome_usuario && registro.nome_usuario.toLowerCase().includes(searchTerm.toLowerCase()))
 
     const matchesDataInicio = !dataInicio || registro.data >= dataInicio
     const matchesDataFim = !dataFim || registro.data <= dataFim
@@ -197,6 +198,10 @@ export function RegistrosLimpeza() {
                 </div>
                 <div className="space-y-2 text-xs sm:text-sm">
                   <div className="flex justify-between">
+                    <span className="text-gray-500">Usuário:</span>
+                    <span className="text-gray-800 font-medium">{registro.nome_usuario || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
                     <span className="text-gray-500">Nº Equipe:</span>
                     <span className="text-gray-800 font-medium">{registro.numero_equipe || '-'}</span>
                   </div>
@@ -236,6 +241,7 @@ export function RegistrosLimpeza() {
                   >
                     Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
                   </th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuário</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nº Equipe</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Setor</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Local</th>
@@ -254,6 +260,7 @@ export function RegistrosLimpeza() {
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                       {formatDate(registro.data)}
                     </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">{registro.nome_usuario || '-'}</td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                       {registro.numero_equipe || '-'}
                     </td>

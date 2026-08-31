@@ -89,7 +89,8 @@ export function RegistrosMorte() {
       (registro.categoria && registro.categoria.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.sexo && registro.sexo.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.raca && registro.raca.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.peso_vivo && registro.peso_vivo.toString().includes(searchTerm.toLowerCase()))
+      (registro.peso_vivo && registro.peso_vivo.toString().includes(searchTerm.toLowerCase())) ||
+      (registro.nome_usuario && registro.nome_usuario.toLowerCase().includes(searchTerm.toLowerCase()))
 
     const matchesDataInicio = !dataInicio || new Date(registro.data) >= new Date(dataInicio)
     const matchesDataFim = !dataFim || new Date(registro.data) <= new Date(dataFim + 'T23:59:59')
@@ -208,6 +209,10 @@ export function RegistrosMorte() {
                 </div>
                 <div className="space-y-2 text-xs sm:text-sm">
                   <div className="flex justify-between">
+                    <span className="text-gray-500">Usuário:</span>
+                    <span className="text-gray-800 font-medium">{registro.nome_usuario || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
                     <span className="text-gray-500">Causa:</span>
                     <span className="text-gray-800 font-medium">{registro.causa_morte || '-'}</span>
                   </div>
@@ -259,6 +264,7 @@ export function RegistrosMorte() {
                   >
                     Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
                   </th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuário</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Causa</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lote</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pasto</th>
@@ -280,6 +286,7 @@ export function RegistrosMorte() {
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                       {formatDate(registro.data)}
                     </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">{registro.nome_usuario || '-'}</td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                       {registro.causa_morte || '-'}
                     </td>

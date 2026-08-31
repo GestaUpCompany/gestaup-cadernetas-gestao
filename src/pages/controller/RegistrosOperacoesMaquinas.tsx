@@ -79,7 +79,8 @@ export function RegistrosOperacoesMaquinas() {
       (registro.veiculo_trator && registro.veiculo_trator.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.implemento_utilizado && registro.implemento_utilizado.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.tipo_operacao && registro.tipo_operacao.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.observacao && registro.observacao.toLowerCase().includes(searchTerm.toLowerCase()))
+      (registro.observacao && registro.observacao.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.nome_usuario && registro.nome_usuario.toLowerCase().includes(searchTerm.toLowerCase()))
 
     const matchesDataInicio = !dataInicio || registro.data >= dataInicio
     const matchesDataFim = !dataFim || registro.data <= dataFim
@@ -185,6 +186,10 @@ export function RegistrosOperacoesMaquinas() {
                 </div>
                 <div className="space-y-2 text-xs sm:text-sm">
                   <div className="flex justify-between">
+                    <span className="text-gray-500">Usuário:</span>
+                    <span className="text-gray-800 font-medium">{registro.nome_usuario || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
                     <span className="text-gray-500">Veículo/Trator:</span>
                     <span className="text-gray-800 font-medium">{registro.veiculo_trator || '-'}</span>
                   </div>
@@ -215,6 +220,7 @@ export function RegistrosOperacoesMaquinas() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuário</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Veículo/Trator</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Implemento</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo Operação</th>
@@ -232,6 +238,7 @@ export function RegistrosOperacoesMaquinas() {
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                       {formatDate(registro.data)}
                     </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">{registro.nome_usuario || '-'}</td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                       {registro.veiculo_trator}
                     </td>

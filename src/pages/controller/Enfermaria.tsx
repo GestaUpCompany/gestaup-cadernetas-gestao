@@ -81,7 +81,8 @@ export function Enfermaria() {
       (registro.pasto && registro.pasto.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.categoria && registro.categoria.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.tratamento_outros && registro.tratamento_outros.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.tratamento_obs && registro.tratamento_obs.toLowerCase().includes(searchTerm.toLowerCase()))
+      (registro.tratamento_obs && registro.tratamento_obs.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.nome_usuario && registro.nome_usuario.toLowerCase().includes(searchTerm.toLowerCase()))
 
     const matchesDataInicio = !dataInicio || new Date(registro.data) >= new Date(dataInicio)
     const matchesDataFim = !dataFim || new Date(registro.data) <= new Date(dataFim + 'T23:59:59')
@@ -200,6 +201,10 @@ export function Enfermaria() {
                 </div>
                 <div className="space-y-2 text-xs sm:text-sm">
                   <div className="flex justify-between">
+                    <span className="text-gray-500">Usuário:</span>
+                    <span className="text-gray-800 font-medium">{registro.nome_usuario || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
                     <span className="text-gray-500">Brinco:</span>
                     <span className="text-gray-800 font-medium">{registro.brinco || '-'}</span>
                   </div>
@@ -239,6 +244,7 @@ export function Enfermaria() {
                   >
                     Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
                   </th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuário</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Brinco</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chip</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoria</th>
@@ -257,6 +263,7 @@ export function Enfermaria() {
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                       {formatDate(registro.data)}
                     </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">{registro.nome_usuario || '-'}</td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                       {registro.brinco || '-'}
                     </td>

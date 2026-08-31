@@ -117,6 +117,7 @@ export function RegistrosOperacoesMaquinasDetalhes() {
             <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Informações Gerais</h3>
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Data:</span> {formatDate(registro.data)}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Usuário:</span> {registro.nome_usuario || '-'}</p>
               <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Veículo/Trator:</span> {registro.veiculo_trator}</p>
               <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Implemento Utilizado:</span> {registro.implemento_utilizado || '-'}</p>
               <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Tipo Operação:</span> {registro.tipo_operacao.charAt(0).toUpperCase() + registro.tipo_operacao.slice(1)}</p>

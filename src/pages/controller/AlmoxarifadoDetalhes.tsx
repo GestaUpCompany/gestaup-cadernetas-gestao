@@ -95,6 +95,7 @@ export function AlmoxarifadoDetalhes() {
               <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Data:</span> {(() => {
                 return formatDateTime(registro.data)
               })()}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Usuário:</span> {registro.nome_usuario || '-'}</p>
               <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Setor:</span> {registro.setor || '-'}</p>
             </div>
           </div>

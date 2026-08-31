@@ -105,6 +105,7 @@ export function ProblemasDetalhes() {
             <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Informações Gerais</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Data:</span> {formatDate(registro.data)}</p>
+              <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Usuário:</span> {registro.nome_usuario || '-'}</p>
               <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Setor:</span> {registro.setor || '-'}</p>
               <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Local:</span> {registro.local || '-'}</p>
               <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Prioridade:</span> {registro.prioridade || '-'}</p>

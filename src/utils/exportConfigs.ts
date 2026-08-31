@@ -5,6 +5,7 @@ export const MATERNIDADE_EXPORT_CONFIG: TableExportConfig = {
   sheetName: 'Maternidade',
   columns: [
     { source: 'data', header: 'Data', format: 'date' },
+    { source: 'nome_usuario', header: 'Usuário' },
     { source: 'pasto', header: 'Pasto' },
     { source: 'lote', header: 'Lote' },
     { source: 'peso_cria_kg', header: 'Peso Cria (kg)', format: 'number' },
@@ -32,6 +33,7 @@ export const PASTAGENS_EXPORT_CONFIG: TableExportConfig = {
   sheetName: 'Pastagens',
   columns: [
     { source: 'data', header: 'Data', format: 'date' },
+    { source: 'nome_usuario', header: 'Usuário' },
     { source: 'manejador', header: 'Manejador' },
     { source: 'lote', header: 'Lote' },
     { source: 'pasto_saida', header: 'Pasto Saída' },
@@ -76,6 +78,7 @@ export const ALMOXARIFADO_EXPORT_CONFIG: TableExportConfig = {
   sheetName: 'Almoxarifado',
   columns: [
     { source: 'data', header: 'Data', format: 'datetime' },
+    { source: 'nome_usuario', header: 'Usuário' },
     { source: 'quem_entregou', header: 'Quem Entregou' },
     { source: 'quem_pegou', header: 'Quem Pegou' },
     { source: 'setor', header: 'Setor' },
@@ -113,6 +116,7 @@ export const BEBEDOUROS_EXPORT_CONFIG: TableExportConfig = {
   sheetName: 'Bebedouros',
   columns: [
     { source: 'data', header: 'Data', format: 'date' },
+    { source: 'nome_usuario', header: 'Usuário' },
     { source: 'responsavel', header: 'Responsável' },
     { source: 'pasto', header: 'Pasto' },
     { source: 'lote', header: 'Lote' },
@@ -137,6 +141,7 @@ export const ENFERMARIA_EXPORT_CONFIG: TableExportConfig = {
   sheetName: 'Enfermaria',
   columns: [
     { source: 'data', header: 'Data', format: 'date' },
+    { source: 'nome_usuario', header: 'Usuário' },
     { source: 'pasto', header: 'Pasto' },
     { source: 'lote', header: 'Lote' },
     { source: 'brinco', header: 'Brinco' },
@@ -181,6 +186,7 @@ export const MANUTENCAO_MAQUINAS_EXPORT_CONFIG: TableExportConfig = {
   sheetName: 'Manutenção de Máquinas',
   columns: [
     { source: 'data', header: 'Data', format: 'date' },
+    { source: 'nome_usuario', header: 'Usuário' },
     { source: 'responsavel_checklist', header: 'Responsável' },
     { source: 'operador_motorista', header: 'Operador/Motorista' },
     { source: 'veiculo_trator', header: 'Máquina/Veículo' },
@@ -221,6 +227,7 @@ export const MOVIMENTACAO_EXPORT_CONFIG: TableExportConfig = {
   sheetName: 'Movimentação',
   columns: [
     { source: 'data', header: 'Data', format: 'date' },
+    { source: 'nome_usuario', header: 'Usuário' },
     { source: 'lote_origem', header: 'Lote Origem' },
     { source: 'destino', header: 'Lote Destino' },
     { source: 'numero_cabecas', header: 'Nº Cabeças', format: 'number' },
@@ -246,6 +253,7 @@ export const PROBLEMAS_EXPORT_CONFIG: TableExportConfig = {
   sheetName: 'Problemas',
   columns: [
     { source: 'data', header: 'Data', format: 'date' },
+    { source: 'nome_usuario', header: 'Usuário' },
     { source: 'setor', header: 'Setor' },
     { source: 'local', header: 'Local' },
     { source: 'tipo_problema', header: 'Tipo de Problema' },
@@ -271,6 +279,7 @@ export const ABASTECIMENTO_EXPORT_CONFIG: TableExportConfig = {
   sheetName: 'Abastecimento',
   columns: [
     { source: 'data', header: 'Data', format: 'date' },
+    { source: 'nome_usuario', header: 'Usuário' },
     { source: 'quem_abasteceu', header: 'Quem Abasteceu' },
     { source: 'operador_motorista', header: 'Operador/Motorista' },
     { source: 'maquina_veiculo', header: 'Máquina/Veículo' },
@@ -290,6 +299,7 @@ export const ALIMENTACAO_EXPORT_CONFIG: TableExportConfig = {
   sheetName: 'Alimentação',
   columns: [
     { source: 'data', header: 'Data', format: 'datetime' },
+    { source: 'nome_usuario', header: 'Usuário' },
     { source: 'modo', header: 'Modo' },
     { source: 'numero_cozinheiras', header: 'Nº Cozinheiras', format: 'number' },
     { source: 'quem_cozinhou', header: 'Quem Cozinhou' },
@@ -333,6 +343,7 @@ export const CANTINA_EXPORT_CONFIG: TableExportConfig = {
   sheetName: 'Cantina',
   columns: [
     { source: 'data', header: 'Data', format: 'datetime' },
+    { source: 'nome_usuario', header: 'Usuário' },
     { source: 'modo', header: 'Modo' },
     { source: 'numero_cozinheiras', header: 'Nº Cozinheiras', format: 'number' },
     { source: 'quem_cozinhou', header: 'Quem Cozinhou' },
@@ -376,6 +387,7 @@ export const CLIMA_EXPORT_CONFIG: TableExportConfig = {
   sheetName: 'Clima',
   columns: [
     { source: 'data', header: 'Data', format: 'date' },
+    { source: 'nome_usuario', header: 'Usuário' },
     { source: 'responsavel', header: 'Responsável' },
     { source: 'temperatura_media', header: 'Temperatura Média (°C)', format: 'number' },
     { source: 'umidade_relativa', header: 'Umidade Relativa (%)', format: 'number' },
@@ -397,6 +409,7 @@ export const LIMPEZA_EXPORT_CONFIG: TableExportConfig = {
   sheetName: 'Limpeza',
   columns: [
     { source: 'data', header: 'Data', format: 'date' },
+    { source: 'nome_usuario', header: 'Usuário' },
     { source: 'numero_equipe', header: 'Nº Equipe', format: 'number' },
     { source: 'setor', header: 'Setor' },
     { source: 'local', header: 'Local' },
@@ -429,6 +442,7 @@ export const MORTE_EXPORT_CONFIG: TableExportConfig = {
   sheetName: 'Morte',
   columns: [
     { source: 'data', header: 'Data', format: 'date' },
+    { source: 'nome_usuario', header: 'Usuário' },
     { source: 'pasto', header: 'Pasto' },
     { source: 'lote', header: 'Lote' },
     { source: 'sexo', header: 'Sexo' },
@@ -485,6 +499,7 @@ export const OPERACOES_MAQUINAS_EXPORT_CONFIG: TableExportConfig = {
   sheetName: 'Operações de Máquinas',
   columns: [
     { source: 'data', header: 'Data', format: 'date' },
+    { source: 'nome_usuario', header: 'Usuário' },
     { source: 'veiculo_trator', header: 'Veículo/Trator' },
     { source: 'implemento_utilizado', header: 'Implemento Utilizado', transform: (value) => value || '' },
     { source: 'hora_inicial', header: 'Hora Inicial' },
@@ -516,6 +531,7 @@ export const SUPLEMENTACAO_EXPORT_CONFIG: TableExportConfig = {
   sheetName: 'Suplementação',
   columns: [
     { source: 'data', header: 'Data Atual', format: 'date' },
+    { source: 'nome_usuario', header: 'Usuário' },
     { source: 'data_anterior', header: 'Data Anterior', format: 'date' },
     { source: 'intervalo_dias', header: 'Intervalo (dias)', format: 'number' },
     { source: 'data_proximo', header: 'Trato Seguinte', format: 'date' },
@@ -546,6 +562,7 @@ export const RODEIO_EXPORT_CONFIG: TableExportConfig = {
   sheetName: 'Rodeio',
   columns: [
     { source: 'data', header: 'Data', format: 'date' },
+    { source: 'nome_usuario', header: 'Usuário' },
     { source: 'pasto', header: 'Pasto' },
     { source: 'lote', header: 'Lote' },
     { source: 'vaca', header: 'Vaca', format: 'number' },

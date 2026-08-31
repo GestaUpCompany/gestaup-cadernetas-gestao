@@ -89,7 +89,8 @@ export function RegistrosCantina() {
       (registro.numero_lanches && registro.numero_lanches.toString().includes(searchTerm.toLowerCase())) ||
       (registro.numero_refeicoes_almoco && registro.numero_refeicoes_almoco.toString().includes(searchTerm.toLowerCase())) ||
       (registro.numero_refeicoes_jantar && registro.numero_refeicoes_jantar.toString().includes(searchTerm.toLowerCase())) ||
-      (registro.observacao && registro.observacao.toLowerCase().includes(searchTerm.toLowerCase()))
+      (registro.observacao && registro.observacao.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.nome_usuario && registro.nome_usuario.toLowerCase().includes(searchTerm.toLowerCase()))
 
     const matchesDataInicio = !dataInicio || registro.data >= dataInicio
     const matchesDataFim = !dataFim || registro.data <= dataFim
@@ -208,6 +209,10 @@ export function RegistrosCantina() {
                 </div>
                 <div className="space-y-2 text-xs sm:text-sm">
                   <div className="flex justify-between">
+                    <span className="text-gray-500">Usuário:</span>
+                    <span className="text-gray-800 font-medium">{registro.nome_usuario || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
                     <span className="text-gray-500">Quem Cozinhou:</span>
                     <span className="text-gray-800 font-medium">{registro.quem_cozinhou || '-'}</span>
                   </div>
@@ -251,6 +256,7 @@ export function RegistrosCantina() {
                   >
                     Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
                   </th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuário</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quem Cozinhou</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quem Ajudou</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nº Cozinheiras</th>
@@ -270,6 +276,7 @@ export function RegistrosCantina() {
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                       {formatDateTime(registro.data)}
                     </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">{registro.nome_usuario || '-'}</td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                       {registro.quem_cozinhou || '-'}
                     </td>

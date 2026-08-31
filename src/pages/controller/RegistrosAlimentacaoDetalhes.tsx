@@ -120,6 +120,7 @@ export function RegistrosAlimentacaoDetalhes() {
                 <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Informações Gerais</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                   <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Data:</span> {formatDateTime(registro.data)}</p>
+                  <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Usuário:</span> {registro.nome_usuario || '-'}</p>
                   <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Fornecedor:</span> {registro.fornecedor || '-'}</p>
                   <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Destinatário:</span> {registro.destinatario || '-'}</p>
                 </div>
@@ -144,6 +145,7 @@ export function RegistrosAlimentacaoDetalhes() {
                 <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Informações Gerais</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                   <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Data:</span> {formatDateTime(registro.data)}</p>
+                  <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Usuário:</span> {registro.nome_usuario || '-'}</p>
                   <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Nº Cozinheiras:</span> {registro.numero_cozinheiras || '-'}</p>
                   <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Quem Cozinhou:</span> {registro.quem_cozinhou || '-'}</p>
                   <p className="text-sm sm:text-base"><span className="font-medium text-gray-700">Quem Ajudou:</span> {registro.quem_ajudou || '-'}</p>

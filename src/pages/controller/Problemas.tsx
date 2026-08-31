@@ -85,7 +85,8 @@ export function Problemas() {
       (registro.setor && registro.setor.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.descricao_problema && registro.descricao_problema.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.gravidade_impacto && registro.gravidade_impacto.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.prioridade && registro.prioridade.toLowerCase().includes(searchTerm.toLowerCase()))
+      (registro.prioridade && registro.prioridade.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.nome_usuario && registro.nome_usuario.toLowerCase().includes(searchTerm.toLowerCase()))
 
     const matchesDataInicio = !dataInicio || registro.data >= dataInicio
     const matchesDataFim = !dataFim || registro.data <= dataFim
@@ -200,6 +201,10 @@ export function Problemas() {
                 </div>
                 <div className="space-y-2 text-xs sm:text-sm">
                   <div className="flex justify-between">
+                    <span className="text-gray-500">Usuário:</span>
+                    <span className="text-gray-800 font-medium">{registro.nome_usuario || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
                     <span className="text-gray-500">Tipo Problema:</span>
                     <span className="text-gray-800 font-medium">{registro.tipo_problema || '-'}</span>
                   </div>
@@ -239,6 +244,7 @@ export function Problemas() {
                   >
                     Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
                   </th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuário</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo Problema</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Setor</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Local</th>
@@ -257,6 +263,7 @@ export function Problemas() {
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                       {formatDate(registro.data)}
                     </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">{registro.nome_usuario || '-'}</td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                       {registro.tipo_problema || '-'}
                     </td>

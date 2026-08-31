@@ -93,7 +93,8 @@ export function RegistrosAlimentacao() {
       (registro.fornecedor && registro.fornecedor.toLowerCase().includes(search)) ||
       (registro.destinatario && registro.destinatario.toLowerCase().includes(search)) ||
       (registro.quantidade_marmitas && registro.quantidade_marmitas.toString().includes(search)) ||
-      (registro.observacao && registro.observacao.toLowerCase().includes(search))
+      (registro.observacao && registro.observacao.toLowerCase().includes(search)) ||
+      (registro.nome_usuario && registro.nome_usuario.toLowerCase().includes(search))
 
     const matchesDataInicio = !dataInicio || registro.data >= dataInicio
     const matchesDataFim = !dataFim || registro.data <= dataFim
@@ -221,6 +222,10 @@ export function RegistrosAlimentacao() {
                     </span>
                   </div>
                 </div>
+                <div className="flex justify-between text-xs sm:text-sm">
+                  <span className="text-gray-500">Usuário:</span>
+                  <span className="text-gray-800 font-medium">{registro.nome_usuario || '-'}</span>
+                </div>
                 {registro.modo === 'marmita' ? (
                   <div className="space-y-2 text-xs sm:text-sm">
                     <div className="flex justify-between">
@@ -289,6 +294,7 @@ export function RegistrosAlimentacao() {
                   >
                     Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
                   </th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuário</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Modo</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Responsável / Fornecedor</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Detalhes</th>
@@ -305,6 +311,7 @@ export function RegistrosAlimentacao() {
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                       {formatDateTime(registro.data)}
                     </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">{registro.nome_usuario || '-'}</td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm">
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                         registro.modo === 'marmita'

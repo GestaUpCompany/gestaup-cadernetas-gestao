@@ -74,7 +74,8 @@ export function Bebedouros() {
       (registro.pasto && registro.pasto.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.numero_bebedouro && registro.numero_bebedouro.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.leitura_bebedouro && registro.leitura_bebedouro.toString().includes(searchTerm.toLowerCase())) ||
-      (registro.observacao && registro.observacao.toLowerCase().includes(searchTerm.toLowerCase()))
+      (registro.observacao && registro.observacao.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.nome_usuario && registro.nome_usuario.toLowerCase().includes(searchTerm.toLowerCase()))
 
     const matchesDataInicio = !dataInicio || new Date(registro.data) >= new Date(dataInicio)
     const matchesDataFim = !dataFim || new Date(registro.data) <= new Date(dataFim + 'T23:59:59')
@@ -189,6 +190,10 @@ export function Bebedouros() {
                 </div>
                 <div className="space-y-2 text-xs sm:text-sm">
                   <div className="flex justify-between">
+                    <span className="text-gray-500">Usuário:</span>
+                    <span className="text-gray-800 font-medium">{registro.nome_usuario || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
                     <span className="text-gray-500">Responsável:</span>
                     <span className="text-gray-800 font-medium">{registro.responsavel || '-'}</span>
                   </div>
@@ -230,6 +235,7 @@ export function Bebedouros() {
                   >
                     Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
                   </th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuário</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Responsável</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lote</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pasto</th>
@@ -248,6 +254,7 @@ export function Bebedouros() {
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                       {formatDate(registro.data)}
                     </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">{registro.nome_usuario || '-'}</td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                       {registro.responsavel || '-'}
                     </td>

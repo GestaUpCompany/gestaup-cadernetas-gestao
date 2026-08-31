@@ -73,7 +73,8 @@ export function ManutencaoMaquinas() {
       (registro.veiculo_trator && registro.veiculo_trator.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.operador_motorista && registro.operador_motorista.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.responsavel_checklist && registro.responsavel_checklist.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.placa && registro.placa.toLowerCase().includes(searchTerm.toLowerCase()))
+      (registro.placa && registro.placa.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.nome_usuario && registro.nome_usuario.toLowerCase().includes(searchTerm.toLowerCase()))
 
     const matchesDataInicio = !dataInicio || registro.data >= dataInicio
     const matchesDataFim = !dataFim || registro.data <= dataFim
@@ -188,6 +189,10 @@ export function ManutencaoMaquinas() {
                 </div>
                 <div className="space-y-2 text-xs sm:text-sm">
                   <div className="flex justify-between">
+                    <span className="text-gray-500">Usuário:</span>
+                    <span className="text-gray-800 font-medium">{registro.nome_usuario || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
                     <span className="text-gray-500">Máquina/Veículo:</span>
                     <span className="text-gray-800 font-medium">{registro.veiculo_trator || '-'}</span>
                   </div>
@@ -225,6 +230,7 @@ export function ManutencaoMaquinas() {
                   >
                     Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
                   </th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuário</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Máquina/Veículo</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Operador</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Responsável</th>
@@ -242,6 +248,7 @@ export function ManutencaoMaquinas() {
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                       {formatDate(registro.data)}
                     </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">{registro.nome_usuario || '-'}</td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                       {registro.veiculo_trator || '-'}
                     </td>

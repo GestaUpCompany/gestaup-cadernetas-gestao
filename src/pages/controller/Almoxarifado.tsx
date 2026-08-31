@@ -71,7 +71,8 @@ export function Almoxarifado() {
       (registro.quem_entregou && registro.quem_entregou.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.quem_pegou && registro.quem_pegou.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (registro.setor && registro.setor.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (registro.observacao && registro.observacao.toLowerCase().includes(searchTerm.toLowerCase()))
+      (registro.observacao && registro.observacao.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (registro.nome_usuario && registro.nome_usuario.toLowerCase().includes(searchTerm.toLowerCase()))
 
     const matchesDataInicio = !dataInicio || registro.data >= dataInicio
     const matchesDataFim = !dataFim || registro.data <= dataFim
@@ -186,6 +187,10 @@ export function Almoxarifado() {
                 </div>
                 <div className="space-y-2 text-xs sm:text-sm">
                   <div className="flex justify-between">
+                    <span className="text-gray-500">Usuário:</span>
+                    <span className="text-gray-800 font-medium">{registro.nome_usuario || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
                     <span className="text-gray-500">Quem Entregou:</span>
                     <span className="text-gray-800 font-medium">{registro.quem_entregou || '-'}</span>
                   </div>
@@ -227,6 +232,7 @@ export function Almoxarifado() {
                   >
                     Data <span className="text-lg ml-1">{dateSortOrder === 'asc' ? '↑' : '↓'}</span>
                   </th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuário</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quem Entregou</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quem Pegou</th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Setor</th>
@@ -244,6 +250,7 @@ export function Almoxarifado() {
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                       {formatDateTime(registro.data)}
                     </td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">{registro.nome_usuario || '-'}</td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900">
                       {registro.quem_entregou || '-'}
                     </td>
