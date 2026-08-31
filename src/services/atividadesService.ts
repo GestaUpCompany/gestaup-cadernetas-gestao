@@ -40,7 +40,7 @@ export interface AtividadeFuncionario {
   gps_accuracy: number | null
   // Joined
   funcionario_nome?: string | null
-  setor_nome?: string | null
+  setor_nomes?: string[]
 }
 
 export interface PrioridadeAtividade {
@@ -53,8 +53,8 @@ export interface PrioridadeAtividade {
 export interface FuncionarioComSetor {
   id: string
   nome: string
-  setor_id: string | null
-  setor_nome: string | null
+  setor_ids: string[]
+  setor_nomes: string[]
   cargo: string | null
   ativo: boolean
 }
@@ -116,7 +116,7 @@ export async function getAtividades(
     .from('atividade_funcionarios')
     .select(`
       *,
-      funcionario:funcionarios(nome, setor_id, setor:setores(nome))
+      funcionario:funcionarios(nome)
     `)
     .in('atividade_id', atividadeIds)
 
@@ -125,27 +125,46 @@ export async function getAtividades(
     return atividades
   }
 
+  // Buscar setores de cada funcionario via junction (N:N)
+  const funcIds = [...new Set((afs || []).map((af: any) => af.funcionario_id))]
+  let setoresByFuncId: Record<string, string[]> = {}
+  if (funcIds.length > 0) {
+    const { data: fsData } = await supabase
+      .from('funcionario_setores')
+      .select('funcionario_id, setor:setores(nome)')
+      .in('funcionario_id', funcIds)
+    for (const fs of (fsData || []) as any[]) {
+      const nome = fs.setor?.nome
+      if (nome) {
+        if (!setoresByFuncId[fs.funcionario_id]) setoresByFuncId[fs.funcionario_id] = []
+        if (!setoresByFuncId[fs.funcionario_id].includes(nome)) {
+          setoresByFuncId[fs.funcionario_id].push(nome)
+        }
+      }
+    }
+  }
+
   // Fallback: se o join voltar null (RLS no join aninhado), buscar nomes separadamente
   const funcIdsSemNome = (afs || []).filter((af: any) => !af.funcionario?.nome).map((af: any) => af.funcionario_id)
-  let nomesByFuncId: Record<string, { nome: string; setor_nome: string | null }> = {}
+  let nomesByFuncId: Record<string, string> = {}
   if (funcIdsSemNome.length > 0) {
     const uniqueIds = [...new Set(funcIdsSemNome)]
     const { data: funcs } = await supabase
       .from('funcionarios')
-      .select('id, nome, setor:setores(nome)')
+      .select('id, nome')
       .in('id', uniqueIds)
     for (const f of funcs || []) {
-      nomesByFuncId[f.id] = { nome: f.nome, setor_nome: (f as any).setor?.nome || null }
+      nomesByFuncId[f.id] = f.nome
     }
   }
 
   const afsByAtividade: Record<string, AtividadeFuncionario[]> = {}
   for (const af of afs || []) {
-    const fallback = nomesByFuncId[af.funcionario_id]
+    const fallbackNome = nomesByFuncId[af.funcionario_id]
     const mapped: AtividadeFuncionario = {
       ...af,
-      funcionario_nome: af.funcionario?.nome || fallback?.nome || null,
-      setor_nome: af.funcionario?.setor?.nome || fallback?.setor_nome || null,
+      funcionario_nome: af.funcionario?.nome || fallbackNome || null,
+      setor_nomes: setoresByFuncId[af.funcionario_id] || [],
     }
     if (!afsByAtividade[af.atividade_id]) afsByAtividade[af.atividade_id] = []
     afsByAtividade[af.atividade_id].push(mapped)
@@ -322,16 +341,10 @@ export async function updatePrioridade(
 
 export async function getFuncionariosComSetor(fazendaId: string): Promise<FuncionarioComSetor[]> {
   const { data, error } = await supabase
-    .from('funcionarios')
-    .select(`
-      id,
-      nome,
-      setor_id,
-      cargo,
-      ativo,
-      setor:setores(nome)
-    `)
+    .from('v_funcionarios_com_setores')
+    .select('funcionario_id, nome, cargo, ativo, setor_ids, setor_nomes')
     .eq('fazenda_id', fazendaId)
+    .is('deleted_at', null)
     .order('nome', { ascending: true })
 
   if (error) {
@@ -340,10 +353,10 @@ export async function getFuncionariosComSetor(fazendaId: string): Promise<Funcio
   }
 
   return (data || []).map((f: any) => ({
-    id: f.id,
+    id: f.funcionario_id,
     nome: f.nome,
-    setor_id: f.setor_id,
-    setor_nome: f.setor?.nome || null,
+    setor_ids: f.setor_ids || [],
+    setor_nomes: f.setor_nomes || [],
     cargo: f.cargo || null,
     ativo: f.ativo,
   })) as FuncionarioComSetor[]

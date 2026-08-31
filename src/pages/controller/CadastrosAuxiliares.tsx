@@ -306,7 +306,7 @@ export function CadastrosAuxiliares() {
   const [importError, setImportError] = useState<string | null>(null)
   const [importSuccess, setImportSuccess] = useState<string | null>(null)
   const [setores, setSetores] = useState<{id: string, nome: string}[]>([])
-  const [funcionariosComSetor, setFuncionariosComSetor] = useState<{id: string, nome: string, setor_id: string | null, cargo: string | null, ativo: boolean}[]>([])
+  const [funcionariosComSetor, setFuncionariosComSetor] = useState<{id: string, nome: string, setor_ids: string[], setor_nomes: string[], cargo: string | null, ativo: boolean}[]>([])
   const [setorEmEdicao, setSetorEmEdicao] = useState<{id: string | null, nome: string, funcionario_ids: string[]} | null>(null)
   const [salvandoSetor, setSalvandoSetor] = useState(false)
   const [atribuindoFunc, setAtribuindoFunc] = useState<string | null>(null)
@@ -332,10 +332,10 @@ export function CadastrosAuxiliares() {
     const term = tabStates.setores?.searchTerm?.toLowerCase() || ''
     const filtrados = setores.filter((s) => s.nome.toLowerCase().includes(term))
     const comMembros = filtrados.filter((s) =>
-      funcionariosComSetor.some((f) => f.setor_id === s.id && f.ativo)
+      funcionariosComSetor.some((f) => f.setor_ids.includes(s.id) && f.ativo)
     )
     const semMembros = filtrados.filter((s) =>
-      !funcionariosComSetor.some((f) => f.setor_id === s.id && f.ativo)
+      !funcionariosComSetor.some((f) => f.setor_ids.includes(s.id) && f.ativo)
     )
     return [...comMembros, ...semMembros]
   }, [setores, funcionariosComSetor, tabStates.setores?.searchTerm])
@@ -414,17 +414,25 @@ export function CadastrosAuxiliares() {
       setSetores(data || [])
     }
 
-    // Carregar funcionarios com setor_id
+    // Carregar funcionarios com setores via view N:N
     const { data: funcData, error: funcError } = await supabase
-      .from('funcionarios')
-      .select('id, nome, setor_id, cargo, ativo')
+      .from('v_funcionarios_com_setores')
+      .select('funcionario_id, nome, cargo, ativo, setor_ids, setor_nomes')
       .eq('fazenda_id', fazendaId)
+      .is('deleted_at', null)
       .order('nome', { ascending: true })
 
     if (funcError) {
       console.error('Erro ao buscar funcionários com setor:', funcError)
     } else {
-      setFuncionariosComSetor(funcData || [])
+      setFuncionariosComSetor((funcData || []).map((f: any) => ({
+        id: f.funcionario_id,
+        nome: f.nome,
+        setor_ids: f.setor_ids || [],
+        setor_nomes: f.setor_nomes || [],
+        cargo: f.cargo || null,
+        ativo: f.ativo,
+      })))
     }
   }
 
@@ -455,29 +463,29 @@ export function CadastrosAuxiliares() {
         setorId = data.id
       }
 
-      // Atribuir funcionarios selecionados
-      if (setorId && setorEmEdicao.funcionario_ids.length > 0) {
-        // Desvincular funcionarios que foram removidos (em edicao)
-        if (setorEmEdicao.id) {
-          const membrosAtuais = funcionariosComSetor.filter(
-            (f) => f.setor_id === setorId && f.ativo
-          )
-          const removidos = membrosAtuais
-            .filter((m) => !setorEmEdicao.funcionario_ids.includes(m.id))
-            .map((m) => m.id)
-          for (const removidoId of removidos) {
-            await supabase
-              .from('funcionarios')
-              .update({ setor_id: null })
-              .eq('id', removidoId)
-          }
-        }
-        // Atribuir os selecionados
-        for (const funcId of setorEmEdicao.funcionario_ids) {
+      // Atribuir funcionarios selecionados via junction N:N
+      if (setorId) {
+        // Membros atuais deste setor
+        const membrosAtuais = funcionariosComSetor.filter(
+          (f) => f.setor_ids.includes(setorId) && f.ativo
+        )
+        const atuaisIds = membrosAtuais.map((m) => m.id)
+        const novosIds = setorEmEdicao.funcionario_ids.filter((id) => !atuaisIds.includes(id))
+        const removidosIds = atuaisIds.filter((id) => !setorEmEdicao.funcionario_ids.includes(id))
+
+        // Inserir novos vinculos
+        for (const funcId of novosIds) {
           await supabase
-            .from('funcionarios')
-            .update({ setor_id: setorId })
-            .eq('id', funcId)
+            .from('funcionario_setores')
+            .insert({ funcionario_id: funcId, setor_id: setorId, fazenda_id: fazendaId })
+        }
+        // Remover vinculos desmarcados
+        for (const funcId of removidosIds) {
+          await supabase
+            .from('funcionario_setores')
+            .delete()
+            .eq('funcionario_id', funcId)
+            .eq('setor_id', setorId)
         }
       }
 
@@ -494,10 +502,10 @@ export function CadastrosAuxiliares() {
   const handleExcluirSetor = async (setorId: string) => {
     if (!confirm('Excluir este setor? Os funcionários ficarão sem setor.')) return
     try {
-      // Desvincular funcionários
+      // Desvincular funcionários da junction
       await supabase
-        .from('funcionarios')
-        .update({ setor_id: null })
+        .from('funcionario_setores')
+        .delete()
         .eq('setor_id', setorId)
       // Soft delete
       await supabase
@@ -511,18 +519,36 @@ export function CadastrosAuxiliares() {
     }
   }
 
-  const handleAtribuirSetor = async (funcionarioId: string, setorId: string | null) => {
+  const handleAtribuirSetor = async (funcionarioId: string, setorId: string) => {
     setAtribuindoFunc(funcionarioId)
     try {
+      // Adicionar vínculo na junction (N:N: não remove outros setores)
       const { error } = await supabase
-        .from('funcionarios')
-        .update({ setor_id: setorId })
-        .eq('id', funcionarioId)
-      if (error) throw error
+        .from('funcionario_setores')
+        .insert({ funcionario_id: funcionarioId, setor_id: setorId, fazenda_id: fazendaId })
+      if (error && error.code !== '23505') throw error // 23505 = duplicate, ignorar
       await loadSetoresComFuncionarios()
     } catch (err) {
       console.error('Erro ao atribuir setor:', err)
       alert('Erro ao atribuir setor')
+    } finally {
+      setAtribuindoFunc(null)
+    }
+  }
+
+  const handleRemoverDoSetor = async (funcionarioId: string, setorId: string) => {
+    setAtribuindoFunc(funcionarioId)
+    try {
+      const { error } = await supabase
+        .from('funcionario_setores')
+        .delete()
+        .eq('funcionario_id', funcionarioId)
+        .eq('setor_id', setorId)
+      if (error) throw error
+      await loadSetoresComFuncionarios()
+    } catch (err) {
+      console.error('Erro ao remover do setor:', err)
+      alert('Erro ao remover do setor')
     } finally {
       setAtribuindoFunc(null)
     }
@@ -1247,8 +1273,8 @@ export function CadastrosAuxiliares() {
                     </label>
                     <MultiSelect
                       options={funcionariosComSetor
-                        .filter((f) => f.ativo && (!f.setor_id || f.setor_id === setorEmEdicao.id))
-                        .map((f) => ({ id: f.id, name: f.nome, category: f.cargo || undefined }))}
+                        .filter((f) => f.ativo)
+                        .map((f) => ({ id: f.id, name: f.nome, category: f.cargo || (f.setor_nomes.length > 0 ? f.setor_nomes.join(', ') : undefined) }))}
                       value={setorEmEdicao.funcionario_ids}
                       onChange={(ids) => setSetorEmEdicao({ ...setorEmEdicao, funcionario_ids: ids })}
                       placeholder="Selecione os funcionários deste setor"
@@ -1274,7 +1300,7 @@ export function CadastrosAuxiliares() {
             ) : (
               <>
                 {setoresOrdenados.map((setor) => {
-                  const membros = funcionariosComSetor.filter((f) => f.setor_id === setor.id && f.ativo)
+                  const membros = funcionariosComSetor.filter((f) => f.setor_ids.includes(setor.id) && f.ativo)
                   return (
                     <Card key={setor.id} className="bg-white p-4 border-0 shadow-sm">
                       <div className="flex items-center justify-between mb-3">
@@ -1291,7 +1317,7 @@ export function CadastrosAuxiliares() {
                               id: setor.id,
                               nome: setor.nome,
                               funcionario_ids: funcionariosComSetor
-                                .filter((f) => f.setor_id === setor.id && f.ativo)
+                                .filter((f) => f.setor_ids.includes(setor.id) && f.ativo)
                                 .map((f) => f.id),
                             })}
                             className="text-xs text-primary hover:underline"
@@ -1314,7 +1340,7 @@ export function CadastrosAuxiliares() {
                               {m.nome}
                               {m.cargo && <span className="text-gray-400">· {m.cargo}</span>}
                               <button
-                                onClick={() => handleAtribuirSetor(m.id, null)}
+                                onClick={() => handleRemoverDoSetor(m.id, setor.id)}
                                 disabled={atribuindoFunc === m.id}
                                 className="text-gray-400 hover:text-red-500 ml-0.5"
                                 title="Remover do setor"
@@ -1333,7 +1359,7 @@ export function CadastrosAuxiliares() {
 
                 {/* Funcionários sem setor */}
                 {(() => {
-                  const semSetor = funcionariosComSetor.filter((f) => !f.setor_id && f.ativo)
+                  const semSetor = funcionariosComSetor.filter((f) => f.setor_ids.length === 0 && f.ativo)
                   if (semSetor.length === 0) return null
                   return (
                     <Card className="bg-white p-4 border-0 shadow-sm">

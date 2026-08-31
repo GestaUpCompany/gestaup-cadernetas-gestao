@@ -452,7 +452,7 @@ export function Atividades() {
     return funcionarios.map((f) => ({
       id: f.id,
       name: f.nome,
-      category: f.setor_nome || undefined,
+      category: f.setor_nomes.length > 0 ? f.setor_nomes.join(', ') : undefined,
     }))
   }, [funcionarios])
 
@@ -652,7 +652,7 @@ export function Atividades() {
     return funcionarios.map((f) => ({
       id: f.id,
       name: f.nome,
-      category: f.setor_nome || undefined,
+      category: f.setor_nomes.length > 0 ? f.setor_nomes.join(', ') : undefined,
     }))
   }, [funcionarios])
 
@@ -1063,7 +1063,7 @@ export function Atividades() {
                           onChange={(e) => {
                             const setorId = e.target.value
                             const membros = setorId
-                              ? funcionarios.filter((f) => f.setor_id === setorId).map((f) => f.id)
+                              ? funcionarios.filter((f) => f.setor_ids.includes(setorId)).map((f) => f.id)
                               : []
                             updateRow(row.id, { setor_id: setorId, funcionario_ids: membros })
                           }}
@@ -1081,7 +1081,7 @@ export function Atividades() {
                           value={row.funcionario_ids}
                           onChange={(ids) => {
                             const membrosSetor = row.setor_id
-                              ? funcionarios.filter((f) => f.setor_id === row.setor_id).map((f) => f.id)
+                              ? funcionarios.filter((f) => f.setor_ids.includes(row.setor_id)).map((f) => f.id)
                               : []
                             const aindaIgualSetor = membrosSetor.length > 0 &&
                               membrosSetor.length === ids.length &&
@@ -1388,7 +1388,7 @@ export function Atividades() {
                 onChange={(e) => {
                   const setorId = e.target.value
                   const membros = setorId
-                    ? funcionarios.filter((f) => f.setor_id === setorId).map((f) => f.id)
+                    ? funcionarios.filter((f) => f.setor_ids.includes(setorId)).map((f) => f.id)
                     : []
                   setEditForm({ ...editForm, setor_id: setorId, funcionario_ids: membros })
                 }}
@@ -1408,7 +1408,7 @@ export function Atividades() {
                 value={editForm.funcionario_ids}
                 onChange={(ids) => {
                   const membrosSetor = editForm.setor_id
-                    ? funcionarios.filter((f) => f.setor_id === editForm.setor_id).map((f) => f.id)
+                    ? funcionarios.filter((f) => f.setor_ids.includes(editForm.setor_id)).map((f) => f.id)
                     : []
                   const aindaIgualSetor = membrosSetor.length > 0 &&
                     membrosSetor.length === ids.length &&
@@ -1608,7 +1608,7 @@ export function Atividades() {
                           if (setorId === 'todos') {
                             membros = funcionarios.map((f) => f.id)
                           } else if (setorId) {
-                            membros = funcionarios.filter((f) => f.setor_id === setorId).map((f) => f.id)
+                            membros = funcionarios.filter((f) => f.setor_ids.includes(setorId)).map((f) => f.id)
                           } else {
                             membros = []
                           }
@@ -1634,7 +1634,7 @@ export function Atividades() {
                             const aindaTodos = todosIds.length === ids.length && todosIds.every((id) => ids.includes(id))
                             if (!aindaTodos) novoSetor = ''
                           } else if (row.setor_id) {
-                            const membrosSetor = funcionarios.filter((f) => f.setor_id === row.setor_id).map((f) => f.id)
+                            const membrosSetor = funcionarios.filter((f) => f.setor_ids.includes(row.setor_id)).map((f) => f.id)
                             const aindaIgualSetor = membrosSetor.length > 0 &&
                               membrosSetor.length === ids.length &&
                               membrosSetor.every((id) => ids.includes(id))
@@ -1736,7 +1736,7 @@ export function Atividades() {
                   if (setorId === 'todos') {
                     membros = funcionarios.map((f) => f.id)
                   } else if (setorId) {
-                    membros = funcionarios.filter((f) => f.setor_id === setorId).map((f) => f.id)
+                    membros = funcionarios.filter((f) => f.setor_ids.includes(setorId)).map((f) => f.id)
                   } else {
                     membros = []
                   }
@@ -1763,7 +1763,7 @@ export function Atividades() {
                     const aindaTodos = todosIds.length === ids.length && todosIds.every((id) => ids.includes(id))
                     if (!aindaTodos) novoSetor = ''
                   } else if (editTemplateForm.setor_id) {
-                    const membrosSetor = funcionarios.filter((f) => f.setor_id === editTemplateForm.setor_id).map((f) => f.id)
+                    const membrosSetor = funcionarios.filter((f) => f.setor_ids.includes(editTemplateForm.setor_id)).map((f) => f.id)
                     const aindaIgualSetor = membrosSetor.length > 0 &&
                       membrosSetor.length === ids.length &&
                       membrosSetor.every((id) => ids.includes(id))

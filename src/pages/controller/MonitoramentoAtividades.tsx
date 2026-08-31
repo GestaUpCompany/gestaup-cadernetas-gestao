@@ -263,20 +263,38 @@ export function MonitoramentoAtividades() {
             id, atividade_id, funcionario_id, status_individual,
             inicio_at, fim_at, detalhamento, tempo_gasto_segundos,
             foto_url, latitude, longitude, gps_accuracy,
-            funcionario:funcionarios(nome, setor:setores(nome))
+            funcionario:funcionarios(nome)
           )
         `)
         .eq('id', atividadeParam)
         .eq('fazenda_id', fazendaId)
         .single()
       if (data) {
+        // Buscar setores dos funcionarios via junction N:N
+        const funcIds = ((data as any).funcionarios || []).map((af: any) => af.funcionario_id)
+        let setoresByFuncId: Record<string, string[]> = {}
+        if (funcIds.length > 0) {
+          const { data: fsData } = await supabase
+            .from('funcionario_setores')
+            .select('funcionario_id, setor:setores(nome)')
+            .in('funcionario_id', funcIds)
+          for (const fs of (fsData || []) as any[]) {
+            const nome = fs.setor?.nome
+            if (nome) {
+              if (!setoresByFuncId[fs.funcionario_id]) setoresByFuncId[fs.funcionario_id] = []
+              if (!setoresByFuncId[fs.funcionario_id].includes(nome)) {
+                setoresByFuncId[fs.funcionario_id].push(nome)
+              }
+            }
+          }
+        }
         const mapped = {
           ...data,
           setor_nome: (data as any).setor?.nome || null,
           funcionarios: (data as any).funcionarios?.map((af: any) => ({
             ...af,
             funcionario_nome: af.funcionario?.nome || null,
-            setor_nome: af.funcionario?.setor?.nome || null,
+            setor_nomes: setoresByFuncId[af.funcionario_id] || [],
           })) || [],
         } as unknown as Atividade
         setDetalheAtividade(mapped)
