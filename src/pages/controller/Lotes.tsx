@@ -5,6 +5,7 @@ import { supabase } from '../../services/supabaseClient'
 import { Button, Card, Input, NumericInput, CardSkeleton, ConfirmModal, CardItem } from '../../components/ui'
 import { PlanoNutricionalLoteModal } from '../../components/plano-nutricional/PlanoNutricionalLoteModal'
 import { PlanoNutricionalDraftModal, PlanoRascunho } from '../../components/plano-nutricional/PlanoNutricionalDraftModal'
+import { RevisarNovoLoteModal } from '../../components/lotes/RevisarNovoLoteModal'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 import { exportToXLSXMultiSheet, type ColumnConfig } from '../../utils/exportXLSX'
@@ -185,6 +186,9 @@ export function Lotes() {
   const [avisoEnfermariaFechado, setAvisoEnfermariaFechado] = useState(false)
   const [isPlanoDraftModalOpen, setIsPlanoDraftModalOpen] = useState(false)
   const [selectedDraftCategoriaIndex, setSelectedDraftCategoriaIndex] = useState<number | null>(null)
+  const [solicitacoesNovoLote, setSolicitacoesNovoLote] = useState<any[]>([])
+  const [solicitacaoRevisao, setSolicitacaoRevisao] = useState<any | null>(null)
+  const [showRevisarModal, setShowRevisarModal] = useState(false)
 
   const [originalPesos, setOriginalPesos] = useState<Record<string, number | undefined>>({})
   const [pesoEditModal, setPesoEditModal] = useState<{
@@ -840,6 +844,22 @@ export function Lotes() {
 
     setLotes(lotesComCategorias as Lote[])
     setLoading(false)
+
+    // Carregar solicitações de Novo Lote pendentes
+    try {
+      const { data: solicitacoesData, error: solicitacoesError } = await supabase
+        .from('solicitacoes_novo_lote')
+        .select('*')
+        .eq('fazenda_id', fazendaId)
+        .eq('status', 'pendente')
+        .order('created_at', { ascending: false })
+
+      if (!solicitacoesError && solicitacoesData) {
+        setSolicitacoesNovoLote(solicitacoesData)
+      }
+    } catch (e) {
+      console.error('Erro ao buscar solicitações de novo lote:', e)
+    }
 
     // Carregar ocupação atual dos lotes
     const { data: ocupacaoPastoData } = await supabase
@@ -3247,6 +3267,40 @@ export function Lotes() {
         </Card>
       )}
 
+      {/* Card de Solicitações de Novo Lote Pendentes */}
+      {!showForm && solicitacoesNovoLote.length > 0 && (
+        <div className="mb-6 bg-amber-50 border-2 border-amber-300 rounded-xl p-4">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🕐</span>
+              <div>
+                <h3 className="text-base font-bold text-amber-900">
+                  {solicitacoesNovoLote.length} Solicitação{ solicitacoesNovoLote.length > 1 ? 'ões' : '' } de Novo Lote Pendente{ solicitacoesNovoLote.length > 1 ? 's' : '' }
+                </h3>
+                <p className="text-sm text-amber-700">
+                  Peão{ solicitacoesNovoLote.length > 1 ? 's' : '' } solicitou{ solicitacoesNovoLote.length > 1 ? 'aram' : '' } a criação de novo{ solicitacoesNovoLote.length > 1 ? 's' : '' } lote{ solicitacoesNovoLote.length > 1 ? 's' : '' } aguardando sua revisão.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {solicitacoesNovoLote.map((sol) => (
+                <Button
+                  key={sol.id}
+                  onClick={() => {
+                    setSolicitacaoRevisao(sol)
+                    setShowRevisarModal(true)
+                  }}
+                  variant="primary"
+                  size="sm"
+                >
+                  Revisar: {sol.dados_lote_proposto?.nome || 'Sem nome'}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {!showForm && lotes.length === 0 ? (
         <Card className="bg-white p-12 border-0 shadow-sm text-center">
           <p className="text-gray-600 mb-4">Nenhum lote cadastrado</p>
@@ -3530,6 +3584,32 @@ export function Lotes() {
             setFormData({ ...formData, categorias: updatedCategorias })
             setIsPlanoDraftModalOpen(false)
             setSelectedDraftCategoriaIndex(null)
+          }}
+        />
+      )}
+
+      {showRevisarModal && solicitacaoRevisao && (
+        <RevisarNovoLoteModal
+          isOpen={showRevisarModal}
+          onClose={() => {
+            setShowRevisarModal(false)
+            setSolicitacaoRevisao(null)
+          }}
+          solicitacao={solicitacaoRevisao}
+          pastos={pastos}
+          currais={currais}
+          usuarioId={user?.id || ''}
+          onAprovado={() => {
+            loadLotes()
+            if (user?.id) {
+              queryClient.invalidateQueries({ queryKey: ['fazenda', user.id] })
+              queryClient.invalidateQueries({ queryKey: ['dashboard-stats', user.id] })
+              queryClient.invalidateQueries({ queryKey: ['gado-stats', user.id] })
+              queryClient.invalidateQueries({ queryKey: ['recent-activities', user.id] })
+            }
+          }}
+          onRejeitado={() => {
+            loadLotes()
           }}
         />
       )}

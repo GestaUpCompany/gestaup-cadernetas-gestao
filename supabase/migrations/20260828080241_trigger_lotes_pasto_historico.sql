@@ -1,0 +1,3 @@
+-- Migration applied remotely via MCP/Studio
+-- trigger_lotes_pasto_historico
+-- Placeholder to reconcile migration history

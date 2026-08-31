@@ -1,0 +1,3 @@
+-- Migration applied remotely via MCP/Studio
+-- add_mae_adotiva
+-- Placeholder to reconcile migration history

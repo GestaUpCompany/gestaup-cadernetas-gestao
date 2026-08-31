@@ -1,0 +1,4 @@
+-- Migration applied remotely via MCP (apply_migration)
+-- solicitacoes_novo_lote (original, version registrada como 20260828132905)
+-- O arquivo local 20260828160000_solicitacoes_novo_lote.sql contem o SQL completo.
+-- Este placeholder reconcilia o version remoto com o local.
