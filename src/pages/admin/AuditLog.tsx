@@ -80,7 +80,7 @@ function tabelaLabel(tabela: string): string {
     lote_categorias: 'Categorias do Lote',
     currais: 'Currais',
     pastos: 'Pastos',
-    programacao_tratos: 'Programação de Tratos',
+    programacao_tratos: 'Configuração de Tratos',
     funcionarios: 'Funcionários',
     tratamentos: 'Tratamentos',
   }

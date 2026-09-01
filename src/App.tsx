@@ -52,7 +52,7 @@ import { AuditoriaRotinas } from './pages/controller/AuditoriaRotinas'
 import { Atividades } from './pages/controller/Atividades'
 import { MonitoramentoAtividades } from './pages/controller/MonitoramentoAtividades'
 import { Currais } from './pages/controller/Currais'
-import { ProgramacaoTratos } from './pages/controller/ProgramacaoTratos'
+import { ConfiguracaoTratos } from './pages/controller/ProgramacaoTratos'
 import { HistoricoDietas } from './pages/controller/HistoricoDietas'
 import { HistoricoPlanos } from './pages/controller/HistoricoPlanos'
 import { BebedourosCadastro } from './pages/controller/BebedourosCadastro'
@@ -90,7 +90,6 @@ import { FaixasCategorias } from './pages/controller/FaixasCategorias'
 import { MapaFazenda } from './pages/controller/MapaFazenda'
 import { RastreioCadernetas } from './pages/controller/RastreioCadernetas'
 import { Notificacoes } from './pages/controller/Notificacoes'
-import { LeituraCocho } from './pages/controller/LeituraCocho'
 import { AcompanhamentoTratos } from './pages/controller/AcompanhamentoTratos'
 import { AssistenteIA } from './pages/controller/AssistenteIA'
 import { GerenciamentoIA } from './pages/admin/GerenciamentoIA'
@@ -507,12 +506,12 @@ function App() {
           }
         />
         <Route
-          path="/controller/programacao-tratos"
+          path="/controller/configuracao-tratos"
           element={
             <ControllerRoute>
               <ConfinamentoRoute>
                 <ControllerLayout>
-                  <ProgramacaoTratos />
+                  <ConfiguracaoTratos />
                 </ControllerLayout>
               </ConfinamentoRoute>
             </ControllerRoute>
@@ -537,18 +536,6 @@ function App() {
               <ConfinamentoRoute>
                 <ControllerLayout>
                   <HistoricoDietas />
-                </ControllerLayout>
-              </ConfinamentoRoute>
-            </ControllerRoute>
-          }
-        />
-        <Route
-          path="/controller/leitura-cocho"
-          element={
-            <ControllerRoute>
-              <ConfinamentoRoute>
-                <ControllerLayout>
-                  <LeituraCocho />
                 </ControllerLayout>
               </ConfinamentoRoute>
             </ControllerRoute>

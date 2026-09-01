@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
+import { supabase } from '../../services/supabaseClient'
 import { Button, Card, CardSkeleton, Input } from '../../components/ui'
 import { getFazendaIdForUser } from '../../utils/fazendaContext'
 import {
@@ -24,6 +25,13 @@ interface CurralComKg {
   kg_mn_dia: string
 }
 
+interface NotaLeituraConfig {
+  id: string
+  nota: number
+  percentual_ajuste: number
+  descricao: string | null
+}
+
 const DISTRIBUICAO_PADRAO_4: Record<number, string> = { 1: '30', 2: '20', 3: '20', 4: '30' }
 
 const TIPOS: { value: TipoProgramacao; label: string }[] = [
@@ -31,7 +39,17 @@ const TIPOS: { value: TipoProgramacao; label: string }[] = [
   { value: 'sequestro', label: 'Sequestro' },
 ]
 
-export function ProgramacaoTratos() {
+const DESCRICOES_FIXAS: Record<number, string> = {
+  [-1]: 'Cocho vazio (lambido)',
+  0: 'Cocho limpo (sem sobras)',
+  1: 'Poucas sobras (rapinha)',
+  2: 'Sobras moderadas',
+  3: 'Sobras em excesso',
+}
+
+const NOTAS_ORDEM = [-1, 0, 1, 2, 3]
+
+export function ConfiguracaoTratos() {
   const { user } = useAuth()
   const [fazendaId, setFazendaId] = useState<string | null>(null)
   const [loadingFazenda, setLoadingFazenda] = useState(true)
@@ -52,6 +70,13 @@ export function ProgramacaoTratos() {
     currais: CurralComKg[]
   }>>({})
 
+  // Leitura de cocho
+  const [notasLeitura, setNotasLeitura] = useState<NotaLeituraConfig[]>([])
+  const [editandoNotas, setEditandoNotas] = useState<Record<number, string>>({})
+  const [savingNotas, setSavingNotas] = useState(false)
+  const [salvoNotas, setSalvoNotas] = useState(false)
+  const [erroNotas, setErroNotas] = useState<string | null>(null)
+
   const loadFazenda = useCallback(async () => {
     if (!user) return
     const fid = await getFazendaIdForUser(user.id)
@@ -68,11 +93,16 @@ export function ProgramacaoTratos() {
     setLoading(true)
     setErro(null)
 
-    const [tiposExistentes, progEngorda, progSequestro, curraisFazenda] = await Promise.all([
+    const [tiposExistentes, progEngorda, progSequestro, curraisFazenda, notasData] = await Promise.all([
       getTiposExistentes(fazendaId),
       getProgramacaoTratos(fazendaId, 'engorda'),
       getProgramacaoTratos(fazendaId, 'sequestro'),
       getCurraisFazenda(fazendaId),
+      supabase
+        .from('notas_leitura_cocho_config')
+        .select('*')
+        .eq('fazenda_id', fazendaId)
+        .order('nota', { ascending: true }),
     ])
 
     setTiposAtivos(tiposExistentes.length > 0 ? tiposExistentes : ['engorda'])
@@ -115,6 +145,20 @@ export function ProgramacaoTratos() {
     }
 
     setConfigs(newConfigs)
+
+    // Leitura de cocho
+    if (notasData.error) {
+      setErroNotas(notasData.error.message)
+    } else if (notasData.data) {
+      const notas = notasData.data as NotaLeituraConfig[]
+      setNotasLeitura(notas)
+      const editMap: Record<number, string> = {}
+      notas.forEach(n => {
+        editMap[n.nota] = String(n.percentual_ajuste)
+      })
+      setEditandoNotas(editMap)
+    }
+
     setLoading(false)
   }, [fazendaId])
 
@@ -235,6 +279,86 @@ export function ProgramacaoTratos() {
     setSaving(false)
   }
 
+  // Leitura de cocho
+  const handleNotaPercentualChange = (nota: number, valor: string) => {
+    setEditandoNotas(prev => ({ ...prev, [nota]: valor }))
+  }
+
+  const haAlteracoesNotas = notasLeitura.some(n => {
+    const editado = parseFloat(editandoNotas[n.nota] || '0')
+    return !isNaN(editado) && editado !== Number(n.percentual_ajuste)
+  })
+
+  const handleSalvarNotas = async () => {
+    if (!fazendaId) return
+    setSavingNotas(true)
+    setSalvoNotas(false)
+    setErroNotas(null)
+
+    let teveErro = false
+    for (const notaConfig of notasLeitura) {
+      const novoValor = parseFloat(editandoNotas[notaConfig.nota] || '0')
+      if (isNaN(novoValor)) continue
+
+      const { error } = await supabase
+        .from('notas_leitura_cocho_config')
+        .update({ percentual_ajuste: novoValor, updated_at: new Date().toISOString() })
+        .eq('id', notaConfig.id)
+
+      if (error) {
+        console.error(`Erro ao salvar nota ${notaConfig.nota}:`, error)
+        teveErro = true
+      }
+    }
+
+    if (!teveErro) {
+      setSalvoNotas(true)
+      setTimeout(() => setSalvoNotas(false), 3000)
+      // Recarregar notas
+      const { data } = await supabase
+        .from('notas_leitura_cocho_config')
+        .select('*')
+        .eq('fazenda_id', fazendaId)
+        .order('nota', { ascending: true })
+      if (data) {
+        const notas = data as NotaLeituraConfig[]
+        setNotasLeitura(notas)
+        const editMap: Record<number, string> = {}
+        notas.forEach(n => {
+          editMap[n.nota] = String(n.percentual_ajuste)
+        })
+        setEditandoNotas(editMap)
+      }
+    } else {
+      setErroNotas('Erro ao salvar uma ou mais notas.')
+    }
+
+    setSavingNotas(false)
+  }
+
+  const getNotaStyle = (nota: number) => {
+    switch (nota) {
+      case -1:
+        return { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', badge: 'bg-red-500' }
+      case 0:
+        return { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-700', badge: 'bg-yellow-500' }
+      case 1:
+        return { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700', badge: 'bg-green-500' }
+      case 2:
+        return { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-700', badge: 'bg-yellow-500' }
+      case 3:
+        return { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', badge: 'bg-red-500' }
+      default:
+        return { bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-700', badge: 'bg-gray-500' }
+    }
+  }
+
+  const formatPercentual = (valor: number) => {
+    if (valor > 0) return `+${valor}%`
+    if (valor === 0) return '0%'
+    return `${valor}%`
+  }
+
   if (loadingFazenda) {
     return (
       <div className="p-4 sm:p-6 max-w-4xl mx-auto">
@@ -249,9 +373,9 @@ export function ProgramacaoTratos() {
     <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-800">Programação de Tratos</h1>
+        <h1 className="text-2xl font-bold text-gray-800">Configuração de Tratos</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Defina a quantidade de tratos diários e a distribuição percentual por trato para cada tipo de manejo.
+          Defina a quantidade de tratos diários, a distribuição percentual por trato e os ajustes de leitura de cocho.
         </p>
       </div>
 
@@ -264,8 +388,11 @@ export function ProgramacaoTratos() {
           <div className="text-sm text-blue-800">
             <p className="font-medium mb-1">Como funciona</p>
             <p>
-              Os percentuais por trato balizam a distribuição do <strong>primeiro dia</strong>. Do segundo dia em diante,
+              Os percentuais por trato definem a distribuição do <strong>primeiro dia</strong>. Do segundo dia em diante,
               a oferta recomendada por curral e por trato será ajustada pela leitura de cocho do dia anterior.
+            </p>
+            <p className="mt-2">
+              <strong>Exemplo:</strong> se a nota foi <strong>2</strong> (sobras moderadas) e a porcentagem é <strong>-5%</strong>, o tratador reduz 5% da quantidade de comida no próximo trato.
             </p>
           </div>
         </div>
@@ -273,7 +400,7 @@ export function ProgramacaoTratos() {
 
       {erro && (
         <div className="p-4 bg-red-50 border-2 border-red-200 rounded-xl">
-          <p className="text-sm text-red-700 font-medium">Erro ao salvar programação</p>
+          <p className="text-sm text-red-700 font-medium">Erro ao salvar configuração</p>
           <p className="text-xs text-red-500 mt-1">{erro}</p>
         </div>
       )}
@@ -311,118 +438,59 @@ export function ProgramacaoTratos() {
       {loading ? (
         <CardSkeleton />
       ) : (
-        <Card className="p-4 sm:p-6">
-          <h2 className="text-lg font-bold text-gray-800 mb-4">
-            Configuração: {TIPOS.find((t) => t.value === tipoSelecionado)?.label}
-          </h2>
+        <>
+          <Card className="p-4 sm:p-6">
+            <h2 className="text-lg font-bold text-gray-800 mb-4">
+              Configuração: {TIPOS.find((t) => t.value === tipoSelecionado)?.label}
+            </h2>
 
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
-              Quantidade de tratos por dia
-            </label>
-            <Input
-              type="number"
-              min={1}
-              value={configAtual.quantidadeTratos}
-              onChange={(e) => handleQuantidadeTratosChange(e.target.value)}
-              placeholder="Ex: 4"
-              className="border-gray-200 focus:border-accent max-w-[200px]"
-            />
-          </div>
-
-          {/* Tabela de percentuais por trato */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-700 mb-2">Distribuição percentual por trato</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left border border-gray-200 rounded-lg">
-                <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
-                  <tr>
-                    <th className="px-4 py-2">Trato</th>
-                    <th className="px-4 py-2">Percentual (%)</th>
-                    <th className="px-4 py-2">Horário sugerido <span className="text-red-500">*</span></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {(configAtual.percentuais || []).map((p) => (
-                    <tr key={p.ordem_trato}>
-                      <td className="px-4 py-2 font-medium text-gray-800">{p.ordem_trato}º</td>
-                      <td className="px-4 py-2">
-                        <Input
-                          type="number"
-                          min={0}
-                          max={100}
-                          step="0.1"
-                          value={p.percentual}
-                          onChange={(e) => handlePercentualChange(p.ordem_trato, 'percentual', e.target.value)}
-                          className="w-24 border-gray-200 focus:border-accent"
-                        />
-                      </td>
-                      <td className="px-4 py-2">
-                        <Input
-                          type="time"
-                          value={p.horario_sugerido}
-                          onChange={(e) => handlePercentualChange(p.ordem_trato, 'horario_sugerido', e.target.value)}
-                          className="w-32 border-gray-200 focus:border-accent"
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot className="bg-gray-50 font-medium">
-                  <tr>
-                    <td className="px-4 py-2 text-gray-700">Total</td>
-                    <td className="px-4 py-2">
-                      <span className={percentuaisValidos ? 'text-green-600' : 'text-red-600'}>
-                        {somaPercentuais.toFixed(1)}%
-                      </span>
-                      {!percentuaisValidos && (
-                        <span className="text-xs text-red-500 ml-2">(deve somar 100%)</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2"></td>
-                  </tr>
-                </tfoot>
-              </table>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-1 leading-tight line-clamp-2">
+                Quantidade de tratos por dia
+              </label>
+              <Input
+                type="number"
+                min={1}
+                value={configAtual.quantidadeTratos}
+                onChange={(e) => handleQuantidadeTratosChange(e.target.value)}
+                placeholder="Ex: 4"
+                className="border-gray-200 focus:border-accent max-w-[200px]"
+              />
             </div>
-          </div>
 
-          {/* Tabela de kg MN por curral (Dia 1) */}
-          <div className="mt-6">
-            <h3 className="text-sm font-semibold text-gray-700 mb-1">
-              Quantidade total de MN (kg) por curral, Dia 1
-            </h3>
-            <p className="text-xs text-gray-500 mb-3">
-              Informe o total diário de matéria natural (kg) que será trato em cada curral no primeiro dia.
-              O aplicativo usará esses valores como previsão inicial, ajustada depois pelas leituras de cocho.
-            </p>
-            {(configAtual.currais || []).length === 0 ? (
-              <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-500 text-center">
-                Nenhum curral ativo cadastrado para esta fazenda.
-              </div>
-            ) : (
+            {/* Tabela de percentuais por trato */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700 mb-2">Distribuição percentual por trato</h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left border border-gray-200 rounded-lg">
                   <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
                     <tr>
-                      <th className="px-4 py-2">Curral</th>
-                      <th className="px-4 py-2">Lote</th>
-                      <th className="px-4 py-2">Total MN Dia 1 (kg)</th>
+                      <th className="px-4 py-2">Trato</th>
+                      <th className="px-4 py-2">Percentual (%)</th>
+                      <th className="px-4 py-2">Horário sugerido <span className="text-red-500">*</span></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {(configAtual.currais || []).map((c) => (
-                      <tr key={c.curral_id}>
-                        <td className="px-4 py-2 font-medium text-gray-800">{c.curral_nome}</td>
-                        <td className="px-4 py-2 text-gray-600">{c.lote_nome || <span className="text-gray-400 italic">Sem lote</span>}</td>
+                    {(configAtual.percentuais || []).map((p) => (
+                      <tr key={p.ordem_trato}>
+                        <td className="px-4 py-2 font-medium text-gray-800">{p.ordem_trato}º</td>
                         <td className="px-4 py-2">
                           <Input
                             type="number"
                             min={0}
+                            max={100}
                             step="0.1"
-                            value={c.kg_mn_dia}
-                            onChange={(e) => handleCurralKgChange(c.curral_id, e.target.value)}
-                            placeholder="0"
-                            className="w-28 border-gray-200 focus:border-accent"
+                            value={p.percentual}
+                            onChange={(e) => handlePercentualChange(p.ordem_trato, 'percentual', e.target.value)}
+                            className="w-24 border-gray-200 focus:border-accent"
+                          />
+                        </td>
+                        <td className="px-4 py-2">
+                          <Input
+                            type="time"
+                            value={p.horario_sugerido}
+                            onChange={(e) => handlePercentualChange(p.ordem_trato, 'horario_sugerido', e.target.value)}
+                            className="w-32 border-gray-200 focus:border-accent"
                           />
                         </td>
                       </tr>
@@ -430,46 +498,210 @@ export function ProgramacaoTratos() {
                   </tbody>
                   <tfoot className="bg-gray-50 font-medium">
                     <tr>
-                      <td className="px-4 py-2 text-gray-700" colSpan={2}>Total geral</td>
+                      <td className="px-4 py-2 text-gray-700">Total</td>
                       <td className="px-4 py-2">
-                        <span className="text-gray-800">
-                          {(configAtual.currais || []).reduce((sum, c) => sum + (parseFloat(c.kg_mn_dia) || 0), 0).toFixed(1)} kg
+                        <span className={percentuaisValidos ? 'text-green-600' : 'text-red-600'}>
+                          {somaPercentuais.toFixed(1)}%
                         </span>
+                        {!percentuaisValidos && (
+                          <span className="text-xs text-red-500 ml-2">(deve somar 100%)</span>
+                        )}
                       </td>
+                      <td className="px-4 py-2"></td>
                     </tr>
                   </tfoot>
                 </table>
               </div>
-            )}
-          </div>
+            </div>
 
-          {/* Botão salvar */}
-          <div className="flex justify-end gap-3 items-center mt-6">
-            {salvo && (
-              <span className="text-sm text-green-600 font-medium flex items-center gap-1">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                Salvo!
-              </span>
-            )}
-            <Button
-              onClick={handleSalvar}
-              disabled={!podeSalvar || saving}
-              className="px-6"
-            >
-              {saving ? 'Salvando...' : 'Salvar Programação'}
-            </Button>
-          </div>
+            {/* Tabela de kg MN por curral (Dia 1) */}
+            <div className="mt-6">
+              <h3 className="text-sm font-semibold text-gray-700 mb-1">
+                Quantidade total de MN (kg) por curral, Dia 1
+              </h3>
+              <p className="text-xs text-gray-500 mb-3">
+                Informe o total diário de matéria natural (kg) que será trato em cada curral no primeiro dia.
+                O aplicativo usará esses valores como previsão inicial, ajustada depois pelas leituras de cocho.
+              </p>
+              {(configAtual.currais || []).length === 0 ? (
+                <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-500 text-center">
+                  Nenhum curral ativo cadastrado para esta fazenda.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left border border-gray-200 rounded-lg">
+                    <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
+                      <tr>
+                        <th className="px-4 py-2">Curral</th>
+                        <th className="px-4 py-2">Lote</th>
+                        <th className="px-4 py-2">Total MN Dia 1 (kg)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {(configAtual.currais || []).map((c) => (
+                        <tr key={c.curral_id}>
+                          <td className="px-4 py-2 font-medium text-gray-800">{c.curral_nome}</td>
+                          <td className="px-4 py-2 text-gray-600">{c.lote_nome || <span className="text-gray-400 italic">Sem lote</span>}</td>
+                          <td className="px-4 py-2">
+                            <Input
+                              type="number"
+                              min={0}
+                              step="0.1"
+                              value={c.kg_mn_dia}
+                              onChange={(e) => handleCurralKgChange(c.curral_id, e.target.value)}
+                              placeholder="0"
+                              className="w-28 border-gray-200 focus:border-accent"
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="bg-gray-50 font-medium">
+                      <tr>
+                        <td className="px-4 py-2 text-gray-700" colSpan={2}>Total geral</td>
+                        <td className="px-4 py-2">
+                          <span className="text-gray-800">
+                            {(configAtual.currais || []).reduce((sum, c) => sum + (parseFloat(c.kg_mn_dia) || 0), 0).toFixed(1)} kg
+                          </span>
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
+            </div>
 
-          {!podeSalvar && (
-            <p className="text-xs text-gray-400 text-right mt-2">
-              {!percentuaisValidos && 'Os percentuais devem somar 100%. '}
-              {!horariosPreenchidos && 'Todos os horários sugeridos devem ser preenchidos. '}
-              {parseInt(configAtual.quantidadeTratos) <= 0 && 'A quantidade de tratos deve ser maior que zero. '}
+            {/* Botão salvar */}
+            <div className="flex justify-end gap-3 items-center mt-6">
+              {salvo && (
+                <span className="text-sm text-green-600 font-medium flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Salvo!
+                </span>
+              )}
+              <Button
+                onClick={handleSalvar}
+                disabled={!podeSalvar || saving}
+                className="px-6"
+              >
+                {saving ? 'Salvando...' : 'Salvar Configuração'}
+              </Button>
+            </div>
+
+            {!podeSalvar && (
+              <p className="text-xs text-gray-400 text-right mt-2">
+                {!percentuaisValidos && 'Os percentuais devem somar 100%. '}
+                {!horariosPreenchidos && 'Todos os horários sugeridos devem ser preenchidos. '}
+                {parseInt(configAtual.quantidadeTratos) <= 0 && 'A quantidade de tratos deve ser maior que zero. '}
+              </p>
+            )}
+          </Card>
+
+          {/* Seção: Leitura de Cocho */}
+          <Card className="p-4 sm:p-6">
+            <h2 className="text-lg font-bold text-gray-800 mb-1">Leitura de Cocho</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Configure a porcentagem de ajuste para cada nota de leitura de cocho. As notas são fixas e não podem ser alteradas.
             </p>
-          )}
-        </Card>
+
+            {erroNotas && (
+              <div className="p-4 bg-red-50 border-2 border-red-200 rounded-xl mb-4">
+                <p className="text-sm text-red-700 font-medium">Erro ao carregar configurações de leitura</p>
+                <p className="text-xs text-red-500 mt-1">{erroNotas}</p>
+              </div>
+            )}
+
+            {notasLeitura.length === 0 ? (
+              <div className="p-6 bg-gray-50 rounded-xl border-2 border-gray-200 text-center">
+                <p className="text-sm text-gray-500">
+                  {fazendaId
+                    ? `Nenhuma configuração encontrada para esta fazenda (${fazendaId}).`
+                    : 'Não foi possível identificar a fazenda do usuário.'}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {NOTAS_ORDEM.map(nota => {
+                  const config = notasLeitura.find(n => n.nota === nota)
+                  if (!config) return null
+                  const style = getNotaStyle(nota)
+                  const valorEditado = editandoNotas[nota] || ''
+
+                  return (
+                    <div
+                      key={nota}
+                      className={`flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 bg-white rounded-xl border-2 ${style.border} ${style.bg}`}
+                    >
+                      {/* Badge da nota */}
+                      <div className="flex items-center gap-3 shrink-0">
+                        <div className={`w-12 h-12 rounded-full ${style.badge} flex items-center justify-center text-white font-bold text-lg`}>
+                          {nota}
+                        </div>
+                        <div className="min-w-0">
+                          <p className={`font-semibold ${style.text}`}>Nota {nota}</p>
+                          <p className="text-xs text-gray-500">{DESCRICOES_FIXAS[nota]}</p>
+                        </div>
+                      </div>
+
+                      {/* Descricao do efeito */}
+                      <div className="flex-1 min-w-0 sm:text-right">
+                        <p className="text-sm text-gray-600">
+                          Ajuste no próximo trato:
+                        </p>
+                        <p className={`text-lg font-bold ${style.text}`}>
+                          {formatPercentual(parseFloat(valorEditado) || 0)}
+                        </p>
+                      </div>
+
+                      {/* Input de percentual */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="relative">
+                          <input
+                            type="number"
+                            step="0.5"
+                            value={valorEditado}
+                            onChange={e => handleNotaPercentualChange(nota, e.target.value)}
+                            className="w-24 px-3 py-2 border-2 border-gray-200 rounded-lg text-center font-semibold text-gray-700 focus:border-accent focus:outline-none"
+                            placeholder="0"
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">%</span>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* Botão salvar leitura */}
+            {notasLeitura.length > 0 && (
+              <div className="flex items-center gap-3 mt-6">
+                <Button
+                  onClick={handleSalvarNotas}
+                  disabled={savingNotas || !haAlteracoesNotas}
+                  variant="primary"
+                >
+                  {savingNotas ? 'Salvando...' : 'Salvar leitura de cocho'}
+                </Button>
+                {salvoNotas && (
+                  <span className="text-sm text-green-600 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Configurações salvas
+                  </span>
+                )}
+                {haAlteracoesNotas && !salvoNotas && (
+                  <span className="text-sm text-gray-500">
+                    Alterações não salvas
+                  </span>
+                )}
+              </div>
+            )}
+          </Card>
+        </>
       )}
     </div>
   )
