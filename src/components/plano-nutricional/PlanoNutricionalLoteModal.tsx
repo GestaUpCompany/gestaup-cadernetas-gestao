@@ -235,15 +235,19 @@ export function PlanoNutricionalLoteModal({
       if (planoIdsEncerrados.length > 0) {
         const { data: snapData } = await supabase
           .from('planos_nutricionais_snapshots')
-          .select('plano_nutricional_id, ganho_peso_total_kg_cab, gmd_realizado, motivo_migracao')
+          .select('plano_nutricional_id, ganho_peso_total_kg_cab, gmd_realizado, motivo_migracao, metricas_derivadas')
           .in('plano_nutricional_id', planoIdsEncerrados)
           .eq('tipo_snapshot', 'saida')
 
-        const snapByPlano: Record<string, { ganhos: number[]; gmds: number[]; motivo: string | null }> = {}
+        const snapByPlano: Record<string, { ganhos: number[]; pesos: number[]; gmds: number[]; motivo: string | null }> = {}
         ;(snapData || []).forEach((s: any) => {
           const pid = s.plano_nutricional_id
-          if (!snapByPlano[pid]) snapByPlano[pid] = { ganhos: [], gmds: [], motivo: null }
-          if (s.ganho_peso_total_kg_cab != null) snapByPlano[pid].ganhos.push(Number(s.ganho_peso_total_kg_cab))
+          if (!snapByPlano[pid]) snapByPlano[pid] = { ganhos: [], pesos: [], gmds: [], motivo: null }
+          const quant = s.metricas_derivadas?.quant_atual != null ? Number(s.metricas_derivadas.quant_atual) : 0
+          if (s.ganho_peso_total_kg_cab != null) {
+            snapByPlano[pid].ganhos.push(Number(s.ganho_peso_total_kg_cab))
+            snapByPlano[pid].pesos.push(quant)
+          }
           if (s.gmd_realizado != null) snapByPlano[pid].gmds.push(Number(s.gmd_realizado))
           if (s.motivo_migracao) snapByPlano[pid].motivo = s.motivo_migracao
         })
@@ -261,12 +265,20 @@ export function PlanoNutricionalLoteModal({
           .filter((p) => p.data_fim)
           .map((p) => {
             const snaps = snapByPlano[p.id]
-            const ganhoMedio = snaps && snaps.ganhos.length > 0
-              ? snaps.ganhos.reduce((a, b) => a + b, 0) / snaps.ganhos.length
-              : null
+            // GMD: média simples entre categorias (já é por cabeça)
             const gmdMedio = snaps && snaps.gmds.length > 0
               ? snaps.gmds.reduce((a, b) => a + b, 0) / snaps.gmds.length
               : null
+            // Ganho de peso: média ponderada por quant_atual de cada categoria
+            const ganhoMedio = (() => {
+              if (!snaps || snaps.ganhos.length === 0) return null
+              const totalPesos = snaps.pesos.reduce((a, b) => a + b, 0)
+              if (totalPesos === 0) {
+                // Sem cabeças: média simples
+                return snaps.ganhos.reduce((a, b) => a + b, 0) / snaps.ganhos.length
+              }
+              return snaps.ganhos.reduce((acc, g, i) => acc + g * snaps.pesos[i], 0) / totalPesos
+            })()
             const duracao = p.data_inicio && p.data_fim
               ? Math.max(Math.ceil((new Date(p.data_fim + 'T00:00:00').getTime() - new Date(p.data_inicio + 'T00:00:00').getTime()) / (1000 * 60 * 60 * 24)), 0)
               : 0
