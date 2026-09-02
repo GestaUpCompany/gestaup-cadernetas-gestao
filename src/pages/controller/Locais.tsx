@@ -184,13 +184,23 @@ export function Locais() {
             <button
               type="button"
               onClick={() => setShowInactive(!showInactive)}
-              className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 border-2 h-10 ${
+              className={`px-2 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 border-2 whitespace-nowrap h-10 ${
                 showInactive
                   ? 'bg-primary text-white border-primary hover:bg-primary/90'
                   : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
               }`}
             >
-              {showInactive ? '✓ Mostrando Desativados' : 'Mostrar Desativados'}
+              {showInactive ? (
+                <>
+                  <span className="sm:hidden">✓ Mostrando</span>
+                  <span className="hidden sm:inline">✓ Mostrando Desativados</span>
+                </>
+              ) : (
+                <>
+                  <span className="sm:hidden">Mostrar</span>
+                  <span className="hidden sm:inline">Mostrar Desativados</span>
+                </>
+              )}
             </button>
             <Button onClick={() => setShowForm(true)} className="h-10 text-sm flex-1 sm:flex-none">Novo Local</Button>
           </div>

@@ -41,12 +41,6 @@ const RELATORIOS_DISPONIVEIS: RelatorioDisponivel[] = [
     icone: '🐂',
   },
   {
-    tipo: 'morte',
-    titulo: 'Mortalidade',
-    descricao: 'Mortes por causa, categoria, sexo e período, com frequência de diagnósticos.',
-    icone: '⚰️',
-  },
-  {
     tipo: 'atividades',
     titulo: 'Atividades',
     descricao: 'Produtividade por funcionário, tempo produtivo, taxa de conclusão, atividades não previstas e imprevistos por período.',
@@ -65,6 +59,7 @@ export function Relatorios() {
   const navigate = useNavigate()
   const [fazendaId, setFazendaId] = useState<string | null>(null)
   const [fazendaNome, setFazendaNome] = useState<string | null>(null)
+  const [acessoConfinamento, setAcessoConfinamento] = useState(false)
   const [linksAtivos, setLinksAtivos] = useState<RelatorioPublico[]>([])
   const [loading, setLoading] = useState(true)
   const [modalAberto, setModalAberto] = useState(false)
@@ -73,9 +68,6 @@ export function Relatorios() {
   const [linkGerado, setLinkGerado] = useState<string | null>(null)
   const [copiado, setCopiado] = useState(false)
   const [showInactive, setShowInactive] = useState(false)
-  const [precos, setPrecos] = useState<{ id: string; categoria: string; preco_kg: number }[]>([])
-  const [salvandoPrecos, setSalvandoPrecos] = useState(false)
-  const [precosAlterados, setPrecosAlterados] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -90,53 +82,14 @@ export function Relatorios() {
     if (fid) {
       const { data: fazendaData } = await supabase
         .from('fazendas')
-        .select('nome')
+        .select('nome, acesso_confinamento')
         .eq('id', fid)
         .maybeSingle()
       setFazendaNome(fazendaData?.nome ?? null)
+      setAcessoConfinamento(fazendaData?.acesso_confinamento ?? false)
       await carregarLinks(fid)
-      await carregarPrecos(fid)
     }
     setLoading(false)
-  }
-
-  const carregarPrecos = async (fid: string) => {
-    const { data, error } = await supabase
-      .from('precos_categorias')
-      .select('id, categoria, preco_kg')
-      .eq('fazenda_id', fid)
-      .order('categoria')
-    if (error) {
-      console.error('Erro ao carregar preços:', error)
-    } else {
-      setPrecos((data ?? []).map((p: { id: string; categoria: string; preco_kg: number }) => ({ id: p.id, categoria: p.categoria, preco_kg: Number(p.preco_kg) })))
-      setPrecosAlterados(false)
-    }
-  }
-
-  const atualizarPreco = (id: string, novoPreco: number) => {
-    setPrecos((prev) => prev.map((p) => (p.id === id ? { ...p, preco_kg: novoPreco } : p)))
-    setPrecosAlterados(true)
-  }
-
-  const salvarPrecos = async () => {
-    if (!fazendaId || !user) return
-    setSalvandoPrecos(true)
-    const updates = precos.map((p) =>
-      supabase
-        .from('precos_categorias')
-        .update({ preco_kg: p.preco_kg, updated_at: new Date().toISOString(), updated_by: user.id })
-        .eq('id', p.id)
-    )
-    const results = await Promise.all(updates)
-    const erros = results.filter((r) => r.error)
-    if (erros.length > 0) {
-      console.error('Erros ao salvar preços:', erros)
-      alert(`Erro ao salvar ${erros.length} preço(s).`)
-    } else {
-      setPrecosAlterados(false)
-    }
-    setSalvandoPrecos(false)
   }
 
   const carregarLinks = async (fid: string) => {
@@ -252,6 +205,10 @@ export function Relatorios() {
 
   const linksVisiveis = linksAtivos.filter((l) => showInactive || l.ativo)
 
+  const relatoriosFiltrados = acessoConfinamento
+    ? RELATORIOS_DISPONIVEIS
+    : RELATORIOS_DISPONIVEIS.filter((rel) => rel.tipo !== 'tratos')
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -276,13 +233,23 @@ export function Relatorios() {
           <button
             type="button"
             onClick={() => setShowInactive(!showInactive)}
-            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 border-2 h-10 ${
+            className={`px-2 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 border-2 whitespace-nowrap h-10 ${
               showInactive
                 ? 'bg-primary text-white border-primary hover:bg-primary/90'
                 : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
             }`}
           >
-            {showInactive ? '✓ Mostrando Desativados' : 'Mostrar Desativados'}
+            {showInactive ? (
+              <>
+                <span className="sm:hidden">✓ Mostrando</span>
+                <span className="hidden sm:inline">✓ Mostrando Desativados</span>
+              </>
+            ) : (
+              <>
+                <span className="sm:hidden">Mostrar</span>
+                <span className="hidden sm:inline">Mostrar Desativados</span>
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -291,7 +258,7 @@ export function Relatorios() {
       <div>
         <h2 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Relatórios disponíveis</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          {RELATORIOS_DISPONIVEIS.map((rel) => {
+          {relatoriosFiltrados.map((rel) => {
             const linkAtivo = linksAtivos.find((l) => l.tipo === rel.tipo && l.ativo)
             return (
               <div
@@ -425,65 +392,7 @@ export function Relatorios() {
         </div>
       )}
 
-      {/* Preços por categoria para relatório de mortalidade */}
-      {precos.length > 0 && (
-        <div>
-          <h2 className="text-sm font-semibold text-gray-700 mb-1 uppercase tracking-wide">
-            Preços por categoria (relatório de mortalidade)
-          </h2>
-          <p className="text-xs text-gray-500 mb-3">
-            Preço por kg vivo usado no cálculo de impacto financeiro do relatório de mortalidade.
-            Padrões baseados em cotações de agosto/2026 (Scot Consultoria, CEPEA/ESALQ, Agrifatto, FarmNews).
-          </p>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <table className="min-w-full text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Categoria</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-600">Preço (R$/kg vivo)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {precos.map((p) => (
-                  <tr key={p.id} className="border-t border-gray-100">
-                    <td className="py-3 px-4 text-gray-900 font-medium">{p.categoria}</td>
-                    <td className="py-3 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <span className="text-gray-400 text-sm">R$</span>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={p.preco_kg}
-                          onChange={(e) => atualizarPreco(p.id, parseFloat(e.target.value) || 0)}
-                          className="w-24 text-right rounded border border-gray-300 px-2 py-1 text-sm focus:border-green-600 focus:ring-1 focus:ring-green-600"
-                        />
-                        <span className="text-gray-400 text-sm">/kg</span>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
-              <p className="text-xs text-gray-500">
-                {precosAlterados ? 'Alterações não salvas' : 'Preços em dia'}
-              </p>
-              <button
-                onClick={salvarPrecos}
-                disabled={!precosAlterados || salvandoPrecos}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  precosAlterados && !salvandoPrecos
-                    ? 'bg-green-700 text-white hover:bg-green-800'
-                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                }`}
-              >
-                {salvandoPrecos ? 'Salvando...' : 'Salvar preços'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {/* Modal de geração de link */}
       {modalAberto && relatorioSelecionado && (

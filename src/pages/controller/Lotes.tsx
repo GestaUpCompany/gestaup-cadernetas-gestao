@@ -174,6 +174,8 @@ export function Lotes() {
   // Estado da verificação de nome duplicado em tempo real
   // status: 'idle' (vazio/curto demais) | 'checking' (consultando) | 'available' | 'duplicated'
   const [nomeCheck, setNomeCheck] = useState<{ status: 'idle' | 'checking' | 'available' | 'duplicated'; duplicataNome?: string }>({ status: 'idle' })
+  // Só dispara a validação de nome depois que o usuário altera o campo
+  const [nomeTouched, setNomeTouched] = useState(false)
   const [showCategoryRemoveModal, setShowCategoryRemoveModal] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; nome: string } | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -758,8 +760,8 @@ export function Lotes() {
 
   // Debounce de verificação de nome em tempo real
   useEffect(() => {
-    // Só verifica quando o formulário está aberto
-    if (!showForm) {
+    // Só verifica quando o formulário está aberto e o nome foi alterado
+    if (!showForm || !nomeTouched) {
       setNomeCheck({ status: 'idle' })
       return
     }
@@ -786,7 +788,7 @@ export function Lotes() {
       controller.abort()
       clearTimeout(timer)
     }
-  }, [formData.nome, showForm, editingLote, user, normalizarNomeLote, verificarNomeDuplicado])
+  }, [formData.nome, showForm, nomeTouched, editingLote, user, normalizarNomeLote, verificarNomeDuplicado])
 
   const loadLotes = async () => {
     if (!user) return
@@ -1348,6 +1350,7 @@ export function Lotes() {
       setEditingLote(null)
       setOriginalAtivo(true)
       setNomeCheck({ status: 'idle' })
+      setNomeTouched(false)
       lotesCacheRef.current = null
       loadLotes()
       // Invalidar cache do Dashboard para atualizar KPIs
@@ -1363,6 +1366,7 @@ export function Lotes() {
 
   const handleEdit = async (lote: Lote) => {
     setEditingLote(lote)
+    setNomeTouched(false)
     setAvisoEnfermariaFechado(false)
 
     const fazendaId = lote.fazenda_id
@@ -1589,6 +1593,7 @@ export function Lotes() {
     setOriginalAtivo(true)
     setShowForm(false)
     setNomeCheck({ status: 'idle' })
+    setNomeTouched(false)
   }
 
   const handleToggleActive = async (lote: Lote) => {
@@ -1965,6 +1970,7 @@ export function Lotes() {
             <Button onClick={() => {
               setShowForm(true)
               setEditingLote(null)
+              setNomeTouched(false)
               setAvisoEnfermariaFechado(false)
               setMovimentacaoData([])
               setMaternidadeData([])
@@ -1987,13 +1993,23 @@ export function Lotes() {
           <button
             type="button"
             onClick={() => setShowInactive(!showInactive)}
-            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 border-2 ${
+            className={`px-2 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 border-2 whitespace-nowrap h-10 ${
               showInactive
                 ? 'bg-primary text-white border-primary hover:bg-primary/90'
                 : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
             }`}
           >
-            {showInactive ? '✓ Mostrando Desativados' : 'Mostrar Desativados'}
+            {showInactive ? (
+              <>
+                <span className="sm:hidden">✓ Mostrando</span>
+                <span className="hidden sm:inline">✓ Mostrando Desativados</span>
+              </>
+            ) : (
+              <>
+                <span className="sm:hidden">Mostrar</span>
+                <span className="hidden sm:inline">Mostrar Desativados</span>
+              </>
+            )}
           </button>
         </div>
       )}
@@ -2027,7 +2043,7 @@ export function Lotes() {
                   <Input
                     type="text"
                     value={formData.nome}
-                    onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                    onChange={(e) => { setNomeTouched(true); setFormData({ ...formData, nome: e.target.value }) }}
                     required
                     placeholder="Nome do lote"
                     className={`${
@@ -3307,6 +3323,7 @@ export function Lotes() {
           <Button onClick={() => {
             setShowForm(true)
             setEditingLote(null)
+            setNomeTouched(false)
             setAvisoEnfermariaFechado(false)
             setMovimentacaoData([])
             setMaternidadeData([])
