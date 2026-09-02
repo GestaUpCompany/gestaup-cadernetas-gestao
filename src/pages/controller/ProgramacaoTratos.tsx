@@ -37,6 +37,7 @@ const DISTRIBUICAO_PADRAO_4: Record<number, string> = { 1: '30', 2: '20', 3: '20
 const TIPOS: { value: TipoProgramacao; label: string }[] = [
   { value: 'engorda', label: 'Engorda' },
   { value: 'sequestro', label: 'Sequestro' },
+  { value: 'tip', label: 'TIP' },
 ]
 
 const DESCRICOES_FIXAS: Record<number, string> = {
@@ -58,7 +59,7 @@ export function ConfiguracaoTratos() {
   const [salvo, setSalvo] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
 
-  // Tipos ativos (engorda, sequestro, ou ambos)
+  // Tipos ativos (engorda, sequestro, TIP, ou múltiplos)
   const [tiposAtivos, setTiposAtivos] = useState<TipoProgramacao[]>([])
   // Tipo atualmente selecionado para edição
   const [tipoSelecionado, setTipoSelecionado] = useState<TipoProgramacao>('engorda')
@@ -93,10 +94,11 @@ export function ConfiguracaoTratos() {
     setLoading(true)
     setErro(null)
 
-    const [tiposExistentes, progEngorda, progSequestro, curraisFazenda, notasData] = await Promise.all([
+    const [tiposExistentes, progEngorda, progSequestro, progTip, curraisFazenda, notasData] = await Promise.all([
       getTiposExistentes(fazendaId),
       getProgramacaoTratos(fazendaId, 'engorda'),
       getProgramacaoTratos(fazendaId, 'sequestro'),
+      getProgramacaoTratos(fazendaId, 'tip'),
       getCurraisFazenda(fazendaId),
       supabase
         .from('notas_leitura_cocho_config')
@@ -109,7 +111,7 @@ export function ConfiguracaoTratos() {
 
     const newConfigs: Record<string, { quantidadeTratos: string; percentuais: PercentualTrato[]; currais: CurralComKg[] }> = {}
 
-    for (const [tipo, prog] of [['engorda', progEngorda], ['sequestro', progSequestro]] as const) {
+    for (const [tipo, prog] of [['engorda', progEngorda], ['sequestro', progSequestro], ['tip', progTip]] as const) {
       // Mapa de kg MN salvos por curral
       const kgPorCurral: Record<string, string> = {}
       for (const c of prog.currais || []) {
@@ -367,7 +369,7 @@ export function ConfiguracaoTratos() {
     )
   }
 
-  const tipoPodeSerAdicionado = TIPOS.find((t) => t.value !== tipoSelecionado && !tiposAtivos.includes(t.value))
+  const tiposPodeSerAdicionados = TIPOS.filter((t) => !tiposAtivos.includes(t.value))
 
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6">
@@ -424,15 +426,16 @@ export function ConfiguracaoTratos() {
             </button>
           )
         })}
-        {tipoPodeSerAdicionado && (
+        {tiposPodeSerAdicionados.map((t) => (
           <button
+            key={t.value}
             type="button"
-            onClick={() => handleAdicionarTipo(tipoPodeSerAdicionado.value)}
+            onClick={() => handleAdicionarTipo(t.value)}
             className="px-4 py-2 rounded-lg text-sm font-medium text-gray-500 border border-dashed border-gray-300 hover:bg-gray-50 hover:text-gray-700 transition-colors"
           >
-            + {tipoPodeSerAdicionado.label}
+            + {t.label}
           </button>
-        )}
+        ))}
       </div>
 
       {loading ? (

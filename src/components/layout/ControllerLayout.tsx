@@ -62,7 +62,7 @@ const menuStructure: MenuItem[] = [
     ],
   },
   {
-    label: 'Confinamento',
+    label: 'Confinamento e TIP',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5h16M4 5v14a2 2 0 002 2h12a2 2 0 002-2V5M4 5h16M9 9h6M9 13h6M9 17h6" />
@@ -239,7 +239,7 @@ export function ControllerLayout({ children }: ControllerLayoutProps) {
   const visibleMenuStructure = useMemo(() => {
     let structure = menuStructure
     if (!fazenda?.acesso_confinamento) {
-      structure = structure.filter((menu) => menu.label !== 'Confinamento')
+      structure = structure.filter((menu) => menu.label !== 'Confinamento e TIP')
     }
     // IA visível apenas para fazendas com ia_ativo=true em ia_fazenda_config.
     if (iaAtiva) {

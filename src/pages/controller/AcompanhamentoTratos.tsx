@@ -144,7 +144,7 @@ export function AcompanhamentoTratos() {
     if (fazendaId) loadData()
   }, [fazendaId, loadData])
 
-  // Aplicar filtro de tipo (engorda/sequestro) sobre os dados carregados
+  // Aplicar filtro de tipo (engorda, sequestro ou TIP) sobre os dados carregados
   const linhasFiltradas = useMemo(() => {
     if (tipoFiltro === 'todos') return linhas
     return linhas.filter((l) => l.tipo === tipoFiltro)
@@ -358,7 +358,7 @@ export function AcompanhamentoTratos() {
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Tipo</label>
             <div className="inline-flex rounded-lg border-2 border-gray-200 overflow-hidden">
-              {(['todos', 'engorda', 'sequestro'] as const).map((t) => (
+              {(['todos', 'engorda', 'sequestro', 'tip'] as const).map((t) => (
                 <button
                   key={t}
                   onClick={() => setTipoFiltro(t)}
@@ -368,7 +368,7 @@ export function AcompanhamentoTratos() {
                       : 'bg-white text-gray-600 hover:bg-gray-50'
                   }`}
                 >
-                  {t === 'todos' ? 'Todos' : t === 'engorda' ? 'Engorda' : 'Sequestro'}
+                  {t === 'todos' ? 'Todos' : t === 'engorda' ? 'Engorda' : t === 'sequestro' ? 'Sequestro' : 'TIP'}
                 </button>
               ))}
             </div>
