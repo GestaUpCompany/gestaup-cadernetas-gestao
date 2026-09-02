@@ -52,6 +52,18 @@ interface FormulacaoCategoriaGmd {
   gmd: number
 }
 
+interface HistoricoPlano {
+  id: string
+  nome: string
+  formulacao_nome: string | null
+  data_inicio: string | null
+  data_fim: string | null
+  duracao_dias: number
+  ganho_medio_kg: number | null
+  gmd_realizado_medio: number | null
+  motivo_migracao: string | null
+}
+
 interface PlanoNutricionalLoteModalProps {
   isOpen: boolean
   onClose: () => void
@@ -103,6 +115,8 @@ export function PlanoNutricionalLoteModal({
 
   const [message, setMessage] = useState<string | null>(null)
   const [showEncerrados, setShowEncerrados] = useState(false)
+  const [showHistorico, setShowHistorico] = useState(false)
+  const [historicoPlanos, setHistoricoPlanos] = useState<HistoricoPlano[]>([])
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null)
   const [formVisible, setFormVisible] = useState(false)
@@ -211,6 +225,68 @@ export function PlanoNutricionalLoteModal({
             .in('formulacao_id', formIds)
           setFormulacaoCategoriasGmd((fcgData as FormulacaoCategoriaGmd[]) || [])
         }
+      }
+
+      // Buscar histórico de planos encerrados com snapshots agregados
+      const planoIdsEncerrados = ((planosData as PlanoNutricional[]) || [])
+        .filter((p) => p.data_fim)
+        .map((p) => p.id)
+
+      if (planoIdsEncerrados.length > 0) {
+        const { data: snapData } = await supabase
+          .from('planos_nutricionais_snapshots')
+          .select('plano_nutricional_id, ganho_peso_total_kg_cab, gmd_realizado, motivo_migracao')
+          .in('plano_nutricional_id', planoIdsEncerrados)
+          .eq('tipo_snapshot', 'saida')
+
+        const snapByPlano: Record<string, { ganhos: number[]; gmds: number[]; motivo: string | null }> = {}
+        ;(snapData || []).forEach((s: any) => {
+          const pid = s.plano_nutricional_id
+          if (!snapByPlano[pid]) snapByPlano[pid] = { ganhos: [], gmds: [], motivo: null }
+          if (s.ganho_peso_total_kg_cab != null) snapByPlano[pid].ganhos.push(Number(s.ganho_peso_total_kg_cab))
+          if (s.gmd_realizado != null) snapByPlano[pid].gmds.push(Number(s.gmd_realizado))
+          if (s.motivo_migracao) snapByPlano[pid].motivo = s.motivo_migracao
+        })
+
+        const formIdSet = new Set(((planosData as PlanoNutricional[]) || []).map((p) => p.formulacao_id))
+        const { data: formHist } = await supabase
+          .from('formulacoes')
+          .select('id, nome')
+          .in('id', Array.from(formIdSet))
+
+        const formNomeMap: Record<string, string> = {}
+        ;(formHist || []).forEach((f: any) => { formNomeMap[f.id] = f.nome })
+
+        const historico: HistoricoPlano[] = ((planosData as PlanoNutricional[]) || [])
+          .filter((p) => p.data_fim)
+          .map((p) => {
+            const snaps = snapByPlano[p.id]
+            const ganhoMedio = snaps && snaps.ganhos.length > 0
+              ? snaps.ganhos.reduce((a, b) => a + b, 0) / snaps.ganhos.length
+              : null
+            const gmdMedio = snaps && snaps.gmds.length > 0
+              ? snaps.gmds.reduce((a, b) => a + b, 0) / snaps.gmds.length
+              : null
+            const duracao = p.data_inicio && p.data_fim
+              ? Math.max(Math.ceil((new Date(p.data_fim + 'T00:00:00').getTime() - new Date(p.data_inicio + 'T00:00:00').getTime()) / (1000 * 60 * 60 * 24)), 0)
+              : 0
+            return {
+              id: p.id,
+              nome: p.nome,
+              formulacao_nome: formNomeMap[p.formulacao_id] || null,
+              data_inicio: p.data_inicio,
+              data_fim: p.data_fim,
+              duracao_dias: duracao,
+              ganho_medio_kg: ganhoMedio,
+              gmd_realizado_medio: gmdMedio,
+              motivo_migracao: snaps?.motivo || null,
+            }
+          })
+          .sort((a, b) => (b.data_fim || '').localeCompare(a.data_fim || ''))
+
+        setHistoricoPlanos(historico)
+      } else {
+        setHistoricoPlanos([])
       }
     } catch (error) {
       console.error('Erro ao carregar dados do lote:', error)
@@ -716,6 +792,60 @@ export function PlanoNutricionalLoteModal({
                     {!planoVigente && <Button size="sm" variant="secondary" onClick={() => handleIniciarPlano(p)}>Reativar</Button>}
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* Histórico de planos (vigentes e encerrados) */}
+            {historicoPlanos.length > 0 && (
+              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setShowHistorico(!showHistorico)}
+                  className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors"
+                >
+                  <span className="text-sm font-medium text-gray-700">
+                    Histórico de Planos ({historicoPlanos.length})
+                  </span>
+                  <span className="text-xs text-gray-500">{showHistorico ? '▲ Recolher' : '▼ Expandir'}</span>
+                </button>
+                {showHistorico && (
+                  <div className="divide-y divide-gray-100">
+                    {historicoPlanos.map((hp) => (
+                      <div key={hp.id} className="px-3 py-2.5 bg-white">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm font-semibold text-gray-800 truncate">{hp.nome}</p>
+                          <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full flex-shrink-0">
+                            {hp.duracao_dias} dias
+                          </span>
+                        </div>
+                        <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-gray-500">
+                          <span>
+                            Formulação: <span className="font-medium text-gray-700">{hp.formulacao_nome || '—'}</span>
+                          </span>
+                          {hp.data_inicio && hp.data_fim && (
+                            <span>
+                              {new Date(hp.data_inicio + 'T00:00:00').toLocaleDateString('pt-BR')}
+                              {' → '}
+                              {new Date(hp.data_fim + 'T00:00:00').toLocaleDateString('pt-BR')}
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs">
+                          {hp.ganho_medio_kg != null && (
+                            <span className="text-green-700">
+                              Ganho: <span className="font-semibold">{hp.ganho_medio_kg.toFixed(2).replace('.', ',')} kg/cab</span>
+                            </span>
+                          )}
+                          {hp.gmd_realizado_medio != null && hp.gmd_realizado_medio > 0 && (
+                            <span className="text-blue-700">
+                              GMD realizado: <span className="font-semibold">{hp.gmd_realizado_medio.toFixed(3).replace('.', ',')} kg/dia</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 

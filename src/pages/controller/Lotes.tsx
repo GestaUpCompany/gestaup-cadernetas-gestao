@@ -847,6 +847,14 @@ export function Lotes() {
     setLotes(lotesComCategorias as Lote[])
     setLoading(false)
 
+    // Atualizar editingLote se ele estiver aberto, para refletir mudanças externas (ex: migração de plano)
+    if (editingLote) {
+      const loteAtualizado = lotesComCategorias.find((l: any) => l.id === editingLote.id)
+      if (loteAtualizado) {
+        setEditingLote(loteAtualizado as Lote)
+      }
+    }
+
     // Carregar solicitações de Novo Lote pendentes
     try {
       const { data: solicitacoesData, error: solicitacoesError } = await supabase
@@ -883,6 +891,37 @@ export function Lotes() {
         ocupacaoMap[item.lote_id].modulo = item
       })
       setOcupacaoPorLote(ocupacaoMap)
+    }
+  }
+
+  const atualizarFormulacaoVigenteNoForm = async (loteId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('planos_nutricionais')
+        .select('formulacao_id')
+        .eq('lote_id', loteId)
+        .eq('ativo', true)
+        .is('data_fim', null)
+        .order('data_inicio', { ascending: false, nullsFirst: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (error) {
+        console.error('Erro ao buscar plano vigente:', error)
+        return
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        formulacao_lote_id: data?.formulacao_id || '',
+      }))
+
+      // Atualizar também editingLote para manter consistência
+      if (editingLote) {
+        setEditingLote({ ...editingLote, formulacao_id: data?.formulacao_id || null } as any)
+      }
+    } catch (err) {
+      console.error('Erro ao atualizar formulação vigente:', err)
     }
   }
 
@@ -3550,7 +3589,7 @@ export function Lotes() {
             setIsPlanoLoteModalOpen(false)
             loadLotes()
             if (editingLote) {
-              handleEdit(editingLote)
+              atualizarFormulacaoVigenteNoForm(editingLote.id)
             }
           }}
           loteId={editingLote.id}
@@ -3561,7 +3600,7 @@ export function Lotes() {
           onPlanChanged={async () => {
             await loadLotes()
             if (editingLote) {
-              await handleEdit(editingLote)
+              await atualizarFormulacaoVigenteNoForm(editingLote.id)
             }
           }}
         />
