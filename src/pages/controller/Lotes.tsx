@@ -65,6 +65,7 @@ interface LoteCategoria {
   planos_rascunho?: PlanoRascunho[]
   data_ajuste_peso?: string | null
   planos_cadastrados?: { id: string; nome: string; ativo: boolean; ordem: number; data_inicio: string | null; data_fim: string | null; peso_inicio_kg_cab: number | null }[]
+  ultima_entrada?: { data: string; numero_cabecas: number; peso_vivo_atual_kg: number; responsavel: string | null }[]
 }
 
 interface Lote {
@@ -1441,22 +1442,33 @@ export function Lotes() {
     ])
 
     // Normalizar registros_movimentacao para o formato da timeline
-    const movPwaById = (movPwaByIdData.data || []).map((r: any) => ({
-      ...r,
-      type: 'movimentacao',
-      data_movimentacao: r.data,
-      tipo_movimentacao: r.lote_origem_id === lote.id ? 'saida' : 'entrada',
-      quantidade: r.numero_cabecas,
-      peso_kg: r.peso_vivo_atual_kg,
-      observacoes: [
-        r.motivo_movimentacao ? `Motivo: ${r.motivo_movimentacao}` : null,
-        r.subtipo ? `Subtipo: ${r.subtipo}` : null,
-        r.lote_origem_id === lote.id && r.destino ? `Destino: ${r.destino}` : null,
-        r.lote_destino_id === lote.id && r.lote_origem ? `Origem: ${r.lote_origem}` : null,
-        r.responsavel ? `Resp: ${r.responsavel}` : null,
-        r.causa_observacao ? r.causa_observacao : null,
-      ].filter(Boolean).join(' • '),
-    }))
+    const movPwaById = (movPwaByIdData.data || []).map((r: any) => {
+      // Para Entrada, o lote_origem_id é o lote que recebe (destino), então é sempre 'entrada'
+      // Para outros motivos, lote_origem_id === lote.id significa que o lote é a origem (saída)
+      const isEntrada = r.motivo_movimentacao === 'Entrada'
+      const tipo_movimentacao = isEntrada
+        ? 'entrada'
+        : r.lote_origem_id === lote.id ? 'saida' : 'entrada'
+      return {
+        ...r,
+        type: 'movimentacao',
+        data_movimentacao: r.data,
+        tipo_movimentacao,
+        quantidade: r.numero_cabecas,
+        peso_kg: r.peso_vivo_atual_kg,
+        observacoes: [
+          r.subtipo ? `Subtipo: ${r.subtipo}` : null,
+          isEntrada
+            ? (r.raca || null)
+            : (r.lote_origem_id === lote.id && r.destino ? `Destino: ${r.destino}` : null),
+          !isEntrada && r.lote_destino_id === lote.id && r.lote_origem ? `Origem: ${r.lote_origem}` : null,
+          isEntrada && r.sexo ? r.sexo : null,
+          isEntrada && r.idade ? `${r.idade} meses` : null,
+          r.responsavel ? `Resp: ${r.responsavel}` : null,
+          r.causa_observacao ? r.causa_observacao : null,
+        ].filter(Boolean).join(' • '),
+      }
+    })
 
     // Fallback por nome: apenas registros que ainda não foram capturados por ID
     const idsJaCapturados = new Set(movPwaById.map((r: any) => r.id))
@@ -1496,10 +1508,33 @@ export function Lotes() {
       planosPorCategoria[p.lote_categoria_id].push({ id: p.id, nome: p.nome, ativo: p.ativo, ordem: p.ordem, data_inicio: p.data_inicio, data_fim: p.data_fim, peso_inicio_kg_cab: p.peso_inicio_kg_cab })
     })
 
+    // Buscar a última Entrada por categoria para anotação de proveniência do peso
+    const { data: ultimasEntradasData } = await supabase
+      .from('registros_movimentacao')
+      .select('categoria, data, numero_cabecas, peso_vivo_atual_kg, responsavel')
+      .eq('fazenda_id', fazendaId)
+      .eq('motivo_movimentacao', 'Entrada')
+      .eq('lote_origem_id', lote.id)
+      .is('deleted_at', null)
+      .order('data', { ascending: false })
+
+    const ultimaEntradaPorCategoria: Record<string, { data: string; numero_cabecas: number; peso_vivo_atual_kg: number; responsavel: string | null }[]> = {}
+    ;(ultimasEntradasData || []).forEach((r: any) => {
+      const key = (r.categoria || '').toLowerCase()
+      if (!ultimaEntradaPorCategoria[key]) ultimaEntradaPorCategoria[key] = []
+      ultimaEntradaPorCategoria[key].push({
+        data: r.data,
+        numero_cabecas: r.numero_cabecas,
+        peso_vivo_atual_kg: r.peso_vivo_atual_kg,
+        responsavel: r.responsavel,
+      })
+    })
+
     // Update categorias to include new fields if not present
     const categoriasWithMeta = updatedCategorias.map((cat: any) => ({
       ...cat,
       data_ajuste_peso: cat.data_ajuste_peso ?? undefined,
+      ultima_entrada: ultimaEntradaPorCategoria[cat.categoria.toLowerCase()] || [],
       planos_cadastrados: planosPorCategoria[cat.id] || [],
       consumo_meta_porcentagem_pesovivo: cat.consumo_meta_porcentagem_pesovivo ?? undefined,
       rc_final: cat.rc_final ?? undefined,
@@ -2704,6 +2739,44 @@ export function Lotes() {
                             </div>
                           </div>
                         </div>
+
+                        {/* Proveniência do peso */}
+                        {(() => {
+                          const entradas = cat.ultima_entrada || []
+                          const gmdNum = cat.gmd ? Number(String(cat.gmd).replace(',', '.')) : null
+                          const dataAjuste = cat.data_ajuste_peso
+                          const temPlanoAtivo = cat.planos_cadastrados?.some((p: any) => p.ativo) || !!cat.formulacao_id
+                          if (entradas.length === 0 && (!gmdNum || !dataAjuste || !temPlanoAtivo)) return null
+                          const diasGmd = dataAjuste
+                            ? Math.max(0, Math.floor((Date.now() - new Date(dataAjuste).getTime()) / 86400000))
+                            : 0
+                          const gmdAcumulado = gmdNum ? (gmdNum * diasGmd).toFixed(1) : null
+                          return (
+                            <div className="mb-4 rounded-lg bg-gray-50 border border-gray-200 px-3 py-2">
+                              <div className="flex flex-col gap-0.5 text-xs text-gray-500">
+                                {entradas.map((entr, idx) => (
+                                  <div key={idx}>
+                                    <span className="font-semibold text-gray-600">Entrada</span>
+                                    {' em '}
+                                    {new Date(entr.data).toLocaleDateString('pt-BR')}
+                                    {': +'}
+                                    {entr.numero_cabecas}
+                                    {' cab a '}
+                                    {Number(entr.peso_vivo_atual_kg).toFixed(0)}
+                                    {' kg'}
+                                  </div>
+                                ))}
+                                {gmdNum && dataAjuste && temPlanoAtivo && (
+                                  <div>
+                                    <span className="font-semibold text-gray-600">GMD</span>
+                                    {` ${gmdNum} kg/dia`}
+                                    {diasGmd > 0 ? ` x ${diasGmd} dias = +${gmdAcumulado} kg` : ' (hoje)'}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )
+                        })()}
 
                         {/* Meta */}
                         <div className="mb-4">

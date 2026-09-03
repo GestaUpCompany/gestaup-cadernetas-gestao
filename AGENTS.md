@@ -463,3 +463,26 @@ NÃO usar `apply_migration` do MCP para migrations estruturais. O MCP aplica o S
 Migrations pontuais (dados operacionais: resets, backfills, deletes por fazenda) continuam sendo aplicadas via MCP sem arquivo local, conforme regra existente.
 
 Disparador: antes de criar ou aplicar qualquer migration estrutural, ler esta seção.
+
+### Proveniência do peso: camadas implementadas e pendentes — adicionado em 2026-09-04
+
+Contexto: o peso vivo atual de uma categoria pode mudar por dois motivos distintos: (1) Entrada de animais (reponderação) ou (2) evolução diária pelo GMD do plano nutricional. Sem anotação, o usuário vê o número mas não sabe por que mudou.
+
+**Camada 1 (implementada em 2026-09-04):** anotação textual abaixo do peso vivo atual no card da categoria, em `Lotes.tsx`. Mostra duas linhas:
+- Entrada em DD/MM/AAAA: +N cab a X kg (última Entrada da categoria, buscada em `registros_movimentacao` filtrando `motivo_movimentacao='Entrada'` e `lote_origem_id=lote.id`, ordenado por `data DESC`).
+- GMD X kg/dia x N dias = +Y kg (quando há plano ativo e `data_ajuste_peso` preenchido; `N = floor((hoje - data_ajuste_peso) / 86400000)`).
+
+Bug de dados corrigido junto com a camada 1 (migration `20260904120000_entrada_reset_data_ajuste_peso.sql`): a trigger `update_quant_atual_movimentacao` não resetava `data_ajuste_peso` nem `data_pesagem` na Entrada. O cron diário somava GMD sobre o peso já reponderado, superestimando o peso vivo. Agora ambos os campos são setados para a data da entrada em categoria nova e existente.
+
+**Camada 2 (débito técnico, não implementada):** mini-gráfico de evolução do peso dentro do card da categoria, usando `recharts` (já instalado). Duas linhas sobrepostas:
+- Linha azul tracejada (projeção do plano): reta `peso_inicio + gmd * dias` desde `data_inicio` do plano até hoje, representando o peso esperado sem Entradas.
+- Linha verde (peso real): pontos reconstruídos a partir de `peso_entrada_kg_cab` + `data_pesagem`, evoluindo pela GMD entre Entradas, com salto vertical em cada Entrada (reponderação visível). Ponto final: `(hoje, peso_vivo_atual_kg_cab)`.
+- Pontos laranja anotados: cada Entrada marcada com `ReferenceDot` e tooltip mostrando data, cabeças e peso informado.
+
+Dados necessários: todas as Entradas históricas da categoria (não só a última), já disponíveis via query em `registros_movimentacao`. Sem nova migration.
+
+Limitação honesta: a curva real entre Entradas é aproximação linear pela GMD. Se o GMD mudou no meio (novo plano nutricional), a curva terá quinas não capturadas. Capturar isso com precisão exige logar snapshots diários de peso, que é a Camada 3 (também não implementada, fora do escopo atual).
+
+Esforço estimado: ~60 linhas (1 query adicional no carregamento do lote + 1 função utilitária que monta os pontos + 1 componente recharts inline no card).
+
+Disparador: quando mencionar "camada 2 do peso", "mini-gráfico de peso", "gráfico de evolução do peso no card", "proveniência visual do peso", ou retomar a implementação visual da evolução de peso, ler esta seção.
