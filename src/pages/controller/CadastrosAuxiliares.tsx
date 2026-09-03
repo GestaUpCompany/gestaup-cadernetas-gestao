@@ -12,6 +12,8 @@ import * as XLSX from 'xlsx'
 interface TabConfig {
   key: string
   label: string
+  singular?: string
+  gender?: 'm' | 'f'
   table: string
   fields: { name: string; label: string; required?: boolean; placeholder?: string; options?: { label: string; value: string }[]; showIf?: (formData: Record<string, string>) => boolean }[]
   searchPlaceholder: string
@@ -45,6 +47,8 @@ const tabs: TabConfig[] = [
   {
     key: 'racas',
     label: 'Raças',
+    singular: 'Raça',
+    gender: 'f',
     table: 'racas',
     fields: [{ name: 'nome', label: 'Nome', required: true, placeholder: 'Nome da raça' }],
     searchPlaceholder: 'Buscar raça...',
@@ -54,6 +58,7 @@ const tabs: TabConfig[] = [
   {
     key: 'locais',
     label: 'Locais',
+    singular: 'Local',
     table: 'locais',
     fields: [{ name: 'nome', label: 'Nome', required: true, placeholder: 'Nome do local' }],
     searchPlaceholder: 'Buscar local...',
@@ -63,6 +68,8 @@ const tabs: TabConfig[] = [
   {
     key: 'causas-morte',
     label: 'Causas de Morte',
+    singular: 'Causa de Morte',
+    gender: 'f',
     table: 'causas_morte',
     fields: [
       { name: 'nome', label: 'Nome', required: true, placeholder: 'Nome da causa de morte' },
@@ -75,6 +82,7 @@ const tabs: TabConfig[] = [
   {
     key: 'implementos',
     label: 'Implementos',
+    singular: 'Implemento',
     table: 'implementos',
     fields: [{ name: 'nome', label: 'Nome', required: true, placeholder: 'Nome do implemento' }],
     searchPlaceholder: 'Buscar implemento...',
@@ -82,8 +90,23 @@ const tabs: TabConfig[] = [
     icon: iconMaquina,
   },
   {
+    key: 'vagoes',
+    label: 'Vagões',
+    singular: 'Vagão',
+    table: 'vagoes',
+    fields: [
+      { name: 'marca', label: 'Marca', required: true, placeholder: 'Ex: IRL, Reboval, Star' },
+      { name: 'modelo', label: 'Modelo', required: true, placeholder: 'Ex: 14000, RDS 9000' },
+      { name: 'capacidade_kg', label: 'Capacidade (kg)', placeholder: 'Ex: 14000' },
+    ],
+    searchPlaceholder: 'Buscar vagão...',
+    category: 'Máquinas & Equipamentos',
+    icon: iconMaquina,
+  },
+  {
     key: 'tratamentos',
     label: 'Tratamentos de Maternidade',
+    singular: 'Tratamento de Maternidade',
     table: 'tratamentos',
     fields: [{ name: 'nome', label: 'Nome', required: true, placeholder: 'Nome do tratamento' }],
     searchPlaceholder: 'Buscar tratamento...',
@@ -93,6 +116,7 @@ const tabs: TabConfig[] = [
   {
     key: 'itens-almoxarifado',
     label: 'Itens do Almoxarifado',
+    singular: 'Item do Almoxarifado',
     table: 'itens_almoxarifado',
     fields: [
       { name: 'nome', label: 'Nome', required: true, placeholder: 'Nome do item' },
@@ -125,6 +149,7 @@ const tabs: TabConfig[] = [
   {
     key: 'itens-supermercado',
     label: 'Itens de Supermercado',
+    singular: 'Item de Supermercado',
     table: 'itens_supermercado',
     fields: [
       { name: 'nome', label: 'Nome', required: true, placeholder: 'Nome do item' },
@@ -137,6 +162,7 @@ const tabs: TabConfig[] = [
   {
     key: 'pluviometros',
     label: 'Pluviômetros',
+    singular: 'Pluviômetro',
     table: 'pluviometros',
     fields: [
       { name: 'nome', label: 'Nome', required: true, placeholder: 'Nome do pluviômetro' },
@@ -149,6 +175,8 @@ const tabs: TabConfig[] = [
   {
     key: 'maquinas-veiculos',
     label: 'Máquinas e Veículos',
+    singular: 'Máquina/Veículo',
+    gender: 'f',
     table: 'maquinas_veiculos',
     fields: [
       { name: 'marca', label: 'Marca', required: true, placeholder: 'Ex: John Deere, Massey Ferguson' },
@@ -191,6 +219,7 @@ const tabs: TabConfig[] = [
   {
     key: 'funcionarios',
     label: 'Funcionários',
+    singular: 'Funcionário',
     table: 'funcionarios',
     fields: [
       { name: 'nome', label: 'Nome', required: true, placeholder: 'Nome do funcionário' },
@@ -205,6 +234,7 @@ const tabs: TabConfig[] = [
   {
     key: 'medicamentos',
     label: 'Medicamentos',
+    singular: 'Medicamento',
     table: 'medicamentos',
     fields: [
       { name: 'nome_comercial', label: 'Nome Comercial', required: true, placeholder: 'Nome do medicamento' },
@@ -235,6 +265,7 @@ const tabs: TabConfig[] = [
   {
     key: 'bebedouros',
     label: 'Bebedouros',
+    singular: 'Bebedouro',
     table: 'bebedouros',
     fields: [
       { name: 'nome', label: 'Nome', required: true, placeholder: 'Nome do bebedouro' },
@@ -293,6 +324,23 @@ const defaultTabState: TabState = {
   submitting: false,
 }
 
+// Formata inteiro com separadores de milhar (ponto)
+function formatIntWithThousands(value: string | number | null | undefined): string {
+  const digits = String(value || '').replace(/\D/g, '')
+  if (!digits) return ''
+  return parseInt(digits, 10).toLocaleString('pt-BR')
+}
+
+// Extrai apenas os dígitos de um valor formatado
+function parseFormattedInt(value: string): string {
+  return value.replace(/\D/g, '')
+}
+
+// Retorna o artigo indefinido conforme o gênero
+function novoArtigo(tab: TabConfig): string {
+  return tab.gender === 'f' ? 'Nova' : 'Novo'
+}
+
 export function CadastrosAuxiliares() {
   const { user } = useAuth()
   const [activeTab, setActiveTab] = useState(tabs[0].key)
@@ -325,7 +373,7 @@ export function CadastrosAuxiliares() {
   const ITENS_POR_PAGINA = 12
 
   const currentTab = tabs.find((t) => t.key === activeTab)!
-  const state = tabStates[activeTab]
+  const state = tabStates[activeTab] || { ...defaultTabState }
 
   // Setores ordenados: primeiro os que têm funcionários, depois os vazios
   const setoresOrdenados = useMemo(() => {
@@ -619,8 +667,21 @@ export function CadastrosAuxiliares() {
       data[f.name] = value || null
     })
 
+    // Converter capacidade_kg de formatado para número puro
+    if (activeTab === 'vagoes' && data.capacidade_kg) {
+      const digits = parseFormattedInt(data.capacidade_kg)
+      data.capacidade_kg = digits ? parseInt(digits, 10) : null
+    }
+
     // Auto-populate nome for maquinas-veiculos from marca + modelo
     if (activeTab === 'maquinas-veiculos' && !data.nome) {
+      const marca = state.formData.marca || ''
+      const modelo = state.formData.modelo || ''
+      data.nome = `${marca} ${modelo}`.trim() || null
+    }
+
+    // Auto-populate nome for vagoes from marca + modelo
+    if (activeTab === 'vagoes' && !data.nome) {
       const marca = state.formData.marca || ''
       const modelo = state.formData.modelo || ''
       data.nome = `${marca} ${modelo}`.trim() || null
@@ -716,6 +777,11 @@ export function CadastrosAuxiliares() {
       formData[f.name] = item[f.name] || ''
     })
 
+    // Formatar capacidade_kg com separadores de milhar ao editar
+    if (activeTab === 'vagoes' && formData.capacidade_kg) {
+      formData.capacidade_kg = formatIntWithThousands(formData.capacidade_kg)
+    }
+
     if (activeTab === 'funcionarios') {
       setFuncionarioRbac({
         acessa_app: !!item.acessa_app,
@@ -762,13 +828,26 @@ export function CadastrosAuxiliares() {
     if (!itemToDelete) return
 
     const tab = tabs.find((t) => t.key === itemToDelete.tab)!
-    const { error } = await supabase
-      .from(tab.table)
-      .update({ ativo: false, deleted_at: new Date().toISOString() })
-      .eq('id', itemToDelete.id)
+
+    let error
+    if (itemToDelete.tab === 'vagoes') {
+      // Vagões: exclusão definitiva (hard delete)
+      const { error: deleteError } = await supabase
+        .from(tab.table)
+        .delete()
+        .eq('id', itemToDelete.id)
+      error = deleteError
+    } else {
+      // Demais cadastros: soft delete (inativar)
+      const { error: updateError } = await supabase
+        .from(tab.table)
+        .update({ ativo: false, deleted_at: new Date().toISOString() })
+        .eq('id', itemToDelete.id)
+      error = updateError
+    }
 
     if (error) {
-      console.error(`Erro ao inativar ${tab.label}:`, error)
+      console.error(`Erro ao excluir ${tab.label}:`, error)
     } else {
       loadItems(itemToDelete.tab)
     }
@@ -1202,7 +1281,7 @@ export function CadastrosAuxiliares() {
               </>
             )}
             <Button onClick={() => setShowForm(true)} className="h-10 min-h-[44px] flex-1 sm:flex-none">
-              Novo {currentTab.label}
+              {novoArtigo(currentTab)} {currentTab.singular || currentTab.label}
             </Button>
           </div>
         </div>
@@ -1398,7 +1477,7 @@ export function CadastrosAuxiliares() {
         {state.showForm && activeTab !== 'setores' && (
           <Card className="bg-white p-4 sm:p-6 border-0 shadow-sm">
             <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-4">
-              {state.editingItem ? `Editar ${currentTab.label}` : `Novo ${currentTab.label}`}
+              {state.editingItem ? `Editar ${currentTab.singular || currentTab.label}` : `${novoArtigo(currentTab)} ${currentTab.singular || currentTab.label}`}
             </h3>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
@@ -1430,6 +1509,20 @@ export function CadastrosAuxiliares() {
                           <option key={opt.value} value={opt.value}>{opt.label}</option>
                         ))}
                       </select>
+                    ) : field.name === 'capacidade_kg' ? (
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        value={state.formData[field.name] || ''}
+                        onChange={(e) => {
+                          const digits = e.target.value.replace(/\D/g, '')
+                          setFormField(field.name, digits ? formatIntWithThousands(digits) : '')
+                        }}
+                        required={field.required}
+                        placeholder={field.placeholder}
+                        autoComplete="off"
+                        className="border-gray-200 focus:border-accent min-h-[44px]"
+                      />
                     ) : (
                       <Input
                         type="text"
@@ -1566,9 +1659,9 @@ export function CadastrosAuxiliares() {
           </div>
         ) : activeTab !== 'equipes' && activeTab !== 'setores' && !state.showForm && filteredItems.length === 0 ? (
           <Card className="bg-white p-8 sm:p-12 border-0 shadow-sm text-center">
-            <p className="text-gray-600 mb-4 text-sm sm:text-base">Nenhum {currentTab.label.toLowerCase()} cadastrado</p>
+            <p className="text-gray-600 mb-4 text-sm sm:text-base">{currentTab.gender === 'f' ? 'Nenhuma' : 'Nenhum'} {(currentTab.singular || currentTab.label).toLowerCase()} cadastrado</p>
             <Button onClick={() => setShowForm(true)} className="w-full sm:w-auto">
-              Criar Primeiro {currentTab.label}
+              Criar Primeir{currentTab.gender === 'f' ? 'a' : 'o'} {currentTab.singular || currentTab.label}
             </Button>
           </Card>
         ) : activeTab !== 'equipes' && activeTab !== 'setores' && !state.showForm ? (          <>
@@ -1585,7 +1678,9 @@ export function CadastrosAuxiliares() {
                         <span key={f.name}>
                           {f.label}: {f.name === 'setor_id'
                             ? setores.find(s => s.id === item[f.name])?.nome || item[f.name]
-                            : item[f.name]
+                            : f.name === 'capacidade_kg'
+                              ? formatIntWithThousands(String(item[f.name]))
+                              : item[f.name]
                           }
                         </span>
                       ))}
@@ -1631,17 +1726,19 @@ export function CadastrosAuxiliares() {
                   >
                     Editar
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="flex-1 min-w-[70px] text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 text-red-600 hover:text-red-700"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleToggleActive(item)
-                    }}
-                  >
-                    {isItemActive(item, currentTab) ? 'Desativar' : 'Ativar'}
-                  </Button>
+                  {activeTab !== 'vagoes' && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="flex-1 min-w-[70px] text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 text-red-600 hover:text-red-700"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleToggleActive(item)
+                      }}
+                    >
+                      {isItemActive(item, currentTab) ? 'Desativar' : 'Ativar'}
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     variant="secondary"
@@ -1687,9 +1784,11 @@ export function CadastrosAuxiliares() {
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handleDeleteConfirm}
-        title="Inativar Registro"
-        message="O registro será inativado e não aparecerá mais em novos lançamentos. O histórico é preservado."
-        confirmText="Inativar"
+        title={activeTab === 'vagoes' ? 'Excluir Registro' : 'Inativar Registro'}
+        message={activeTab === 'vagoes'
+          ? 'O registro será excluído permanentemente. Esta ação não pode ser desfeita.'
+          : 'O registro será inativado e não aparecerá mais em novos lançamentos. O histórico é preservado.'}
+        confirmText={activeTab === 'vagoes' ? 'Excluir' : 'Inativar'}
         cancelText="Cancelar"
         variant="danger"
       />
