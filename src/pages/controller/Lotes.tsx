@@ -1855,10 +1855,20 @@ export function Lotes() {
     { source: 'peso_meta_kg', header: 'Peso meta (kg)', format: 'number' },
   ]
 
+  const matchesSearch = (lote: Lote) => {
+    const term = searchTerm.toLowerCase().trim()
+    if (!term) return true
+    return (
+      lote.nome.toLowerCase().includes(term) ||
+      (lote.pasto_nome?.toLowerCase().includes(term) ?? false) ||
+      (lote.curral_nome?.toLowerCase().includes(term) ?? false)
+    )
+  }
+
   const handleExportAllLotes = async () => {
     const lotesVisiveis = lotes.filter((lote) =>
       (showInactive || lote.ativo) &&
-      lote.nome.toLowerCase().includes(searchTerm.toLowerCase())
+      matchesSearch(lote)
     )
     if (lotesVisiveis.length === 0) return
 
@@ -2036,7 +2046,7 @@ export function Lotes() {
           <div className="flex gap-2 items-start">
             <Input
               type="text"
-              placeholder="Buscar lote..."
+              placeholder="Buscar por lote, pasto ou curral..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="flex-1 min-w-0 border-gray-200 focus:border-accent h-10"
@@ -3449,19 +3459,19 @@ export function Lotes() {
             onClick={() => setFiltroLocal('todos')}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${filtroLocal === 'todos' ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
           >
-            Todos <span className="opacity-60 ml-1">{lotes.filter(l => (showInactive || l.ativo) && l.nome.toLowerCase().includes(searchTerm.toLowerCase())).length}</span>
+            Todos <span className="opacity-60 ml-1">{lotes.filter(l => (showInactive || l.ativo) && matchesSearch(l)).length}</span>
           </button>
           <button
             onClick={() => setFiltroLocal('pasto')}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${filtroLocal === 'pasto' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
           >
-            Pasto <span className="opacity-60 ml-1">{lotes.filter(l => (showInactive || l.ativo) && l.nome.toLowerCase().includes(searchTerm.toLowerCase()) && l.sistema_producao !== 'Confinamento').length}</span>
+            Pasto <span className="opacity-60 ml-1">{lotes.filter(l => (showInactive || l.ativo) && matchesSearch(l) && l.sistema_producao !== 'Confinamento').length}</span>
           </button>
           <button
             onClick={() => setFiltroLocal('confinamento')}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${filtroLocal === 'confinamento' ? 'bg-amber-700 text-white border-amber-700' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
           >
-            Confinamento <span className="opacity-60 ml-1">{lotes.filter(l => (showInactive || l.ativo) && l.nome.toLowerCase().includes(searchTerm.toLowerCase()) && l.sistema_producao === 'Confinamento').length}</span>
+            Confinamento <span className="opacity-60 ml-1">{lotes.filter(l => (showInactive || l.ativo) && matchesSearch(l) && l.sistema_producao === 'Confinamento').length}</span>
           </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
@@ -3469,7 +3479,7 @@ export function Lotes() {
           const lotesFiltrados = lotes
             .filter((lote) =>
               (showInactive || lote.ativo) &&
-              lote.nome.toLowerCase().includes(searchTerm.toLowerCase())
+              matchesSearch(lote)
             )
             .filter((lote) =>
               filtroLocal === 'todos' ? true :
