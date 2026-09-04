@@ -2043,13 +2043,13 @@ export function Lotes() {
       {!showForm && (
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <h2 className="text-2xl font-bold text-gray-800">Lotes</h2>
-          <div className="flex gap-2 items-start">
+          <div className="flex gap-2 items-start w-full md:w-auto">
             <Input
               type="text"
               placeholder="Buscar por lote, pasto ou curral..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1 min-w-0 border-gray-200 focus:border-accent h-10"
+              className="flex-1 min-w-[300px] border-gray-200 focus:border-accent h-10"
             />
             <Button onClick={() => {
               setShowForm(true)
