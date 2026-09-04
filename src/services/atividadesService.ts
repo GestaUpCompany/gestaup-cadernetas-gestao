@@ -33,6 +33,8 @@ export interface AtividadeFuncionario {
   inicio_at: string | null
   fim_at: string | null
   detalhamento: string | null
+  justificativa: string | null
+  justificada_at: string | null
   tempo_gasto_segundos: number | null
   foto_url: string | null
   latitude: number | null

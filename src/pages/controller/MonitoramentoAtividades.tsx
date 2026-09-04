@@ -138,6 +138,7 @@ export function MonitoramentoAtividades() {
   const [imprevistosRecentes, setImprevistosRecentes] = useState<AtividadeImprevisto[]>([])
   const [sessoesDetalhe, setSessoesDetalhe] = useState<AtividadeSessao[]>([])
   const [imprevistosDetalhe, setImprevistosDetalhe] = useState<AtividadeImprevisto[]>([])
+  const [reabrindoId, setReabrindoId] = useState<string | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
   const atividadeParam = searchParams.get('atividade')
 
@@ -196,6 +197,27 @@ export function MonitoramentoAtividades() {
     if (!fazendaId) return
     const data = await getFuncionariosComSetor(fazendaId)
     setFuncionarios(data.filter((f) => f.ativo))
+  }
+
+  const handleReabrirAtividade = async (afId: string) => {
+    setReabrindoId(afId)
+    try {
+      const { error } = await supabase
+        .from('atividade_funcionarios')
+        .update({
+          status_individual: 'pendente',
+          justificativa: null,
+          justificada_at: null,
+        })
+        .eq('id', afId)
+      if (error) throw error
+      await loadAtividades(true)
+    } catch (err) {
+      console.error('[MonitoramentoAtividades] Erro ao reabrir atividade:', err)
+      alert('Erro ao reabrir atividade. Tente novamente.')
+    } finally {
+      setReabrindoId(null)
+    }
   }
 
   const loadAtividades = async (isRealtime = false) => {
@@ -563,12 +585,14 @@ export function MonitoramentoAtividades() {
     pendente: 'bg-gray-100 text-gray-600',
     em_andamento: 'bg-blue-100 text-blue-700',
     concluida: 'bg-green-100 text-green-700',
+    justificada: 'bg-orange-100 text-orange-700',
   }
 
   const STATUS_BADGE_LABELS: Record<string, string> = {
     pendente: 'Pendente',
     em_andamento: 'Em Andamento',
     concluida: 'Concluída',
+    justificada: 'Justificada',
   }
 
   // === KPIs ===
@@ -1105,6 +1129,26 @@ export function MonitoramentoAtividades() {
                         {af.detalhamento && (
                           <div className="mt-1 ml-9 text-xs text-gray-600 italic bg-gray-50 rounded px-2 py-1">
                             "{af.detalhamento}"
+                          </div>
+                        )}
+                        {af.justificativa && (
+                          <div className="mt-1 ml-9 text-xs text-orange-700 bg-orange-50 rounded px-2 py-1">
+                            <span className="font-semibold">Justificativa: </span>
+                            {af.justificativa}
+                            {af.justificada_at && (
+                              <span className="text-orange-400 ml-1">({formatarDataHora(af.justificada_at)})</span>
+                            )}
+                          </div>
+                        )}
+                        {af.status_individual === 'justificada' && (
+                          <div className="mt-1 ml-9">
+                            <button
+                              onClick={() => handleReabrirAtividade(af.id)}
+                              disabled={reabrindoId === af.id}
+                              className="text-xs font-medium text-blue-600 hover:text-blue-700 disabled:opacity-50"
+                            >
+                              {reabrindoId === af.id ? 'Reabrindo...' : '↻ Reabrir atividade'}
+                            </button>
                           </div>
                         )}
                         {af.foto_url && (

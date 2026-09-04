@@ -1300,10 +1300,10 @@ export function Atividades() {
                   <p className="text-xs text-gray-500 font-medium mb-2">Responsáveis:</p>
                   <div className="flex flex-wrap gap-2">
                     {atividade.funcionarios.map((af) => {
-                      const icone = af.status_individual === 'concluida' ? '✓' : af.status_individual === 'em_andamento' ? '▶' : '○'
-                      const cor = af.status_individual === 'concluida' ? 'text-green-600' : af.status_individual === 'em_andamento' ? 'text-blue-600' : 'text-gray-400'
+                      const icone = af.status_individual === 'concluida' ? '✓' : af.status_individual === 'em_andamento' ? '▶' : af.status_individual === 'justificada' ? '⚠' : '○'
+                      const cor = af.status_individual === 'concluida' ? 'text-green-600' : af.status_individual === 'em_andamento' ? 'text-blue-600' : af.status_individual === 'justificada' ? 'text-orange-600' : 'text-gray-400'
                       return (
-                        <span key={af.id} className={`inline-flex items-center gap-1 text-xs ${cor}`}>
+                        <span key={af.id} className={`inline-flex items-center gap-1 text-xs ${cor}`} title={af.justificativa || undefined}>
                           <span className="font-medium">{icone}</span>
                           {af.funcionario_nome}
                         </span>
