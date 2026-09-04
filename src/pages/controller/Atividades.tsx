@@ -807,7 +807,9 @@ export function Atividades() {
       data_fim: '',
       prioridade: t.prioridade,
     }))
-    const todas = [...rows, ...novasLinhas]
+    // Sobrescreve linhas em branco existentes com as novas, preservando linhas preenchidas
+    const linhasPreenchidas = rows.filter((r) => r.titulo.trim() || r.funcionario_ids.length > 0)
+    const todas = [...linhasPreenchidas, ...novasLinhas]
     setRows(todas)
     saveDraft(todas)
     setSelectedTemplateIds([])
