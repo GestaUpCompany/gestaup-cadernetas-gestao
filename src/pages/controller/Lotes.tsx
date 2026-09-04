@@ -124,6 +124,7 @@ export function Lotes() {
   const [currais, setCurrais] = useState<{id: string, nome: string, linha_id: string | null}[]>([])
   const [racas, setRacas] = useState<{id: string, nome: string}[]>([])
   const [nutritionalOptions, setNutritionalOptions] = useState<{id: string, name: string, category: string, categoria?: string, consumo_meta?: number, gmd?: number}[]>([])
+  const [formulacaoCategoriasGmd, setFormulacaoCategoriasGmd] = useState<Record<string, Record<string, number>>>({})
   const [movimentacaoData, setMovimentacaoData] = useState<any[]>([])
   const [maternidadeData, setMaternidadeData] = useState<any[]>([])
   const [morteData, setMorteData] = useState<any[]>([])
@@ -291,6 +292,20 @@ export function Lotes() {
             gmd: item.gmd != null ? Number(item.gmd) : undefined,
           }))
         )
+
+        const formIds = formulacoesData.data.map((f: any) => f.id)
+        if (formIds.length > 0) {
+          const { data: fcgData } = await supabase
+            .from('formulacao_categorias_gmd')
+            .select('formulacao_id, categoria, gmd')
+            .in('formulacao_id', formIds)
+          const fcgMap: Record<string, Record<string, number>> = {}
+          ;(fcgData || []).forEach((row: any) => {
+            if (!fcgMap[row.formulacao_id]) fcgMap[row.formulacao_id] = {}
+            fcgMap[row.formulacao_id][row.categoria.toLowerCase().trim()] = Number(row.gmd)
+          })
+          setFormulacaoCategoriasGmd(fcgMap)
+        }
       }
     }
 
@@ -2528,7 +2543,10 @@ export function Lotes() {
                               const hasPlano = !!(cat.formulacao_id || cat.planos_rascunho?.length || cat.planos_cadastrados?.length)
                               const formulacao = cat.formulacao_id ? nutritionalOptions.find(opt => opt.id === cat.formulacao_id) : null
                               const titulo = formulacao?.name || (cat.planos_cadastrados?.find(p => p.ativo)?.nome) || 'Plano Nutricional'
-                              const gmdValor = cat.gmd ? Number(cat.gmd.replace(',', '.')) : (formulacao?.gmd ?? null)
+                              const gmdPorCategoria = cat.formulacao_id && formulacaoCategoriasGmd[cat.formulacao_id]
+                                ? formulacaoCategoriasGmd[cat.formulacao_id][cat.categoria.toLowerCase().trim()]
+                                : undefined
+                              const gmdValor = cat.gmd ? Number(cat.gmd.replace(',', '.')) : (gmdPorCategoria ?? formulacao?.gmd ?? null)
                               const consumoValor = formulacao?.consumo_meta ?? null
                               const planosCount = cat.planos_cadastrados?.filter(p => !p.data_fim).length || cat.planos_rascunho?.length || 0
                               const hasVigente = cat.planos_cadastrados?.some(p => p.ativo) || !!cat.formulacao_id
