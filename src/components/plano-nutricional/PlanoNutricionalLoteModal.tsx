@@ -444,6 +444,34 @@ export function PlanoNutricionalLoteModal({
   }
 
   const handleIniciarPlano = async (plano: PlanoNutricional) => {
+    // Validar que categorias ativas afetadas têm peso vivo atual > 0
+    try {
+      const { data: catsData, error: catsError } = await supabase
+        .from('lote_categorias')
+        .select('id, categoria, peso_vivo_atual_kg_cab')
+        .eq('lote_id', loteId)
+        .eq('ativo', true)
+        .is('data_fim', null)
+
+      if (catsError) throw catsError
+
+      const catsAfetadas = (catsData || []).filter(c => {
+        const cat = c.categoria.toLowerCase()
+        return !cat.includes('bezerro ao p') && !cat.includes('bezerra ao p')
+      })
+
+      const semPeso = catsAfetadas.filter(c => c.peso_vivo_atual_kg_cab == null || c.peso_vivo_atual_kg_cab <= 0)
+
+      if (semPeso.length > 0) {
+        const lista = semPeso.map(c => c.categoria).join(', ')
+        setMessage(`Erro: não é possível iniciar o plano. As seguintes categorias precisam de peso vivo atual preenchido: ${lista}.`)
+        return
+      }
+    } catch (error: any) {
+      setMessage(error.message || 'Erro ao validar categorias antes de iniciar plano')
+      return
+    }
+
     setConfirmModal({
       isOpen: true,
       title: 'Iniciar Plano do Lote',

@@ -941,6 +941,69 @@ export function Lotes() {
     }
   }
 
+  // Re-busca categorias do banco após mudanças de plano nutricional (iniciar retroativo,
+  // encerrar, etc.) e mergeia os campos projetados no formData, preservando edições
+  // manuais do usuário em outros campos. Atualiza também originalPesos para que as
+  // validações de "peso atual alterado" usem o novo baseline.
+  const atualizarCategoriasNoForm = async (loteId: string) => {
+    try {
+      const { data: catsData, error: catsError } = await supabase
+        .from('lote_categorias')
+        .select('*')
+        .eq('lote_id', loteId)
+        .eq('ativo', true)
+        .order('categoria', { ascending: true })
+
+      if (catsError) throw catsError
+
+      // Buscar planos nutricionais das categorias (para atualizar planos_cadastrados)
+      const categoriaIds = (catsData || []).map((c: any) => c.id)
+      const { data: planosData } = await supabase
+        .from('planos_nutricionais')
+        .select('id, lote_categoria_id, nome, ativo, ordem, data_inicio, data_fim, peso_inicio_kg_cab')
+        .in('lote_categoria_id', categoriaIds)
+        .order('ordem', { ascending: true })
+
+      const planosPorCategoria: Record<string, { id: string; nome: string; ativo: boolean; ordem: number; data_inicio: string | null; data_fim: string | null; peso_inicio_kg_cab: number | null }[]> = {}
+      ;(planosData || []).forEach((p: any) => {
+        if (!planosPorCategoria[p.lote_categoria_id]) planosPorCategoria[p.lote_categoria_id] = []
+        planosPorCategoria[p.lote_categoria_id].push({ id: p.id, nome: p.nome, ativo: p.ativo, ordem: p.ordem, data_inicio: p.data_inicio, data_fim: p.data_fim, peso_inicio_kg_cab: p.peso_inicio_kg_cab })
+      })
+
+      // Merge: preservar edições do usuário, atualizar campos que o RPC altera
+      setFormData((prev) => {
+        const updatedCategorias = prev.categorias.map((formCat) => {
+          const dbCat = (catsData || []).find((c: any) =>
+            c.id === formCat.id || c.categoria.toLowerCase() === formCat.categoria.toLowerCase()
+          )
+          if (!dbCat) return formCat
+
+          return {
+            ...formCat,
+            peso_vivo_atual_kg_cab: dbCat.peso_vivo_atual_kg_cab,
+            formulacao_id: dbCat.formulacao_id,
+            estrategia_nutricional: dbCat.estrategia_nutricional,
+            peso_vivo_meta_kg_cab: dbCat.peso_vivo_meta_kg_cab,
+            gmd: dbCat.gmd,
+            consumo_meta_porcentagem_pesovivo: dbCat.consumo_meta_porcentagem_pesovivo,
+            data_ajuste_peso: dbCat.data_ajuste_peso,
+            planos_cadastrados: planosPorCategoria[dbCat.id] || formCat.planos_cadastrados,
+          }
+        })
+        return { ...prev, categorias: updatedCategorias }
+      })
+
+      // Atualizar originalPesos para o novo baseline (peso projetado pelo RPC)
+      const pesosOrig: Record<string, number | undefined> = {}
+      ;(catsData || []).forEach((cat: any) => {
+        pesosOrig[cat.categoria.toLowerCase()] = cat.peso_vivo_atual_kg_cab ?? undefined
+      })
+      setOriginalPesos(pesosOrig)
+    } catch (err) {
+      console.error('Erro ao atualizar categorias no form:', err)
+    }
+  }
+
   const syncIndividuosNutricional = async (loteId: string, categorias: LoteCategoria[]) => {
     if (!loteId || categorias.length === 0) return
 
@@ -3691,6 +3754,7 @@ export function Lotes() {
             loadLotes()
             if (editingLote) {
               atualizarFormulacaoVigenteNoForm(editingLote.id)
+              atualizarCategoriasNoForm(editingLote.id)
             }
           }}
           loteId={editingLote.id}
@@ -3702,6 +3766,7 @@ export function Lotes() {
             await loadLotes()
             if (editingLote) {
               await atualizarFormulacaoVigenteNoForm(editingLote.id)
+              await atualizarCategoriasNoForm(editingLote.id)
             }
           }}
         />
