@@ -22,6 +22,7 @@ import {
   FuncionarioComSetor,
   AtividadeTemplate,
 } from '../../services/atividadesService'
+// TemplateFormRow removido: unificado em FormRow com eh_padrao
 
 const PRIORIDADE_CORES: Record<number, string> = {
   1: 'bg-red-500',
@@ -47,6 +48,20 @@ const LOCAL_TIPO_LABELS: Record<string, string> = {
   curral: 'Curral',
   local: 'Infraestrutura',
   maquina: 'Máquina/Equipamento',
+}
+
+const AVATAR_CORES = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 'bg-pink-500', 'bg-teal-500', 'bg-indigo-500']
+
+function getIniciais(nome: string): string {
+  const partes = nome.trim().split(/\s+/)
+  if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase()
+  return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase()
+}
+
+function getCorAvatar(nome: string): string {
+  let hash = 0
+  for (let i = 0; i < nome.length; i++) hash = nome.charCodeAt(i) + ((hash << 5) - hash)
+  return AVATAR_CORES[Math.abs(hash) % AVATAR_CORES.length]
 }
 
 interface LocalPickerProps {
@@ -133,32 +148,8 @@ interface FormRow {
   data_inicio: string
   data_fim: string
   prioridade: number
-}
-
-interface TemplateFormRow {
-  id: string
-  titulo: string
-  descricao: string
-  local: string
-  local_tipo: string
-  local_id: string
-  setor_id: string
-  funcionario_ids: string[]
-  prioridade: number
-}
-
-function emptyTemplateRow(): TemplateFormRow {
-  return {
-    id: uid(),
-    titulo: '',
-    descricao: '',
-    local: '',
-    local_tipo: 'livre',
-    local_id: '',
-    setor_id: '',
-    funcionario_ids: [],
-    prioridade: 3,
-  }
+  eh_padrao: boolean
+  origem_template_id?: string
 }
 
 // Formulario de edicao (atividade unica, modal vertical)
@@ -194,6 +185,7 @@ function emptyRow(): FormRow {
     data_inicio: '',
     data_fim: '',
     prioridade: 3,
+    eh_padrao: false,
   }
 }
 
@@ -207,40 +199,10 @@ function getHoje(): string {
   return `${ano}-${mes}-${dia}`
 }
 
-function getDataFimSemana(dataInicio: string): string {
-  const d = new Date(dataInicio + 'T00:00:00')
-  d.setDate(d.getDate() + 6)
-  return d.toISOString().split('T')[0]
-}
-
-function formatarSemana(dataInicio: string): string {
-  if (!dataInicio) return ''
-  const fim = getDataFimSemana(dataInicio)
-  const [, mi, di] = dataInicio.split('-')
-  const [, mf, df] = fim.split('-')
-  return `${di}/${mi} - ${df}/${mf}`
-}
-
 function formatarData(iso: string): string {
   if (!iso) return ''
   const [, m, d] = iso.split('-')
   return `${d}/${m}`
-}
-
-function gerarSemanas(quantidade: number): { value: string; label: string }[] {
-  const semanas: { value: string; label: string }[] = []
-  const hoje = new Date()
-  const diaSemana = hoje.getDay()
-  const diasParaSegunda = ((1 - diaSemana + 7) % 7)
-  const segundaAtual = new Date(hoje)
-  segundaAtual.setDate(hoje.getDate() - diasParaSegunda)
-  for (let i = 0; i < quantidade; i++) {
-    const seg = new Date(segundaAtual)
-    seg.setDate(segundaAtual.getDate() + i * 7)
-    const value = seg.toISOString().split('T')[0]
-    semanas.push({ value, label: formatarSemana(value) })
-  }
-  return semanas
 }
 
 // === Draft cache ===
@@ -304,9 +266,45 @@ export function Atividades() {
   const [locais, setLocais] = useState<{ id: string; nome: string }[]>([])
   const [maquinas, setMaquinas] = useState<{ id: string; nome: string }[]>([])
 
-  const [filtroSemana, setFiltroSemana] = useState<string>('')
+  const [filtroDataInicio, setFiltroDataInicio] = useState<string>('')
+  const [filtroDataFim, setFiltroDataFim] = useState<string>('')
   const [filtroStatus, setFiltroStatus] = useState<string>('')
   const [filtroPrioridade, setFiltroPrioridade] = useState<number | ''>('')
+
+  // Limite de exibição da lista de atividades
+  const LIMITE_LISTA = 10
+  const [expandirLista, setExpandirLista] = useState(false)
+
+  // Presets de data rápida
+  const aplicarPreset = (preset: 'esta_semana' | 'proximas_2' | 'este_mes' | 'proximos_30') => {
+    const hoje = new Date()
+    const diaSemana = hoje.getDay()
+    const diasParaSegunda = ((1 - diaSemana + 7) % 7)
+    const segundaAtual = new Date(hoje)
+    segundaAtual.setDate(hoje.getDate() - diasParaSegunda)
+    const fmt = (d: Date) => d.toISOString().split('T')[0]
+    if (preset === 'esta_semana') {
+      const fim = new Date(segundaAtual)
+      fim.setDate(segundaAtual.getDate() + 6)
+      setFiltroDataInicio(fmt(segundaAtual))
+      setFiltroDataFim(fmt(fim))
+    } else if (preset === 'proximas_2') {
+      const fim = new Date(segundaAtual)
+      fim.setDate(segundaAtual.getDate() + 13)
+      setFiltroDataInicio(fmt(segundaAtual))
+      setFiltroDataFim(fmt(fim))
+    } else if (preset === 'este_mes') {
+      const inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1)
+      const fim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0)
+      setFiltroDataInicio(fmt(inicio))
+      setFiltroDataFim(fmt(fim))
+    } else if (preset === 'proximos_30') {
+      const fim = new Date(hoje)
+      fim.setDate(hoje.getDate() + 30)
+      setFiltroDataInicio(fmt(hoje))
+      setFiltroDataFim(fmt(fim))
+    }
+  }
 
   const [showPrioridadesModal, setShowPrioridadesModal] = useState(false)
   const [prioridadeNomes, setPrioridadeNomes] = useState<Record<number, string>>({})
@@ -316,11 +314,8 @@ export function Atividades() {
   const [abaMode, setAbaMode] = useState<'atividades' | 'padroes'>('atividades')
   const [templates, setTemplates] = useState<AtividadeTemplate[]>([])
   const [templatesLoading, setTemplatesLoading] = useState(false)
-  const [showBulkTemplateForm, setShowBulkTemplateForm] = useState(false)
-  const [templateRows, setTemplateRows] = useState<TemplateFormRow[]>([emptyTemplateRow()])
-  const [templateSubmitting, setTemplateSubmitting] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState<AtividadeTemplate | null>(null)
-  const [editTemplateForm, setEditTemplateForm] = useState<TemplateFormRow | null>(null)
+  const [editTemplateForm, setEditTemplateForm] = useState<{ id: string; titulo: string; descricao: string; local: string; local_tipo: string; local_id: string; setor_id: string; funcionario_ids: string[]; prioridade: number } | null>(null)
   const [editTemplateSubmitting, setEditTemplateSubmitting] = useState(false)
   const [showTemplateDeleteModal, setShowTemplateDeleteModal] = useState(false)
   const [templateToDelete, setTemplateToDelete] = useState<string | null>(null)
@@ -438,15 +433,16 @@ export function Atividades() {
   const loadAtividades = async () => {
     if (!fazendaId) return
     setLoading(true)
-    const filtros: { semanaInicio?: string; status?: string; prioridade?: number } = {}
-    if (filtroSemana) filtros.semanaInicio = filtroSemana
+    const filtros: { dataInicio?: string; dataFim?: string; status?: string; prioridade?: number } = {}
+    if (filtroDataInicio) filtros.dataInicio = filtroDataInicio
+    if (filtroDataFim) filtros.dataFim = filtroDataFim
     if (filtroStatus) filtros.status = filtroStatus
     if (filtroPrioridade !== '') filtros.prioridade = filtroPrioridade
     setAtividades(await getAtividades(fazendaId, filtros))
     setLoading(false)
   }
 
-  useEffect(() => { if (fazendaId) loadAtividades() }, [filtroSemana, filtroStatus, filtroPrioridade, fazendaId])
+  useEffect(() => { if (fazendaId) loadAtividades() }, [filtroDataInicio, filtroDataFim, filtroStatus, filtroPrioridade, fazendaId])
 
   const funcionarioOptionsAll = useMemo(() => {
     return funcionarios.map((f) => ({
@@ -455,8 +451,6 @@ export function Atividades() {
       category: f.setor_nomes.length > 0 ? f.setor_nomes.join(', ') : undefined,
     }))
   }, [funcionarios])
-
-  const semanasDisponiveis = useMemo(() => gerarSemanas(12), [])
 
   // === Handlers do form em lote ===
 
@@ -513,6 +507,7 @@ export function Atividades() {
         ...original,
         id: uid(),
         funcionario_ids: [...original.funcionario_ids],
+        origem_template_id: undefined,
       }
       const next = [...prev]
       next.splice(idx + 1, 0, copy)
@@ -524,20 +519,22 @@ export function Atividades() {
   const handleSalvarLote = async () => {
     if (!fazendaId) return
 
-    // Validar todas as linhas
-    const linhasValidas = rows.filter((r) => r.titulo.trim() && r.data_inicio && r.funcionario_ids.length > 0)
-    if (linhasValidas.length === 0) {
-      alert('Preencha pelo menos uma linha com título, data e responsável')
+    // Separar linhas por tipo
+    const linhasPadrao = rows.filter((r) => r.eh_padrao && r.titulo.trim())
+    const linhasNormais = rows.filter((r) => !r.eh_padrao && r.titulo.trim())
+
+    // Validar atividades normais: exigem data e responsáveis
+    const normaisInvalidas = linhasNormais.filter((r) => !r.data_inicio || r.funcionario_ids.length === 0)
+    if (linhasNormais.length === 0 && linhasPadrao.length === 0) {
+      alert('Preencha pelo menos uma linha com título')
+      return
+    }
+    if (normaisInvalidas.length > 0) {
+      alert('Há atividades normais (não padrão) com título mas sem data ou responsável. Corrija, remova ou ative o modo padrão.')
       return
     }
 
-    const invalidas = rows.filter((r) => r.titulo.trim() && (!r.data_inicio || r.funcionario_ids.length === 0))
-    if (invalidas.length > 0) {
-      alert('Há linhas com título mas sem data ou responsável. Corrija ou remova antes de salvar.')
-      return
-    }
-
-    const semDataFim = rows.filter((r) => r.titulo.trim() && r.tipo_data === 'periodo' && !r.data_fim)
+    const semDataFim = linhasNormais.filter((r) => r.tipo_data === 'periodo' && !r.data_fim)
     if (semDataFim.length > 0) {
       alert('Há atividades em período sem data final. Defina a data fim ou mude para "Dia único".')
       return
@@ -545,7 +542,8 @@ export function Atividades() {
 
     setSubmitting(true)
     try {
-      for (const row of linhasValidas) {
+      // Salvar atividades normais
+      for (const row of linhasNormais) {
         const dataFim = row.tipo_data === 'dia' ? row.data_inicio : (row.data_fim || row.data_inicio)
         await createAtividade({
           fazenda_id: fazendaId,
@@ -564,12 +562,29 @@ export function Atividades() {
           funcionario_ids: row.funcionario_ids,
         })
       }
+      // Salvar atividades padrão
+      for (const row of linhasPadrao) {
+        await createAtividadeTemplate({
+          fazenda_id: fazendaId,
+          titulo: row.titulo.trim(),
+          descricao: row.descricao.trim() || null,
+          local: row.local.trim() || null,
+          local_tipo: row.local_tipo || 'livre',
+          local_id: row.local_id || null,
+          setor_id: row.setor_id || null,
+          prioridade: row.prioridade,
+          ativo: true,
+          created_by: user?.id || null,
+          funcionario_ids: row.funcionario_ids,
+        })
+      }
       clearDraft()
       setRows([{ ...emptyRow(), data_inicio: getHoje() }])
       setShowBulkForm(false)
       loadAtividades()
+      loadTemplates()
     } catch (err) {
-      console.error('Erro ao salvar lote:', err)
+      console.error('Erro ao salvar:', err)
       alert('Erro ao salvar uma ou mais atividades')
     } finally {
       setSubmitting(false)
@@ -666,79 +681,6 @@ export function Atividades() {
     setTemplatesLoading(false)
   }
 
-  const handleOpenBulkTemplateForm = () => {
-    setTemplateRows([emptyTemplateRow()])
-    setShowBulkTemplateForm(true)
-  }
-
-  const handleCloseBulkTemplateForm = () => {
-    setShowBulkTemplateForm(false)
-  }
-
-  const updateTemplateRow = (rowId: string, patch: Partial<TemplateFormRow>) => {
-    setTemplateRows((prev) => prev.map((r) => (r.id === rowId ? { ...r, ...patch } : r)))
-  }
-
-  const addTemplateRow = () => {
-    setTemplateRows((prev) => [...prev, emptyTemplateRow()])
-  }
-
-  const removeTemplateRow = (rowId: string) => {
-    setTemplateRows((prev) => prev.length > 1 ? prev.filter((r) => r.id !== rowId) : prev)
-  }
-
-  const duplicateTemplateRow = (rowId: string) => {
-    setTemplateRows((prev) => {
-      const idx = prev.findIndex((r) => r.id === rowId)
-      if (idx === -1) return prev
-      const original = prev[idx]
-      const copy: TemplateFormRow = {
-        ...original,
-        id: uid(),
-        funcionario_ids: [...original.funcionario_ids],
-      }
-      const next = [...prev]
-      next.splice(idx + 1, 0, copy)
-      return next
-    })
-  }
-
-  const handleSalvarBulkTemplates = async () => {
-    if (!fazendaId) return
-    const validRows = templateRows.filter((r) => r.titulo.trim())
-    if (validRows.length === 0) {
-      alert('Adicione pelo menos uma atividade padrão com nome')
-      return
-    }
-
-    setTemplateSubmitting(true)
-    try {
-      for (const row of validRows) {
-        await createAtividadeTemplate({
-          fazenda_id: fazendaId,
-          titulo: row.titulo.trim(),
-          descricao: null,
-          local: row.local || null,
-          local_tipo: row.local_tipo || 'livre',
-          local_id: row.local_id || null,
-          setor_id: row.setor_id === 'todos' ? null : (row.setor_id || null),
-          prioridade: row.prioridade,
-          ativo: true,
-          created_by: user?.id || null,
-          funcionario_ids: row.funcionario_ids,
-        })
-      }
-      setTemplateRows([emptyTemplateRow()])
-      setShowBulkTemplateForm(false)
-      loadTemplates()
-    } catch (err) {
-      console.error('Erro ao salvar atividades padrão:', err)
-      alert('Erro ao salvar uma ou mais atividades padrão')
-    } finally {
-      setTemplateSubmitting(false)
-    }
-  }
-
   const handleEditarTemplate = (t: AtividadeTemplate) => {
     setEditingTemplate(t)
     const fids = t.funcionario_ids || []
@@ -806,6 +748,8 @@ export function Atividades() {
       data_inicio: getHoje(),
       data_fim: '',
       prioridade: t.prioridade,
+      eh_padrao: false,
+      origem_template_id: t.id,
     }))
     // Sobrescreve linhas em branco existentes com as novas, preservando linhas preenchidas
     const linhasPreenchidas = rows.filter((r) => r.titulo.trim() || r.funcionario_ids.length > 0)
@@ -858,9 +802,9 @@ export function Atividades() {
             </>
           )}
           {abaMode === 'padroes' && (
-            <Button onClick={handleOpenBulkTemplateForm} disabled={!controleAcessoHabilitado} className="h-10">
-              Nova Atividade Padrão
-            </Button>
+            <div className="text-xs text-gray-500 max-w-md text-right">
+              Para criar uma atividade padrão, abra "Nova Atividade" na aba Atividades e ative a estrela na linha desejada.
+            </div>
           )}
         </div>
       </div>
@@ -869,7 +813,7 @@ export function Atividades() {
       <div className="flex gap-1 bg-gray-100 rounded-lg p-1 w-fit">
         <button
           onClick={() => setAbaMode('atividades')}
-          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
             abaMode === 'atividades' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'
           }`}
         >
@@ -877,7 +821,7 @@ export function Atividades() {
         </button>
         <button
           onClick={() => setAbaMode('padroes')}
-          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
             abaMode === 'padroes' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'
           }`}
         >
@@ -901,7 +845,7 @@ export function Atividades() {
           ) : templates.length === 0 ? (
             <Card className="bg-white p-8 border-0 shadow-sm text-center">
               <p className="text-gray-600 mb-4">Nenhuma atividade padrão cadastrada</p>
-              <Button onClick={handleOpenBulkTemplateForm} disabled={!controleAcessoHabilitado}>
+              <Button onClick={handleOpenBulkForm} disabled={!controleAcessoHabilitado}>
                 Criar Primeira Atividade Padrão
               </Button>
             </Card>
@@ -917,47 +861,44 @@ export function Atividades() {
                   const ehTodos = fids.length > 0 && todosIds.length === fids.length && todosIds.every((id) => fids.includes(id))
                   const setorLabel = ehTodos ? 'Todos' : (t.setor_nome || (fids.length > 0 ? 'Personalizado' : '-'))
                   const nomesResp = fids.map((fid) => funcionarios.find((f) => f.id === fid)?.nome).filter(Boolean) as string[]
+                  const metaParts: string[] = []
+                  if (t.local) {
+                    const tipoPrefix = t.local_tipo && t.local_tipo !== 'livre' ? `${LOCAL_TIPO_LABELS[t.local_tipo] || t.local_tipo}: ` : ''
+                    metaParts.push(`${tipoPrefix}${t.local}`)
+                  }
+                  metaParts.push(`Setor: ${setorLabel}`)
+                  const respLabel = nomesResp.length > 0
+                    ? nomesResp.length <= 3
+                      ? nomesResp.join(', ')
+                      : `${nomesResp.slice(0, 3).join(', ')} +${nomesResp.length - 3}`
+                    : 'Nenhum'
+                  metaParts.push(`Resp: ${respLabel}`)
                   return (
-                    <Card key={t.id} className="bg-white p-4 border-0 shadow-sm">
-                      <div className="flex items-start justify-between">
-                        <h3 className="font-semibold text-gray-800">{t.titulo}</h3>
-                        <div className="flex gap-1">
+                    <Card key={t.id} className="bg-white p-3 border-0 shadow-sm hover:shadow-md transition-shadow">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="font-semibold text-gray-800 truncate text-sm">{t.titulo}</h3>
+                        <div className="flex items-center gap-0.5 flex-shrink-0">
                           <button
                             onClick={() => handleEditarTemplate(t)}
-                            className="text-xs text-primary hover:underline"
+                            className="text-gray-400 hover:text-primary p-1"
+                            title="Editar"
                           >
-                            Editar
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                           </button>
                           <button
                             onClick={() => {
                               setTemplateToDelete(t.id)
                               setShowTemplateDeleteModal(true)
                             }}
-                            className="text-xs text-red-600 hover:underline"
+                            className="text-gray-400 hover:text-red-500 p-1"
+                            title="Excluir"
                           >
-                            Excluir
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                           </button>
                         </div>
                       </div>
-                      <div className="mt-2 space-y-1 text-xs text-gray-500">
-                        {t.local && (
-                          <div>
-                            <span className="font-medium text-gray-600">Local:</span>{' '}
-                            {t.local_tipo && t.local_tipo !== 'livre' ? `${LOCAL_TIPO_LABELS[t.local_tipo] || t.local_tipo}: ` : ''}
-                            {t.local}
-                          </div>
-                        )}
-                        <div>
-                          <span className="font-medium text-gray-600">Setor:</span> {setorLabel}
-                        </div>
-                        <div>
-                          <span className="font-medium text-gray-600">Responsáveis:</span>{' '}
-                          {nomesResp.length > 0
-                            ? nomesResp.length <= 3
-                              ? nomesResp.join(', ')
-                              : `${nomesResp.slice(0, 3).join(', ')} +${nomesResp.length - 3}`
-                            : 'Nenhum'}
-                        </div>
+                      <div className="text-xs text-gray-500 mt-1 truncate">
+                        {metaParts.join(' · ')}
                       </div>
                     </Card>
                   )
@@ -1012,6 +953,7 @@ export function Atividades() {
               <thead>
                 <tr className="border-b-2 border-gray-200 text-xs text-gray-500 uppercase tracking-wider">
                   <th className="text-left py-2 px-2 w-8">#</th>
+                  <th className="text-left py-2 px-2 w-10">Padrão</th>
                   <th className="text-left py-2 px-2 min-w-[200px]">Atividade *</th>
                   <th className="text-left py-2 px-2 min-w-[160px]">Descrição</th>
                   <th className="text-left py-2 px-2 min-w-[140px]">Local</th>
@@ -1026,13 +968,25 @@ export function Atividades() {
               <tbody>
                 {rows.map((row, idx) => {
                   return (
-                    <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50/50 align-top h-20">
+                    <tr key={row.id} className={`border-b border-gray-100 hover:bg-gray-50/50 align-top h-20 ${row.eh_padrao ? 'bg-amber-50/40' : ''}`}>
                       <td className="py-2 px-2 text-gray-400 text-xs">{idx + 1}</td>
+                      <td className="py-2 px-2 text-center">
+                        <button
+                          onClick={() => updateRow(row.id, { eh_padrao: !row.eh_padrao })}
+                          disabled={!!row.origem_template_id}
+                          className={`p-1.5 rounded-md transition-colors ${row.eh_padrao ? 'text-amber-500 bg-amber-100' : 'text-gray-300 hover:text-amber-400 hover:bg-amber-50'} ${row.origem_template_id ? 'opacity-30 cursor-not-allowed' : ''}`}
+                          title={row.origem_template_id ? 'Esta linha veio de uma atividade padrão existente. Use-a como atividade normal.' : (row.eh_padrao ? 'Atividade padrão (sem data). Clique para voltar a atividade normal' : 'Marcar como atividade padrão (sem data)')}
+                        >
+                          <svg className="w-4 h-4" fill={row.eh_padrao ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                          </svg>
+                        </button>
+                      </td>
                       <td className="py-2 px-2">
                         <textarea
                           value={row.titulo}
                           onChange={(e) => updateRow(row.id, { titulo: e.target.value })}
-                          placeholder="Consertar cerca..."
+                          placeholder={row.eh_padrao ? "Vacinação do rebanho..." : "Consertar cerca..."}
                           rows={1}
                           className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent min-h-[44px] resize-none"
                         />
@@ -1098,44 +1052,56 @@ export function Atividades() {
                         />
                       </td>
                       <td className="py-2 px-2">
-                        <div className="flex flex-col gap-1.5">
-                          <label className="flex items-center gap-1.5 text-xs cursor-pointer">
-                            <input
-                              type="radio"
-                              checked={row.tipo_data === 'dia'}
-                              onChange={() => updateRow(row.id, { tipo_data: 'dia', data_fim: '' })}
-                              className="w-3.5 h-3.5"
-                            />
-                            Dia único
-                          </label>
-                          <label className="flex items-center gap-1.5 text-xs cursor-pointer">
-                            <input
-                              type="radio"
-                              checked={row.tipo_data === 'periodo'}
-                              onChange={() => updateRow(row.id, { tipo_data: 'periodo' })}
-                              className="w-3.5 h-3.5"
-                            />
-                            Período
-                          </label>
-                        </div>
+                        {row.eh_padrao ? (
+                          <div className="flex items-center justify-center h-[44px] text-xs text-amber-600 font-medium">
+                            Padrão
+                          </div>
+                        ) : (
+                          <div className="flex flex-col gap-1.5">
+                            <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                              <input
+                                type="radio"
+                                checked={row.tipo_data === 'dia'}
+                                onChange={() => updateRow(row.id, { tipo_data: 'dia', data_fim: '' })}
+                                className="w-3.5 h-3.5"
+                              />
+                              Dia único
+                            </label>
+                            <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                              <input
+                                type="radio"
+                                checked={row.tipo_data === 'periodo'}
+                                onChange={() => updateRow(row.id, { tipo_data: 'periodo' })}
+                                className="w-3.5 h-3.5"
+                              />
+                              Período
+                            </label>
+                          </div>
+                        )}
                       </td>
                       <td className="py-2 px-2">
-                        <div className="flex flex-col gap-1.5">
-                          <input
-                            type="date"
-                            value={row.data_inicio}
-                            onChange={(e) => updateRow(row.id, { data_inicio: e.target.value })}
-                            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent min-h-[44px]"
-                          />
-                          {row.tipo_data === 'periodo' && (
+                        {row.eh_padrao ? (
+                          <div className="flex items-center justify-center h-[44px] text-xs text-gray-400">
+                            —
+                          </div>
+                        ) : (
+                          <div className="flex flex-col gap-1.5">
                             <input
                               type="date"
-                              value={row.data_fim}
-                              onChange={(e) => updateRow(row.id, { data_fim: e.target.value })}
+                              value={row.data_inicio}
+                              onChange={(e) => updateRow(row.id, { data_inicio: e.target.value })}
                               className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent min-h-[44px]"
                             />
-                          )}
-                        </div>
+                            {row.tipo_data === 'periodo' && (
+                              <input
+                                type="date"
+                                value={row.data_fim}
+                                onChange={(e) => updateRow(row.id, { data_fim: e.target.value })}
+                                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent min-h-[44px]"
+                              />
+                            )}
+                          </div>
+                        )}
                       </td>
                       <td className="py-2 px-2">
                         <select
@@ -1202,38 +1168,71 @@ export function Atividades() {
         </Modal>
       )}
 
-      {/* Filtros */}
-      <div className="flex flex-wrap gap-3">
-        <select
-          value={filtroSemana}
-          onChange={(e) => setFiltroSemana(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent min-h-[40px] bg-white text-sm"
-        >
-          <option value="">Todas as semanas</option>
-          {semanasDisponiveis.map((s) => (
-            <option key={s.value} value={s.value}>{s.label}</option>
+      {/* Filtros - toolbar unificada com intervalo de data + presets */}
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="date"
+            value={filtroDataInicio}
+            onChange={(e) => setFiltroDataInicio(e.target.value)}
+            placeholder="Data inicial"
+            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent min-h-[40px] bg-white text-sm min-w-[140px]"
+          />
+          <span className="text-gray-400 text-sm">até</span>
+          <input
+            type="date"
+            value={filtroDataFim}
+            onChange={(e) => setFiltroDataFim(e.target.value)}
+            placeholder="Data final"
+            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent min-h-[40px] bg-white text-sm min-w-[140px]"
+          />
+          <select
+            value={filtroStatus}
+            onChange={(e) => setFiltroStatus(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent min-h-[40px] bg-white text-sm min-w-[140px]"
+          >
+            <option value="">Todos os status</option>
+            <option value="pendente">Pendente</option>
+            <option value="em_andamento">Em Andamento</option>
+            <option value="concluido">Concluído</option>
+          </select>
+          <select
+            value={filtroPrioridade}
+            onChange={(e) => setFiltroPrioridade(e.target.value === '' ? '' : Number(e.target.value))}
+            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent min-h-[40px] bg-white text-sm min-w-[160px]"
+          >
+            <option value="">Todas as prioridades</option>
+            {prioridades.map((p) => (
+              <option key={p.nivel} value={p.nivel}>{p.nome}</option>
+            ))}
+          </select>
+          {(filtroDataInicio || filtroDataFim || filtroStatus || filtroPrioridade !== '') && (
+            <button
+              onClick={() => { setFiltroDataInicio(''); setFiltroDataFim(''); setFiltroStatus(''); setFiltroPrioridade('') }}
+              className="px-3 py-2 rounded-md text-xs font-medium text-red-600 hover:bg-red-50 transition-colors min-h-[40px]"
+            >
+              Limpar
+            </button>
+          )}
+        </div>
+        {/* Presets de data rápida */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-xs text-gray-400">Filtros rápidos:</span>
+          {[
+            { key: 'esta_semana' as const, label: 'Esta semana' },
+            { key: 'proximas_2' as const, label: 'Próximas 2 semanas' },
+            { key: 'este_mes' as const, label: 'Este mês' },
+            { key: 'proximos_30' as const, label: 'Próximos 30 dias' },
+          ].map((p) => (
+            <button
+              key={p.key}
+              onClick={() => aplicarPreset(p.key)}
+              className="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+            >
+              {p.label}
+            </button>
           ))}
-        </select>
-        <select
-          value={filtroStatus}
-          onChange={(e) => setFiltroStatus(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent min-h-[40px] bg-white text-sm"
-        >
-          <option value="">Todos os status</option>
-          <option value="pendente">Pendente</option>
-          <option value="em_andamento">Em Andamento</option>
-          <option value="concluido">Concluído</option>
-        </select>
-        <select
-          value={filtroPrioridade}
-          onChange={(e) => setFiltroPrioridade(e.target.value === '' ? '' : Number(e.target.value))}
-          className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent min-h-[40px] bg-white text-sm"
-        >
-          <option value="">Todas as prioridades</option>
-          {prioridades.map((p) => (
-            <option key={p.nivel} value={p.nivel}>{p.nome}</option>
-          ))}
-        </select>
+        </div>
       </div>
 
       {/* Lista de atividades */}
@@ -1251,92 +1250,102 @@ export function Atividades() {
           )}
         </Card>
       ) : (
+        <>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {atividades.map((atividade) => (
-            <Card key={atividade.id} className="bg-white p-4 border-0 shadow-sm">
-              <div className="flex items-start justify-between gap-3 mb-3">
-                <div className="flex items-start gap-3 min-w-0 flex-1">
-                  <div className={`w-3 h-3 rounded-full flex-shrink-0 mt-1.5 ${PRIORIDADE_CORES[atividade.prioridade] || 'bg-gray-400'}`} />
+          {(expandirLista ? atividades : atividades.slice(0, LIMITE_LISTA)).map((atividade) => {
+            const metaParts: string[] = []
+            const periodo = atividade.data_inicio === atividade.data_fim
+              ? formatarData(atividade.data_inicio)
+              : `${formatarData(atividade.data_inicio)} - ${formatarData(atividade.data_fim)}`
+            metaParts.push(periodo)
+            if (atividade.setor_nome) metaParts.push(atividade.setor_nome)
+            if (atividade.local) metaParts.push(`📍 ${atividade.local}`)
+            return (
+            <Card key={atividade.id} className={`bg-white p-3 border-0 shadow-sm hover:shadow-md transition-shadow ${atividade.atrasada ? 'bg-red-50' : ''}`}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                  <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1.5 ${PRIORIDADE_CORES[atividade.prioridade] || 'bg-gray-400'}`} />
                   <div className="min-w-0">
-                    <h3 className="font-semibold text-gray-800 truncate">{atividade.titulo}</h3>
+                    <h3 className="font-semibold text-gray-800 truncate text-sm">{atividade.titulo}</h3>
                     {atividade.descricao && (
-                      <p className="text-sm text-gray-600 mt-1 line-clamp-2">{atividade.descricao}</p>
+                      <p className="text-xs text-gray-600 mt-0.5 line-clamp-1">{atividade.descricao}</p>
+                    )}
+                    {metaParts.length > 0 && (
+                      <div className="text-xs text-gray-500 mt-0.5 truncate">{metaParts.join(' · ')}</div>
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_CORES[atividade.status] || 'bg-gray-100'}`}>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {/* Avatares empilhados substituindo lista de ✓ Nome */}
+                  {atividade.funcionarios && atividade.funcionarios.length > 0 && (
+                    <div className="flex -space-x-1.5 mr-1">
+                      {atividade.funcionarios.slice(0, 4).map((af) => {
+                        const ringStatus =
+                          af.status_individual === 'concluida' ? 'ring-green-400' :
+                          af.status_individual === 'em_andamento' ? 'ring-blue-400' :
+                          af.status_individual === 'justificada' ? 'ring-amber-400' :
+                          'ring-gray-300'
+                        return (
+                          <div
+                            key={af.id}
+                            title={`${af.funcionario_nome} · ${STATUS_LABELS[af.status_individual] || af.status_individual}`}
+                            className={`w-6 h-6 rounded-full ${getCorAvatar(af.funcionario_nome || '?')} flex items-center justify-center text-white text-[9px] font-bold ring-2 ${ringStatus}`}
+                          >
+                            {getIniciais(af.funcionario_nome || '?')}
+                          </div>
+                        )
+                      })}
+                      {atividade.funcionarios.length > 4 && (
+                        <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 text-[9px] font-bold ring-2 ring-gray-200">
+                          +{atividade.funcionarios.length - 4}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_CORES[atividade.status] || 'bg-gray-100'}`}>
                     {STATUS_LABELS[atividade.status] || atividade.status}
                   </span>
-                  {atividade.atrasada && (
-                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
-                      Atrasada
-                    </span>
-                  )}
+                  {/* Botões de ação como ícones compactos */}
+                  <button
+                    onClick={() => handleEdit(atividade)}
+                    className="text-gray-400 hover:text-primary p-1"
+                    title="Editar"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                  </button>
+                  <button
+                    onClick={() => navigate(`/controller/monitoramento-atividades?atividade=${atividade.id}`)}
+                    className="text-gray-400 hover:text-primary p-1"
+                    title="Monitorar"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                  </button>
+                  <button
+                    onClick={() => { setAtividadeToDelete(atividade.id); setShowDeleteModal(true) }}
+                    className="text-gray-400 hover:text-red-500 p-1"
+                    title="Excluir"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  </button>
                 </div>
-              </div>
-
-              <div className="flex flex-wrap gap-2 text-xs text-gray-500 mb-3">
-                <span className="inline-flex items-center gap-1">
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                  {atividade.data_inicio === atividade.data_fim
-                    ? formatarData(atividade.data_inicio)
-                    : `${formatarData(atividade.data_inicio)} - ${formatarData(atividade.data_fim)}`}
-                </span>
-                {atividade.setor_nome && (
-                  <span className="inline-flex items-center gap-1">
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5" /></svg>
-                    {atividade.setor_nome}
-                  </span>
-                )}
-                {atividade.local && (
-                  <span className="inline-flex items-center gap-1">
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                    {atividade.local}
-                  </span>
-                )}
-              </div>
-
-              {atividade.funcionarios && atividade.funcionarios.length > 0 && (
-                <div className="border-t border-gray-100 pt-3">
-                  <p className="text-xs text-gray-500 font-medium mb-2">Responsáveis:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {atividade.funcionarios.map((af) => {
-                      const icone = af.status_individual === 'concluida' ? '✓' : af.status_individual === 'em_andamento' ? '▶' : af.status_individual === 'justificada' ? '⚠' : '○'
-                      const cor = af.status_individual === 'concluida' ? 'text-green-600' : af.status_individual === 'em_andamento' ? 'text-blue-600' : af.status_individual === 'justificada' ? 'text-orange-600' : 'text-gray-400'
-                      return (
-                        <span key={af.id} className={`inline-flex items-center gap-1 text-xs ${cor}`} title={af.justificativa || undefined}>
-                          <span className="font-medium">{icone}</span>
-                          {af.funcionario_nome}
-                        </span>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
-                <Button variant="secondary" onClick={() => handleEdit(atividade)} className="h-8 text-xs px-3">
-                  Editar
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => navigate(`/controller/monitoramento-atividades?atividade=${atividade.id}`)}
-                  className="h-8 text-xs px-3"
-                >
-                  Monitorar
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => { setAtividadeToDelete(atividade.id); setShowDeleteModal(true) }}
-                  className="h-8 text-xs px-3 text-red-600 hover:text-red-700"
-                >
-                  Excluir
-                </Button>
               </div>
             </Card>
-          ))}
+            )
+          })}
         </div>
+        {atividades.length > LIMITE_LISTA && (
+          <div className="flex justify-center mt-4">
+            <button
+              onClick={() => setExpandirLista((v) => !v)}
+              className="px-4 py-2 text-sm text-gray-600 font-medium rounded-md border border-gray-200 hover:bg-gray-50 transition-colors"
+            >
+              {expandirLista
+                ? 'Ver menos'
+                : `Ver mais ${atividades.length - LIMITE_LISTA} de ${atividades.length}`}
+            </button>
+          </div>
+        )}
+        </>
       )}
 
       {/* Modal de edicao (atividade unica, layout vertical) */}
@@ -1553,147 +1562,6 @@ export function Atividades() {
         </Modal>
       )}
         </>
-      )}
-
-      {/* === Modal: Criar Atividades Padrão em Lote (planilha) === */}
-      {showBulkTemplateForm && (
-        <Modal
-          isOpen={showBulkTemplateForm}
-          onClose={handleCloseBulkTemplateForm}
-          title="Nova Atividade Padrão"
-          size="full"
-        >
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[1100px]">
-              <thead>
-                <tr className="border-b-2 border-gray-200 text-xs text-gray-500 uppercase tracking-wider">
-                  <th className="text-left py-2 px-2 w-8">#</th>
-                  <th className="text-left py-2 px-2">Atividade *</th>
-                  <th className="text-left py-2 px-2 w-56">Local</th>
-                  <th className="text-left py-2 px-2 w-48">Setor</th>
-                  <th className="text-left py-2 px-2 w-64">Responsáveis</th>
-                  <th className="text-center py-2 px-2 w-20">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {templateRows.map((row, idx) => (
-                  <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50/50 align-top">
-                    <td className="py-2 px-2 text-gray-400 text-xs">{idx + 1}</td>
-                    <td className="py-2 px-2">
-                      <textarea
-                        value={row.titulo}
-                        onChange={(e) => updateTemplateRow(row.id, { titulo: e.target.value })}
-                        placeholder="Vacinação do rebanho..."
-                        rows={1}
-                        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent min-h-[44px] resize-none"
-                      />
-                    </td>
-                    <td className="py-2 px-2">
-                      <LocalPicker
-                        localTipo={row.local_tipo}
-                        localId={row.local_id}
-                        localNome={row.local}
-                        pastos={pastos}
-                        currais={currais}
-                        locais={locais}
-                        maquinas={maquinas}
-                        onChange={(patch) => updateTemplateRow(row.id, patch)}
-                        compact
-                      />
-                    </td>
-                    <td className="py-2 px-2">
-                      <select
-                        value={row.setor_id}
-                        onChange={(e) => {
-                          const setorId = e.target.value
-                          let membros: string[]
-                          if (setorId === 'todos') {
-                            membros = funcionarios.map((f) => f.id)
-                          } else if (setorId) {
-                            membros = funcionarios.filter((f) => f.setor_ids.includes(setorId)).map((f) => f.id)
-                          } else {
-                            membros = []
-                          }
-                          updateTemplateRow(row.id, { setor_id: setorId, funcionario_ids: membros })
-                        }}
-                        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent min-h-[44px] bg-white"
-                      >
-                        <option value="">-</option>
-                        <option value="todos">Todos</option>
-                        {setores.map((s) => (
-                          <option key={s.id} value={s.id}>{s.nome}</option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="py-2 px-2 align-top">
-                      <MultiSelect
-                        options={funcionarioOptionsAll}
-                        value={row.funcionario_ids}
-                        onChange={(ids) => {
-                          let novoSetor = row.setor_id
-                          if (row.setor_id === 'todos') {
-                            const todosIds = funcionarios.map((f) => f.id)
-                            const aindaTodos = todosIds.length === ids.length && todosIds.every((id) => ids.includes(id))
-                            if (!aindaTodos) novoSetor = ''
-                          } else if (row.setor_id) {
-                            const membrosSetor = funcionarios.filter((f) => f.setor_ids.includes(row.setor_id)).map((f) => f.id)
-                            const aindaIgualSetor = membrosSetor.length > 0 &&
-                              membrosSetor.length === ids.length &&
-                              membrosSetor.every((id) => ids.includes(id))
-                            if (!aindaIgualSetor) novoSetor = ''
-                          }
-                          updateTemplateRow(row.id, {
-                            funcionario_ids: ids,
-                            setor_id: novoSetor,
-                          })
-                        }}
-                        placeholder="Selecionar..."
-                        compact
-                      />
-                    </td>
-                    <td className="py-2 px-2 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <button
-                          onClick={() => duplicateTemplateRow(row.id)}
-                          className="text-gray-400 hover:text-primary"
-                          title="Copiar linha"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => removeTemplateRow(row.id)}
-                          disabled={templateRows.length === 1}
-                          className="text-red-500 hover:text-red-700 disabled:text-gray-300 disabled:cursor-not-allowed"
-                          title="Remover linha"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3" />
-                          </svg>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="flex justify-between items-center mt-4">
-            <Button variant="secondary" onClick={addTemplateRow} className="text-sm h-9">
-              + Adicionar Atividade
-            </Button>
-            <div className="flex gap-2">
-              <Button variant="secondary" onClick={handleCloseBulkTemplateForm} className="h-10">
-                Cancelar
-              </Button>
-              <Button onClick={handleSalvarBulkTemplates} disabled={templateSubmitting} className="h-10">
-                {templateSubmitting ? 'Salvando...' : 'Salvar Atividades Padrão'}
-              </Button>
-            </div>
-          </div>
-        </Modal>
       )}
 
       {/* === Modal: Editar Atividade Padrão === */}

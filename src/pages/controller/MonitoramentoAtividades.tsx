@@ -66,6 +66,7 @@ const KANBAN_COLUNAS = [
   { status: 'em_andamento', label: 'Em Andamento', corDot: 'bg-blue-500', headerBg: 'bg-blue-50' },
   { status: 'pendente', label: 'Pendentes', corDot: 'bg-gray-400', headerBg: 'bg-gray-50' },
   { status: 'concluido', label: 'Concluídas', corDot: 'bg-green-500', headerBg: 'bg-green-50' },
+  { status: '__justificada__', label: 'Justificadas', corDot: 'bg-amber-500', headerBg: 'bg-amber-50' },
 ]
 
 const AVATAR_CORES = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 'bg-pink-500', 'bg-teal-500', 'bg-indigo-500']
@@ -151,6 +152,21 @@ export function MonitoramentoAtividades() {
   // Vista
   const [vista, setVista] = useState<'lista' | 'kanban'>('lista')
   const [expandirNaoPrevistas, setExpandirNaoPrevistas] = useState(false)
+
+  // Colapso de seções
+  const [secoesAbertas, setSecoesAbertas] = useState<Record<string, boolean>>({
+    trabalhandoAgora: true,
+    justificadas: true,
+    desempenho: false,
+    imprevistos: false,
+    naoPrevistas: false,
+  })
+  const toggleSecao = (key: string) => setSecoesAbertas((p) => ({ ...p, [key]: !p[key] }))
+
+  // Limite de cards por coluna no Kanban (expansível por coluna)
+  const KANBAN_LIMITE_INICIAL = 5
+  const [kanbanExpandido, setKanbanExpandido] = useState<Record<string, boolean>>({})
+  const toggleKanbanColuna = (key: string) => setKanbanExpandido((p) => ({ ...p, [key]: !p[key] }))
 
   // Flash e tendencia
   const [flashIds, setFlashIds] = useState<Set<string>>(new Set())
@@ -410,18 +426,39 @@ export function MonitoramentoAtividades() {
   const planejadasFiltradas = useMemo(() => atividadesFiltradas.filter((a) => !a.nao_prevista), [atividadesFiltradas])
   const naoPrevistasFiltradas = useMemo(() => atividadesFiltradas.filter((a) => a.nao_prevista), [atividadesFiltradas])
 
+  // Particionar planejadas em justificadas (>=1 funcionario justificado) e restantes
+  const justificadasFiltradas = useMemo(
+    () => planejadasFiltradas.filter((a) => a.funcionarios?.some((af) => af.status_individual === 'justificada')),
+    [planejadasFiltradas]
+  )
+  const planejadasSemJustificadas = useMemo(
+    () => planejadasFiltradas.filter((a) => !a.funcionarios?.some((af) => af.status_individual === 'justificada')),
+    [planejadasFiltradas]
+  )
+
   const usarGrupos = statusSelecionados.length === 0 && vista === 'lista'
 
   const atividadesAgrupadas = useMemo(() => {
     if (!usarGrupos) return null
     const grupos: Record<string, Atividade[]> = {}
-    planejadasFiltradas.forEach((a) => {
+    planejadasSemJustificadas.forEach((a) => {
       const s = a.status || 'pendente'
       if (!grupos[s]) grupos[s] = []
       grupos[s].push(a)
     })
     return grupos
-  }, [planejadasFiltradas, usarGrupos])
+  }, [planejadasSemJustificadas, usarGrupos])
+
+  const justificadasAgrupadas = useMemo(() => {
+    if (!usarGrupos) return null
+    const grupos: Record<string, Atividade[]> = {}
+    justificadasFiltradas.forEach((a) => {
+      const s = a.status || 'pendente'
+      if (!grupos[s]) grupos[s] = []
+      grupos[s].push(a)
+    })
+    return grupos
+  }, [justificadasFiltradas, usarGrupos])
 
   const kpis = useMemo(() => {
     const total = planejadasFiltradas.length
@@ -497,81 +534,94 @@ export function MonitoramentoAtividades() {
     return null
   }
 
-  const renderCard = (atividade: Atividade, compact = false) => {
+  const renderCard = (atividade: Atividade, compact = false, bordaOverride?: string) => {
     const totalFunc = atividade.funcionarios?.length || 0
     const concluidas = atividade.funcionarios?.filter((af) => af.status_individual === 'concluida').length || 0
     const progresso = totalFunc > 0 ? Math.round((concluidas / totalFunc) * 100) : 0
     const isAtrasada = atividade.atrasada === true
     const isFlash = flashIds.has(atividade.id)
-    const bordaCor = STATUS_BORDA_HEX[atividade.status] || '#d1d5db'
+    const bordaCor = bordaOverride || STATUS_BORDA_HEX[atividade.status] || '#d1d5db'
     const tempoTotal = atividade.funcionarios?.reduce((acc, af) => acc + (af.tempo_gasto_segundos || 0), 0) || 0
     const isConcluida = atividade.status === 'concluido' || atividade.status === 'concluida'
+
+    // Metadata condensada em linha única separada por ·
+    const metaParts: string[] = []
+    const periodo = formatarPeriodo(atividade.data_inicio, atividade.data_fim)
+    if (periodo) metaParts.push(periodo)
+    if (atividade.local) metaParts.push(`📍 ${atividade.local}`)
+    if (isConcluida && tempoTotal > 0) metaParts.push(`⏱ ${formatarTempo(tempoTotal)}`)
 
     return (
       <div
         key={atividade.id}
         onClick={() => setDetalheAtividade(atividade)}
-        className={`p-4 rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-all border-l-4 ${isAtrasada ? 'bg-red-50' : 'bg-white'} ${isFlash ? 'ring-2 ring-blue-400' : ''}`}
+        className={`p-3 rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-all border-l-4 ${isAtrasada ? 'bg-red-50' : 'bg-white'} ${isFlash ? 'ring-2 ring-blue-400' : ''}`}
         style={{ borderLeftColor: bordaCor }}
       >
         <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
             {!atividade.nao_prevista && (
-              <div className={`w-3 h-3 rounded-full flex-shrink-0 ${PRIORIDADE_CORES[atividade.prioridade] || 'bg-gray-400'}`} />
+              <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${PRIORIDADE_CORES[atividade.prioridade] || 'bg-gray-400'}`} />
             )}
             <div className="min-w-0 flex-1">
-              <h4 className="font-medium text-gray-800 truncate">{atividade.titulo}</h4>
-              <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-gray-500">
-                <span>{formatarPeriodo(atividade.data_inicio, atividade.data_fim)}</span>
-                {atividade.local && <span>📍 {atividade.local}</span>}
-                {isConcluida && tempoTotal > 0 && (
-                  <span className="inline-flex items-center gap-0.5 text-green-700 font-medium">
-                    ⏱ {formatarTempo(tempoTotal)}
-                  </span>
-                )}
-              </div>
-              {!compact && atividade.funcionarios && atividade.funcionarios.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-1">
-                  {atividade.funcionarios.map((af) => {
-                    const icone = af.status_individual === 'concluida' ? '✓' : af.status_individual === 'em_andamento' ? '▶' : '○'
-                    const cor = af.status_individual === 'concluida' ? 'text-green-600' : af.status_individual === 'em_andamento' ? 'text-blue-600' : 'text-gray-400'
-                    return <span key={af.id} className={`text-xs ${cor}`}>{icone} {af.funcionario_nome}</span>
-                  })}
+              <h4 className="font-medium text-gray-800 truncate text-sm">{atividade.titulo}</h4>
+              {metaParts.length > 0 && (
+                <div className="text-xs text-gray-500 mt-0.5 truncate">
+                  {metaParts.join(' · ')}
                 </div>
               )}
             </div>
           </div>
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_CORES[atividade.status] || 'bg-gray-100'}`}>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {/* Avatares empilhados substituindo lista de ✓ Nome */}
+            {!compact && atividade.funcionarios && atividade.funcionarios.length > 0 && (
+              <div className="flex -space-x-1.5 mr-1">
+                {atividade.funcionarios.slice(0, 4).map((af) => {
+                  const corAvatar = getCorAvatar(af.funcionario_nome || '?')
+                  const ringStatus =
+                    af.status_individual === 'concluida' ? 'ring-green-400' :
+                    af.status_individual === 'em_andamento' ? 'ring-blue-400' :
+                    af.status_individual === 'justificada' ? 'ring-amber-400' :
+                    'ring-gray-300'
+                  return (
+                    <div
+                      key={af.id}
+                      title={`${af.funcionario_nome} · ${STATUS_BADGE_LABELS[af.status_individual] || af.status_individual}`}
+                      className={`w-6 h-6 rounded-full ${corAvatar} flex items-center justify-center text-white text-[9px] font-bold ring-2 ${ringStatus}`}
+                    >
+                      {getIniciais(af.funcionario_nome || '?')}
+                    </div>
+                  )
+                })}
+                {atividade.funcionarios.length > 4 && (
+                  <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 text-[9px] font-bold ring-2 ring-gray-200">
+                    +{atividade.funcionarios.length - 4}
+                  </div>
+                )}
+              </div>
+            )}
+            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_CORES[atividade.status] || 'bg-gray-100'}`}>
               {STATUS_LABELS[atividade.status] || atividade.status}
             </span>
-            {isAtrasada && (
-              <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
-                Atrasada
-              </span>
-            )}
+            {/* Badge Atrasada removida: o fundo bg-red-50 já sinaliza visualmente */}
             {atividade.nao_prevista && (
-              <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
                 Não prevista
               </span>
             )}
           </div>
         </div>
 
-        {/* Barra de progresso */}
-        {totalFunc > 0 && (
+        {/* Barra de progresso só quando há progresso parcial (0 < progresso < 100) */}
+        {totalFunc > 0 && progresso > 0 && progresso < 100 && (
           <div className="mt-2">
             <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
               <span>{concluidas}/{totalFunc} concluíram</span>
-              {progresso === 100 ? (
-                <span className="text-green-600 font-medium">✓ Completo</span>
-              ) : progresso > 0 ? (
-                <span className="text-blue-600">{progresso}%</span>
-              ) : null}
+              <span className="text-blue-600">{progresso}%</span>
             </div>
             <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all ${progresso === 100 ? 'bg-green-500' : progresso > 0 ? 'bg-blue-500' : 'bg-gray-300'}`}
+                className="h-full rounded-full transition-all bg-blue-500"
                 style={{ width: `${progresso}%` }}
               />
             </div>
@@ -653,20 +703,20 @@ export function MonitoramentoAtividades() {
         </div>
       </div>
 
-      {/* Filtros */}
-      <div className="space-y-3">
-        <div className="flex flex-col md:flex-row gap-3">
+      {/* Filtros - toolbar única em md+, empilhada em mobile */}
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-col md:flex-row md:items-center gap-2">
           <Input
             type="text"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             placeholder="Buscar por título ou descrição..."
-            className="flex-1 border-gray-300 focus:border-accent"
+            className="flex-1 min-w-[320px] md:min-w-[420px] border-gray-300 focus:border-accent min-h-[40px]"
           />
           <select
             value={funcionarioSelecionado}
             onChange={(e) => setFuncionarioSelecionado(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] bg-white text-sm md:w-56"
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent min-h-[40px] bg-white text-sm md:w-48"
           >
             <option value="">Todos os responsáveis</option>
             {funcionarios.map((f) => (
@@ -676,61 +726,62 @@ export function MonitoramentoAtividades() {
           <select
             value={prioridadeSelecionada}
             onChange={(e) => setPrioridadeSelecionada(e.target.value === '' ? '' : Number(e.target.value))}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent min-h-[44px] bg-white text-sm md:w-48"
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent min-h-[40px] bg-white text-sm md:w-52"
           >
             <option value="">Todas as prioridades</option>
             {prioridades.map((p) => (
               <option key={p.nivel} value={p.nivel}>{p.nome}</option>
             ))}
           </select>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          {STATUS_CHIPS.map((chip) => {
-            const ativo = statusSelecionados.includes(chip.value)
-            return (
+          <div className="flex items-center gap-1.5 md:flex-shrink-0">
+            {STATUS_CHIPS.map((chip) => {
+              const ativo = statusSelecionados.includes(chip.value)
+              return (
+                <button
+                  key={chip.value}
+                  onClick={() => toggleStatus(chip.value)}
+                  className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
+                    ativo ? chip.corAtivo + ' ring-1 ring-offset-1 ring-gray-400' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  }`}
+                >
+                  {chip.label}
+                </button>
+              )
+            })}
+            {temFiltrosAtivos && (
               <button
-                key={chip.value}
-                onClick={() => toggleStatus(chip.value)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                  ativo ? chip.corAtivo + ' ring-2 ring-offset-1 ring-gray-400' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                }`}
+                onClick={limparFiltros}
+                className="px-2.5 py-1 rounded-full text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
               >
-                {chip.label}
+                Limpar
               </button>
-            )
-          })}
-          {temFiltrosAtivos && (
-            <button
-              onClick={limparFiltros}
-              className="px-3 py-1.5 rounded-full text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
-            >
-              Limpar filtros
-            </button>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {KPI_ITEMS.map((kpi) => {
+      {/* KPIs - stat strip compacta */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-100 px-2 py-2.5 flex items-stretch gap-1 overflow-x-auto">
+        {KPI_ITEMS.map((kpi, idx) => {
           const valor = (kpis as any)[kpi.key] as number
           const isClickable = kpi.clickable && valor > 0
           const highlightClass =
-            kpi.highlight === 'red' && kpis.atrasada > 0 ? 'ring-2 ring-red-200' :
-            kpi.highlight === 'blue' && kpis.em_andamento > 0 ? 'ring-2 ring-blue-200' : ''
+            kpi.highlight === 'red' && kpis.atrasada > 0 ? 'ring-1 ring-red-200' :
+            kpi.highlight === 'blue' && kpis.em_andamento > 0 ? 'ring-1 ring-blue-200' : ''
           return (
-            <Card
+            <button
               key={kpi.key}
-              className={`bg-white p-4 border-0 shadow-sm transition-all ${highlightClass} ${isClickable ? 'cursor-pointer hover:shadow-md' : ''}`}
               onClick={isClickable ? () => handleKpiClick(kpi.key === 'concluido' ? 'concluido' : kpi.key) : undefined}
+              disabled={!isClickable}
+              className={`flex-1 min-w-[110px] flex flex-col items-start px-3 py-1 rounded-md transition-all text-left ${highlightClass} ${isClickable ? 'hover:bg-gray-50 cursor-pointer' : 'cursor-default'}`}
+              style={idx > 0 ? { borderLeft: '1px solid #f1f5f9' } : undefined}
             >
-              <p className="text-xs text-gray-500 mb-1">
+              <span className="text-[11px] text-gray-500 leading-tight flex items-center">
                 {kpi.label}
                 {renderTendencia(kpi.key)}
-              </p>
-              <p className={`text-2xl font-bold ${kpi.cor}`}>{valor}</p>
-            </Card>
+              </span>
+              <span className={`text-lg font-bold tabular-nums leading-tight ${kpi.cor}`}>{valor}</span>
+            </button>
           )
         })}
       </div>
@@ -738,88 +789,143 @@ export function MonitoramentoAtividades() {
       {/* Agora: sessoes abertas em tempo real */}
       {sessoesAbertas.length > 0 && (
         <div>
-          <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+          <button
+            onClick={() => toggleSecao('trabalhandoAgora')}
+            className="text-base font-semibold text-gray-700 mb-2 flex items-center gap-2 w-full text-left"
+          >
             <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
             Trabalhando agora
             <span className="text-sm font-normal text-gray-500">({sessoesAbertas.length})</span>
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <span className="ml-auto text-gray-400 text-xs">{secoesAbertas.trabalhandoAgora ? '▲' : '▼'}</span>
+          </button>
+          {secoesAbertas.trabalhandoAgora && (
+          <div className="flex flex-col sm:flex-row gap-2 overflow-x-auto pb-1">
             {sessoesAbertas.map((s) => {
               const decorrido = Math.floor((Date.now() - new Date(s.inicio_at).getTime()) / 1000)
               return (
-                <Card
+                <button
                   key={s.id}
-                  className="bg-blue-50 border border-blue-100 p-3 shadow-sm cursor-pointer hover:shadow-md transition-all"
                   onClick={() => {
                     if (s.atividade_id) {
                       const atv = atividades.find((a) => a.id === s.atividade_id)
                       if (atv) setDetalheAtividade(atv)
                     }
                   }}
+                  className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-md px-3 py-1.5 hover:bg-blue-100 transition-colors text-left flex-shrink-0 min-w-0 sm:min-w-[220px]"
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-gray-800 text-sm truncate">{s.atividade_titulo || 'Atividade'}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">{s.funcionario_nome || 'Funcionário'}</p>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-lg font-bold tabular-nums text-blue-700">{formatarTempo(decorrido)}</p>
-                      <p className="text-[10px] text-gray-400">desde {formatarHoraCurta(s.inicio_at)}</p>
-                    </div>
+                  <div className={`w-7 h-7 rounded-full ${getCorAvatar(s.funcionario_nome || '?')} flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0`}>
+                    {getIniciais(s.funcionario_nome || '?')}
                   </div>
-                </Card>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-gray-800 text-xs truncate">{s.atividade_titulo || 'Atividade'}</p>
+                    <p className="text-[11px] text-gray-500 truncate">{s.funcionario_nome || 'Funcionário'}</p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-sm font-bold tabular-nums text-blue-700 leading-tight">{formatarTempo(decorrido)}</p>
+                    <p className="text-[10px] text-gray-400 leading-tight">desde {formatarHoraCurta(s.inicio_at)}</p>
+                  </div>
+                </button>
               )
             })}
           </div>
+          )}
         </div>
       )}
 
       {/* Conteudo: Lista ou Kanban */}
       {vista === 'lista' ? (
-        <div>
-          <h3 className="text-lg font-semibold text-gray-800 mb-3">
-            Atividades {planejadasFiltradas.length !== atividades.length && `(${planejadasFiltradas.length} de ${atividades.filter(a => !a.nao_prevista).length})`}
-          </h3>
-          {planejadasFiltradas.length === 0 ? (
-            <Card className="bg-white p-8 border-0 shadow-sm text-center">
-              <p className="text-gray-600">
-                {temFiltrosAtivos ? 'Nenhuma atividade encontrada com os filtros aplicados' : 'Nenhuma atividade encontrada'}
-              </p>
-            </Card>
-          ) : usarGrupos && atividadesAgrupadas ? (
-            <div className="space-y-6">
-              {ORDEM_GRUPOS.map((status) => {
-                const items = atividadesAgrupadas[status]
-                if (!items || items.length === 0) return null
-                const info = GRUPO_INFO[status] || { label: status, corDot: 'bg-gray-400', corTexto: 'text-gray-700' }
-                return (
-                  <div key={status}>
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className={`w-3 h-3 rounded-full ${info.corDot}`} />
-                      <h4 className={`font-medium text-sm ${info.corTexto}`}>{info.label}</h4>
-                      <span className="text-xs text-gray-400">({items.length})</span>
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-xl font-bold text-gray-800 mb-3">
+              Atividades {planejadasFiltradas.length !== atividades.length && `(${planejadasFiltradas.length} de ${atividades.filter(a => !a.nao_prevista).length})`}
+            </h3>
+            {planejadasSemJustificadas.length === 0 ? (
+              <Card className="bg-white p-8 border-0 shadow-sm text-center">
+                <p className="text-gray-600">
+                  {temFiltrosAtivos ? 'Nenhuma atividade encontrada com os filtros aplicados' : 'Nenhuma atividade encontrada'}
+                </p>
+              </Card>
+            ) : usarGrupos && atividadesAgrupadas ? (
+              <div className="space-y-6">
+                {ORDEM_GRUPOS.map((status) => {
+                  const items = atividadesAgrupadas[status]
+                  if (!items || items.length === 0) return null
+                  const info = GRUPO_INFO[status] || { label: status, corDot: 'bg-gray-400', corTexto: 'text-gray-700' }
+                  return (
+                    <div key={status}>
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className={`w-3 h-3 rounded-full ${info.corDot}`} />
+                        <h4 className={`font-medium text-sm ${info.corTexto}`}>{info.label}</h4>
+                        <span className="text-xs text-gray-400">({items.length})</span>
+                      </div>
+                      <div className="space-y-3">
+                        {items.map((a) => renderCard(a))}
+                      </div>
                     </div>
-                    <div className="space-y-3">
-                      {items.map((a) => renderCard(a))}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {planejadasFiltradas.map((a) => renderCard(a))}
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {planejadasSemJustificadas.map((a) => renderCard(a))}
+              </div>
+            )}
+          </div>
+
+          {/* Atividades justificadas (>=1 funcionario justificado) */}
+          {justificadasFiltradas.length > 0 && (
+            <div>
+              <button
+                onClick={() => toggleSecao('justificadas')}
+                className="text-base font-semibold text-gray-700 mb-2 flex items-center gap-2 w-full text-left"
+              >
+                <span className="w-3 h-3 rounded-full bg-amber-500" />
+                Atividades justificadas
+                <span className="text-sm font-normal text-gray-500">({justificadasFiltradas.length})</span>
+                <span className="ml-auto text-gray-400 text-xs">{secoesAbertas.justificadas ? '▲' : '▼'}</span>
+              </button>
+              {secoesAbertas.justificadas && (
+              <>
+              {usarGrupos && justificadasAgrupadas ? (
+                <div className="space-y-6">
+                  {ORDEM_GRUPOS.map((status) => {
+                    const items = justificadasAgrupadas[status]
+                    if (!items || items.length === 0) return null
+                    const info = GRUPO_INFO[status] || { label: status, corDot: 'bg-gray-400', corTexto: 'text-gray-700' }
+                    return (
+                      <div key={status}>
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className={`w-3 h-3 rounded-full ${info.corDot}`} />
+                          <h4 className={`font-medium text-sm ${info.corTexto}`}>{info.label}</h4>
+                          <span className="text-xs text-gray-400">({items.length})</span>
+                        </div>
+                        <div className="space-y-3">
+                          {items.map((a) => renderCard(a, false, '#f97316'))}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {justificadasFiltradas.map((a) => renderCard(a, false, '#f97316'))}
+                </div>
+              )}
+              </>
+              )}
             </div>
           )}
         </div>
       ) : (
         <div>
-          <h3 className="text-lg font-semibold text-gray-800 mb-3">
+          <h3 className="text-xl font-bold text-gray-800 mb-3">
             Board {planejadasFiltradas.length !== atividades.length && `(${planejadasFiltradas.length} de ${atividades.filter(a => !a.nao_prevista).length})`}
           </h3>
           <div className="flex gap-4 overflow-x-auto pb-4">
             {KANBAN_COLUNAS.map((col) => {
-              const items = planejadasFiltradas.filter((a) => a.status === col.status)
+              const items = col.status === '__justificada__'
+                ? justificadasFiltradas
+                : planejadasSemJustificadas.filter((a) => a.status === col.status)
               return (
                 <div key={col.status} className="flex-shrink-0 w-72">
                   <div className={`flex items-center gap-2 mb-3 px-3 py-2 rounded-lg ${col.headerBg}`}>
@@ -833,7 +939,21 @@ export function MonitoramentoAtividades() {
                         Vazio
                       </div>
                     ) : (
-                      items.map((a) => renderCard(a, true))
+                      <>
+                        {(kanbanExpandido[col.status] ? items : items.slice(0, KANBAN_LIMITE_INICIAL)).map((a) =>
+                          renderCard(a, true, col.status === '__justificada__' ? '#f97316' : undefined)
+                        )}
+                        {items.length > KANBAN_LIMITE_INICIAL && (
+                          <button
+                            onClick={() => toggleKanbanColuna(col.status)}
+                            className="w-full text-center text-xs text-gray-500 font-medium py-1.5 rounded-md border border-gray-200 hover:bg-gray-50 transition-colors"
+                          >
+                            {kanbanExpandido[col.status]
+                              ? `Ver menos`
+                              : `Ver mais ${items.length - KANBAN_LIMITE_INICIAL} de ${items.length}`}
+                          </button>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -846,19 +966,25 @@ export function MonitoramentoAtividades() {
       {/* Metricas por funcionario */}
       {metricasFuncionario.length > 0 && (
         <div>
-          <h3 className="text-lg font-semibold text-gray-800 mb-3">Desempenho por Funcionário</h3>
+          <button
+            onClick={() => toggleSecao('desempenho')}
+            className="text-sm font-medium uppercase tracking-wide text-gray-500 mb-3 flex items-center gap-2 w-full text-left"
+          >
+            Desempenho por Funcionário
+            <span className="text-gray-400 text-xs normal-case tracking-normal">{secoesAbertas.desempenho ? '▲' : '▼'}</span>
+          </button>
+          {secoesAbertas.desempenho && (
           <Card className="bg-white border-0 shadow-sm overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Funcionário</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-600">Atrib.</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-600">Concl.</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-600">Andam.</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-600">Pend.</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-600">Não prev.</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-600">Tempo prod.</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600 min-w-[140px]">
+                  <th className="text-left py-2.5 px-4 font-medium text-gray-600">Funcionário</th>
+                  <th className="text-left py-2.5 px-4 font-medium text-gray-600" title="Atribuídas (concluídas / em andamento / pendentes)">
+                    Progresso
+                  </th>
+                  <th className="text-center py-2.5 px-3 font-medium text-gray-600">Não prev.</th>
+                  <th className="text-center py-2.5 px-3 font-medium text-gray-600 whitespace-nowrap">Tempo prod.</th>
+                  <th className="text-left py-2.5 px-4 font-medium text-gray-600 min-w-[120px]">
                     <span className="inline-flex items-center gap-1" title="Taxa de conclusão = concluídas ÷ atribuídas. Mostra o percentual de atividades que o funcionário concluiu entre todas as que recebeu.">
                       Taxa
                       <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -871,26 +997,32 @@ export function MonitoramentoAtividades() {
                   const taxa = m.atribuidas > 0 ? Math.round((m.concluidas / m.atribuidas) * 100) : 0
                   return (
                     <tr key={i} className="border-b border-gray-100 last:border-0">
-                      <td className="py-3 px-4">
+                      <td className="py-2.5 px-4">
                         <div className="flex items-center gap-2">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${getCorAvatar(m.nome)}`}>
+                          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold ${getCorAvatar(m.nome)}`}>
                             {getIniciais(m.nome)}
                           </div>
-                          <span className="font-medium text-gray-800">{m.nome}</span>
+                          <span className="font-medium text-gray-800 text-sm">{m.nome}</span>
                         </div>
                       </td>
-                      <td className="text-center py-3 px-4 text-gray-600">{m.atribuidas}</td>
-                      <td className="text-center py-3 px-4 text-green-600 font-medium">{m.concluidas}</td>
-                      <td className="text-center py-3 px-4 text-blue-600">{m.emAndamento}</td>
-                      <td className="text-center py-3 px-4 text-gray-500">{m.pendentes}</td>
-                      <td className="text-center py-3 px-4 text-purple-600 font-medium">{m.naoPrevistas || '-'}</td>
-                      <td className="text-center py-3 px-4 text-gray-700 font-medium whitespace-nowrap">{m.tempoProdutivo > 0 ? formatarTempo(m.tempoProdutivo) : '-'}</td>
-                      <td className="py-3 px-4">
+                      <td className="py-2.5 px-4 text-gray-700">
+                        <span className="font-medium">{m.atribuidas}</span>
+                        <span className="text-gray-400 text-xs ml-1.5">
+                          (<span className="text-green-600">{m.concluidas}✓</span>
+                          {' · '}
+                          <span className="text-blue-600">{m.emAndamento}▶</span>
+                          {' · '}
+                          <span className="text-gray-500">{m.pendentes}○</span>)
+                        </span>
+                      </td>
+                      <td className="text-center py-2.5 px-3 text-purple-600 font-medium">{m.naoPrevistas || '-'}</td>
+                      <td className="text-center py-2.5 px-3 text-gray-700 font-medium whitespace-nowrap text-xs">{m.tempoProdutivo > 0 ? formatarTempo(m.tempoProdutivo) : '-'}</td>
+                      <td className="py-2.5 px-4">
                         <div className="flex items-center gap-2">
-                          <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden min-w-[60px]">
+                          <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden min-w-[50px]">
                             <div className={`h-full rounded-full ${getCorBarra(taxa)}`} style={{ width: `${taxa}%` }} />
                           </div>
-                          <span className="text-xs font-medium text-gray-700 min-w-[35px]">{taxa}%</span>
+                          <span className="text-xs font-medium text-gray-700 min-w-[32px]">{taxa}%</span>
                         </div>
                       </td>
                     </tr>
@@ -899,17 +1031,23 @@ export function MonitoramentoAtividades() {
               </tbody>
             </table>
           </Card>
+          )}
         </div>
       )}
 
       {/* Imprevistos recentes (ultimos 7 dias) */}
       {imprevistosRecentes.length > 0 && (
         <div>
-          <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-            <span className="text-amber-500 text-lg">⚠️</span>
+          <button
+            onClick={() => toggleSecao('imprevistos')}
+            className="text-sm font-medium uppercase tracking-wide text-gray-500 mb-3 flex items-center gap-2 w-full text-left"
+          >
+            <span className="text-amber-500 text-base">⚠️</span>
             Imprevistos recentes
-            <span className="text-sm font-normal text-gray-500">({imprevistosRecentes.length} nos últimos 7 dias)</span>
-          </h3>
+            <span className="text-xs font-normal normal-case tracking-normal text-gray-400">({imprevistosRecentes.length} nos últimos 7 dias)</span>
+            <span className="ml-auto text-gray-400 text-xs normal-case tracking-normal">{secoesAbertas.imprevistos ? '▲' : '▼'}</span>
+          </button>
+          {secoesAbertas.imprevistos && (
           <Card className="bg-white border-0 shadow-sm overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -952,17 +1090,24 @@ export function MonitoramentoAtividades() {
               </tbody>
             </table>
           </Card>
+          )}
         </div>
       )}
 
       {/* Atividades nao previstas */}
       {naoPrevistasFiltradas.length > 0 && (
         <div>
-          <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+          <button
+            onClick={() => toggleSecao('naoPrevistas')}
+            className="text-sm font-medium uppercase tracking-wide text-gray-500 mb-3 flex items-center gap-2 w-full text-left"
+          >
             <span className="w-3 h-3 rounded-full bg-purple-500" />
             Atividades não previstas
-            <span className="text-sm font-normal text-gray-500">({naoPrevistasFiltradas.length})</span>
-          </h3>
+            <span className="text-xs font-normal normal-case tracking-normal text-gray-400">({naoPrevistasFiltradas.length})</span>
+            <span className="ml-auto text-gray-400 text-xs normal-case tracking-normal">{secoesAbertas.naoPrevistas ? '▲' : '▼'}</span>
+          </button>
+          {secoesAbertas.naoPrevistas && (
+          <>
           <div className="space-y-2">
             {(expandirNaoPrevistas ? naoPrevistasFiltradas : naoPrevistasFiltradas.slice(0, 5)).map((a) => {
               const func = a.funcionarios?.[0]
@@ -1002,6 +1147,8 @@ export function MonitoramentoAtividades() {
                 ? `Ver menos`
                 : `Ver mais ${naoPrevistasFiltradas.length - 5} de ${naoPrevistasFiltradas.length}`}
             </button>
+          )}
+          </>
           )}
         </div>
       )}
@@ -1095,103 +1242,110 @@ export function MonitoramentoAtividades() {
                       .filter((s) => s.fim_at && s.trabalhada && s.duracao_segundos != null)
                       .reduce((acc, s) => acc + (s.duracao_segundos || 0), 0)
                     const temSessaoAberta = sessoesAf.some((s) => !s.fim_at)
+                    const hasMetadata = (af.inicio_at || af.fim_at || tempoProdutivo > 0)
+                    const hasContent = (af.detalhamento || af.justificativa || af.foto_url || sessoesAf.length > 0 || imprevistosAf.length > 0)
                     return (
-                      <div key={af.id} className="py-2 border-b border-gray-50 last:border-0">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold ${getCorAvatar(af.funcionario_nome || '?')}`}>
+                      <div key={af.id} className="py-2.5 border-b border-gray-100 last:border-0">
+                        {/* Zona 1: header (avatar + nome + status + ação) */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0 ${getCorAvatar(af.funcionario_nome || '?')}`}>
                               {getIniciais(af.funcionario_nome || '?')}
                             </div>
-                            <span className="text-sm font-medium text-gray-800">{af.funcionario_nome}</span>
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_BADGE_CORES[af.status_individual] || 'bg-gray-100 text-gray-600'}`}>
+                            <span className="text-sm font-medium text-gray-800 truncate">{af.funcionario_nome}</span>
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${STATUS_BADGE_CORES[af.status_individual] || 'bg-gray-100 text-gray-600'}`}>
                               {STATUS_BADGE_LABELS[af.status_individual] || af.status_individual}
                             </span>
                             {temSessaoAberta && (
-                              <span className="inline-flex items-center gap-1 text-xs text-blue-600 font-medium">
+                              <span className="inline-flex items-center gap-1 text-xs text-blue-600 font-medium flex-shrink-0">
                                 <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
                                 gravando
                               </span>
                             )}
                           </div>
-                          <div className="text-xs text-gray-500 text-right">
-                            {tempoProdutivo > 0 && (
-                              <span className="font-medium text-gray-700">⏱ {formatarTempo(tempoProdutivo)}</span>
-                            )}
-                          </div>
-                        </div>
-                        {(af.inicio_at || af.fim_at) && (
-                          <div className="text-xs text-gray-400 mt-1 ml-9">
-                            {af.inicio_at && <>Iniciou: {formatarDataHora(af.inicio_at)}</>}
-                            {af.inicio_at && af.fim_at && <> · </>}
-                            {af.fim_at && <>Concluiu: {formatarDataHora(af.fim_at)}</>}
-                          </div>
-                        )}
-                        {af.detalhamento && (
-                          <div className="mt-1 ml-9 text-xs text-gray-600 italic bg-gray-50 rounded px-2 py-1">
-                            "{af.detalhamento}"
-                          </div>
-                        )}
-                        {af.justificativa && (
-                          <div className="mt-1 ml-9 text-xs text-orange-700 bg-orange-50 rounded px-2 py-1">
-                            <span className="font-semibold">Justificativa: </span>
-                            {af.justificativa}
-                            {af.justificada_at && (
-                              <span className="text-orange-400 ml-1">({formatarDataHora(af.justificada_at)})</span>
-                            )}
-                          </div>
-                        )}
-                        {af.status_individual === 'justificada' && (
-                          <div className="mt-1 ml-9">
+                          {af.status_individual === 'justificada' && (
                             <button
                               onClick={() => handleReabrirAtividade(af.id)}
                               disabled={reabrindoId === af.id}
-                              className="text-xs font-medium text-blue-600 hover:text-blue-700 disabled:opacity-50"
+                              className="text-xs font-medium text-blue-600 hover:text-blue-700 disabled:opacity-50 flex-shrink-0"
                             >
-                              {reabrindoId === af.id ? 'Reabrindo...' : '↻ Reabrir atividade'}
+                              {reabrindoId === af.id ? 'Reabrindo...' : '↻ Reabrir'}
                             </button>
-                          </div>
-                        )}
-                        {af.foto_url && (
-                          <div className="mt-2 ml-9 flex flex-col gap-1">
-                            <img
-                              src={af.foto_url}
-                              alt="Foto da conclusão"
-                              className="w-full max-w-[240px] rounded-lg border border-gray-200"
-                              loading="lazy"
-                            />
-                            {af.latitude !== null && af.longitude !== null && (
-                              <p className="text-[10px] text-gray-500 inline-flex items-center gap-1">
-                                📍 {af.latitude?.toFixed(5)}, {af.longitude?.toFixed(5)}
-                                {af.gps_accuracy ? ` (±${Math.round(af.gps_accuracy)}m)` : ''}
-                              </p>
+                          )}
+                        </div>
+
+                        {/* Zona 2: metadata (tempo, datas) */}
+                        {hasMetadata && (
+                          <div className="ml-9 mt-1 text-xs text-gray-400 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                            {tempoProdutivo > 0 && (
+                              <span className="text-gray-600 font-medium">⏱ {formatarTempo(tempoProdutivo)}</span>
                             )}
+                            {af.inicio_at && <span>Iniciou: {formatarDataHora(af.inicio_at)}</span>}
+                            {af.inicio_at && af.fim_at && <span>·</span>}
+                            {af.fim_at && <span>Concluiu: {formatarDataHora(af.fim_at)}</span>}
                           </div>
                         )}
-                        {sessoesAf.length > 0 && (
-                          <div className="mt-2 ml-9 space-y-1">
-                            <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Sessões ({sessoesAf.length})</p>
-                            {sessoesAf.map((s) => (
-                              <div key={s.id} className="flex items-center gap-2 text-xs text-gray-500">
-                                <span className={`w-1.5 h-1.5 rounded-full ${s.trabalhada ? 'bg-green-400' : 'bg-amber-400'}`} />
-                                <span>{formatarHoraCurta(s.inicio_at)} → {s.fim_at ? formatarHoraCurta(s.fim_at) : '...'}</span>
-                                <span className="font-medium">{s.duracao_segundos != null ? formatarTempo(s.duracao_segundos) : 'em andamento'}</span>
-                                {s.motivo_pausa && <span className="text-gray-400">({s.motivo_pausa})</span>}
+
+                        {/* Zona 3: conteúdo (detalhamento, justificativa, foto, sessões, imprevistos) */}
+                        {hasContent && (
+                          <div className="ml-9 mt-1.5 space-y-1.5">
+                            {af.detalhamento && (
+                              <div className="text-xs text-gray-600 italic bg-gray-50 rounded px-2 py-1">
+                                "{af.detalhamento}"
                               </div>
-                            ))}
-                          </div>
-                        )}
-                        {imprevistosAf.length > 0 && (
-                          <div className="mt-2 ml-9 space-y-1">
-                            <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Imprevistos ({imprevistosAf.length})</p>
-                            {imprevistosAf.map((i) => (
-                              <div key={i.id} className="flex items-center gap-2 text-xs text-gray-500">
-                                <span className="text-xs text-amber-500">⚠️</span>
-                                <span className="font-medium">{i.tipo}</span>
-                                <span className="text-gray-400">· {formatarHoraCurta(i.ocorrido_at)}</span>
-                                {i.impacto_minutos != null && <span className="text-gray-400">({i.impacto_minutos}min)</span>}
-                                {i.descricao && <span className="text-gray-400 truncate">— {i.descricao}</span>}
+                            )}
+                            {af.justificativa && (
+                              <div className="text-xs text-orange-700 bg-orange-50 rounded px-2 py-1">
+                                <span className="font-semibold">Justificativa: </span>
+                                {af.justificativa}
+                                {af.justificada_at && (
+                                  <span className="text-orange-400 ml-1">({formatarDataHora(af.justificada_at)})</span>
+                                )}
                               </div>
-                            ))}
+                            )}
+                            {af.foto_url && (
+                              <div className="flex flex-col gap-1">
+                                <img
+                                  src={af.foto_url}
+                                  alt="Foto da conclusão"
+                                  className="w-full max-w-[240px] rounded-lg border border-gray-200"
+                                  loading="lazy"
+                                />
+                                {af.latitude !== null && af.longitude !== null && (
+                                  <p className="text-[10px] text-gray-500 inline-flex items-center gap-1">
+                                    📍 {af.latitude?.toFixed(5)}, {af.longitude?.toFixed(5)}
+                                    {af.gps_accuracy ? ` (±${Math.round(af.gps_accuracy)}m)` : ''}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                            {sessoesAf.length > 0 && (
+                              <div className="space-y-0.5">
+                                <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Sessões ({sessoesAf.length})</p>
+                                {sessoesAf.map((s) => (
+                                  <div key={s.id} className="flex items-center gap-2 text-xs text-gray-500">
+                                    <span className={`w-1.5 h-1.5 rounded-full ${s.trabalhada ? 'bg-green-400' : 'bg-amber-400'}`} />
+                                    <span>{formatarHoraCurta(s.inicio_at)} → {s.fim_at ? formatarHoraCurta(s.fim_at) : '...'}</span>
+                                    <span className="font-medium">{s.duracao_segundos != null ? formatarTempo(s.duracao_segundos) : 'em andamento'}</span>
+                                    {s.motivo_pausa && <span className="text-gray-400">({s.motivo_pausa})</span>}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            {imprevistosAf.length > 0 && (
+                              <div className="space-y-0.5">
+                                <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Imprevistos ({imprevistosAf.length})</p>
+                                {imprevistosAf.map((i) => (
+                                  <div key={i.id} className="flex items-center gap-2 text-xs text-gray-500">
+                                    <span className="text-xs text-amber-500">⚠️</span>
+                                    <span className="font-medium">{i.tipo}</span>
+                                    <span className="text-gray-400">· {formatarHoraCurta(i.ocorrido_at)}</span>
+                                    {i.impacto_minutos != null && <span className="text-gray-400">({i.impacto_minutos}min)</span>}
+                                    {i.descricao && <span className="text-gray-400 truncate">— {i.descricao}</span>}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>

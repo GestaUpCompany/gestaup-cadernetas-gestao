@@ -63,7 +63,7 @@ export interface FuncionarioComSetor {
 
 export async function getAtividades(
   fazendaId: string,
-  filtros?: { semanaInicio?: string; status?: string; prioridade?: number; setorId?: string },
+  filtros?: { dataInicio?: string; dataFim?: string; status?: string; prioridade?: number; setorId?: string },
   incluirNaoPrevistas = false
 ): Promise<Atividade[]> {
   let query = supabase
@@ -81,12 +81,11 @@ export async function getAtividades(
     query = query.eq('nao_prevista', false)
   }
 
-  if (filtros?.semanaInicio) {
-    // semanaInicio é uma segunda-feira; filtrar da segunda ao domingo (6 dias depois)
-    const fim = new Date(filtros.semanaInicio + 'T00:00:00')
-    fim.setDate(fim.getDate() + 6)
-    const fimStr = fim.toISOString().split('T')[0]
-    query = query.gte('data_inicio', filtros.semanaInicio).lte('data_inicio', fimStr)
+  if (filtros?.dataInicio) {
+    query = query.gte('data_inicio', filtros.dataInicio)
+  }
+  if (filtros?.dataFim) {
+    query = query.lte('data_inicio', filtros.dataFim)
   }
   if (filtros?.status) {
     query = query.eq('status', filtros.status)
@@ -366,9 +365,10 @@ export async function getFuncionariosComSetor(fazendaId: string): Promise<Funcio
 
 export async function getMonitoramentoData(
   fazendaId: string,
-  semanaInicio?: string
+  dataInicio?: string,
+  dataFim?: string
 ): Promise<Atividade[]> {
-  return getAtividades(fazendaId, { semanaInicio }, true)
+  return getAtividades(fazendaId, { dataInicio, dataFim }, true)
 }
 
 export async function getControleAcessoHabilitado(fazendaId: string): Promise<boolean> {
